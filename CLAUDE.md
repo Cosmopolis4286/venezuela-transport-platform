@@ -10,6 +10,9 @@ that app.
 - Mobile deps: `npx expo install <pkg>` inside the app folder (use `EXPO_OFFLINE=1` if
   api.expo.dev is unreachable). Routes live in `src/app/`.
 - `@vtp/shared-types` must stay framework-free and is consumed from `dist/` — Turbo builds it first.
+- Database: Drizzle ORM. Module tables go in `src/modules/<name>/<name>.schema.ts`, re-exported
+  from `src/database/schema.ts`; then `pnpm db:generate --name=<change>` and commit
+  `apps/api/drizzle/`. Never edit an applied migration.
 - No business features exist yet; do not invent auth, bookings or payments unless asked.
 - Docs live in `docs/`; update `.env.example` files and `docs/development/environment-variables.md`
   whenever configuration changes.

@@ -44,6 +44,7 @@ pnpm install                    # installs from pnpm-lock.yaml
 pnpm env:init                   # creates .env files from the templates (never overwrites)
 pnpm infra:up                   # PostgreSQL + PostGIS, waits until healthy
 pnpm db:check                   # → "OK: PostgreSQL 18.x, PostGIS 3.6.x ..."
+pnpm db:migrate                 # applies SQL migrations (idempotent)
 pnpm dev                        # web (:3000) + API (:4000)
 curl http://localhost:4000/api/v1/health
 ```
@@ -76,6 +77,8 @@ All commands run from the repository root.
 | Stop infrastructure (keeps data)              | `pnpm infra:down`                                     |
 | Container status / logs                       | `pnpm infra:ps` / `pnpm infra:logs`                   |
 | Check DB connectivity + PostGIS               | `pnpm db:check`                                       |
+| Apply database migrations                     | `pnpm db:migrate`                                     |
+| Generate a migration after a schema change    | `pnpm db:generate --name=<change>`                    |
 | Open `psql` in the container                  | `pnpm db:psql`                                        |
 | **Delete** local DB/Redis data                | `pnpm infra:reset` (asks for confirmation)            |
 

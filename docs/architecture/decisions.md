@@ -61,22 +61,42 @@ configured following its manual-installation guide: `components.json`, `src/lib/
 (`cn`), theme tokens in `globals.css`, and the `Button` component. The CLI works normally on
 an unrestricted network: `pnpm --filter @vtp/web exec shadcn add <component>`.
 
-## ADR-007: Defer the ORM / migration tool
+## ADR-007: Drizzle ORM with committed SQL migrations
 
-**Decision.** No ORM yet. `DatabaseService` owns a `pg` pool used for health checks.
+_Supersedes the initial "defer the ORM" decision from the foundation PR._
 
-**Why.** The choice depends on the first real domain module and on how much PostGIS SQL is
-needed. Picking now would create code to migrate later.
+**Decision.** Drizzle ORM (`drizzle-orm` 0.45) for queries and `drizzle-kit` 0.31 to generate
+SQL migrations. Migrations are applied by our own runner (`apps/api/src/database/migrate.ts`,
+`pnpm db:migrate`), which uses Drizzle's migrator and its `drizzle.__drizzle_migrations` table.
 
-**When choosing** (with the first domain module), require: versioned, reviewable SQL
-migrations; first-class PostGIS support or raw SQL escape hatches; transactions across
-modules. Good candidates: **Drizzle ORM + drizzle-kit**, **Kysely + a SQL migration runner**,
-or **Prisma** (weaker PostGIS support). Record the result as a new ADR.
+**Why.** Generated migrations are plain, reviewable SQL files; custom SQL migrations
+(`--custom`) cover PostGIS features the schema DSL does not; queries stay close to SQL and
+fully typed; no code-generation step or engine binary (unlike Prisma, whose PostGIS support is
+weaker). Kysely was the runner-up; it needs a separate migration tool.
 
-**Migration rules regardless of tool.**
+**How it works.**
 
-- Migrations are committed, forward-only in production, and run as a separate deploy step
-  _before_ the new API version starts (never automatically at app boot).
+| Piece                          | Location                                                                              |
+| ------------------------------ | ------------------------------------------------------------------------------------- |
+| Module tables                  | `src/modules/<name>/<name>.schema.ts`, re-exported from `src/database/schema.ts`      |
+| Migrations                     | `apps/api/drizzle/NNNN_<name>.sql` + `meta/` journal and snapshots (commit all of it) |
+| Generate after a schema change | `pnpm db:generate --name=<change>`                                                    |
+| Hand-written SQL migration     | `pnpm --filter @vtp/api exec drizzle-kit generate --custom --name=<change>`           |
+| Apply                          | `pnpm db:migrate` (dev) · `node dist/database/migrate.js` (production image)          |
+| Query from a module            | inject `DatabaseService`, use `database.db` (Drizzle) or `database.pool` (raw SQL)    |
+
+`0000_baseline_extensions.sql` creates `postgis`, `pgcrypto`, `citext` and `pg_trgm` with
+`IF NOT EXISTS`, so production databases that never ran the Docker init SQL get them too.
+PostGIS is not a trusted extension: on managed databases an admin may have to create it first.
+
+CI applies migrations twice (idempotence) and fails if `db:generate` would produce a migration
+that is not committed (schema drift).
+
+**Migration rules.**
+
+- Migrations are committed, reviewed like code, forward-only in production, and run as a
+  separate deploy step _before_ the new API version starts (never automatically at app boot).
+- Never edit a migration that has been applied anywhere shared; add a new one.
 - `infrastructure/docker/postgres/init/` only enables extensions. It runs once on an empty
   volume and must never contain tables.
 - Destructive changes use expand → migrate data → contract across releases.

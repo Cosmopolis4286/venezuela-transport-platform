@@ -125,8 +125,9 @@ background jobs.
   (`infrastructure/docker/postgres/init/001-extensions.sql`).
 - Time zone: containers run in `America/Caracas`; **store timestamps as `timestamptz`** and
   convert at the edges.
-- Schema changes go through migrations (tool to be chosen with the first domain module — see
-  [decisions](decisions.md#adr-007-defer-the-orm--migration-tool)).
+- Schema changes go through committed SQL migrations generated with drizzle-kit and applied by
+  `pnpm db:migrate` — see [decisions](decisions.md#adr-007-drizzle-orm-with-committed-sql-migrations).
+  Each module owns its tables in `src/modules/<name>/<name>.schema.ts`.
 
 ## Shared contracts (`@vtp/shared-types`)
 

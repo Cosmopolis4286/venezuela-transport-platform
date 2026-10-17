@@ -1,17 +1,23 @@
 import { Injectable, Logger, type OnApplicationShutdown } from '@nestjs/common';
+import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
 import { AppConfigService } from '../config/app-config.service.js';
+import * as schema from './schema.js';
+
+export type Database = NodePgDatabase<typeof schema>;
 
 /**
  * Owns the PostgreSQL connection pool. The pool connects lazily, so the API can
  * boot (and report itself as not ready) while the database is still starting.
  *
- * This is deliberately thin: no ORM is chosen yet (see docs/architecture/decisions.md).
+ * Feature modules query through `db` (Drizzle). Use `pool` only for raw SQL that Drizzle
+ * cannot express (some PostGIS functions), always with parameter placeholders.
  */
 @Injectable()
 export class DatabaseService implements OnApplicationShutdown {
   private readonly logger = new Logger(DatabaseService.name);
   readonly pool: pg.Pool;
+  readonly db: Database;
 
   constructor(config: AppConfigService) {
     this.pool = new pg.Pool({
@@ -26,6 +32,7 @@ export class DatabaseService implements OnApplicationShutdown {
       idleTimeoutMillis: 30_000,
       application_name: 'vtp-api',
     });
+    this.db = drizzle(this.pool, { schema, casing: 'snake_case' });
     // Without a listener, an error on an idle client would crash the process.
     this.pool.on('error', (error) =>
       this.logger.error(`Idle database client error: ${error.message}`),

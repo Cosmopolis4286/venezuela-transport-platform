@@ -2,7 +2,7 @@
   "name": "venezuela-transport-platform",
   "version": "0.0.0",
   "private": true,
-  "description": "Venezuelan ground transportation platform — pnpm + Turborepo monorepo.",
+  "description": "Venezuelan ground transportation platform \u2014 pnpm + Turborepo monorepo.",
   "packageManager": "pnpm@10.34.7",
   "engines": {
     "node": ">=24.15.0 <25",
@@ -34,7 +34,9 @@
     "infra:logs": "docker compose --profile redis logs -f --tail=200",
     "infra:reset": "node infrastructure/scripts/reset-local-data.mjs",
     "db:psql": "docker compose exec postgres sh -c 'psql -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"'",
-    "db:check": "pnpm --filter @vtp/api db:check"
+    "db:check": "pnpm --filter @vtp/api db:check",
+    "db:migrate": "turbo run db:migrate --filter=@vtp/api",
+    "db:generate": "pnpm --filter @vtp/api db:generate"
   },
   "devDependencies": {
     "prettier": "3.9.10",

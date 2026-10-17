@@ -60,7 +60,7 @@ alternative if backups and PostGIS are supported.
 ## 5. Database migrations
 
 - [ ] Migrations run as a **separate one-off step** before starting the new API version
-      (e.g. `docker compose run --rm api pnpm db:migrate`), never automatically on API boot.
+      (`docker compose run --rm api node dist/database/migrate.js`), never automatically on API boot.
 - [ ] Backwards-compatible migrations only (expand → deploy → contract) so the previous API
       version keeps working during and after the migration, which keeps rollback possible.
 

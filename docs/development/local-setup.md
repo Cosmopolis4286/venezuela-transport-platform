@@ -59,14 +59,21 @@ the database password, change it in **both** `.env` (`POSTGRES_PASSWORD`) and `a
 ```bash
 pnpm infra:up         # starts postgis/postgis:18-3.6 and waits for the health check
 pnpm db:check         # OK: PostgreSQL 18.x, PostGIS 3.6.x at 127.0.0.1:5432/vtp_dev
+pnpm db:migrate       # applies apps/api/drizzle/*.sql
 pnpm db:psql          # interactive psql inside the container
 ```
 
 **Initialization strategy.** On the _first_ start with an empty volume, the image creates the
 database/user from `.env` and runs `infrastructure/docker/postgres/init/*.sql`, which enables
 `postgis`, `pgcrypto`, `citext` and `pg_trgm`. Later starts reuse the volume and skip
-initialization. Tables will come from migrations (see
-[decisions](../architecture/decisions.md#adr-007-defer-the-orm--migration-tool)).
+initialization. Tables come from migrations — apply them after the database starts:
+
+```bash
+pnpm db:migrate       # idempotent; safe to run any time
+```
+
+See [decisions](../architecture/decisions.md#adr-007-drizzle-orm-with-committed-sql-migrations)
+for generating new migrations.
 
 **Data lifetime.** Data lives in the named volume `vtp_postgres-data`. `pnpm infra:down` keeps
 it. `pnpm infra:reset` **permanently deletes it** (asks you to type `vtp`). Back up first if needed:
