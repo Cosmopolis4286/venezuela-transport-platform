@@ -7,7 +7,7 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
-      "env": ["NEXT_PUBLIC_*"],
+      "env": ["NEXT_PUBLIC_*", "NEXT_OUTPUT"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"]
     },
     "dev": {

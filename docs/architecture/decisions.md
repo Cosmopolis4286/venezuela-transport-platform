@@ -126,3 +126,11 @@ supported path). API e2e tests use Supertest against the real app configuration
 
 Kubernetes, Terraform, microservices, paid observability, a component library shared between
 web and mobile, GraphQL and an auth provider. Each needs a concrete requirement first.
+
+## ADR-013: Reference production images and Compose
+
+Multi-stage Dockerfiles on `node:24.22.0-trixie-slim` (glibc, so native modules need no
+musl rebuilds) and a single-VPS Compose stack with **Caddy** for automatic HTTPS. Chosen over
+Nginx + certbot for fewer moving parts. Images are built in CI but not pushed; publishing and
+deployment need registry credentials and an explicit decision. Image sizes at creation:
+API ≈ 490 MB, web ≈ 390 MB (mostly the Node base image).

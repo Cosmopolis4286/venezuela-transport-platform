@@ -1,9 +1,10 @@
 # VPS deployment preparation
 
 > **Nothing is deployed.** This is the plan and checklist for a first Linux VPS deployment of
-> the API and web app. Production Dockerfiles/Compose are not written yet; create them under
-> `infrastructure/docker/production/` when deployment work starts. Do not reuse the
-> development `docker-compose.yml`.
+> the API and web app. Reference production files live in `infrastructure/docker/production/`:
+> `api.Dockerfile`, `web.Dockerfile`, `compose.yml` (Caddy + API + web + PostGIS + one-off
+> `migrate`), `Caddyfile` and `env.example`. CI builds both images on every PR but **does not
+> push them anywhere**. Do not reuse the development `docker-compose.yml`.
 
 ## Target topology (single VPS, low cost)
 
@@ -51,11 +52,26 @@ alternative if backups and PostGIS are supported.
 
 ## 4. Build and release
 
-- [ ] CI builds images tagged with the git SHA after the CI workflow is green on `main`.
-- [ ] Multi-stage Dockerfiles: `pnpm deploy --filter @vtp/api --prod` for a pruned API
-      runtime; Next.js `output: 'standalone'` for the web image. Run as a non-root user.
-- [ ] Push to a registry (GitHub Container Registry is free for private repos within limits).
-- [ ] Deploy = pull new images → run migrations → restart services → health check.
+Images are built from the repository root:
+
+```bash
+docker build -f infrastructure/docker/production/api.Dockerfile -t vtp-api:$(git rev-parse --short HEAD) .
+docker build -f infrastructure/docker/production/web.Dockerfile \
+  --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.example.ve/api/v1 \
+  -t vtp-web:$(git rev-parse --short HEAD) .
+```
+
+- API image: `pnpm deploy --prod` output only (no dev dependencies, no sources), runs as
+  `node`, `HEALTHCHECK` on `/api/v1/health`, migrations shipped in `drizzle/`.
+- Web image: Next.js `standalone` output (enabled by `NEXT_OUTPUT=standalone` in the
+  Dockerfile only), runs as `node`. `NEXT_PUBLIC_API_BASE_URL` is fixed at build time, so
+  build one image per environment.
+- Behind a TLS-intercepting proxy, pass its CA as a build secret:
+  `--secret id=ca_bundle,src=/path/to/ca.crt` (never copied into a layer).
+- [ ] Push to a registry (GitHub Container Registry is free for private repos within limits),
+      tagged with the git SHA. Requires a deploy workflow and registry credentials — not set up.
+- [ ] Deploy = `pull` → `run --rm migrate` → `up -d` → check `https://<api>/api/v1/health/ready`
+      (commands at the top of `compose.yml`).
 
 ## 5. Database migrations
 

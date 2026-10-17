@@ -36,6 +36,10 @@ updates:
     schedule:
       interval: monthly
   - package-ecosystem: docker-compose
-    directory: /
+    directories: ['/', '/infrastructure/docker/production']
+    schedule:
+      interval: monthly
+  - package-ecosystem: docker
+    directory: /infrastructure/docker/production
     schedule:
       interval: monthly

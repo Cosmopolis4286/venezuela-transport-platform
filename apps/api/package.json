@@ -5,6 +5,11 @@
   "description": "NestJS modular-monolith REST API.",
   "license": "UNLICENSED",
   "type": "module",
+  "files": [
+    "dist",
+    "drizzle",
+    "scripts"
+  ],
   "scripts": {
     "build": "nest build",
     "dev": "nest start --watch --preserveWatchOutput",
