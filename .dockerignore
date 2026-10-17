@@ -1,0 +1,14 @@
+# Keep build contexts small and free of secrets.
+**/node_modules
+**/.turbo
+**/.next
+**/.expo
+**/dist
+**/coverage
+**/.env
+**/.env.*
+!**/.env.example
+.git
+*.log
+apps/passenger-mobile
+apps/transport-mobile

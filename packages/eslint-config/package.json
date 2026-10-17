@@ -1,0 +1,23 @@
+{
+  "name": "@vtp/eslint-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared ESLint flat-config presets.",
+  "exports": {
+    "./base": "./base.js",
+    "./node": "./node.js"
+  },
+  "dependencies": {
+    "@eslint/js": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "globals": "catalog:",
+    "typescript-eslint": "catalog:"
+  },
+  "peerDependencies": {
+    "eslint": "^9.39.0"
+  },
+  "devDependencies": {
+    "eslint": "catalog:"
+  }
+}

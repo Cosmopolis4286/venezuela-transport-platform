@@ -1,0 +1,95 @@
+# REFERENCE production stack for a single Linux VPS. Not used in development.
+# See docs/deployment/vps-preparation.md before using it. Secrets live in env files OUTSIDE
+# the repository (root-owned, chmod 600), never in this file.
+#
+#   export VTP_API_IMAGE=ghcr.io/<owner>/vtp-api:<git-sha> VTP_WEB_IMAGE=ghcr.io/<owner>/vtp-web:<git-sha>
+#   docker compose -f compose.yml --env-file /etc/vtp/compose.env pull
+#   docker compose -f compose.yml --env-file /etc/vtp/compose.env run --rm migrate
+#   docker compose -f compose.yml --env-file /etc/vtp/compose.env up -d
+
+name: vtp-prod
+
+x-logging: &logging
+  driver: local
+  options:
+    max-size: 20m
+    max-file: '5'
+
+services:
+  caddy:
+    image: caddy:2.11-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      VTP_WEB_DOMAIN: ${VTP_WEB_DOMAIN:?Set VTP_WEB_DOMAIN, e.g. app.example.ve}
+      VTP_API_DOMAIN: ${VTP_API_DOMAIN:?Set VTP_API_DOMAIN, e.g. api.example.ve}
+      VTP_ACME_EMAIL: ${VTP_ACME_EMAIL:?Set VTP_ACME_EMAIL for Let's Encrypt notices}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    logging: *logging
+
+  api:
+    image: ${VTP_API_IMAGE:?Set VTP_API_IMAGE to an immutable tag (git SHA)}
+    restart: unless-stopped
+    env_file: ${VTP_API_ENV_FILE:-/etc/vtp/api.env}
+    environment:
+      NODE_ENV: production
+      API_HOST: 0.0.0.0
+      API_PORT: '4000'
+      API_TRUST_PROXY_HOPS: '1'
+      DATABASE_HOST: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging: *logging
+
+  # One-off: docker compose run --rm migrate   (run BEFORE starting a new api image)
+  migrate:
+    image: ${VTP_API_IMAGE:?Set VTP_API_IMAGE}
+    profiles: ['migrate']
+    restart: 'no'
+    env_file: ${VTP_API_ENV_FILE:-/etc/vtp/api.env}
+    environment:
+      NODE_ENV: production
+      DATABASE_HOST: postgres
+    command: ['node', 'dist/database/migrate.js']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging: *logging
+
+  web:
+    # NEXT_PUBLIC_API_BASE_URL is baked in when the image is built.
+    image: ${VTP_WEB_IMAGE:?Set VTP_WEB_IMAGE to an immutable tag (git SHA)}
+    restart: unless-stopped
+    logging: *logging
+
+  postgres:
+    image: postgis/postgis:18-3.6
+    restart: unless-stopped
+    env_file: ${VTP_POSTGRES_ENV_FILE:-/etc/vtp/postgres.env}
+    # No published ports: reachable only from this Compose network.
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    shm_size: 256mb
+    logging: *logging
+
+volumes:
+  postgres-data:
+  caddy-data:
+  caddy-config:

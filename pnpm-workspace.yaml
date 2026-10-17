@@ -1,0 +1,30 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Single source of truth for versions shared by several workspace packages.
+# Reference them from a package.json with "catalog:".
+catalog:
+  typescript: 6.0.3
+  eslint: 9.39.5
+  '@eslint/js': 9.39.5
+  typescript-eslint: 8.71.2
+  eslint-config-prettier: 10.1.8
+  globals: 17.13.0
+  '@types/node': 24.19.2
+  react: 19.3.0
+  react-dom: 19.3.0
+  '@types/react': ~19.3.0
+  zod: 4.6.7
+  vitest: 4.1.12
+  '@vitest/coverage-v8': 4.1.12
+
+autoInstallPeers: true
+strictPeerDependencies: false
+
+# pnpm 10 blocks dependency lifecycle scripts by default. Review before allowing any.
+onlyBuiltDependencies: []
+ignoredBuiltDependencies:
+  - '@scarf/scarf' # install-time telemetry from swagger-ui-dist; not needed
+  - unrs-resolver # prebuilt binaries ship via optional deps; postinstall not needed
+  - '@parcel/watcher' # prebuilt binaries ship via optional deps; postinstall not needed
