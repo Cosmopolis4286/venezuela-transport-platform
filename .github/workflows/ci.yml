@@ -27,7 +27,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4 # version read from package.json "packageManager"
+      - uses: pnpm/action-setup@v6 # version read from package.json "packageManager"
       - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
@@ -65,7 +65,7 @@ jobs:
       E2E_EXPECT_DATABASE: 'true'
     steps:
       - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
@@ -88,7 +88,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
