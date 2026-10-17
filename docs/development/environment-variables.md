@@ -24,24 +24,27 @@ Template: `.env.example`
 Template: `apps/api/.env.example`. Validated by `apps/api/src/config/env.schema.ts`; the API
 refuses to start and lists invalid variable **names** (never values).
 
-| Variable              | Required | Secret                         | Default                  | Purpose                                                                           |
-| --------------------- | -------- | ------------------------------ | ------------------------ | --------------------------------------------------------------------------------- |
-| `NODE_ENV`            | no       | no                             | `development`            | `development` \| `test` \| `production`. In production `.env` files are ignored   |
-| `APP_VERSION`         | no       | no                             | `0.0.0-dev`              | Reported by `/api/v1/health`. Set to release tag / git SHA                        |
-| `API_HOST`            | no       | no                             | `127.0.0.1`              | Bind address. `0.0.0.0` for physical devices on the LAN or inside containers      |
-| `API_PORT`            | no       | no                             | `4000`                   | HTTP port                                                                         |
-| `CORS_ORIGINS`        | no       | no                             | empty                    | Comma-separated allowed browser origins. Empty = none. `*` rejected in production |
-| `LOG_LEVEL`           | no       | no                             | `info`                   | `fatal`…`trace`, or `silent`                                                      |
-| `SWAGGER_ENABLED`     | no       | no                             | on, except in production | Serve `/api/docs`                                                                 |
-| `DATABASE_HOST`       | yes      | no                             | —                        | PostgreSQL host                                                                   |
-| `DATABASE_PORT`       | no       | no                             | `5432`                   | PostgreSQL port                                                                   |
-| `DATABASE_NAME`       | yes      | no                             | —                        | Database name (match `POSTGRES_DB` locally)                                       |
-| `DATABASE_USER`       | yes      | no                             | —                        | Database user (match `POSTGRES_USER` locally)                                     |
-| `DATABASE_PASSWORD`   | yes      | **yes**                        | —                        | In production: 16+ characters and must not contain `change-me`                    |
-| `DATABASE_SSL`        | no       | no                             | `false`                  | `true` to require TLS with certificate verification                               |
-| `DATABASE_POOL_MAX`   | no       | no                             | `10`                     | Max pool connections (1–100)                                                      |
-| `REDIS_URL`           | no       | **yes** (may embed a password) | empty                    | `redis://` or `rediss://` URL. Unused until a feature needs Redis                 |
-| `E2E_EXPECT_DATABASE` | no       | no                             | —                        | Test-only: `true` makes e2e tests assert DB readiness                             |
+| Variable                 | Required | Secret                         | Default                  | Purpose                                                                                                                       |
+| ------------------------ | -------- | ------------------------------ | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`               | no       | no                             | `development`            | `development` \| `test` \| `production`. In production `.env` files are ignored                                               |
+| `APP_VERSION`            | no       | no                             | `0.0.0-dev`              | Reported by `/api/v1/health`. Set to release tag / git SHA                                                                    |
+| `API_HOST`               | no       | no                             | `127.0.0.1`              | Bind address. `0.0.0.0` for physical devices on the LAN or inside containers                                                  |
+| `API_PORT`               | no       | no                             | `4000`                   | HTTP port                                                                                                                     |
+| `CORS_ORIGINS`           | no       | no                             | empty                    | Comma-separated allowed browser origins. Empty = none. `*` rejected in production                                             |
+| `API_TRUST_PROXY_HOPS`   | no       | no                             | `0`                      | Reverse-proxy hops trusted for `X-Forwarded-For`. `1` behind a single Caddy/Nginx; never more than the real number of proxies |
+| `RATE_LIMIT_TTL_SECONDS` | no       | no                             | `60`                     | Rate-limit window                                                                                                             |
+| `RATE_LIMIT_MAX`         | no       | no                             | `120`                    | Max requests per client IP per window (health endpoints exempt)                                                               |
+| `LOG_LEVEL`              | no       | no                             | `info`                   | `fatal`…`trace`, or `silent`                                                                                                  |
+| `SWAGGER_ENABLED`        | no       | no                             | on, except in production | Serve `/api/docs`                                                                                                             |
+| `DATABASE_HOST`          | yes      | no                             | —                        | PostgreSQL host                                                                                                               |
+| `DATABASE_PORT`          | no       | no                             | `5432`                   | PostgreSQL port                                                                                                               |
+| `DATABASE_NAME`          | yes      | no                             | —                        | Database name (match `POSTGRES_DB` locally)                                                                                   |
+| `DATABASE_USER`          | yes      | no                             | —                        | Database user (match `POSTGRES_USER` locally)                                                                                 |
+| `DATABASE_PASSWORD`      | yes      | **yes**                        | —                        | In production: 16+ characters and must not contain `change-me`                                                                |
+| `DATABASE_SSL`           | no       | no                             | `false`                  | `true` to require TLS with certificate verification                                                                           |
+| `DATABASE_POOL_MAX`      | no       | no                             | `10`                     | Max pool connections (1–100)                                                                                                  |
+| `REDIS_URL`              | no       | **yes** (may embed a password) | empty                    | `redis://` or `rediss://` URL. Unused until a feature needs Redis                                                             |
+| `E2E_EXPECT_DATABASE`    | no       | no                             | —                        | Test-only: `true` makes e2e tests assert DB readiness                                                                         |
 
 ## `apps/web/.env.local` — web (Next.js)
 

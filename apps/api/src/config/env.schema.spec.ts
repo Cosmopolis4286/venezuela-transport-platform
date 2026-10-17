@@ -17,6 +17,9 @@ describe('validateEnv', () => {
       DATABASE_SSL: false,
       CORS_ORIGINS: [],
       SWAGGER_ENABLED: true,
+      API_TRUST_PROXY_HOPS: 0,
+      RATE_LIMIT_TTL_SECONDS: 60,
+      RATE_LIMIT_MAX: 120,
     });
     expect(env.REDIS_URL).toBeUndefined();
   });
@@ -36,6 +39,13 @@ describe('validateEnv', () => {
     } catch (error) {
       expect((error as Error).message).not.toContain('super-secret-value');
     }
+  });
+
+  it('rejects out-of-range security settings', () => {
+    expect(() => validateEnv({ ...valid, RATE_LIMIT_MAX: '0' })).toThrow(/RATE_LIMIT_MAX/);
+    expect(() => validateEnv({ ...valid, API_TRUST_PROXY_HOPS: '-1' })).toThrow(
+      /API_TRUST_PROXY_HOPS/,
+    );
   });
 
   it('rejects invalid ports and origins', () => {

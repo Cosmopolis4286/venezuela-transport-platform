@@ -1,10 +1,13 @@
 import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { ApiOkResponse, ApiServiceUnavailableResponse, ApiTags } from '@nestjs/swagger';
 import type { HealthResponse, ReadinessResponse } from '@vtp/shared-types';
 import type { Response } from 'express';
 import { HealthService } from './health.service.js';
 
 @ApiTags('health')
+// Probes from load balancers and uptime monitors must never be rate limited.
+@SkipThrottle()
 @Controller({ path: 'health', version: '1' })
 export class HealthController {
   constructor(private readonly health: HealthService) {}

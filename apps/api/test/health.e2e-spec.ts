@@ -1,4 +1,4 @@
-import type { INestApplication } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import { isApiErrorResponse } from '@vtp/shared-types';
 import request from 'supertest';
@@ -10,11 +10,11 @@ import { configureApp } from '../src/app.setup.js';
 const expectDatabase = process.env.E2E_EXPECT_DATABASE === 'true';
 
 describe('API (e2e)', () => {
-  let app: INestApplication;
+  let app: NestExpressApplication;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-    app = moduleRef.createNestApplication();
+    app = moduleRef.createNestApplication<NestExpressApplication>();
     configureApp(app);
     await app.init();
   });
@@ -36,6 +36,19 @@ describe('API (e2e)', () => {
       expect(res.body).toMatchObject({ status: 'ok', checks: { database: { status: 'ok' } } });
     },
   );
+
+  it('sends security headers and hides the framework', async () => {
+    const res = await request(app.getHttpServer()).get('/api/v1/health').expect(200);
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    expect(res.headers['strict-transport-security']).toBeDefined();
+    expect(res.headers['x-powered-by']).toBeUndefined();
+  });
+
+  it('never rate limits health probes', async () => {
+    for (let i = 0; i < 5; i++) {
+      await request(app.getHttpServer()).get('/api/v1/health').expect(200);
+    }
+  });
 
   it('unknown routes return the shared error shape', async () => {
     const res = await request(app.getHttpServer()).get('/api/v1/does-not-exist').expect(404);

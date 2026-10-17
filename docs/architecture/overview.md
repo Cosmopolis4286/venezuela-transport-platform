@@ -99,20 +99,23 @@ Conventions for each new module (`apps/api/src/modules/<name>/`):
 
 ### Cross-cutting behaviour already in place
 
-| Concern    | Implementation                                                                                                                               |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| Versioning | Global prefix `api` + URI versioning, default `v1` → `/api/v1/...`                                                                           |
-| Validation | Global `ValidationPipe`: whitelist, reject unknown fields, transform; never echoes values                                                    |
-| Errors     | `HttpExceptionFilter` → `ApiErrorResponse` (`packages/shared-types/src/api/errors.ts`)                                                       |
-| Config     | `zod` schema validated at boot; process exits listing invalid variable names                                                                 |
-| Logging    | `nestjs-pino`: JSON in prod, pretty in dev; request IDs (`x-request-id`); auth headers/cookies redacted; query strings and bodies not logged |
-| CORS       | Explicit allowlist from `CORS_ORIGINS`; `*` rejected in production                                                                           |
-| API docs   | Swagger at `/api/docs`, on by default outside production                                                                                     |
-| Shutdown   | `enableShutdownHooks()`; DB pool closed on SIGTERM/SIGINT                                                                                    |
-| Health     | `/api/v1/health` (liveness), `/api/v1/health/ready` (DB readiness, 503 when down)                                                            |
+| Concern          | Implementation                                                                                                                                                                                |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Versioning       | Global prefix `api` + URI versioning, default `v1` → `/api/v1/...`                                                                                                                            |
+| Validation       | Global `ValidationPipe`: whitelist, reject unknown fields, transform; never echoes values                                                                                                     |
+| Errors           | `HttpExceptionFilter` → `ApiErrorResponse` (`packages/shared-types/src/api/errors.ts`)                                                                                                        |
+| Config           | `zod` schema validated at boot; process exits listing invalid variable names                                                                                                                  |
+| Logging          | `nestjs-pino`: JSON in prod, pretty in dev; request IDs (`x-request-id`); auth headers/cookies redacted; query strings and bodies not logged                                                  |
+| CORS             | Explicit allowlist from `CORS_ORIGINS`; `*` rejected in production                                                                                                                            |
+| API docs         | Swagger at `/api/docs`, on by default outside production                                                                                                                                      |
+| Shutdown         | `enableShutdownHooks()`; DB pool closed on SIGTERM/SIGINT                                                                                                                                     |
+| Health           | `/api/v1/health` (liveness), `/api/v1/health/ready` (DB readiness, 503 when down)                                                                                                             |
+| Security headers | `helmet` defaults (CSP, HSTS, nosniff, frame-ancestors…); `x-powered-by` removed                                                                                                              |
+| Rate limiting    | `@nestjs/throttler` global guard per client IP (`RATE_LIMIT_*`); health probes exempt via `@SkipThrottle()`. In-memory store: move to Redis storage before running more than one API instance |
+| Proxies          | `trust proxy` set from `API_TRUST_PROXY_HOPS` so client IPs are correct behind Caddy/Nginx                                                                                                    |
 
-**Not in place yet (do not assume they exist):** authentication, authorization, rate limiting,
-security headers (helmet), audit logging, migrations tooling, background jobs.
+**Not in place yet (do not assume they exist):** authentication, authorization, audit logging,
+background jobs.
 
 ## Data
 

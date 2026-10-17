@@ -24,6 +24,11 @@ export const envSchema = z
           .filter(Boolean),
       )
       .pipe(z.array(z.union([z.url(), z.literal('*')]))),
+    /** Reverse-proxy hops to trust for client IPs (X-Forwarded-For). 0 = no proxy. */
+    API_TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
+    /** Global rate limit per client IP: at most RATE_LIMIT_MAX requests per window. */
+    RATE_LIMIT_TTL_SECONDS: z.coerce.number().int().min(1).max(3600).default(60),
+    RATE_LIMIT_MAX: z.coerce.number().int().min(1).max(100_000).default(120),
     LOG_LEVEL: z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
       .default('info'),

@@ -105,5 +105,4 @@ supported path). API e2e tests use Supertest against the real app configuration
 ## ADR-011: What we deliberately did not add
 
 Kubernetes, Terraform, microservices, paid observability, a component library shared between
-web and mobile, GraphQL, an auth provider, and helmet/rate limiting (to be added with the
-first public endpoints). Each needs a concrete requirement first.
+web and mobile, GraphQL and an auth provider. Each needs a concrete requirement first.

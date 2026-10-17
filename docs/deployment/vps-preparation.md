@@ -31,8 +31,8 @@ alternative if backups and PostGIS are supported.
 
 - [ ] DNS A/AAAA records for the web and API hostnames.
 - [ ] Caddy obtains and renews Let's Encrypt certificates automatically (or Nginx + certbot).
-- [ ] Forward `X-Forwarded-For`/`X-Forwarded-Proto`; when the API needs client IPs (rate
-      limiting), enable Express `trust proxy` for exactly one hop.
+- [ ] Forward `X-Forwarded-For`/`X-Forwarded-Proto` and set `API_TRUST_PROXY_HOPS=1` so rate
+      limiting sees real client IPs (otherwise every request appears to come from the proxy).
 - [ ] Add HSTS, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, and a CSP for the web app.
 - [ ] Limit request body size (e.g. 1 MB) and enable gzip/zstd at the proxy.
 
