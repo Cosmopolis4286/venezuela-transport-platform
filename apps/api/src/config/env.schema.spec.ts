@@ -1,4 +1,4 @@
-import { validateEnv } from './env.schema.js';
+import { validateDatabaseEnv, validateEnv } from './env.schema.js';
 
 const valid = {
   DATABASE_HOST: '127.0.0.1',
@@ -96,6 +96,15 @@ describe('validateEnv', () => {
       }),
     ).toThrow(/AUTH_SECRET[\s\S]*OTP_DELIVERY/);
     expect(() => validateEnv(productionValid)).not.toThrow();
+  });
+
+  it('validates database settings alone for migration tooling', () => {
+    const { AUTH_SECRET: _omitted, ...databaseOnly } = valid;
+    expect(validateDatabaseEnv(databaseOnly)).toMatchObject({
+      DATABASE_PORT: 5432,
+      DATABASE_SSL: false,
+    });
+    expect(() => validateDatabaseEnv({ AUTH_SECRET: valid.AUTH_SECRET })).toThrow(/DATABASE_HOST/);
   });
 
   it('accepts an empty optional REDIS_URL and rejects a non-redis URL', () => {

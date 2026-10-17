@@ -7,6 +7,23 @@ const booleanString = z
 const optionalBoolean = (defaultValue: boolean) =>
   booleanString.optional().transform((value) => value ?? defaultValue);
 
+/**
+ * Database connection settings alone. Tools that only touch the database (migrations, CLI
+ * scripts) validate just these, so they do not need the API's secrets.
+ */
+const databaseEnvShape = {
+  DATABASE_HOST: z.string().min(1),
+  DATABASE_PORT: z.coerce.number().int().min(1).max(65535).default(5432),
+  DATABASE_NAME: z.string().min(1),
+  DATABASE_USER: z.string().min(1),
+  DATABASE_PASSWORD: z.string().min(1),
+  DATABASE_SSL: optionalBoolean(false),
+  DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
+};
+
+export const databaseEnvSchema = z.object(databaseEnvShape);
+export type DatabaseEnv = z.output<typeof databaseEnvSchema>;
+
 export const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -34,13 +51,7 @@ export const envSchema = z
       .default('info'),
     SWAGGER_ENABLED: booleanString.optional(),
 
-    DATABASE_HOST: z.string().min(1),
-    DATABASE_PORT: z.coerce.number().int().min(1).max(65535).default(5432),
-    DATABASE_NAME: z.string().min(1),
-    DATABASE_USER: z.string().min(1),
-    DATABASE_PASSWORD: z.string().min(1),
-    DATABASE_SSL: optionalBoolean(false),
-    DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
+    ...databaseEnvShape,
 
     /** HMAC key for session-token and OTP hashes. Rotating it signs every user out. */
     AUTH_SECRET: z.string().min(32, 'Must be at least 32 characters'),
@@ -105,7 +116,16 @@ export type Env = z.output<typeof envSchema>;
  * by name only — values are never echoed, so secrets do not leak into logs.
  */
 export function validateEnv(raw: Record<string, unknown>): Env {
-  const result = envSchema.safeParse(raw);
+  return parseOrThrow(envSchema, raw);
+}
+
+/** Validates only the DATABASE_* variables (see databaseEnvSchema). */
+export function validateDatabaseEnv(raw: Record<string, unknown>): DatabaseEnv {
+  return parseOrThrow(databaseEnvSchema, raw);
+}
+
+function parseOrThrow<T extends z.ZodType>(schema: T, raw: Record<string, unknown>): z.output<T> {
+  const result = schema.safeParse(raw);
   if (!result.success) {
     const problems = result.error.issues
       .map((issue) => `  - ${issue.path.join('.') || '(root)'}: ${issue.message}`)
