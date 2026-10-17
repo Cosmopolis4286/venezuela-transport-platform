@@ -96,21 +96,23 @@ Redis is optional and off by default; nothing in the default `pnpm dev` flow nee
 
 ## Troubleshooting
 
-| Symptom                                            | Fix                                                                                                                                         |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ERR_PNPM_UNSUPPORTED_ENGINE`                      | Use Node 24 (`nvm use`) and run `corepack enable`.                                                                                          |
-| API exits with `Invalid environment configuration` | The message lists each bad variable by name. Run `pnpm env:init` and compare with `apps/api/.env.example`.                                  |
-| `/health/ready` returns 503                        | Database is down or credentials differ: `pnpm infra:ps`, `pnpm db:check`. Root `.env` `POSTGRES_*` must match `apps/api/.env` `DATABASE_*`. |
-| Port 5432 already in use                           | A local PostgreSQL is running. Set `POSTGRES_PORT=5433` in `.env` **and** `DATABASE_PORT=5433` in `apps/api/.env`.                          |
-| Changed `POSTGRES_PASSWORD` but login fails        | The password is only applied when the volume is first created. Either change it inside PostgreSQL or reset local data (`pnpm infra:reset`). |
-| Mobile app cannot reach the API                    | `localhost` on a phone/emulator is the device itself. See [mobile networking](docs/development/local-setup.md#mobile-apps).                 |
-| Browser blocked by CORS                            | Add the exact origin to `CORS_ORIGINS` in `apps/api/.env`.                                                                                  |
-| Metro serves stale code after dependency changes   | `pnpm --filter @vtp/passenger-mobile exec expo start --clear --port 8081`                                                                   |
+| Symptom                                                    | Fix                                                                                                                                         |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ERR_PNPM_UNSUPPORTED_ENGINE`                              | Use Node 24 (`nvm use`) and run `corepack enable`.                                                                                          |
+| API exits with `Invalid environment configuration`         | The message lists each bad variable by name. Run `pnpm env:init` and compare with `apps/api/.env.example`.                                  |
+| API exits with `AUTH_SECRET: Invalid input` after updating | Your `apps/api/.env` predates authentication. Copy the `AUTH_*` and `OTP_*` lines from `apps/api/.env.example`.                             |
+| `/health/ready` returns 503                                | Database is down or credentials differ: `pnpm infra:ps`, `pnpm db:check`. Root `.env` `POSTGRES_*` must match `apps/api/.env` `DATABASE_*`. |
+| Port 5432 already in use                                   | A local PostgreSQL is running. Set `POSTGRES_PORT=5433` in `.env` **and** `DATABASE_PORT=5433` in `apps/api/.env`.                          |
+| Changed `POSTGRES_PASSWORD` but login fails                | The password is only applied when the volume is first created. Either change it inside PostgreSQL or reset local data (`pnpm infra:reset`). |
+| Mobile app cannot reach the API                            | `localhost` on a phone/emulator is the device itself. See [mobile networking](docs/development/local-setup.md#mobile-apps).                 |
+| Browser blocked by CORS                                    | Add the exact origin to `CORS_ORIGINS` in `apps/api/.env`.                                                                                  |
+| Metro serves stale code after dependency changes           | `pnpm --filter @vtp/passenger-mobile exec expo start --clear --port 8081`                                                                   |
 
 ## Documentation
 
 - [Architecture overview](docs/architecture/overview.md)
 - [Architecture decisions](docs/architecture/decisions.md)
+- [Authentication](docs/architecture/authentication.md)
 - [Local setup (Windows, macOS, Linux)](docs/development/local-setup.md)
 - [Environment variables](docs/development/environment-variables.md)
 - [Repository workflow](docs/development/repository-workflow.md)

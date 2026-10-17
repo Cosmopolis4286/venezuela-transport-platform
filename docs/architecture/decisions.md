@@ -134,3 +134,19 @@ musl rebuilds) and a single-VPS Compose stack with **Caddy** for automatic HTTPS
 Nginx + certbot for fewer moving parts. Images are built in CI but not pushed; publishing and
 deployment need registry credentials and an explicit decision. Image sizes at creation:
 API ≈ 490 MB, web ≈ 390 MB (mostly the Node base image).
+
+## ADR-013: Opaque session tokens, scrypt passwords and one-time codes
+
+**Decision.** Opaque random access/refresh tokens stored as HMAC hashes in a `sessions` table,
+instead of JWTs. Passwords hashed with Node's built-in scrypt. Passengers can sign in with
+e-mail + password or with one-time codes (SMS, WhatsApp, e-mail); staff accounts are the same users
+with organization memberships added by invitation or after KYC approval.
+
+**Why.** Every session is revocable immediately (logout, suspension, token replay) without a
+deny-list; there is no signing-key management; the per-request lookup is one indexed query, which
+is fine at this scale and can be cached later. scrypt needs no native module. Codes cover users
+without e-mail, which is common for passengers in Venezuela.
+
+**Trade-offs.** Each authenticated request hits the database; if that becomes a bottleneck, cache
+session lookups in Redis. Code delivery costs money per message, so it is rate-limited per
+destination and per IP, and stays `disabled` in production until a provider is chosen.

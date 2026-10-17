@@ -101,6 +101,10 @@ pnpm dev:all          # all of the above in one Turborepo TUI
 
 The API starts even if the database is down; `/api/v1/health/ready` then returns 503.
 
+In development, one-time sign-in codes are **printed to the API console** (`OTP_DELIVERY=console`),
+look for `[DEV ONLY] login code for +58 *** ***4567 via sms: 123456`. No SMS/WhatsApp/e-mail
+provider is integrated yet.
+
 ## Mobile apps
 
 Docker is **not** used for mobile development. Each app runs its own Metro bundler; open it

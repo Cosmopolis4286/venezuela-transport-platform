@@ -3,8 +3,10 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import { isApiErrorResponse } from '@vtp/shared-types';
 import request from 'supertest';
+import { Public } from '../src/modules/identity/auth.decorators.js';
 
 // Test-only route: no real throttled endpoint exists yet.
+@Public()
 @Controller({ path: 'rate-limit-probe', version: '1' })
 class ProbeController {
   @Get()
