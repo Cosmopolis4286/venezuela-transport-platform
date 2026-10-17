@@ -1,0 +1,9 @@
+{
+  "extends": "@vtp/typescript-config/node-library.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "dist",
+    "types": []
+  },
+  "include": ["src", "vitest.config.ts"]
+}

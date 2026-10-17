@@ -1,0 +1,41 @@
+# Weekly, grouped dependency updates. See docs/development/repository-workflow.md
+# ("Dependency updates") for how to review them.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: America/Caracas
+    open-pull-requests-limit: 5
+    groups:
+      # Expo pins exact native-module versions per SDK; upgrade them together with
+      # `npx expo install --fix`, never piecemeal.
+      expo-sdk:
+        patterns: ['expo', 'expo-*', '@expo/*', 'react-native', 'react-native-*', 'jest-expo']
+      nestjs:
+        patterns: ['@nestjs/*']
+      nextjs:
+        patterns: ['next', 'eslint-config-next', '@next/*']
+      tooling:
+        dependency-type: development
+        update-types: [minor, patch]
+      runtime-patches:
+        dependency-type: production
+        update-types: [patch]
+    ignore:
+      # React and React Native versions are dictated by the Expo SDK.
+      - dependency-name: react
+        update-types: [version-update:semver-major, version-update:semver-minor]
+      - dependency-name: react-dom
+        update-types: [version-update:semver-major, version-update:semver-minor]
+      - dependency-name: react-native
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: monthly

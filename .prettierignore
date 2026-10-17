@@ -1,0 +1,11 @@
+node_modules
+pnpm-lock.yaml
+.turbo
+.next
+.expo
+dist
+build
+coverage
+next-env.d.ts
+expo-env.d.ts
+apps/*/AGENTS.md

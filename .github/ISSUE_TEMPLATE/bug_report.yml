@@ -1,0 +1,43 @@
+name: Bug report
+description: Something does not work as expected.
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Do not report security vulnerabilities here — follow SECURITY.md instead.
+        Never paste real passwords, tokens or passenger personal data.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [web, passenger-mobile, transport-mobile, api, infrastructure, ci, docs]
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Include the expected behaviour.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. pnpm dev:api
+        2. curl http://localhost:4000/api/v1/...
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Node and pnpm versions, device/emulator, browser, commit SHA.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Redact secrets and personal data before pasting.
+      render: shell

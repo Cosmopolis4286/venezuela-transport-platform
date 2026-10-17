@@ -1,0 +1,28 @@
+name: Technical task
+description: Refactor, tooling, infrastructure or other engineering work.
+labels: ['technical']
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What should be true when this is done, and why does it matter?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and approach
+      description: Affected apps/packages, proposed approach, and what is explicitly out of scope.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] ...
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks, migrations or rollout notes

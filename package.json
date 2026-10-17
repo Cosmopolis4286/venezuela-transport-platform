@@ -1,0 +1,43 @@
+{
+  "name": "venezuela-transport-platform",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Venezuelan ground transportation platform — pnpm + Turborepo monorepo.",
+  "packageManager": "pnpm@10.34.7",
+  "engines": {
+    "node": ">=24.15.0 <25",
+    "pnpm": ">=10.34.0 <11"
+  },
+  "scripts": {
+    "dev": "turbo run dev --filter=@vtp/web --filter=@vtp/api",
+    "dev:all": "turbo run dev",
+    "dev:web": "turbo run dev --filter=@vtp/web",
+    "dev:api": "turbo run dev --filter=@vtp/api",
+    "dev:passenger": "turbo run dev --filter=@vtp/passenger-mobile",
+    "dev:transport": "turbo run dev --filter=@vtp/transport-mobile",
+    "build": "turbo run build",
+    "build:web": "turbo run build --filter=@vtp/web",
+    "build:api": "turbo run build --filter=@vtp/api",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:e2e": "turbo run test:e2e --filter=@vtp/api",
+    "check": "turbo run lint typecheck test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "clean": "turbo run clean && rm -rf .turbo node_modules",
+    "env:init": "node infrastructure/scripts/init-env.mjs",
+    "infra:up": "docker compose up -d --wait postgres",
+    "infra:up:redis": "docker compose --profile redis up -d --wait",
+    "infra:down": "docker compose --profile redis down",
+    "infra:ps": "docker compose --profile redis ps",
+    "infra:logs": "docker compose --profile redis logs -f --tail=200",
+    "infra:reset": "node infrastructure/scripts/reset-local-data.mjs",
+    "db:psql": "docker compose exec postgres sh -c 'psql -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"'",
+    "db:check": "pnpm --filter @vtp/api db:check"
+  },
+  "devDependencies": {
+    "prettier": "3.9.10",
+    "turbo": "2.11.9"
+  }
+}

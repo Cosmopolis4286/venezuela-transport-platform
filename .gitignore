@@ -1,0 +1,75 @@
+# ── Dependencies ───────────────────────────────────────────
+node_modules/
+.pnpm-store/
+.pnpm-debug.log*
+
+# ── Environment files & secrets (NEVER commit) ─────────────
+.env
+.env.*
+!.env.example
+!**/.env.example
+*.pem
+*.key
+*.crt
+*.p8
+*.p12
+*.jks
+*.keystore
+!debug.keystore
+*.mobileprovision
+google-services.json
+GoogleService-Info.plist
+credentials.json
+secrets/
+
+# ── Build outputs & caches ─────────────────────────────────
+dist/
+build/
+out/
+coverage/
+.turbo/
+*.tsbuildinfo
+.eslintcache
+
+# Next.js
+.next/
+next-env.d.ts
+
+# Expo / React Native
+.expo/
+.expo-shared/
+web-build/
+expo-env.d.ts
+.metro-health-check*
+.kotlin/
+*.orig.*
+# Generated native projects (Continuous Native Generation)
+apps/*-mobile/ios/
+apps/*-mobile/android/
+*.ipa
+*.apk
+*.aab
+
+# ── Local data (Docker volumes are named, but just in case) ─
+infrastructure/docker/**/data/
+*.sql.gz
+*.dump
+backups/
+*.sqlite
+*.db
+
+# ── Logs ───────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── OS / editors ───────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
