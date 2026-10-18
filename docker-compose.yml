@@ -34,7 +34,7 @@ services:
       start_period: 10s
 
   redis:
-    image: redis:8.2-alpine
+    image: redis:8.10-alpine
     profiles: ['redis']
     restart: unless-stopped
     command: ['redis-server', '--appendonly', 'yes', '--save', '60', '1000']
