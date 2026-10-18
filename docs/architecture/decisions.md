@@ -166,3 +166,16 @@ message.
 **Trade-offs.** Changing a role's permissions is a code change and a release. One role per
 membership: a person who both dispatches and drives needs the broader role (e.g. owner/admin) or
 the matrix extended.
+
+## ADR-015: KYC applications with platform review and organization consent
+
+**Decision.** Drivers and staff who are not invited submit an application with documents. Platform
+reviewers verify identity and documents; if the applicant named an organization, that organization
+then accepts or declines. Files go through a `FileStorage` interface, local disk for now.
+
+**Why.** KYC is a platform responsibility (consistent checks, one place for personal data), while
+hiring stays the organization's decision. A storage interface lets the MVP run on one VPS and move
+to S3-compatible storage without touching business code.
+
+**Trade-offs.** Local storage ties the API to one server and its volume must be backed up with the
+database. No automated identity verification yet: reviewers check documents by hand.

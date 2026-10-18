@@ -72,6 +72,7 @@ Planned modules, roughly in dependency order:
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
 | `identity`         | Users, credentials, sessions/tokens, device registration                                                                         |
 | `organizations` ✅ | Bus companies, taxi lines and terminals; memberships, roles, invitations, platform review ([organizations.md](organizations.md)) |
+| `onboarding` ✅    | Driver/staff applications, KYC documents, platform review, organization acceptance ([onboarding.md](onboarding.md))              |
 | `terminals`        | Terminals, platforms/bays, geolocation (PostGIS)                                                                                 |
 | `routes`           | Cities, stops, routes, distances (PostGIS)                                                                                       |
 | `fleet`            | Vehicles, seat maps, drivers' assignments                                                                                        |
@@ -117,7 +118,8 @@ Conventions for each new module (`apps/api/src/modules/<name>/`):
 | Authorization    | `@RequireOrganizationAccess(permission)` resolves `:organizationId` to the caller's membership (404 for non-members, 403 without the permission); `@RequirePlatformRole()` for platform staff. See [organizations.md](organizations.md) |
 | Audit log        | `AuditService.record()` → `audit_events` (identifiers only, never secrets or raw PII)                                                                                                                                                   |
 
-**Not in place yet (do not assume they exist):** KYC / provider applications, background jobs.
+**Not in place yet (do not assume they exist):** notifications (no SMS/e-mail provider), cloud file
+storage, background jobs.
 
 ## Data
 

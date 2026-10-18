@@ -41,6 +41,8 @@ export const users = pgTable(
     firstName: text(),
     lastName: text(),
     status: userStatus().notNull().default('active'),
+    /** Set when a platform reviewer approves the user's KYC application. */
+    identityVerifiedAt: timestamp({ withTimezone: true }),
     /** Platform staff only (granted with `pnpm platform:grant`); null for everyone else. */
     platformRole: platformRole(),
     ...timestamps,

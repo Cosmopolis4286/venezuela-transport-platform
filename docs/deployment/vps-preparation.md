@@ -87,6 +87,8 @@ docker build -f infrastructure/docker/production/web.Dockerfile \
       when data loss tolerance drops below 24 h.
 - [ ] Monthly **restore test** into a scratch database; a backup that was never restored is
       not a backup.
+- [ ] Back up the `api-uploads` volume (KYC documents) with the same schedule and encryption as
+      the database — the two must be restorable together.
 - [ ] Back up the reverse-proxy config and the production env file (encrypted) as well.
 
 ## 7. Health checks and monitoring

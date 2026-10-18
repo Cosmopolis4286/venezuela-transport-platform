@@ -98,6 +98,31 @@ export class OrganizationsService {
     return this.summary(organization, 'owner');
   }
 
+  async findById(id: string): Promise<OrganizationRow | undefined> {
+    const [row] = await this.database.db
+      .select()
+      .from(organizations)
+      .where(eq(organizations.id, id))
+      .limit(1);
+    return row;
+  }
+
+  /** Adds a member (used when an organization accepts an approved applicant). 409 if already a member. */
+  async addMember(
+    tx: Transaction,
+    organizationId: string,
+    userId: string,
+    role: OrganizationRole,
+  ): Promise<void> {
+    const [added] = await tx
+      .insert(memberships)
+      .values({ organizationId, userId, role })
+      .onConflictDoNothing()
+      .returning({ userId: memberships.userId });
+    if (!added)
+      throw new ApiException('CONFLICT', 'This person is already a member', HttpStatus.CONFLICT);
+  }
+
   async listForUser(userId: string): Promise<OrganizationMembershipSummary[]> {
     const rows = await this.database.db
       .select({ organization: organizations, role: memberships.role })

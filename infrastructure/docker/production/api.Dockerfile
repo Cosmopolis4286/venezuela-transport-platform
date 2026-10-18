@@ -23,6 +23,8 @@ FROM ${NODE_IMAGE} AS runtime
 ENV NODE_ENV=production API_HOST=0.0.0.0 API_PORT=4000
 WORKDIR /app
 COPY --from=build --chown=node:node /out ./
+# Uploaded KYC documents (mount a persistent, backed-up volume here).
+RUN mkdir -p /app/var/uploads && chown -R node:node /app/var && chmod 700 /app/var/uploads
 USER node
 EXPOSE 4000
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=3 \

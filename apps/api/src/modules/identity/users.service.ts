@@ -121,6 +121,17 @@ export class UsersService {
     return user!;
   }
 
+  /** Called by the onboarding module when KYC is approved. */
+  async markIdentityVerified(
+    userId: string,
+    names: { firstName: string; lastName: string },
+  ): Promise<void> {
+    await this.database.db
+      .update(users)
+      .set({ identityVerifiedAt: new Date(), ...names })
+      .where(eq(users.id, userId));
+  }
+
   private contactTaken(kind: ContactKind): ApiException {
     return new ApiException(
       'CONFLICT',
@@ -139,6 +150,7 @@ export class UsersService {
       firstName: user.firstName,
       lastName: user.lastName,
       status: user.status,
+      identityVerified: user.identityVerifiedAt !== null,
       platformRole: user.platformRole,
       createdAt: user.createdAt.toISOString(),
     };
