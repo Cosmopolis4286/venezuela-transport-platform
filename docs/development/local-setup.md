@@ -86,7 +86,7 @@ docker compose exec -T postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTG
 
 Ports are bound to `127.0.0.1`, so the database is not reachable from other machines.
 
-Optional Redis: `pnpm infra:up:redis` (adds `redis:8.2-alpine` on `127.0.0.1:6379`).
+Optional Redis: `pnpm infra:up:redis` (adds `redis:8.10-alpine` on `127.0.0.1:6379`).
 
 ## 4. Run the apps
 

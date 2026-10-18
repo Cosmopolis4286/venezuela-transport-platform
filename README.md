@@ -19,7 +19,7 @@ One Git repository (pnpm workspace + Turborepo) with **separate applications** i
 | `apps/api`                                             | Shared REST API — modular monolith                      | NestJS 12, OpenAPI/Swagger                     | http://localhost:4000/api/v1    |
 | `packages/shared-types`                                | Framework-independent API contracts                     | TypeScript                                     | —                               |
 | `packages/eslint-config`, `packages/typescript-config` | Shared lint / compiler presets                          | —                                              | —                               |
-| `docker-compose.yml`                                   | PostgreSQL 18 + PostGIS 3.6, optional Redis 8.2         | Docker Compose                                 | 127.0.0.1:5432 / 127.0.0.1:6379 |
+| `docker-compose.yml`                                   | PostgreSQL 18 + PostGIS 3.6, optional Redis 8.10        | Docker Compose                                 | 127.0.0.1:5432 / 127.0.0.1:6379 |
 
 Swagger UI: http://localhost:4000/api/docs · OpenAPI JSON: http://localhost:4000/api/docs-json
 
