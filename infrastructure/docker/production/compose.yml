@@ -48,6 +48,11 @@ services:
       API_PORT: '4000'
       API_TRUST_PROXY_HOPS: '1'
       DATABASE_HOST: postgres
+      FILE_STORAGE_DRIVER: local
+      FILE_STORAGE_LOCAL_DIR: /app/var/uploads
+    volumes:
+      # KYC documents: personal data. Back this volume up together with the database.
+      - api-uploads:/app/var/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -90,6 +95,7 @@ services:
     logging: *logging
 
 volumes:
+  api-uploads:
   postgres-data:
   caddy-data:
   caddy-config:

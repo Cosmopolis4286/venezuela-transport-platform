@@ -21,6 +21,8 @@ export interface UserProfile {
   firstName: string | null;
   lastName: string | null;
   status: UserStatus;
+  /** True once a platform reviewer approved the user's KYC application. */
+  identityVerified: boolean;
   /** Platform staff role (`admin`, `reviewer`), or null for regular users. */
   platformRole: 'admin' | 'reviewer' | null;
   createdAt: string;

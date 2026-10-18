@@ -17,7 +17,8 @@ that app.
   and get the caller with `@CurrentAuth()`. Use `ApiException` for errors with a stable code.
 - Organization routes use `@RequireOrganizationAccess(permission)`; roles and the permission
   matrix live in `packages/shared-types/src/api/organizations.ts`.
-- Implemented so far: identity (auth), audit, organizations. Do not invent bookings, payments or
+- Files go through `FileStorage` (`src/storage`), never `fs` directly; validate type by content.
+- Implemented so far: identity (auth), audit, organizations, onboarding (KYC). Do not invent bookings, payments or
   dispatch unless asked.
 - Docs live in `docs/`; update `.env.example` files and `docs/development/environment-variables.md`
   whenever configuration changes.

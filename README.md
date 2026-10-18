@@ -115,6 +115,7 @@ Redis is optional and off by default; nothing in the default `pnpm dev` flow nee
 - [Architecture decisions](docs/architecture/decisions.md)
 - [Authentication](docs/architecture/authentication.md)
 - [Organizations, roles and invitations](docs/architecture/organizations.md)
+- [Driver and staff applications (KYC)](docs/architecture/onboarding.md)
 - [Local setup (Windows, macOS, Linux)](docs/development/local-setup.md)
 - [Environment variables](docs/development/environment-variables.md)
 - [Repository workflow](docs/development/repository-workflow.md)

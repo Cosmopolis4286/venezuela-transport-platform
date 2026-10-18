@@ -73,3 +73,6 @@ Thumbs.db
 !.vscode/extensions.json
 !.vscode/settings.json
 *.swp
+
+# Local file storage (uploaded KYC documents)
+apps/api/var/

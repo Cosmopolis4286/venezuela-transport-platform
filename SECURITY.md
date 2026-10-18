@@ -21,6 +21,7 @@ This repository is an engineering foundation. As of now:
 | Logging hygiene    | Authorization/cookie/API-key headers redacted; bodies and query strings not logged                                                                                                                           |
 | Security headers   | `helmet` defaults on every API response                                                                                                                                                                      |
 | Rate limiting      | Global per-IP limit (`RATE_LIMIT_*`), in-memory (single instance). Stricter per-route limits needed for login/OTP endpoints when they exist                                                                  |
+| KYC documents      | Private files, type checked by content, random storage keys, served only to the owner and platform reviewers (every reviewer access audited). See `docs/architecture/onboarding.md`                          |
 | Audit log          | **Not implemented**                                                                                                                                                                                          |
 | Dependency updates | Dependabot weekly; pnpm blocks dependency install scripts by default                                                                                                                                         |
 

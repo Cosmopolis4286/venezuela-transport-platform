@@ -66,6 +66,12 @@ export const envSchema = z
     OTP_RESEND_SECONDS: z.coerce.number().int().min(0).max(600).default(60),
     OTP_MAX_PER_HOUR: z.coerce.number().int().min(1).max(100).default(5),
 
+    /** Where uploaded KYC documents are stored. Only `local` exists today; see docs/architecture/onboarding.md. */
+    FILE_STORAGE_DRIVER: z.enum(['local']).default('local'),
+    /** Directory for the local driver. Relative paths resolve from the API's working directory. */
+    FILE_STORAGE_LOCAL_DIR: z.string().min(1).default('var/uploads'),
+    FILE_UPLOAD_MAX_BYTES: z.coerce.number().int().min(1024).max(52_428_800).default(10_485_760),
+
     REDIS_URL: z
       .union([z.url({ protocol: /^rediss?$/ }), z.literal('')])
       .optional()
