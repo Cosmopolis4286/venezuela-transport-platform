@@ -5,6 +5,13 @@ import { AppConfigService } from '../config/app-config.service.js';
 import * as schema from './schema.js';
 
 export type Database = NodePgDatabase<typeof schema>;
+/** The `tx` handle passed to `db.transaction(async (tx) => …)`. */
+export type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
+
+/** The one way to build a Drizzle client, so the API and CLI tools share column naming. */
+export function createDatabase(pool: pg.Pool): Database {
+  return drizzle(pool, { schema, casing: 'snake_case' });
+}
 
 /**
  * Owns the PostgreSQL connection pool. The pool connects lazily, so the API can
@@ -32,7 +39,7 @@ export class DatabaseService implements OnApplicationShutdown {
       idleTimeoutMillis: 30_000,
       application_name: 'vtp-api',
     });
-    this.db = drizzle(this.pool, { schema, casing: 'snake_case' });
+    this.db = createDatabase(this.pool);
     // Without a listener, an error on an idle client would crash the process.
     this.pool.on('error', (error) =>
       this.logger.error(`Idle database client error: ${error.message}`),

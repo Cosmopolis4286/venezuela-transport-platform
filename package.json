@@ -36,7 +36,8 @@
     "db:psql": "docker compose exec postgres sh -c 'psql -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"'",
     "db:check": "pnpm --filter @vtp/api db:check",
     "db:migrate": "turbo run db:migrate --filter=@vtp/api",
-    "db:generate": "pnpm --filter @vtp/api db:generate"
+    "db:generate": "pnpm --filter @vtp/api db:generate",
+    "platform:grant": "pnpm --filter @vtp/api platform:grant"
   },
   "devDependencies": {
     "prettier": "3.9.10",

@@ -137,6 +137,18 @@ Then restart Metro with a clean cache:
 - `pnpm --filter @vtp/passenger-mobile doctor` runs `expo-doctor`, which needs internet access
   to Expo's API.
 
+## Platform administrator (first time)
+
+Sign up once (e.g. with a code to your phone), then grant yourself the admin role from the
+repository root:
+
+```bash
+pnpm platform:grant --phone 0414-1234567 --role admin
+```
+
+Admins and reviewers approve newly registered organizations. See
+[organizations.md](../architecture/organizations.md).
+
 ## 5. Verify everything
 
 ```bash

@@ -55,32 +55,33 @@ Full, per-OS instructions: [docs/development/local-setup.md](docs/development/lo
 
 All commands run from the repository root.
 
-| Task                                          | Command                                               |
-| --------------------------------------------- | ----------------------------------------------------- |
-| Install dependencies (from lockfile)          | `pnpm install` (CI: `pnpm install --frozen-lockfile`) |
-| Create local env files                        | `pnpm env:init`                                       |
-| Run web + API                                 | `pnpm dev`                                            |
-| Run everything (web, API, both Metro servers) | `pnpm dev:all`                                        |
-| Run only the web app                          | `pnpm dev:web`                                        |
-| Run only the API                              | `pnpm dev:api`                                        |
-| Run only the passenger app                    | `pnpm dev:passenger`                                  |
-| Run only the transport-provider app           | `pnpm dev:transport`                                  |
-| Lint                                          | `pnpm lint`                                           |
-| Type-check                                    | `pnpm typecheck`                                      |
-| Unit tests                                    | `pnpm test`                                           |
-| API end-to-end tests (needs database)         | `E2E_EXPECT_DATABASE=true pnpm test:e2e`              |
-| Lint + typecheck + tests                      | `pnpm check`                                          |
-| Format / check formatting                     | `pnpm format` / `pnpm format:check`                   |
-| Build web + API (+ shared packages)           | `pnpm build` (or `pnpm build:web`, `pnpm build:api`)  |
-| Start database                                | `pnpm infra:up`                                       |
-| Start database + Redis                        | `pnpm infra:up:redis`                                 |
-| Stop infrastructure (keeps data)              | `pnpm infra:down`                                     |
-| Container status / logs                       | `pnpm infra:ps` / `pnpm infra:logs`                   |
-| Check DB connectivity + PostGIS               | `pnpm db:check`                                       |
-| Apply database migrations                     | `pnpm db:migrate`                                     |
-| Generate a migration after a schema change    | `pnpm db:generate --name=<change>`                    |
-| Open `psql` in the container                  | `pnpm db:psql`                                        |
-| **Delete** local DB/Redis data                | `pnpm infra:reset` (asks for confirmation)            |
+| Task                                          | Command                                                    |
+| --------------------------------------------- | ---------------------------------------------------------- |
+| Install dependencies (from lockfile)          | `pnpm install` (CI: `pnpm install --frozen-lockfile`)      |
+| Create local env files                        | `pnpm env:init`                                            |
+| Run web + API                                 | `pnpm dev`                                                 |
+| Run everything (web, API, both Metro servers) | `pnpm dev:all`                                             |
+| Run only the web app                          | `pnpm dev:web`                                             |
+| Run only the API                              | `pnpm dev:api`                                             |
+| Run only the passenger app                    | `pnpm dev:passenger`                                       |
+| Run only the transport-provider app           | `pnpm dev:transport`                                       |
+| Lint                                          | `pnpm lint`                                                |
+| Type-check                                    | `pnpm typecheck`                                           |
+| Unit tests                                    | `pnpm test`                                                |
+| API end-to-end tests (needs database)         | `E2E_EXPECT_DATABASE=true pnpm test:e2e`                   |
+| Lint + typecheck + tests                      | `pnpm check`                                               |
+| Format / check formatting                     | `pnpm format` / `pnpm format:check`                        |
+| Build web + API (+ shared packages)           | `pnpm build` (or `pnpm build:web`, `pnpm build:api`)       |
+| Start database                                | `pnpm infra:up`                                            |
+| Start database + Redis                        | `pnpm infra:up:redis`                                      |
+| Stop infrastructure (keeps data)              | `pnpm infra:down`                                          |
+| Container status / logs                       | `pnpm infra:ps` / `pnpm infra:logs`                        |
+| Check DB connectivity + PostGIS               | `pnpm db:check`                                            |
+| Apply database migrations                     | `pnpm db:migrate`                                          |
+| Generate a migration after a schema change    | `pnpm db:generate --name=<change>`                         |
+| Open `psql` in the container                  | `pnpm db:psql`                                             |
+| Grant a platform staff role                   | `pnpm platform:grant --email you@example.com --role admin` |
+| **Delete** local DB/Redis data                | `pnpm infra:reset` (asks for confirmation)                 |
 
 > ⚠️ `pnpm infra:reset` runs `docker compose down --volumes`. Deleting Docker volumes
 > **permanently removes all local database data.** It asks you to type `vtp` first.
@@ -113,6 +114,7 @@ Redis is optional and off by default; nothing in the default `pnpm dev` flow nee
 - [Architecture overview](docs/architecture/overview.md)
 - [Architecture decisions](docs/architecture/decisions.md)
 - [Authentication](docs/architecture/authentication.md)
+- [Organizations, roles and invitations](docs/architecture/organizations.md)
 - [Local setup (Windows, macOS, Linux)](docs/development/local-setup.md)
 - [Environment variables](docs/development/environment-variables.md)
 - [Repository workflow](docs/development/repository-workflow.md)

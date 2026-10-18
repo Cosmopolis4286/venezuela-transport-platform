@@ -15,7 +15,9 @@ that app.
   `apps/api/drizzle/`. Never edit an applied migration.
 - API routes are **private by default** (global `AuthGuard`); mark public ones with `@Public()`
   and get the caller with `@CurrentAuth()`. Use `ApiException` for errors with a stable code.
-- Implemented so far: identity (auth) and audit. Do not invent bookings, payments or dispatch
-  unless asked.
+- Organization routes use `@RequireOrganizationAccess(permission)`; roles and the permission
+  matrix live in `packages/shared-types/src/api/organizations.ts`.
+- Implemented so far: identity (auth), audit, organizations. Do not invent bookings, payments or
+  dispatch unless asked.
 - Docs live in `docs/`; update `.env.example` files and `docs/development/environment-variables.md`
   whenever configuration changes.

@@ -68,20 +68,20 @@ apps/api/src/
 
 Planned modules, roughly in dependency order:
 
-| Module          | Owns                                                                          |
-| --------------- | ----------------------------------------------------------------------------- |
-| `identity`      | Users, credentials, sessions/tokens, device registration                      |
-| `organizations` | Bus companies, taxi cooperatives, terminals as tenants; memberships and roles |
-| `terminals`     | Terminals, platforms/bays, geolocation (PostGIS)                              |
-| `routes`        | Cities, stops, routes, distances (PostGIS)                                    |
-| `fleet`         | Vehicles, seat maps, drivers' assignments                                     |
-| `schedules`     | Departures, frequencies, exceptions                                           |
-| `bookings`      | Seat holds, reservations, passenger manifests                                 |
-| `ticketing`     | Ticket issuance, QR codes, validation/check-in                                |
-| `taxi-dispatch` | Taxi requests, matching, trip lifecycle (WebSockets only if justified)        |
-| `payments`      | Payment intents, provider integrations, settlements to operators              |
-| `notifications` | SMS / push / e-mail delivery, templates                                       |
-| `reporting`     | Read models and exports for operators                                         |
+| Module             | Owns                                                                                                                             |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `identity`         | Users, credentials, sessions/tokens, device registration                                                                         |
+| `organizations` ✅ | Bus companies, taxi lines and terminals; memberships, roles, invitations, platform review ([organizations.md](organizations.md)) |
+| `terminals`        | Terminals, platforms/bays, geolocation (PostGIS)                                                                                 |
+| `routes`           | Cities, stops, routes, distances (PostGIS)                                                                                       |
+| `fleet`            | Vehicles, seat maps, drivers' assignments                                                                                        |
+| `schedules`        | Departures, frequencies, exceptions                                                                                              |
+| `bookings`         | Seat holds, reservations, passenger manifests                                                                                    |
+| `ticketing`        | Ticket issuance, QR codes, validation/check-in                                                                                   |
+| `taxi-dispatch`    | Taxi requests, matching, trip lifecycle (WebSockets only if justified)                                                           |
+| `payments`         | Payment intents, provider integrations, settlements to operators                                                                 |
+| `notifications`    | SMS / push / e-mail delivery, templates                                                                                          |
+| `reporting`        | Read models and exports for operators                                                                                            |
 
 Conventions for each new module (`apps/api/src/modules/<name>/`):
 
@@ -99,25 +99,25 @@ Conventions for each new module (`apps/api/src/modules/<name>/`):
 
 ### Cross-cutting behaviour already in place
 
-| Concern          | Implementation                                                                                                                                                                                |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Versioning       | Global prefix `api` + URI versioning, default `v1` → `/api/v1/...`                                                                                                                            |
-| Validation       | Global `ValidationPipe`: whitelist, reject unknown fields, transform; never echoes values                                                                                                     |
-| Errors           | `HttpExceptionFilter` → `ApiErrorResponse` (`packages/shared-types/src/api/errors.ts`)                                                                                                        |
-| Config           | `zod` schema validated at boot; process exits listing invalid variable names                                                                                                                  |
-| Logging          | `nestjs-pino`: JSON in prod, pretty in dev; request IDs (`x-request-id`); auth headers/cookies redacted; query strings and bodies not logged                                                  |
-| CORS             | Explicit allowlist from `CORS_ORIGINS`; `*` rejected in production                                                                                                                            |
-| API docs         | Swagger at `/api/docs`, on by default outside production                                                                                                                                      |
-| Shutdown         | `enableShutdownHooks()`; DB pool closed on SIGTERM/SIGINT                                                                                                                                     |
-| Health           | `/api/v1/health` (liveness), `/api/v1/health/ready` (DB readiness, 503 when down)                                                                                                             |
-| Security headers | `helmet` defaults (CSP, HSTS, nosniff, frame-ancestors…); `x-powered-by` removed                                                                                                              |
-| Rate limiting    | `@nestjs/throttler` global guard per client IP (`RATE_LIMIT_*`); health probes exempt via `@SkipThrottle()`. In-memory store: move to Redis storage before running more than one API instance |
-| Proxies          | `trust proxy` set from `API_TRUST_PROXY_HOPS` so client IPs are correct behind Caddy/Nginx                                                                                                    |
-| Authentication   | Global `AuthGuard`: every route requires a bearer access token unless marked `@Public()`. See [authentication.md](authentication.md)                                                          |
-| Audit log        | `AuditService.record()` → `audit_events` (identifiers only, never secrets or raw PII)                                                                                                         |
+| Concern          | Implementation                                                                                                                                                                                                                          |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Versioning       | Global prefix `api` + URI versioning, default `v1` → `/api/v1/...`                                                                                                                                                                      |
+| Validation       | Global `ValidationPipe`: whitelist, reject unknown fields, transform; never echoes values                                                                                                                                               |
+| Errors           | `HttpExceptionFilter` → `ApiErrorResponse` (`packages/shared-types/src/api/errors.ts`)                                                                                                                                                  |
+| Config           | `zod` schema validated at boot; process exits listing invalid variable names                                                                                                                                                            |
+| Logging          | `nestjs-pino`: JSON in prod, pretty in dev; request IDs (`x-request-id`); auth headers/cookies redacted; query strings and bodies not logged                                                                                            |
+| CORS             | Explicit allowlist from `CORS_ORIGINS`; `*` rejected in production                                                                                                                                                                      |
+| API docs         | Swagger at `/api/docs`, on by default outside production                                                                                                                                                                                |
+| Shutdown         | `enableShutdownHooks()`; DB pool closed on SIGTERM/SIGINT                                                                                                                                                                               |
+| Health           | `/api/v1/health` (liveness), `/api/v1/health/ready` (DB readiness, 503 when down)                                                                                                                                                       |
+| Security headers | `helmet` defaults (CSP, HSTS, nosniff, frame-ancestors…); `x-powered-by` removed                                                                                                                                                        |
+| Rate limiting    | `@nestjs/throttler` global guard per client IP (`RATE_LIMIT_*`); health probes exempt via `@SkipThrottle()`. In-memory store: move to Redis storage before running more than one API instance                                           |
+| Proxies          | `trust proxy` set from `API_TRUST_PROXY_HOPS` so client IPs are correct behind Caddy/Nginx                                                                                                                                              |
+| Authentication   | Global `AuthGuard`: every route requires a bearer access token unless marked `@Public()`. See [authentication.md](authentication.md)                                                                                                    |
+| Authorization    | `@RequireOrganizationAccess(permission)` resolves `:organizationId` to the caller's membership (404 for non-members, 403 without the permission); `@RequirePlatformRole()` for platform staff. See [organizations.md](organizations.md) |
+| Audit log        | `AuditService.record()` → `audit_events` (identifiers only, never secrets or raw PII)                                                                                                                                                   |
 
-**Not in place yet (do not assume they exist):** organization-level authorization (roles and
-permissions), background jobs.
+**Not in place yet (do not assume they exist):** KYC / provider applications, background jobs.
 
 ## Data
 

@@ -10,15 +10,16 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { AUTH_CLIENTS, OTP_CHANNELS, OTP_PURPOSES } from '@vtp/shared-types';
+import { AUTH_CLIENTS, OTP_CHANNELS, OTP_PURPOSES, PLATFORM_ROLES } from '@vtp/shared-types';
 import { citext } from '../../database/column-types.js';
 
 export const userStatus = pgEnum('user_status', ['active', 'suspended']);
 export const authClient = pgEnum('auth_client', AUTH_CLIENTS);
 export const otpChannel = pgEnum('otp_channel', OTP_CHANNELS);
 export const otpPurpose = pgEnum('otp_purpose', OTP_PURPOSES);
+export const platformRole = pgEnum('platform_role', PLATFORM_ROLES);
 
-const timestamps = {
+export const timestamps = {
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp({ withTimezone: true })
     .notNull()
@@ -40,6 +41,8 @@ export const users = pgTable(
     firstName: text(),
     lastName: text(),
     status: userStatus().notNull().default('active'),
+    /** Platform staff only (granted with `pnpm platform:grant`); null for everyone else. */
+    platformRole: platformRole(),
     ...timestamps,
   },
   (t) => [
