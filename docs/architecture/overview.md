@@ -33,15 +33,17 @@ describes the boundaries the foundation sets up so those features have an obviou
 | App                     | Audience                                              | Responsibility                                                                                                                                                                                                                  | Talks to                     |
 | ----------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
 | `apps/web`              | Public visitors; staff of bus companies and terminals | Public site and bus search (route group `(public)`), operator portal under `/portal` with its own layout. Signed-in areas `/portal` and `/admin` are guarded by `src/proxy.ts` and API checks ([web-portal.md](web-portal.md)). | API over HTTPS               |
-| `apps/passenger-mobile` | Passengers                                            | Search, booking, tickets, taxi requests (future)                                                                                                                                                                                | API over HTTPS               |
-| `apps/transport-mobile` | Taxi drivers, bus crews, terminal operators           | Trip/dispatch handling, QR ticket validation (future)                                                                                                                                                                           | API over HTTPS               |
+| `apps/passenger-mobile` | Passengers                                            | Sign-in and account today; search, booking, tickets, taxi requests later ([mobile-apps.md](mobile-apps.md))                                                                                                                     | API over HTTPS               |
+| `apps/transport-mobile` | Taxi drivers, bus crews, terminal operators           | Sign-in, invitations, KYC application with documents today; dispatch and QR ticket validation later                                                                                                                             | API over HTTPS               |
 | `apps/api`              | All clients                                           | Single source of truth for business rules, authorization and data                                                                                                                                                               | PostgreSQL, Redis (optional) |
 
 Rules:
 
 - **Clients never talk to the database or to each other.** Everything goes through the API.
 - **The two mobile apps stay separate.** Different users, permissions, release cadence and
-  app-store listings. They may share _contracts_ (`@vtp/shared-types`) but not UI code.
+  app-store listings. Besides _contracts_ (`@vtp/shared-types`) they share only session handling,
+  the API client and the sign-in screens (`@vtp/mobile-core`, [ADR-016](decisions.md)); every
+  feature screen lives in its own app ([mobile-apps.md](mobile-apps.md)).
 - **Web and mobile do not share UI components.** React DOM and React Native components are
   different; sharing would couple their release cycles for little gain.
 - The public website and the operator portal share one Next.js app but use separate route

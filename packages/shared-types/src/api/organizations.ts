@@ -35,6 +35,13 @@ export const ORGANIZATION_TYPE_LABELS: Record<OrganizationType, string> = {
   terminal: 'Terminal',
 };
 
+export const ORGANIZATION_STATUS_LABELS: Record<OrganizationStatus, string> = {
+  pending_review: 'En revisión',
+  active: 'Activa',
+  suspended: 'Suspendida',
+  rejected: 'Rechazada',
+};
+
 export const ROLES_BY_ORGANIZATION_TYPE: Record<OrganizationType, readonly OrganizationRole[]> = {
   bus_company: ['owner', 'admin', 'dispatcher', 'ticket_agent', 'driver', 'inspector'],
   taxi_line: ['owner', 'admin', 'dispatcher', 'driver'],
@@ -137,6 +144,15 @@ export interface ReceivedInvitation {
   role: OrganizationRole;
   expiresAt: string;
 }
+
+/**
+ * `GET /api/v1/organizations/directory?type=&q=` — active organizations people can apply to.
+ * Public listing data only: no RIF, contacts or members.
+ */
+export type OrganizationDirectoryEntry = Pick<
+  Organization,
+  'id' | 'type' | 'legalName' | 'tradeName' | 'state' | 'city'
+>;
 
 /** `POST /api/v1/organizations` — the creator becomes owner; status starts as `pending_review`. */
 export interface CreateOrganizationRequest {

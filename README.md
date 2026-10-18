@@ -18,6 +18,7 @@ One Git repository (pnpm workspace + Turborepo) with **separate applications** i
 | `apps/transport-mobile`                                | Drivers, transport companies, terminal operators        | Expo SDK 58, Expo Router                       | Metro on :8082                  |
 | `apps/api`                                             | Shared REST API — modular monolith                      | NestJS 12, OpenAPI/Swagger                     | http://localhost:4000/api/v1    |
 | `packages/shared-types`                                | Framework-independent API contracts                     | TypeScript                                     | —                               |
+| `packages/mobile-core`                                 | Session, API client and sign-in screens for both apps   | React Native (TypeScript source)               | —                               |
 | `packages/eslint-config`, `packages/typescript-config` | Shared lint / compiler presets                          | —                                              | —                               |
 | `docker-compose.yml`                                   | PostgreSQL 18 + PostGIS 3.6, optional Redis 8.10        | Docker Compose                                 | 127.0.0.1:5432 / 127.0.0.1:6379 |
 
@@ -117,6 +118,7 @@ Redis is optional and off by default; nothing in the default `pnpm dev` flow nee
 - [Organizations, roles and invitations](docs/architecture/organizations.md)
 - [Driver and staff applications (KYC)](docs/architecture/onboarding.md)
 - [Web portal and admin panel](docs/architecture/web-portal.md)
+- [Mobile apps](docs/architecture/mobile-apps.md)
 - [Local setup (Windows, macOS, Linux)](docs/development/local-setup.md)
 - [Environment variables](docs/development/environment-variables.md)
 - [Repository workflow](docs/development/repository-workflow.md)

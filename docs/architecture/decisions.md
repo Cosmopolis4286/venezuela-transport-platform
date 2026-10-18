@@ -179,3 +179,20 @@ to S3-compatible storage without touching business code.
 
 **Trade-offs.** Local storage ties the API to one server and its volume must be backed up with the
 database. No automated identity verification yet: reviewers check documents by hand.
+
+## ADR-016: Shared mobile session package, tokens in the device keychain
+
+**Decision.** `packages/mobile-core` (`@vtp/mobile-core`) holds the API client, session handling,
+a small UI kit and the sign-in and registration screens used by both Expo apps. Metro consumes it as
+TypeScript source (no build step). Tokens are stored with `expo-secure-store` (iOS Keychain /
+Android Keystore, `WHEN_UNLOCKED_THIS_DEVICE_ONLY`). Feature screens stay inside each app.
+
+**Why.** Sign-in, token refresh and secure storage are security-sensitive and identical in both
+apps; two copies would drift. Refresh tokens rotate and a replay revokes the session, so the
+serialised refresh logic must exist exactly once and be unit-tested.
+
+**Trade-offs.** A change to the shared screens ships in both apps' next builds. `react` and
+`react-native` must stay on the same versions in the package and the apps, or Metro bundles two
+copies of React; CI's mobile bundle job would not catch a duplicate, so keep them in the catalog
+or pinned identically. The browser preview (`expo start --web`) has no secure storage and keeps the
+session in memory only.

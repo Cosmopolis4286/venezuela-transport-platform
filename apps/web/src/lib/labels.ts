@@ -1,19 +1,4 @@
-import type { ApplicationStatus, OrganizationStatus } from '@vtp/shared-types';
-
-export const ORGANIZATION_STATUS_LABELS: Record<OrganizationStatus, string> = {
-  pending_review: 'En revisión',
-  active: 'Activa',
-  suspended: 'Suspendida',
-  rejected: 'Rechazada',
-};
-
-export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
-  draft: 'Borrador',
-  submitted: 'Enviada',
-  changes_requested: 'Requiere cambios',
-  approved: 'Aprobada',
-  rejected: 'Rechazada',
-};
+export { APPLICATION_STATUS_LABELS, ORGANIZATION_STATUS_LABELS } from '@vtp/shared-types';
 
 export function statusVariant(status: string): 'success' | 'warning' | 'destructive' | 'secondary' {
   if (status === 'active' || status === 'approved' || status === 'accepted') return 'success';

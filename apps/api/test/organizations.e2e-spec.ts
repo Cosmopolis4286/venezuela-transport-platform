@@ -3,6 +3,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import type {
   AuthResponse,
+  OrganizationDirectoryEntry,
   OrganizationInvitation,
   OrganizationMembershipSummary,
   OtpChallengeResponse,
@@ -446,6 +447,50 @@ describe.runIf(expectDatabase)('Organizations (e2e)', () => {
         await http().get('/api/v1/me/organizations').set('Authorization', owner.auth).expect(200)
       ).body as OrganizationMembershipSummary[];
       expect(membership!.organization.status).toBe('suspended');
+    });
+
+    it('lists only active organizations in the directory, filtered by type and name', async () => {
+      const owner = await newUser();
+      const name = `Línea Directorio ${randomUUID().slice(0, 8)}`;
+      const created = async () =>
+        (
+          await http()
+            .post('/api/v1/organizations')
+            .set('Authorization', owner.auth)
+            .send({ type: 'taxi_line', legalName: name, rif: uniqueRif(), city: 'Maracay' })
+            .expect(201)
+        ).body as OrganizationMembershipSummary;
+      const active = await created();
+      const pending = await created();
+      const reviewer = await newUser();
+      await makeReviewer(reviewer.user.id);
+      await http()
+        .post(`/api/v1/admin/organizations/${active.organization.id}/review`)
+        .set('Authorization', reviewer.auth)
+        .send({ decision: 'approve' })
+        .expect(200);
+
+      const search = (query: Record<string, string>) =>
+        http().get('/api/v1/organizations/directory').query(query).set('Authorization', owner.auth);
+      const found = (await search({ q: name.slice(6).toUpperCase() }).expect(200))
+        .body as OrganizationDirectoryEntry[];
+      expect(found.map((o) => o.id)).toEqual([active.organization.id]);
+      expect(found[0]).toEqual({
+        id: active.organization.id,
+        type: 'taxi_line',
+        legalName: name,
+        tradeName: null,
+        state: null,
+        city: 'Maracay',
+      });
+      expect(found.map((o) => o.id)).not.toContain(pending.organization.id);
+
+      const buses = (await search({ type: 'bus_company', q: name }).expect(200)).body;
+      expect(buses).toEqual([]);
+      // LIKE wildcards are matched literally.
+      expect((await search({ q: '%' }).expect(200)).body).toEqual([]);
+      await search({ type: 'airline' }).expect(400);
+      await http().get('/api/v1/organizations/directory').expect(401);
     });
   });
 });
