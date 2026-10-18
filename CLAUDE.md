@@ -17,6 +17,9 @@ that app.
   and get the caller with `@CurrentAuth()`. Use `ApiException` for errors with a stable code.
 - Organization routes use `@RequireOrganizationAccess(permission)`; roles and the permission
   matrix live in `packages/shared-types/src/api/organizations.ts`.
+- Web (`apps/web`): pages that read the session render inside `<Suspense>` (Cache Components);
+  call the API only from server code in `src/lib/server`; Server Actions return `FormState`; never
+  pass functions from Server to Client Components.
 - Files go through `FileStorage` (`src/storage`), never `fs` directly; validate type by content.
 - Implemented so far: identity (auth), audit, organizations, onboarding (KYC). Do not invent bookings, payments or
   dispatch unless asked.

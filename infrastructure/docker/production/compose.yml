@@ -77,6 +77,9 @@ services:
     # NEXT_PUBLIC_API_BASE_URL is baked in when the image is built.
     image: ${VTP_WEB_IMAGE:?Set VTP_WEB_IMAGE to an immutable tag (git SHA)}
     restart: unless-stopped
+    environment:
+      # Server Actions and the session proxy reach the API over the private network.
+      API_INTERNAL_BASE_URL: http://api:4000/api/v1
     logging: *logging
 
   postgres:

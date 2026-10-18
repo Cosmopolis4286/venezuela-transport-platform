@@ -66,7 +66,9 @@ Template: `apps/web/.env.example`. Validated in `apps/web/src/lib/env.ts`; build
 | -------------------------- | -------- | --------------- | ------------------------------ | ---------------------------------------------------------------------------------------- |
 | `NEXT_PUBLIC_API_BASE_URL` | yes      | **no — public** | `http://localhost:4000/api/v1` | API base URL used by the browser. Inlined at **build** time; changing it needs a rebuild |
 
-Server-only web variables (none yet) must **not** use the `NEXT_PUBLIC_` prefix.
+| `API_INTERNAL_BASE_URL` | no | no | — | Server-only. API URL used by the web server (Server Actions, proxy); set to the private address in Docker, e.g. `http://api:4000/api/v1`. Defaults to `NEXT_PUBLIC_API_BASE_URL` |
+
+Server-only web variables must **not** use the `NEXT_PUBLIC_` prefix.
 
 ## `apps/passenger-mobile/.env` and `apps/transport-mobile/.env` — mobile (Expo)
 
