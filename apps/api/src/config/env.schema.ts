@@ -7,6 +7,23 @@ const booleanString = z
 const optionalBoolean = (defaultValue: boolean) =>
   booleanString.optional().transform((value) => value ?? defaultValue);
 
+/**
+ * Database connection settings alone. Tools that only touch the database (migrations, CLI
+ * scripts) validate just these, so they do not need the API's secrets.
+ */
+const databaseEnvShape = {
+  DATABASE_HOST: z.string().min(1),
+  DATABASE_PORT: z.coerce.number().int().min(1).max(65535).default(5432),
+  DATABASE_NAME: z.string().min(1),
+  DATABASE_USER: z.string().min(1),
+  DATABASE_PASSWORD: z.string().min(1),
+  DATABASE_SSL: optionalBoolean(false),
+  DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
+};
+
+export const databaseEnvSchema = z.object(databaseEnvShape);
+export type DatabaseEnv = z.output<typeof databaseEnvSchema>;
+
 export const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -34,13 +51,20 @@ export const envSchema = z
       .default('info'),
     SWAGGER_ENABLED: booleanString.optional(),
 
-    DATABASE_HOST: z.string().min(1),
-    DATABASE_PORT: z.coerce.number().int().min(1).max(65535).default(5432),
-    DATABASE_NAME: z.string().min(1),
-    DATABASE_USER: z.string().min(1),
-    DATABASE_PASSWORD: z.string().min(1),
-    DATABASE_SSL: optionalBoolean(false),
-    DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
+    ...databaseEnvShape,
+
+    /** HMAC key for session-token and OTP hashes. Rotating it signs every user out. */
+    AUTH_SECRET: z.string().min(32, 'Must be at least 32 characters'),
+    AUTH_ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().int().min(1).max(60).default(15),
+    AUTH_REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(30),
+    /** Per-IP limit for login, registration and OTP endpoints, per minute. */
+    AUTH_RATE_LIMIT_MAX: z.coerce.number().int().min(1).max(10_000).default(10),
+    /** How one-time codes are delivered. `console` prints them to the log (development only). */
+    OTP_DELIVERY: z.enum(['console', 'disabled']).default('console'),
+    OTP_TTL_MINUTES: z.coerce.number().int().min(1).max(30).default(5),
+    OTP_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(10).default(5),
+    OTP_RESEND_SECONDS: z.coerce.number().int().min(0).max(600).default(60),
+    OTP_MAX_PER_HOUR: z.coerce.number().int().min(1).max(100).default(5),
 
     REDIS_URL: z
       .union([z.url({ protocol: /^rediss?$/ }), z.literal('')])
@@ -54,6 +78,21 @@ export const envSchema = z
         code: 'custom',
         path: ['CORS_ORIGINS'],
         message: 'Wildcard origins are not allowed in production',
+      });
+    }
+    if (/change-me/i.test(env.AUTH_SECRET)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['AUTH_SECRET'],
+        message: 'Generate a unique random secret for production',
+      });
+    }
+    if (env.OTP_DELIVERY === 'console') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['OTP_DELIVERY'],
+        message:
+          'console delivery prints codes to the logs; configure a real provider or use disabled',
       });
     }
     if (env.DATABASE_PASSWORD.length < 16 || /change-me/i.test(env.DATABASE_PASSWORD)) {
@@ -77,7 +116,16 @@ export type Env = z.output<typeof envSchema>;
  * by name only — values are never echoed, so secrets do not leak into logs.
  */
 export function validateEnv(raw: Record<string, unknown>): Env {
-  const result = envSchema.safeParse(raw);
+  return parseOrThrow(envSchema, raw);
+}
+
+/** Validates only the DATABASE_* variables (see databaseEnvSchema). */
+export function validateDatabaseEnv(raw: Record<string, unknown>): DatabaseEnv {
+  return parseOrThrow(databaseEnvSchema, raw);
+}
+
+function parseOrThrow<T extends z.ZodType>(schema: T, raw: Record<string, unknown>): z.output<T> {
+  const result = schema.safeParse(raw);
   if (!result.success) {
     const problems = result.error.issues
       .map((issue) => `  - ${issue.path.join('.') || '(root)'}: ${issue.message}`)

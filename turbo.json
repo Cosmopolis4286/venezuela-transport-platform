@@ -29,7 +29,17 @@
     "test:e2e": {
       "dependsOn": ["^build"],
       "cache": false,
-      "env": ["E2E_*", "DATABASE_*", "API_*", "CORS_ORIGINS", "LOG_LEVEL", "SWAGGER_ENABLED"]
+      "env": [
+        "E2E_*",
+        "DATABASE_*",
+        "API_*",
+        "AUTH_*",
+        "OTP_*",
+        "RATE_LIMIT_*",
+        "CORS_ORIGINS",
+        "LOG_LEVEL",
+        "SWAGGER_ENABLED"
+      ]
     },
     "export": {
       "dependsOn": ["^build"],

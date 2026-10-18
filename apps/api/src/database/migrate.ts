@@ -5,9 +5,9 @@ import { fileURLToPath } from 'node:url';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import pg from 'pg';
-import { validateEnv } from '../config/env.schema.js';
+import { validateDatabaseEnv } from '../config/env.schema.js';
 
-const env = validateEnv(process.env);
+const env = validateDatabaseEnv(process.env);
 // dist/database/migrate.js → apps/api/drizzle
 const migrationsFolder = fileURLToPath(new URL('../../drizzle', import.meta.url));
 

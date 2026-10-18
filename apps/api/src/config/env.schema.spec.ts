@@ -1,10 +1,19 @@
-import { validateEnv } from './env.schema.js';
+import { validateDatabaseEnv, validateEnv } from './env.schema.js';
 
 const valid = {
   DATABASE_HOST: '127.0.0.1',
   DATABASE_NAME: 'vtp_dev',
   DATABASE_USER: 'vtp',
   DATABASE_PASSWORD: 'change-me-local-only',
+  AUTH_SECRET: 'change-me-local-only-dev-secret-0123456789',
+};
+
+const productionValid = {
+  ...valid,
+  NODE_ENV: 'production',
+  DATABASE_PASSWORD: 'a-long-unique-production-password',
+  AUTH_SECRET: 'f3c1d0a8b2e94c6f8a7d1e2b3c4d5e6f',
+  OTP_DELIVERY: 'disabled',
 };
 
 describe('validateEnv', () => {
@@ -60,12 +69,42 @@ describe('validateEnv', () => {
   });
 
   it('disables Swagger in production by default', () => {
-    const env = validateEnv({
-      ...valid,
-      NODE_ENV: 'production',
-      DATABASE_PASSWORD: 'a-long-unique-production-password',
+    expect(validateEnv(productionValid).SWAGGER_ENABLED).toBe(false);
+  });
+
+  it('applies authentication defaults', () => {
+    expect(validateEnv(valid)).toMatchObject({
+      AUTH_ACCESS_TOKEN_TTL_MINUTES: 15,
+      AUTH_REFRESH_TOKEN_TTL_DAYS: 30,
+      AUTH_RATE_LIMIT_MAX: 10,
+      OTP_DELIVERY: 'console',
+      OTP_TTL_MINUTES: 5,
+      OTP_MAX_ATTEMPTS: 5,
     });
-    expect(env.SWAGGER_ENABLED).toBe(false);
+  });
+
+  it('requires a long AUTH_SECRET', () => {
+    expect(() => validateEnv({ ...valid, AUTH_SECRET: 'short' })).toThrow(/AUTH_SECRET/);
+  });
+
+  it('forbids placeholder secrets and console OTP delivery in production', () => {
+    expect(() =>
+      validateEnv({
+        ...productionValid,
+        AUTH_SECRET: 'change-me-local-only-dev-secret-0123456789',
+        OTP_DELIVERY: 'console',
+      }),
+    ).toThrow(/AUTH_SECRET[\s\S]*OTP_DELIVERY/);
+    expect(() => validateEnv(productionValid)).not.toThrow();
+  });
+
+  it('validates database settings alone for migration tooling', () => {
+    const { AUTH_SECRET: _omitted, ...databaseOnly } = valid;
+    expect(validateDatabaseEnv(databaseOnly)).toMatchObject({
+      DATABASE_PORT: 5432,
+      DATABASE_SSL: false,
+    });
+    expect(() => validateDatabaseEnv({ AUTH_SECRET: valid.AUTH_SECRET })).toThrow(/DATABASE_HOST/);
   });
 
   it('accepts an empty optional REDIS_URL and rejects a non-redis URL', () => {

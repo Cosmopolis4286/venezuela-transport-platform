@@ -9,6 +9,7 @@ export function setupSwagger(app: INestApplication): void {
     .setTitle('Venezuela Transport Platform API')
     .setDescription('REST API for the passenger, transport-provider and web applications.')
     .setVersion('1')
+    .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup(SWAGGER_PATH, app, document, { jsonDocumentUrl: `${SWAGGER_PATH}-json` });

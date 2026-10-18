@@ -62,6 +62,7 @@ jobs:
       DATABASE_NAME: vtp_ci
       DATABASE_USER: vtp
       DATABASE_PASSWORD: ci-only-not-a-secret
+      AUTH_SECRET: ci-only-not-a-secret-0123456789abcdef
       E2E_EXPECT_DATABASE: 'true'
     steps:
       - uses: actions/checkout@v5

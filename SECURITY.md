@@ -11,17 +11,18 @@ We aim to acknowledge reports within 3 business days.
 
 This repository is an engineering foundation. As of now:
 
-| Control                        | Status                                                                                                                                      |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Authentication / authorization | **Not implemented.** No endpoint other than health checks exists. `/portal` in the web app is a placeholder with no access control.         |
-| Input validation               | Global `ValidationPipe` (whitelist + reject unknown fields) ready for DTOs                                                                  |
-| Config validation              | API refuses to start with invalid config; production rejects `*` CORS and weak DB passwords                                                 |
-| CORS                           | Explicit allowlist                                                                                                                          |
-| Logging hygiene                | Authorization/cookie/API-key headers redacted; bodies and query strings not logged                                                          |
-| Security headers               | `helmet` defaults on every API response                                                                                                     |
-| Rate limiting                  | Global per-IP limit (`RATE_LIMIT_*`), in-memory (single instance). Stricter per-route limits needed for login/OTP endpoints when they exist |
-| Audit log                      | **Not implemented**                                                                                                                         |
-| Dependency updates             | Dependabot weekly; pnpm blocks dependency install scripts by default                                                                        |
+| Control            | Status                                                                                                                                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Authentication     | E-mail + password (scrypt) and phone/e-mail one-time codes; opaque, hashed, rotating session tokens with replay detection; deny-by-default guard. See `docs/architecture/authentication.md` |
+| Authorization      | **Not implemented beyond "signed in"**: organization roles arrive with the organizations module. `/portal` in the web app has no access control yet                                         |
+| Input validation   | Global `ValidationPipe` (whitelist + reject unknown fields) ready for DTOs                                                                                                                  |
+| Config validation  | API refuses to start with invalid config; production rejects `*` CORS and weak DB passwords                                                                                                 |
+| CORS               | Explicit allowlist                                                                                                                                                                          |
+| Logging hygiene    | Authorization/cookie/API-key headers redacted; bodies and query strings not logged                                                                                                          |
+| Security headers   | `helmet` defaults on every API response                                                                                                                                                     |
+| Rate limiting      | Global per-IP limit (`RATE_LIMIT_*`), in-memory (single instance). Stricter per-route limits needed for login/OTP endpoints when they exist                                                 |
+| Audit log          | **Not implemented**                                                                                                                                                                         |
+| Dependency updates | Dependabot weekly; pnpm blocks dependency install scripts by default                                                                                                                        |
 
 ## Rules for contributors
 

@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import type { ApiErrorCode, ApiErrorResponse, ApiFieldError } from '@vtp/shared-types';
 import type { Request, Response } from 'express';
+import { ApiException } from '../errors/api.exception.js';
 
 const STATUS_TO_CODE: Partial<Record<number, ApiErrorCode>> = {
   [HttpStatus.BAD_REQUEST]: 'BAD_REQUEST',
@@ -48,7 +49,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let message = 'Internal server error';
     let details: ApiFieldError[] | undefined;
 
-    if (exception instanceof RequestValidationException) {
+    if (exception instanceof ApiException) {
+      code = exception.code;
+      message = exception.message;
+    } else if (exception instanceof RequestValidationException) {
       code = 'VALIDATION_FAILED';
       message = exception.message;
       details = exception.details;

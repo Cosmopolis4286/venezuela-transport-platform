@@ -7,6 +7,7 @@ import { AppConfigService } from './config/app-config.service.js';
 import { buildLoggerParams } from './config/logger.config.js';
 import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { IdentityModule } from './modules/identity/identity.module.js';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { HealthModule } from './modules/health/health.module.js';
     DatabaseModule,
     // Feature modules (see docs/architecture/overview.md) are registered below.
     HealthModule,
+    IdentityModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

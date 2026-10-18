@@ -113,9 +113,11 @@ Conventions for each new module (`apps/api/src/modules/<name>/`):
 | Security headers | `helmet` defaults (CSP, HSTS, nosniff, frame-ancestors…); `x-powered-by` removed                                                                                                              |
 | Rate limiting    | `@nestjs/throttler` global guard per client IP (`RATE_LIMIT_*`); health probes exempt via `@SkipThrottle()`. In-memory store: move to Redis storage before running more than one API instance |
 | Proxies          | `trust proxy` set from `API_TRUST_PROXY_HOPS` so client IPs are correct behind Caddy/Nginx                                                                                                    |
+| Authentication   | Global `AuthGuard`: every route requires a bearer access token unless marked `@Public()`. See [authentication.md](authentication.md)                                                          |
+| Audit log        | `AuditService.record()` → `audit_events` (identifiers only, never secrets or raw PII)                                                                                                         |
 
-**Not in place yet (do not assume they exist):** authentication, authorization, audit logging,
-background jobs.
+**Not in place yet (do not assume they exist):** organization-level authorization (roles and
+permissions), background jobs.
 
 ## Data
 
