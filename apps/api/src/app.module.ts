@@ -8,6 +8,7 @@ import { buildLoggerParams } from './config/logger.config.js';
 import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { IdentityModule } from './modules/identity/identity.module.js';
+import { OrganizationsModule } from './modules/organizations/organizations.module.js';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { IdentityModule } from './modules/identity/identity.module.js';
     // Feature modules (see docs/architecture/overview.md) are registered below.
     HealthModule,
     IdentityModule,
+    OrganizationsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

@@ -15,6 +15,13 @@
       "when": 1792276976061,
       "tag": "0001_identity_and_audit",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792277849432,
+      "tag": "0002_organizations",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import type { UserProfile } from '@vtp/shared-types';
-import { and, eq, ne, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService } from '../../database/database.service.js';
 import type { ContactKind } from './contact.js';
@@ -26,6 +26,25 @@ export class UsersService {
       .select()
       .from(users)
       .where(eq(users.email, email))
+      .limit(1);
+    return user;
+  }
+
+  async findManyByIds(ids: string[]): Promise<User[]> {
+    if (ids.length === 0) return [];
+    return this.database.db.select().from(users).where(inArray(users.id, ids));
+  }
+
+  /** The account that has proven control of this e-mail/phone, if any. */
+  async findByVerifiedContact(kind: ContactKind, value: string): Promise<User | undefined> {
+    const [user] = await this.database.db
+      .select()
+      .from(users)
+      .where(
+        kind === 'email'
+          ? and(eq(users.email, value), isNotNull(users.emailVerifiedAt))
+          : and(eq(users.phone, value), isNotNull(users.phoneVerifiedAt)),
+      )
       .limit(1);
     return user;
   }
@@ -120,6 +139,7 @@ export class UsersService {
       firstName: user.firstName,
       lastName: user.lastName,
       status: user.status,
+      platformRole: user.platformRole,
       createdAt: user.createdAt.toISOString(),
     };
   }

@@ -3,3 +3,4 @@
 // After changing a schema run `pnpm db:generate --name=<change>` and commit apps/api/drizzle/.
 export * from '../modules/identity/identity.schema.js';
 export * from '../modules/audit/audit.schema.js';
+export * from '../modules/organizations/organizations.schema.js';

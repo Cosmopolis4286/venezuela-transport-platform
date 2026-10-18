@@ -150,3 +150,19 @@ without e-mail, which is common for passengers in Venezuela.
 **Trade-offs.** Each authenticated request hits the database; if that becomes a bottleneck, cache
 session lookups in Redis. Code delivery costs money per message, so it is rate-limited per
 destination and per IP, and stays `disabled` in production until a provider is chosen.
+
+## ADR-014: Organization roles in code, invitations bound to verified contacts
+
+**Decision.** One enum of organization roles, a per-type allow-list (taxi lines have no ticket
+agents or inspectors) and a role → permission matrix defined in `@vtp/shared-types`, enforced by
+the API through a route guard. Invitations target an e-mail or phone, and are accepted by a
+signed-in user who has verified that contact; there are no invitation links or tokens.
+
+**Why.** A fixed matrix is easy to review and test, and enough for the known roles; per-tenant
+custom roles can come later if operators ask for them. Contact-bound invitations need no extra
+secret, work before any SMS/e-mail provider exists, and cannot be used by whoever intercepts a
+message.
+
+**Trade-offs.** Changing a role's permissions is a code change and a release. One role per
+membership: a person who both dispatches and drives needs the broader role (e.g. owner/admin) or
+the matrix extended.
