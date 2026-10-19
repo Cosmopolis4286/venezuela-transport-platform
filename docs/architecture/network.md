@@ -79,6 +79,6 @@ Audit events: `stop.created`, `stop.updated`, `route.created`, `route.updated`, 
 
 ## Not yet
 
-- Bays/platforms inside terminals, seat maps and vehicles (`fleet`).
+- Bays/platforms inside terminals and vehicles.
 - Exceptions to schedules (holidays, single cancelled departures) and real-time status.
 - Currency conversion: each fare is shown in the currency the operator set.

@@ -212,3 +212,24 @@ travel offsets make overnight and intermediate-stop times exact.
 **Trade-offs.** No per-trip state yet: cancelling a single departure or holding seats needs a trip
 record, which bookings will add (generated from the same calculation). Operators depend on staff to
 add missing stops. Prices are not converted between currencies.
+
+## ADR-018: The platform collects payments, verified automatically through provider adapters
+
+**Decision.** Passengers pay the platform, not the operator, by pago móvil, bank transfer, PIX or
+USDT. Payments are confirmed automatically: each method is a `PaymentProvider` adapter behind
+one interface (create the payment instruction, receive or poll its confirmation). Until real
+providers are contracted, a **simulated provider** drives the whole flow in development and tests.
+Amounts are converted with an exchange rate each operator sets and frozen when the booking is made.
+The platform keeps a ledger of what it owes each operator (fares minus commission). Seats are
+chosen on the operator's seat map (`fleet`).
+
+**Why.** Decided by the product owner. One checkout across operators, a single place to verify
+payments and issue tickets, and a commission model. Adapters keep each bank, PIX institution or
+blockchain watcher replaceable and keep their credentials in server-side configuration only.
+
+**Trade-offs and prerequisites.** Real verification needs contracts and API access with providers
+(a Venezuelan bank or gateway for pago móvil and transfers, a PIX institution, and a wallet on a
+chosen network for USDT); their keys go in environment variables, never in code or chat.
+Collecting money for third parties and accepting crypto may require registration or licences in
+Venezuela and Brazil: legal review is needed before production. The platform also takes on
+reconciliation, refunds and payouts to operators.

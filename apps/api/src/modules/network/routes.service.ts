@@ -13,6 +13,7 @@ import { and, asc, count, eq, inArray } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService, type Transaction } from '../../database/database.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import { FleetService } from '../fleet/fleet.service.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import type { OrganizationAccess } from '../organizations/organization-access.js';
 import {
@@ -47,6 +48,7 @@ export class RoutesService {
   constructor(
     private readonly database: DatabaseService,
     private readonly audit: AuditService,
+    private readonly fleet: FleetService,
   ) {}
 
   async list(organizationId: string): Promise<RouteSummary[]> {
@@ -262,6 +264,7 @@ export class RoutesService {
       .from(routeSchedules)
       .where(eq(routeSchedules.routeId, route.id))) as [{ total: number }];
     if (total >= MAX_SCHEDULES_PER_ROUTE) throw conflict('This route has too many schedules');
+    const seating = await this.seating(access, input.seatLayoutId ?? null, input.seats);
     const [schedule] = await this.database.db
       .insert(routeSchedules)
       .values({
@@ -271,7 +274,7 @@ export class RoutesService {
         validFrom: input.validFrom,
         validUntil: input.validUntil ?? null,
         serviceClass: input.serviceClass,
-        seats: input.seats,
+        ...seating,
         active: input.active ?? true,
       })
       .returning();
@@ -292,6 +295,11 @@ export class RoutesService {
     const validFrom = input.validFrom ?? current.validFrom;
     const validUntil = input.validUntil === undefined ? current.validUntil : input.validUntil;
     assertWindow(validFrom, validUntil);
+    const seating = await this.seating(
+      access,
+      input.seatLayoutId === undefined ? current.seatLayoutId : input.seatLayoutId,
+      input.seats ?? current.seats,
+    );
     await this.database.db
       .update(routeSchedules)
       .set({
@@ -300,7 +308,7 @@ export class RoutesService {
         validFrom,
         validUntil,
         ...(input.serviceClass ? { serviceClass: input.serviceClass } : {}),
-        ...(input.seats ? { seats: input.seats } : {}),
+        ...seating,
         ...(input.active === undefined ? {} : { active: input.active }),
       })
       .where(eq(routeSchedules.id, current.id));
@@ -320,6 +328,20 @@ export class RoutesService {
     await this.database.db.delete(routeSchedules).where(eq(routeSchedules.id, schedule.id));
     await this.record('route.schedule_deleted', route, actor, meta, { scheduleId });
     return this.load(route);
+  }
+
+  /** With a seat layout the schedule takes its capacity; without one, `seats` is required. */
+  private async seating(
+    access: OrganizationAccess,
+    seatLayoutId: string | null,
+    seats: number | undefined,
+  ): Promise<{ seatLayoutId: string | null; seats: number }> {
+    if (seatLayoutId) {
+      const layout = await this.fleet.require(access.organization.id, seatLayoutId);
+      return { seatLayoutId: layout.id, seats: layout.capacity };
+    }
+    if (!seats) throw invalid('Set the number of seats or choose a seat layout');
+    return { seatLayoutId: null, seats };
   }
 
   /** The route of this organization, or 404 (other organizations' routes are not revealed). */
@@ -454,6 +476,7 @@ export function toSchedule(row: RouteScheduleRow): Schedule {
     validUntil: row.validUntil,
     serviceClass: row.serviceClass,
     seats: row.seats,
+    seatLayoutId: row.seatLayoutId,
     active: row.active,
   };
 }

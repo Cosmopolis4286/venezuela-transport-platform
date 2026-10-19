@@ -18,6 +18,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { CURRENCIES, ROUTE_STATUSES, SERVICE_CLASSES, STOP_KINDS } from '@vtp/shared-types';
 import { timestamps, users } from '../identity/identity.schema.js';
+import { seatLayouts } from '../fleet/fleet.schema.js';
 import { organizations } from '../organizations/organizations.schema.js';
 
 export const stopKind = pgEnum('stop_kind', STOP_KINDS);
@@ -121,6 +122,8 @@ export const routeSchedules = pgTable(
     validUntil: date({ mode: 'string' }),
     serviceClass: serviceClass().notNull(),
     seats: integer().notNull(),
+    /** When set, `seats` mirrors the layout's capacity. */
+    seatLayoutId: uuid().references(() => seatLayouts.id, { onDelete: 'restrict' }),
     active: boolean().notNull().default(true),
     ...timestamps,
   },
