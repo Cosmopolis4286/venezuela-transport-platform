@@ -137,3 +137,17 @@ export class OrganizationStatusQueryDto {
   @IsIn(ORGANIZATION_STATUSES)
   status?: OrganizationStatus;
 }
+
+export class OrganizationDirectoryQueryDto {
+  @ApiPropertyOptional({ enum: ORGANIZATION_TYPES })
+  @IsOptional()
+  @IsIn(ORGANIZATION_TYPES)
+  type?: OrganizationType;
+
+  /** Matches the legal or trade name, case-insensitive. */
+  @ApiPropertyOptional({ example: 'llano' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  q?: string;
+}

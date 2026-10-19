@@ -39,7 +39,21 @@ export const APPLICATION_STATUSES = [
 ] as const;
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 
+export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
+  draft: 'Borrador',
+  submitted: 'Enviada',
+  changes_requested: 'Requiere cambios',
+  approved: 'Aprobada',
+  rejected: 'Rechazada',
+};
+
 export type DocumentReviewStatus = 'pending' | 'accepted' | 'rejected';
+
+export const DOCUMENT_REVIEW_STATUS_LABELS: Record<DocumentReviewStatus, string> = {
+  pending: 'En revisión',
+  accepted: 'Aceptado',
+  rejected: 'Rechazado',
+};
 /** The target organization's answer once the platform has approved the application. */
 export type OrganizationDecision = 'pending' | 'accepted' | 'declined';
 

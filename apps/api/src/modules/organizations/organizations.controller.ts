@@ -9,10 +9,12 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type {
   Organization,
+  OrganizationDirectoryEntry,
   OrganizationInvitation,
   OrganizationMember,
   OrganizationMembershipSummary,
@@ -28,6 +30,7 @@ import {
 import {
   CreateInvitationDto,
   CreateOrganizationDto,
+  OrganizationDirectoryQueryDto,
   UpdateMemberRoleDto,
   UpdateOrganizationDto,
 } from './organizations.dto.js';
@@ -50,6 +53,12 @@ export class OrganizationsController {
     @ReqMeta() meta: RequestMeta,
   ): Promise<OrganizationMembershipSummary> {
     return this.organizations.create(auth, body, meta);
+  }
+
+  /** Active organizations a driver or staff member can apply to. Declared before `:organizationId`. */
+  @Get('directory')
+  directory(@Query() query: OrganizationDirectoryQueryDto): Promise<OrganizationDirectoryEntry[]> {
+    return this.organizations.directory(query);
   }
 
   @Get(':organizationId')

@@ -128,6 +128,12 @@ itself. Set `EXPO_PUBLIC_API_BASE_URL` in the app's `.env`:
 Then restart Metro with a clean cache:
 `pnpm --filter @vtp/passenger-mobile exec expo start --clear --port 8081`.
 
+**Browser preview.** `pnpm --filter @vtp/transport-mobile dev --web` (or `passenger-mobile`)
+opens the app in a browser at http://localhost:8082 (8081), handy for checking screens without an
+emulator. The session lives in memory there, so a page reload signs you out
+([details](../architecture/mobile-apps.md#browser-preview)). If you created `apps/api/.env` before
+this was added, add `http://localhost:8081,http://localhost:8082` to its `CORS_ORIGINS`.
+
 **Limitations.**
 
 - Expo Go only contains Expo's bundled native modules. Adding a library with custom native

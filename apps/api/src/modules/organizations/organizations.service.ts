@@ -4,14 +4,16 @@ import {
   roleAllowedFor,
   type CreateOrganizationRequest,
   type Organization,
+  type OrganizationDirectoryEntry,
   type OrganizationMember,
   type OrganizationMembershipSummary,
   type OrganizationRole,
   type OrganizationStatus,
+  type OrganizationType,
   type ReviewOrganizationRequest,
   type UpdateOrganizationRequest,
 } from '@vtp/shared-types';
-import { and, asc, count, desc, eq } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, or } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService, type Transaction } from '../../database/database.service.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -251,6 +253,35 @@ export class OrganizationsService {
       .orderBy(desc(organizations.createdAt))
       .limit(200);
     return rows.map((row) => this.toDto(row));
+  }
+
+  /** Active organizations, for applicants choosing where to work. */
+  async directory(filter: {
+    type?: OrganizationType;
+    q?: string;
+  }): Promise<OrganizationDirectoryEntry[]> {
+    const conditions = [eq(organizations.status, 'active')];
+    if (filter.type) conditions.push(eq(organizations.type, filter.type));
+    const q = filter.q?.trim();
+    if (q) {
+      const pattern = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+      conditions.push(
+        or(ilike(organizations.legalName, pattern), ilike(organizations.tradeName, pattern))!,
+      );
+    }
+    return this.database.db
+      .select({
+        id: organizations.id,
+        type: organizations.type,
+        legalName: organizations.legalName,
+        tradeName: organizations.tradeName,
+        state: organizations.state,
+        city: organizations.city,
+      })
+      .from(organizations)
+      .where(and(...conditions))
+      .orderBy(asc(organizations.legalName))
+      .limit(50);
   }
 
   /** Platform staff decision. Notes are required when rejecting or suspending. */

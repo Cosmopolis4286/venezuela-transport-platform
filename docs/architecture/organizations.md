@@ -90,17 +90,18 @@ decision: `POST /admin/organizations/:id/review` with `approve | reject | suspen
 
 ## Endpoints (`/api/v1`)
 
-| Method & path                                                                   | Who                                                   |
-| ------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `POST /organizations`                                                           | Any signed-in user                                    |
-| `GET /me/organizations`                                                         | Signed-in user: memberships with role and permissions |
-| `GET /organizations/:id`                                                        | Any member                                            |
-| `PATCH /organizations/:id`                                                      | `organization.manage`                                 |
-| `GET /organizations/:id/members`                                                | `members.view`                                        |
-| `PATCH/DELETE /organizations/:id/members/:userId`                               | `members.manage`                                      |
-| `POST/GET /organizations/:id/invitations`, `DELETE …/invitations/:invitationId` | `members.manage`                                      |
-| `GET /me/invitations`, `POST /me/invitations/:id/accept` · `/decline`           | Invitee                                               |
-| `GET /admin/organizations`, `POST /admin/organizations/:id/review`              | Platform reviewer/admin                               |
+| Method & path                                                                   | Who                                                                      |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `POST /organizations`                                                           | Any signed-in user                                                       |
+| `GET /me/organizations`                                                         | Signed-in user: memberships with role and permissions                    |
+| `GET /organizations/directory?type=&q=`                                         | Signed-in user: active organizations to apply to (name, type, city only) |
+| `GET /organizations/:id`                                                        | Any member                                                               |
+| `PATCH /organizations/:id`                                                      | `organization.manage`                                                    |
+| `GET /organizations/:id/members`                                                | `members.view`                                                           |
+| `PATCH/DELETE /organizations/:id/members/:userId`                               | `members.manage`                                                         |
+| `POST/GET /organizations/:id/invitations`, `DELETE …/invitations/:invitationId` | `members.manage`                                                         |
+| `GET /me/invitations`, `POST /me/invitations/:id/accept` · `/decline`           | Invitee                                                                  |
+| `GET /admin/organizations`, `POST /admin/organizations/:id/review`              | Platform reviewer/admin                                                  |
 
 Audit events: `organization.created`, `.updated`, `.approved`, `.rejected`, `.suspended`,
 `.member_role_changed`, `.member_removed`, `.invitation_created`, `.invitation_revoked`,
