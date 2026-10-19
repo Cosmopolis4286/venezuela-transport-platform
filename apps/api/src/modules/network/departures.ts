@@ -39,10 +39,8 @@ export function dayOfWeek(isoDate: string): number {
   return new Date(`${isoDate}T00:00:00Z`).getUTCDay();
 }
 
-/** Today's date in Venezuela. */
-export function todayInVenezuela(now = new Date()): string {
-  return new Date(now.getTime() - 4 * 60 * 60 * 1000).toISOString().slice(0, 10);
-}
+/** Shared with the web and mobile apps. */
+export { todayInVenezuela } from '@vtp/shared-types';
 
 function minutesOfDay(time: string): number {
   const [hours, minutes] = time.split(':').map(Number);

@@ -2,7 +2,8 @@
 
 Two separate apps with Spanish UIs, both on Expo SDK 58 + Expo Router (routes in `src/app/`):
 
-- `apps/passenger-mobile` (_VTP Pasajeros_): sign-in and account. Search and booking come later.
+- `apps/passenger-mobile` (_VTP Pasajeros_): trip search (no account needed), sign-in and account.
+  Booking comes later.
 - `apps/transport-mobile` (_VTP Transportistas_): drivers and staff of bus companies, taxi lines
   and terminals. Sign-in, invitations and the KYC application.
 
@@ -11,18 +12,22 @@ come from `@vtp/shared-types`.
 
 ## Screens
 
-| App       | Route               | What                                                                                      |
-| --------- | ------------------- | ----------------------------------------------------------------------------------------- |
-| Both      | `/sign-in`          | Code by SMS, WhatsApp or e-mail (creates the account on first use), or e-mail + password  |
-| Both      | `/register`         | Create an account with e-mail + password                                                  |
-| Passenger | `/`                 | Greeting, account and verified contacts, sign out                                         |
-| Transport | `/`                 | Pending invitations (accept / decline), my organizations and roles, my application status |
-| Transport | `/application`      | Application data, required documents with upload and review verdicts, submit to review    |
-| Transport | `/application/edit` | Role, organization (searched in the directory), personal data, vehicle for taxi drivers   |
+| App       | Route               | What                                                                                             |
+| --------- | ------------------- | ------------------------------------------------------------------------------------------------ |
+| Both      | `/sign-in`          | Code by SMS, WhatsApp or e-mail (creates the account on first use), or e-mail + password         |
+| Both      | `/register`         | Create an account with e-mail + password                                                         |
+| Passenger | `/`                 | Trip search: origin, destination (stop picker), date chips for the next 7 days; works signed out |
+| Passenger | `/stop-picker`      | Modal search over active terminals and stops (`GET /stops?q=`)                                   |
+| Passenger | `/results`          | Departures with times (`+1 d` overnight), duration, operator, class, seats and fare              |
+| Passenger | `/account`          | Signed in only: account and verified contacts, sign out                                          |
+| Transport | `/`                 | Pending invitations (accept / decline), my organizations and roles, my application status        |
+| Transport | `/application`      | Application data, required documents with upload and review verdicts, submit to review           |
+| Transport | `/application/edit` | Role, organization (searched in the directory), personal data, vehicle for taxi drivers          |
 
 Navigation follows the auth state: `Stack.Protected` in each root layout shows the signed-in
 screens only with a session and the sign-in screens only without one, so a screen never decides
-where to go after signing in or out.
+where to go after signing in or out. The passenger search screens sit outside both guards: the
+search is public, and `useApi(path, { auth: false })` calls it without a session.
 
 ## Session handling (`@vtp/mobile-core`)
 

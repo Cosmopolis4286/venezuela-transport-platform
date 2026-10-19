@@ -51,6 +51,15 @@ left the origin) and the local `departsAt` / `arrivesAt`. Searches are limited t
 Nothing is stored per trip yet. Bookings will need a trip record (to hold seats and cancel single
 departures); it can be created on demand from the same calculation.
 
+## Where passengers search
+
+- **Website** `/` and `/buscar?from=&to=&date=`: a plain GET form, so results work without
+  JavaScript and can be shared as links. The stop list is cached for a few minutes; departures are
+  never cached. The form reads stops only at request time, so builds never call the API.
+- **Passenger app** (`apps/passenger-mobile`): search, stop picker and results, no account needed.
+- Display helpers shared by both (`localTime`, `daysBetween`, `longDate`, `formatMoney`,
+  `todayInVenezuela`) live in `@vtp/shared-types`.
+
 ## Endpoints (`/api/v1`)
 
 | Method & path                                                        | Who                     |
@@ -70,7 +79,6 @@ Audit events: `stop.created`, `stop.updated`, `route.created`, `route.updated`, 
 
 ## Not yet
 
-- Passenger search screens (web and mobile) — next delivery.
 - Bays/platforms inside terminals, seat maps and vehicles (`fleet`).
 - Exceptions to schedules (holidays, single cancelled departures) and real-time status.
 - Currency conversion: each fare is shown in the currency the operator set.

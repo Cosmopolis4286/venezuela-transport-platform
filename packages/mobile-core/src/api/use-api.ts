@@ -11,8 +11,12 @@ export interface ApiResource<T> {
   mutate: (data: T) => void;
 }
 
-/** GETs `path` with the session and keeps the latest result. `null` skips the request. */
-export function useApi<T>(path: string | null): ApiResource<T> {
+/**
+ * GETs `path` and keeps the latest result. `null` skips the request. Sends the session's token
+ * unless `auth: false` (public endpoints, usable while signed out).
+ */
+export function useApi<T>(path: string | null, options: { auth?: boolean } = {}): ApiResource<T> {
+  const auth = options.auth ?? true;
   const { api } = useAuth();
   const [result, setResult] = useState<{ data?: T; error?: ApiError; loading: boolean }>({
     loading: path !== null,
@@ -21,13 +25,13 @@ export function useApi<T>(path: string | null): ApiResource<T> {
   const load = useCallback(async (): Promise<{ data?: T; error?: ApiError; loading: boolean }> => {
     if (path === null) return { loading: false };
     try {
-      return { data: await api.request<T>(path), loading: false };
+      return { data: await api.request<T>(path, { auth }), loading: false };
     } catch (error) {
       const apiError =
         error instanceof ApiError ? error : new ApiError(0, 'INTERNAL_ERROR', String(error));
       return { error: apiError, loading: false };
     }
-  }, [api, path]);
+  }, [api, path, auth]);
 
   useEffect(() => {
     let active = true;

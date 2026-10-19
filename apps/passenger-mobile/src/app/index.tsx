@@ -1,61 +1,102 @@
 import {
-  Badge,
-  Banner,
   Body,
   Button,
   Card,
   Heading,
-  Row,
   Screen,
+  Segmented,
   Subheading,
   useAuth,
-  useCurrentUser,
+  useColors,
 } from '@vtp/mobile-core';
-import { useState } from 'react';
+import type { StopSummary } from '@vtp/shared-types';
+import { router } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { upcomingDays } from '@/lib/dates';
+import { useSearch } from '@/lib/search-context';
 
-export default function Home() {
-  const user = useCurrentUser();
-  const { signOut } = useAuth();
-  const [leaving, setLeaving] = useState(false);
-  const name = [user.firstName, user.lastName].filter(Boolean).join(' ');
+function StopButton({
+  label,
+  stop,
+  onPress,
+}: {
+  label: string;
+  stop: StopSummary | null;
+  onPress: () => void;
+}) {
+  const colors = useColors();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${label}: ${stop ? `${stop.city}, ${stop.name}` : 'sin elegir'}`}
+      onPress={onPress}
+      style={[styles.stop, { borderColor: colors.border, backgroundColor: colors.card }]}
+    >
+      <Text style={[styles.stopLabel, { color: colors.muted }]}>{label}</Text>
+      <Text style={[styles.stopValue, { color: stop ? colors.text : colors.muted }]}>
+        {stop ? stop.city : 'Elegir terminal o parada'}
+      </Text>
+      {stop ? <Text style={{ color: colors.muted }}>{stop.name}</Text> : null}
+    </Pressable>
+  );
+}
+
+export default function SearchScreen() {
+  const { state } = useAuth();
+  const { from, to, date, setDate, swap } = useSearch();
+  const days = upcomingDays();
+  const ready = from && to && from.id !== to.id;
 
   return (
     <Screen>
-      <Heading>{name ? `Hola, ${user.firstName}` : 'Hola'}</Heading>
-      <Banner tone="info">
-        Muy pronto podrás buscar rutas, comparar horarios y comprar tus boletos desde aquí.
-      </Banner>
+      <Heading>¿A dónde viajas?</Heading>
+      <Body muted>Autobuses y por puesto entre terminales de todo el país.</Body>
       <Card>
-        <Subheading>Tu cuenta</Subheading>
-        {name ? <Body>{name}</Body> : null}
-        {user.email ? (
-          <Row>
-            <Body>{user.email}</Body>
-            <Badge
-              label={user.emailVerified ? 'Verificado' : 'Sin verificar'}
-              tone={user.emailVerified ? 'success' : 'warning'}
-            />
-          </Row>
+        <StopButton
+          label="Origen"
+          stop={from}
+          onPress={() => router.push({ pathname: '/stop-picker', params: { field: 'from' } })}
+        />
+        <View style={styles.swap}>
+          <Button variant="link" title="⇅ Intercambiar" onPress={swap} disabled={!from && !to} />
+        </View>
+        <StopButton
+          label="Destino"
+          stop={to}
+          onPress={() => router.push({ pathname: '/stop-picker', params: { field: 'to' } })}
+        />
+        <Segmented
+          label="Fecha"
+          options={days}
+          value={days.some((d) => d.value === date) ? date : days[0]!.value}
+          onChange={setDate}
+        />
+        {from && to && from.id === to.id ? (
+          <Body muted>Elige un destino distinto del origen.</Body>
         ) : null}
-        {user.phone ? (
-          <Row>
-            <Body>{user.phone}</Body>
-            <Badge
-              label={user.phoneVerified ? 'Verificado' : 'Sin verificar'}
-              tone={user.phoneVerified ? 'success' : 'warning'}
-            />
-          </Row>
-        ) : null}
+        <Button title="Buscar salidas" disabled={!ready} onPress={() => router.push('/results')} />
       </Card>
-      <Button
-        variant="secondary"
-        title="Cerrar sesión"
-        loading={leaving}
-        onPress={() => {
-          setLeaving(true);
-          void signOut();
-        }}
-      />
+
+      <Subheading>Tu cuenta</Subheading>
+      {state.status === 'signedIn' ? (
+        <Button variant="secondary" title="Mi cuenta" onPress={() => router.push('/account')} />
+      ) : (
+        <>
+          <Body muted>Inicia sesión para guardar tus datos. Pronto podrás comprar boletos.</Body>
+          <Button
+            variant="secondary"
+            title="Iniciar sesión"
+            onPress={() => router.push('/sign-in')}
+          />
+        </>
+      )}
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  stop: { borderWidth: 1, borderRadius: 10, padding: 12, gap: 2 },
+  stopLabel: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase' },
+  stopValue: { fontSize: 18, fontWeight: '600' },
+  swap: { alignItems: 'center', marginVertical: -6 },
+});
