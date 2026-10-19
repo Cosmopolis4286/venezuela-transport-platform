@@ -14,9 +14,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="flex flex-1 flex-col">
       <header className="border-b bg-primary text-primary-foreground">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-6">
-          <Link href="/admin" className="font-semibold">
-            VTP · Administración
-          </Link>
+          <nav className="flex items-center gap-5">
+            <Link href="/admin" className="font-semibold">
+              VTP · Administración
+            </Link>
+            <Link href="/admin/stops" className="text-sm opacity-90 hover:underline">
+              Terminales y paradas
+            </Link>
+          </nav>
           <Suspense>
             <UserMenu />
           </Suspense>

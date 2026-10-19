@@ -2,16 +2,20 @@ import {
   ORGANIZATION_ROLE_LABELS,
   ORGANIZATION_TYPE_LABELS,
   ROLES_BY_ORGANIZATION_TYPE,
+  ROUTE_STATUS_LABELS,
+  runsRoutes,
   type OrganizationApplicant,
   type OrganizationInvitation,
   type OrganizationMember,
   type OrganizationMembershipSummary,
   type OrganizationType,
+  type RouteSummary,
 } from '@vtp/shared-types';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { ActionForm, SubmitButton } from '@/components/portal/action-form';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { Input, Select } from '@/components/ui/input';
 import { Field } from '@/components/ui/label';
@@ -72,6 +76,12 @@ async function Organization({ params }: { params: Promise<{ organizationId: stri
         ) : null}
       </div>
 
+      {runsRoutes(organization.type) ? (
+        <Routes
+          organizationId={organization.id}
+          canManage={permissions.includes('routes.manage')}
+        />
+      ) : null}
       {canViewMembers ? (
         <Members
           organizationId={organization.id}
@@ -98,6 +108,60 @@ async function Organization({ params }: { params: Promise<{ organizationId: stri
         </Card>
       ) : null}
     </>
+  );
+}
+
+async function Routes({
+  organizationId,
+  canManage,
+}: {
+  organizationId: string;
+  canManage: boolean;
+}) {
+  const routes = await apiFetch<RouteSummary[]>(`/organizations/${organizationId}/routes`);
+  return (
+    <Card>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <CardTitle>Rutas ({routes.length})</CardTitle>
+          <CardDescription>Recorridos, precios y horarios que ven los pasajeros.</CardDescription>
+        </div>
+        {canManage ? (
+          <Button asChild size="sm">
+            <Link href={`/portal/organizations/${organizationId}/routes/new`}>Nueva ruta</Link>
+          </Button>
+        ) : null}
+      </div>
+      {routes.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Aún no hay rutas.</p>
+      ) : (
+        <ul className="flex flex-col divide-y">
+          {routes.map((route) => (
+            <li key={route.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link
+                    href={`/portal/organizations/${organizationId}/routes/${route.id}`}
+                    className="font-medium hover:underline"
+                  >
+                    {route.name}
+                  </Link>
+                  <Badge
+                    variant={statusVariant(route.status === 'draft' ? 'pending' : route.status)}
+                  >
+                    {ROUTE_STATUS_LABELS[route.status]}
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {route.origin.city} → {route.destination.city} · {route.stopCount} paradas ·{' '}
+                  {route.scheduleCount} horarios
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
   );
 }
 
@@ -208,7 +272,7 @@ async function Invite({
           días.
         </CardDescription>
       </div>
-      <ActionForm action={inviteMember} hidden={{ organizationId }}>
+      <ActionForm action={inviteMember} hidden={{ organizationId }} resetOnSuccess>
         <div className="grid gap-3 sm:grid-cols-[10rem_1fr_12rem_auto] sm:items-end">
           <Field label="Por" htmlFor="contactKind">
             <Select id="contactKind" name="contactKind" defaultValue="phone">

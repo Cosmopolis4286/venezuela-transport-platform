@@ -1,6 +1,8 @@
 import { DUMMY_PASSWORD_HASH, hashPassword, verifyPassword } from './password-hasher.js';
 
-describe('password hasher (scrypt)', () => {
+// Each hash costs ~128 MiB and 0.1–0.3 s on purpose; under a parallel `pnpm check` (Next build,
+// typecheck, lint on a few cores) two of them can exceed Vitest's 5 s default.
+describe('password hasher (scrypt)', { timeout: 30_000 }, () => {
   it('hashes with a random salt in a self-describing format', async () => {
     const a = await hashPassword('correct horse battery');
     const b = await hashPassword('correct horse battery');

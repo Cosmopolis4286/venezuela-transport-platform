@@ -5,3 +5,4 @@ export * from '../modules/identity/identity.schema.js';
 export * from '../modules/audit/audit.schema.js';
 export * from '../modules/organizations/organizations.schema.js';
 export * from '../modules/onboarding/onboarding.schema.js';
+export * from '../modules/network/network.schema.js';
