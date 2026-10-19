@@ -1,21 +1,27 @@
-import { Button } from '@/components/ui/button';
-import { publicEnv } from '@/lib/env';
+import { Suspense } from 'react';
+import { SearchForm } from '@/components/search/search-form';
 
 export default function HomePage() {
   return (
-    <section className="flex flex-col gap-6">
-      <h1 className="text-3xl font-semibold tracking-tight">Transporte terrestre en Venezuela</h1>
-      <p className="max-w-2xl text-muted-foreground">
-        Entorno de desarrollo listo. La búsqueda de autobuses y las reservas aún no están
-        implementadas.
-      </p>
-      <div>
-        <Button asChild variant="outline">
-          <a href={`${publicEnv.NEXT_PUBLIC_API_BASE_URL}/health`} target="_blank" rel="noreferrer">
-            Ver estado de la API
-          </a>
-        </Button>
+    <section className="flex flex-col gap-8">
+      <div className="flex flex-col gap-3">
+        <h1 className="text-3xl font-semibold tracking-tight">
+          Viaja por Venezuela en autobús o por puesto
+        </h1>
+        <p className="max-w-2xl text-muted-foreground">
+          Compara horarios, precios y empresas entre terminales de todo el país.
+        </p>
       </div>
+      <Suspense fallback={<div className="h-24 rounded-xl border bg-muted/40" />}>
+        <SearchForm />
+      </Suspense>
+      <p className="text-sm text-muted-foreground">
+        ¿Tienes una empresa de transporte o una línea de taxis? Publica tus rutas desde el{' '}
+        <a href="/portal" className="underline">
+          portal de operadores
+        </a>
+        .
+      </p>
     </section>
   );
 }

@@ -216,3 +216,40 @@ export function formatDuration(minutes: number): string {
   if (!hours) return `${rest} min`;
   return rest ? `${hours} h ${rest} min` : `${hours} h`;
 }
+
+// --- Display helpers (web and mobile) -------------------------------------------------------
+
+/** Today's date in Venezuela (UTC−4, no daylight saving), `YYYY-MM-DD`. */
+export function todayInVenezuela(now = new Date()): string {
+  return new Date(now.getTime() - 4 * 3600_000).toISOString().slice(0, 10);
+}
+
+/** `HH:MM` of a local ISO timestamp such as `2026-10-20T21:30:00-04:00`. */
+export function localTime(iso: string): string {
+  return iso.slice(11, 16);
+}
+
+/** Calendar days between two local ISO dates/timestamps (by their date part). */
+export function daysBetween(fromIso: string, toIso: string): number {
+  const day = (iso: string) => Date.parse(`${iso.slice(0, 10)}T00:00:00Z`);
+  return Math.round((day(toIso) - day(fromIso)) / 86_400_000);
+}
+
+/** "martes, 20 de octubre" */
+export function longDate(isoDate: string): string {
+  return new Intl.DateTimeFormat('es-VE', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'UTC',
+  }).format(new Date(`${isoDate.slice(0, 10)}T12:00:00Z`));
+}
+
+/** "US$ 35,00" / "Bs. 600,00" */
+export function formatMoney(amount: string, currency: Currency): string {
+  const value = new Intl.NumberFormat('es-VE', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(amount));
+  return currency === 'USD' ? `US$ ${value}` : `Bs. ${value}`;
+}

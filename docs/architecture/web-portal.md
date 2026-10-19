@@ -7,6 +7,7 @@
 
 | Route                                       | Who             | What                                                                                                         |
 | ------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------ |
+| `/`, `/buscar`                              | Anyone          | Trip search: origin, destination and date; departures with times, operator, class and fare                   |
 | `/login`                                    | Anyone          | Sign in with a code (SMS / WhatsApp / e-mail) or with e-mail + password                                      |
 | `/register`                                 | Anyone          | Create an account with e-mail + password                                                                     |
 | `/portal`                                   | Signed in       | My organizations, pending invitations (accept / decline)                                                     |
