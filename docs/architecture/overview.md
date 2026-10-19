@@ -70,19 +70,19 @@ apps/api/src/
 
 Planned modules, roughly in dependency order:
 
-| Module             | Owns                                                                                                                                |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `identity`         | Users, credentials, sessions/tokens, device registration                                                                            |
-| `organizations` ✅ | Bus companies, taxi lines and terminals; memberships, roles, invitations, platform review ([organizations.md](organizations.md))    |
-| `onboarding` ✅    | Driver/staff applications, KYC documents, platform review, organization acceptance ([onboarding.md](onboarding.md))                 |
-| `network` ✅       | Stop catalog (terminals and stops, PostGIS), routes, fares, recurring schedules, public departure search ([network.md](network.md)) |
-| `fleet`            | Vehicles, seat maps, drivers' assignments                                                                                           |
-| `bookings`         | Seat holds, reservations, passenger manifests                                                                                       |
-| `ticketing`        | Ticket issuance, QR codes, validation/check-in                                                                                      |
-| `taxi-dispatch`    | Taxi requests, matching, trip lifecycle (WebSockets only if justified)                                                              |
-| `payments`         | Payment intents, provider integrations, settlements to operators                                                                    |
-| `notifications`    | SMS / push / e-mail delivery, templates                                                                                             |
-| `reporting`        | Read models and exports for operators                                                                                               |
+| Module                 | Owns                                                                                                                                |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `identity`             | Users, credentials, sessions/tokens, device registration                                                                            |
+| `organizations` ✅     | Bus companies, taxi lines and terminals; memberships, roles, invitations, platform review ([organizations.md](organizations.md))    |
+| `onboarding` ✅        | Driver/staff applications, KYC documents, platform review, organization acceptance ([onboarding.md](onboarding.md))                 |
+| `network` ✅           | Stop catalog (terminals and stops, PostGIS), routes, fares, recurring schedules, public departure search ([network.md](network.md)) |
+| `fleet` ✅ (seat maps) | Seat layouts per vehicle type ([fleet.md](fleet.md)); vehicles and drivers' assignments come with dispatch                          |
+| `bookings`             | Seat holds, reservations, passenger manifests                                                                                       |
+| `ticketing`            | Ticket issuance, QR codes, validation/check-in                                                                                      |
+| `taxi-dispatch`        | Taxi requests, matching, trip lifecycle (WebSockets only if justified)                                                              |
+| `payments`             | Payment intents, provider integrations, settlements to operators                                                                    |
+| `notifications`        | SMS / push / e-mail delivery, templates                                                                                             |
+| `reporting`            | Read models and exports for operators                                                                                               |
 
 Conventions for each new module (`apps/api/src/modules/<name>/`):
 

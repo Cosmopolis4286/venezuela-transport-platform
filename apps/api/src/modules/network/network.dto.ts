@@ -196,11 +196,17 @@ export class ScheduleDto implements ScheduleInput {
   @IsIn(SERVICE_CLASSES)
   serviceClass!: ServiceClass;
 
-  @ApiProperty({ example: 42 })
+  @ApiPropertyOptional({ example: 42, description: 'Required without a seat layout' })
+  @IsOptional()
   @IsInt()
   @Min(1)
   @Max(100)
-  seats!: number;
+  seats?: number;
+
+  @ApiPropertyOptional({ nullable: true, description: 'Seat layout of this organization' })
+  @IsOptional()
+  @IsUUID()
+  seatLayoutId?: string | null;
 
   @ApiPropertyOptional()
   @IsOptional()

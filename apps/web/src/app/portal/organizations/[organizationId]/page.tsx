@@ -10,6 +10,7 @@ import {
   type OrganizationMembershipSummary,
   type OrganizationType,
   type RouteSummary,
+  type SeatLayout,
 } from '@vtp/shared-types';
 import Link from 'next/link';
 import { Suspense } from 'react';
@@ -80,6 +81,12 @@ async function Organization({ params }: { params: Promise<{ organizationId: stri
         <Routes
           organizationId={organization.id}
           canManage={permissions.includes('routes.manage')}
+        />
+      ) : null}
+      {runsRoutes(organization.type) ? (
+        <SeatLayouts
+          organizationId={organization.id}
+          canManage={permissions.includes('fleet.manage')}
         />
       ) : null}
       {canViewMembers ? (
@@ -157,6 +164,54 @@ async function Routes({
                   {route.scheduleCount} horarios
                 </p>
               </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+async function SeatLayouts({
+  organizationId,
+  canManage,
+}: {
+  organizationId: string;
+  canManage: boolean;
+}) {
+  const layouts = await apiFetch<SeatLayout[]>(`/organizations/${organizationId}/seat-layouts`);
+  return (
+    <Card>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <CardTitle>Mapas de puestos ({layouts.length})</CardTitle>
+          <CardDescription>
+            La distribución de cada tipo de unidad, para que los pasajeros elijan su puesto.
+          </CardDescription>
+        </div>
+        {canManage ? (
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/portal/organizations/${organizationId}/seat-layouts/new`}>
+              Nuevo mapa
+            </Link>
+          </Button>
+        ) : null}
+      </div>
+      {layouts.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Aún no hay mapas de puestos.</p>
+      ) : (
+        <ul className="flex flex-col divide-y">
+          {layouts.map((layout) => (
+            <li key={layout.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+              <Link
+                href={`/portal/organizations/${organizationId}/seat-layouts/${layout.id}`}
+                className="font-medium hover:underline"
+              >
+                {layout.name}
+              </Link>
+              <span className="text-sm text-muted-foreground">
+                {layout.capacity} puestos · {layout.scheduleCount} horarios
+              </span>
             </li>
           ))}
         </ul>

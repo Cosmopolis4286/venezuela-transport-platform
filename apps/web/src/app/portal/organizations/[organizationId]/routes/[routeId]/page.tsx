@@ -7,6 +7,7 @@ import {
   formatDuration,
   type OrganizationMembershipSummary,
   type Route,
+  type SeatLayout,
   type Stop,
 } from '@vtp/shared-types';
 import Link from 'next/link';
@@ -26,6 +27,7 @@ import {
   deleteSchedule,
   saveFares,
   setScheduleActive,
+  setScheduleLayout,
   updateRoute,
 } from '../actions';
 
@@ -58,9 +60,10 @@ async function RouteDetail({
 }) {
   const { organizationId, routeId } = await params;
   const base = `/organizations/${encodeURIComponent(organizationId)}`;
-  const [{ organization, permissions }, route] = await Promise.all([
+  const [{ organization, permissions }, route, layouts] = await Promise.all([
     apiFetch<OrganizationMembershipSummary>(base),
     apiFetch<Route>(`${base}/routes/${encodeURIComponent(routeId)}`),
+    apiFetch<SeatLayout[]>(`${base}/seat-layouts`),
   ]);
   const canManage = permissions.includes('routes.manage');
   const hidden = { organizationId: organization.id, routeId: route.id };
@@ -119,7 +122,7 @@ async function RouteDetail({
       </Card>
 
       <Fares route={route} hidden={hidden} canManage={canManage} />
-      <Schedules route={route} hidden={hidden} canManage={canManage} />
+      <Schedules route={route} hidden={hidden} canManage={canManage} layouts={layouts} />
     </>
   );
 }
@@ -270,11 +273,14 @@ function Schedules({
   route,
   hidden,
   canManage,
+  layouts,
 }: {
   route: Route;
   hidden: Record<string, string>;
   canManage: boolean;
+  layouts: SeatLayout[];
 }) {
+  const layoutName = (id: string | null) => layouts.find((l) => l.id === id)?.name;
   const arrival = route.stops.at(-1)!.minutesFromOrigin;
   const arrivalTime = (departure: string) => {
     const [h, m] = departure.split(':').map(Number);
@@ -308,13 +314,33 @@ function Schedules({
                   {schedule.active ? null : <Badge variant="secondary">Inactivo</Badge>}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {daysLabel(schedule.daysOfWeek)} · {schedule.seats} puestos · desde{' '}
+                  {daysLabel(schedule.daysOfWeek)} · {schedule.seats} puestos
+                  {schedule.seatLayoutId ? ` (${layoutName(schedule.seatLayoutId)})` : ''} · desde{' '}
                   {schedule.validFrom}
                   {schedule.validUntil ? ` hasta ${schedule.validUntil}` : ''}
                 </p>
               </div>
               {canManage ? (
                 <div className="flex gap-2">
+                  {layouts.length ? (
+                    <ActionForm
+                      action={setScheduleLayout}
+                      hidden={{ ...hidden, scheduleId: schedule.id }}
+                      className="flex-row"
+                    >
+                      <Select
+                        name="seatLayoutId"
+                        defaultValue={schedule.seatLayoutId ?? ''}
+                        aria-label={`Mapa de puestos de las ${schedule.departureTime}`}
+                        className="w-56"
+                      >
+                        <LayoutOptions layouts={layouts} />
+                      </Select>
+                      <SubmitButton size="sm" variant="outline">
+                        Asignar
+                      </SubmitButton>
+                    </ActionForm>
+                  ) : null}
                   <ActionForm
                     action={setScheduleActive}
                     hidden={{
@@ -341,12 +367,31 @@ function Schedules({
           ))}
         </ul>
       )}
-      {canManage ? <AddSchedule hidden={hidden} /> : null}
+      {canManage ? <AddSchedule hidden={hidden} layouts={layouts} /> : null}
     </Card>
   );
 }
 
-function AddSchedule({ hidden }: { hidden: Record<string, string> }) {
+function LayoutOptions({ layouts }: { layouts: SeatLayout[] }) {
+  return (
+    <>
+      <option value="">Sin mapa (solo cantidad)</option>
+      {layouts.map((layout) => (
+        <option key={layout.id} value={layout.id}>
+          {layout.name} · {layout.capacity} puestos
+        </option>
+      ))}
+    </>
+  );
+}
+
+function AddSchedule({
+  hidden,
+  layouts,
+}: {
+  hidden: Record<string, string>;
+  layouts: SeatLayout[];
+}) {
   return (
     <details className="rounded-md border p-3">
       <summary className="cursor-pointer text-sm font-medium">Agregar horario</summary>
@@ -364,8 +409,13 @@ function AddSchedule({ hidden }: { hidden: Record<string, string> }) {
               ))}
             </Select>
           </Field>
-          <Field label="Puestos" htmlFor="seats">
-            <Input id="seats" name="seats" type="number" min={1} max={100} required />
+          <Field label="Mapa de puestos" htmlFor="seatLayoutId">
+            <Select id="seatLayoutId" name="seatLayoutId" defaultValue={layouts[0]?.id ?? ''}>
+              <LayoutOptions layouts={layouts} />
+            </Select>
+          </Field>
+          <Field label="Puestos" htmlFor="seats" hint="Solo si no eliges un mapa.">
+            <Input id="seats" name="seats" type="number" min={1} max={100} />
           </Field>
           <Field label="Desde" htmlFor="validFrom">
             <Input id="validFrom" name="validFrom" type="date" required />

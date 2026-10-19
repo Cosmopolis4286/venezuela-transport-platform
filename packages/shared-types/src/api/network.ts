@@ -127,6 +127,8 @@ export interface Schedule {
   validUntil: string | null;
   serviceClass: ServiceClass;
   seats: number;
+  /** Seat map passengers choose from; `seats` then equals its capacity. */
+  seatLayoutId: string | null;
   active: boolean;
 }
 
@@ -137,7 +139,9 @@ export interface ScheduleInput {
   validFrom: string;
   validUntil?: string | null;
   serviceClass: ServiceClass;
-  seats: number;
+  /** Required without a seat layout; with one, the layout's capacity is used. */
+  seats?: number;
+  seatLayoutId?: string | null;
   active?: boolean;
 }
 

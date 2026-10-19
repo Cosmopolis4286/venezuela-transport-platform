@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module.js';
+import { FleetModule } from '../fleet/fleet.module.js';
 import { IdentityModule } from '../identity/identity.module.js';
 import { OrganizationsModule } from '../organizations/organizations.module.js';
 import { RoutesController } from './routes.controller.js';
@@ -14,7 +15,7 @@ import { StopsService } from './stops.service.js';
  * (bus companies and taxi lines) and the public departure search built on them.
  */
 @Module({
-  imports: [IdentityModule, AuditModule, OrganizationsModule],
+  imports: [IdentityModule, AuditModule, OrganizationsModule, FleetModule],
   controllers: [StopsController, AdminStopsController, RoutesController, SearchController],
   providers: [StopsService, RoutesService, SearchService],
 })

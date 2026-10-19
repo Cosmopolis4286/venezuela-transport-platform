@@ -22,7 +22,7 @@ const FARE_RULES = {
 };
 const SCHEDULE_RULES = {
   VALIDATION_FAILED:
-    'Revisa el horario: indica la hora, al menos un día, entre 1 y 100 puestos y que la fecha final no sea anterior a la inicial.',
+    'Revisa el horario: indica la hora, al menos un día, un mapa de puestos o entre 1 y 100 puestos, y que la fecha final no sea anterior a la inicial.',
   CONFLICT: 'Esta ruta ya tiene el máximo de horarios.',
 };
 
@@ -121,7 +121,8 @@ export async function addSchedule(_: FormState, form: FormData): Promise<FormSta
         validFrom: text(form, 'validFrom'),
         validUntil: text(form, 'validUntil') || null,
         serviceClass: text(form, 'serviceClass'),
-        seats: Number(text(form, 'seats')),
+        seats: Number(text(form, 'seats')) || undefined,
+        seatLayoutId: text(form, 'seatLayoutId') || null,
       },
     });
   } catch (error) {
@@ -129,6 +130,19 @@ export async function addSchedule(_: FormState, form: FormData): Promise<FormSta
   }
   refresh();
   return { success: 'Horario agregado.' };
+}
+
+export async function setScheduleLayout(_: FormState, form: FormData): Promise<FormState> {
+  try {
+    await apiRequest(
+      `${routePath(form)}/schedules/${encodeURIComponent(text(form, 'scheduleId'))}`,
+      { method: 'PATCH', body: { seatLayoutId: text(form, 'seatLayoutId') || null } },
+    );
+  } catch (error) {
+    return failure(error);
+  }
+  refresh();
+  return { success: 'Mapa asignado.' };
 }
 
 export async function setScheduleActive(_: FormState, form: FormData): Promise<FormState> {
