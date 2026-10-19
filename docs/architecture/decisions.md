@@ -196,3 +196,19 @@ serialised refresh logic must exist exactly once and be unit-tested.
 copies of React; CI's mobile bundle job would not catch a duplicate, so keep them in the catalog
 or pinned identically. The browser preview (`expo start --web`) has no secure storage and keeps the
 session in memory only.
+
+## ADR-017: One network module, departures computed from schedules
+
+**Decision.** Stops, routes, fares and schedules live in one `network` module. Stops are a shared
+catalog curated by platform staff; routes store travel minutes from the origin per stop; schedules
+are recurring (time, weekdays, validity). Departures are computed at search time instead of being
+stored as trips. Fares are per pair of stops in `USD` or `VES`.
+
+**Why.** These concepts change together and are small; separate modules would add wiring without
+real boundaries. A shared stop catalog is what makes cross-operator search possible. Computing
+departures keeps the data an operator maintains minimal (a nightly bus is one row, not 365), and
+travel offsets make overnight and intermediate-stop times exact.
+
+**Trade-offs.** No per-trip state yet: cancelling a single departure or holding seats needs a trip
+record, which bookings will add (generated from the same calculation). Operators depend on staff to
+add missing stops. Prices are not converted between currencies.

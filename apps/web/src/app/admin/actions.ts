@@ -4,6 +4,7 @@ import { refresh } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { FormState } from '@/lib/form-state';
 import { ApiError, apiRequest } from '@/lib/server/api';
+import { failure as formFailure } from '@/lib/server/form-actions';
 
 // The API restricts these routes to platform staff; the pages also check, for a clear UX.
 
@@ -56,4 +57,47 @@ export async function reviewApplication(_: FormState, form: FormData): Promise<F
     return failure(error);
   }
   redirect('/admin?reviewed=1');
+}
+
+const coordinate = (form: FormData, name: string) => {
+  const value = text(form, name).replace(',', '.');
+  return value ? Number(value) : undefined;
+};
+
+export async function createStop(_: FormState, form: FormData): Promise<FormState> {
+  try {
+    await apiRequest('/admin/stops', {
+      method: 'POST',
+      body: {
+        kind: text(form, 'kind'),
+        name: text(form, 'name'),
+        city: text(form, 'city'),
+        state: text(form, 'state'),
+        address: text(form, 'address') || undefined,
+        latitude: coordinate(form, 'latitude'),
+        longitude: coordinate(form, 'longitude'),
+      },
+    });
+  } catch (error) {
+    return formFailure(error, {
+      CONFLICT: 'Ya existe una parada con ese nombre en esa ciudad.',
+      VALIDATION_FAILED:
+        'Revisa los datos: nombre, ciudad y estado son obligatorios, y la latitud y la longitud van juntas.',
+    });
+  }
+  refresh();
+  return { success: 'Parada agregada al catálogo.' };
+}
+
+export async function setStopActive(_: FormState, form: FormData): Promise<FormState> {
+  try {
+    await apiRequest(`/admin/stops/${encodeURIComponent(text(form, 'stopId'))}`, {
+      method: 'PATCH',
+      body: { active: text(form, 'active') === 'true' },
+    });
+  } catch (error) {
+    return failure(error);
+  }
+  refresh();
+  return {};
 }

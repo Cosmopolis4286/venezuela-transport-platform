@@ -8,6 +8,7 @@ import { buildLoggerParams } from './config/logger.config.js';
 import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { IdentityModule } from './modules/identity/identity.module.js';
+import { NetworkModule } from './modules/network/network.module.js';
 import { OnboardingModule } from './modules/onboarding/onboarding.module.js';
 import { OrganizationsModule } from './modules/organizations/organizations.module.js';
 import { StorageModule } from './storage/storage.module.js';
@@ -35,6 +36,7 @@ import { StorageModule } from './storage/storage.module.js';
     IdentityModule,
     OrganizationsModule,
     OnboardingModule,
+    NetworkModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
