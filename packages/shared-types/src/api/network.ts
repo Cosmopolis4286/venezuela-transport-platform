@@ -204,6 +204,8 @@ export interface Departure {
   durationMinutes: number;
   serviceClass: ServiceClass;
   seats: number;
+  /** Seats not held or sold on this departure. */
+  seatsAvailable: number;
   /** Null when the operator has not priced this pair of stops. */
   fare: Pick<Fare, 'amount' | 'currency'> | null;
 }

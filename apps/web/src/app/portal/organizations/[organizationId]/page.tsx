@@ -77,6 +77,21 @@ async function Organization({ params }: { params: Promise<{ organizationId: stri
         ) : null}
       </div>
 
+      {runsRoutes(organization.type) && permissions.includes('bookings.view') ? (
+        <Card>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-col gap-1">
+              <CardTitle>Viajes y pasajeros</CardTitle>
+              <CardDescription>
+                Reservas de cada salida y lista de pasajeros para abordar.
+              </CardDescription>
+            </div>
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/portal/organizations/${organization.id}/trips`}>Ver viajes</Link>
+            </Button>
+          </div>
+        </Card>
+      ) : null}
       {runsRoutes(organization.type) ? (
         <Routes
           organizationId={organization.id}

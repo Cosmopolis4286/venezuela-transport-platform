@@ -233,3 +233,33 @@ chosen network for USDT); their keys go in environment variables, never in code 
 Collecting money for third parties and accepting crypto may require registration or licences in
 Venezuela and Brazil: legal review is needed before production. The platform also takes on
 reconciliation, refunds and payouts to operators.
+
+## ADR-019: CircleCI for pipelines
+
+**Decision.** Continuous integration runs on CircleCI (`.circleci/config.yml`) instead of GitHub
+Actions, decided by the product owner. The jobs are the same as before: quality, API e2e on
+PostGIS, mobile bundles and production images. The config uses no orbs, only shell steps on the
+official `node:24.22.0-trixie` image (same Node as `.nvmrc` and production) and a `machine` VM
+for Docker builds.
+
+**Why.** The team's pipelines live on CircleCI. Plain shell keeps the config readable, makes
+every step reproducible locally (`docker run node:24.22.0-trixie …`), and avoids third-party orb
+code with access to the build.
+
+**Trade-offs.** The CircleCI project must be connected and the required checks configured on
+GitHub by the repository owner. The Node image is pinned by hand (Dependabot does not update
+CircleCI configs). Machine executors cost more credits than Docker executors.
+
+## ADR-020: Trips created on demand; seats held for the whole trip
+
+**Decision.** A trip row (schedule + service date) is created on the first booking and keeps a
+snapshot of the seat map. Seats are held for `BOOKING_HOLD_MINUTES` and taken for the whole trip.
+A partial unique index on active `(trip, seat)` rows is the guarantee against double booking;
+expired holds are released lazily rather than by a background job.
+
+**Why.** Departures stay computed (ADR-017) and only booked ones get state. The database index
+holds under concurrency without application locks. Lazy expiry needs no scheduler on a single VPS.
+
+**Trade-offs.** A seat freed at an intermediate stop is not resold. Counts on public reads filter
+by `expiresAt`, so expired rows linger until the next booking on that trip touches them; a
+periodic cleanup can be added when a job runner exists.

@@ -55,6 +55,7 @@ refuses to start and lists invalid variable **names** (never values).
 | `FILE_STORAGE_DRIVER`           | no       | no                             | `local`                  | Where KYC documents are stored. Only `local` exists today (S3-compatible planned)                                                                              |
 | `FILE_STORAGE_LOCAL_DIR`        | no       | no                             | `var/uploads`            | Directory for the local driver (relative to the API's working directory). In production mount a persistent, backed-up volume                                   |
 | `FILE_UPLOAD_MAX_BYTES`         | no       | no                             | `10485760`               | Max upload size (10 MiB); larger uploads get `413 PAYLOAD_TOO_LARGE`                                                                                           |
+| `BOOKING_HOLD_MINUTES`          | no       | no                             | `15`                     | Minutes held seats wait for payment before they are released (5–60)                                                                                            |
 | `REDIS_URL`                     | no       | **yes** (may embed a password) | empty                    | `redis://` or `rediss://` URL. Unused until a feature needs Redis                                                                                              |
 | `E2E_EXPECT_DATABASE`           | no       | no                             | —                        | Test-only: `true` makes e2e tests assert DB readiness                                                                                                          |
 
@@ -90,6 +91,6 @@ Restart Metro with `--clear` after changing these values.
 
 ## CI
 
-GitHub Actions sets placeholder public URLs and throwaway database credentials inline in
-`.github/workflows/ci.yml`. They are not secrets. Real deployment secrets will go in GitHub
-**Environments** secrets, never in the workflow file.
+CircleCI sets placeholder public URLs and throwaway database credentials inline in
+`.circleci/config.yml`. They are not secrets. Real deployment secrets will go in CircleCI
+**contexts** (restricted to the deploy job), never in the config file.

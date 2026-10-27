@@ -77,7 +77,7 @@ Planned modules, roughly in dependency order:
 | `onboarding` ✅        | Driver/staff applications, KYC documents, platform review, organization acceptance ([onboarding.md](onboarding.md))                 |
 | `network` ✅           | Stop catalog (terminals and stops, PostGIS), routes, fares, recurring schedules, public departure search ([network.md](network.md)) |
 | `fleet` ✅ (seat maps) | Seat layouts per vehicle type ([fleet.md](fleet.md)); vehicles and drivers' assignments come with dispatch                          |
-| `bookings`             | Seat holds, reservations, passenger manifests                                                                                       |
+| `bookings` ✅ (holds)  | Trips, seat holds, passenger manifests ([bookings.md](bookings.md)); payment and tickets come with `payments`                       |
 | `ticketing`            | Ticket issuance, QR codes, validation/check-in                                                                                      |
 | `taxi-dispatch`        | Taxi requests, matching, trip lifecycle (WebSockets only if justified)                                                              |
 | `payments`             | Payment intents, provider integrations, settlements to operators                                                                    |

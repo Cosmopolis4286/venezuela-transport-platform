@@ -4,6 +4,7 @@ import { and, eq, gt } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService } from '../../database/database.service.js';
+import { takenSeatCounts } from '../bookings/occupancy.js';
 import { organizations } from '../organizations/organizations.schema.js';
 import { addDays, isCalendarDate, occurrencesOn, todayInVenezuela } from './departures.js';
 import { routeFares, routes, routeSchedules, routeStops } from './network.schema.js';
@@ -73,6 +74,10 @@ export class SearchService {
     if (!rows.length) return [];
 
     const stops = await this.stops.summaries([from, to]);
+    const taken = await takenSeatCounts(
+      this.database.db,
+      rows.map((row) => row.schedule.id),
+    );
     const departures: Departure[] = rows.flatMap((row) =>
       occurrencesOn(date, row.schedule, row.fromOffset, row.toOffset).map((trip) => ({
         scheduleId: row.schedule.id,
@@ -86,6 +91,10 @@ export class SearchService {
         durationMinutes: trip.durationMinutes,
         serviceClass: row.schedule.serviceClass,
         seats: row.schedule.seats,
+        seatsAvailable: Math.max(
+          0,
+          row.schedule.seats - (taken.get(`${row.schedule.id}:${trip.serviceDate}`) ?? 0),
+        ),
         fare: row.fare?.amount && row.fare.currency ? (row.fare as Departure['fare']) : null,
       })),
     );

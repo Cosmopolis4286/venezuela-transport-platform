@@ -13,6 +13,7 @@ import { and, asc, count, eq, inArray } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService, type Transaction } from '../../database/database.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import { trips } from '../bookings/bookings.schema.js';
 import { FleetService } from '../fleet/fleet.service.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import type { OrganizationAccess } from '../organizations/organization-access.js';
@@ -325,6 +326,12 @@ export class RoutesService {
   ): Promise<Route> {
     const route = await this.requireRoute(access, routeId);
     const schedule = await this.requireSchedule(route.id, scheduleId);
+    const [booked] = await this.database.db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.scheduleId, schedule.id))
+      .limit(1);
+    if (booked) throw conflict('This schedule has bookings; pause it instead of deleting it');
     await this.database.db.delete(routeSchedules).where(eq(routeSchedules.id, schedule.id));
     await this.record('route.schedule_deleted', route, actor, meta, { scheduleId });
     return this.load(route);

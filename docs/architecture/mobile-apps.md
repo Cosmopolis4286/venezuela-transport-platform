@@ -19,7 +19,11 @@ come from `@vtp/shared-types`.
 | Passenger | `/`                 | Trip search: origin, destination (stop picker), date chips for the next 7 days; works signed out |
 | Passenger | `/stop-picker`      | Modal search over active terminals and stops (`GET /stops?q=`)                                   |
 | Passenger | `/results`          | Departures with times (`+1 d` overnight), duration, operator, class, seats and fare              |
-| Passenger | `/account`          | Signed in only: account and verified contacts, sign out                                          |
+| Passenger | `/trip`             | Seat map of one departure: taken seats disabled, up to 6 seats, price; public until holding      |
+| Passenger | `/passengers`       | Signed in: name and ID per seat (first prefilled from the account), then hold the seats          |
+| Passenger | `/booking/:id`      | Booking code, status, hold countdown, passengers, total; cancel while held                       |
+| Passenger | `/bookings`         | "Mis viajes": the user's bookings, newest first                                                  |
+| Passenger | `/account`          | Signed in only: account and verified contacts, "Mis viajes", sign out                            |
 | Transport | `/`                 | Pending invitations (accept / decline), my organizations and roles, my application status        |
 | Transport | `/application`      | Application data, required documents with upload and review verdicts, submit to review           |
 | Transport | `/application/edit` | Role, organization (searched in the directory), personal data, vehicle for taxi drivers          |

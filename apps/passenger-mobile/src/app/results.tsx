@@ -2,6 +2,7 @@ import {
   Badge,
   Banner,
   Body,
+  Button,
   Card,
   Heading,
   Row,
@@ -19,9 +20,10 @@ import {
   SERVICE_CLASS_LABELS,
   type Departure,
 } from '@vtp/shared-types';
-import { Redirect } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { ActivityIndicator, RefreshControl, Text } from 'react-native';
 import { useSearch } from '@/lib/search-context';
+import { useRefreshOnFocus } from '@/lib/use-refresh-on-focus';
 
 export default function Results() {
   const { from, to, date } = useSearch();
@@ -31,6 +33,7 @@ export default function Results() {
       ? `/search/departures?${new URLSearchParams({ from: from.id, to: to.id, date })}`
       : null;
   const departures = useApi<Departure[]>(query, { auth: false });
+  useRefreshOnFocus(departures.reload);
   if (!from || !to) return <Redirect href="/" />;
 
   return (
@@ -94,7 +97,9 @@ function DepartureCard({ departure }: { departure: Departure }) {
         {departure.operator.type === 'taxi_line' ? (
           <Badge label={ORGANIZATION_TYPE_LABELS.taxi_line} />
         ) : null}
-        <Body muted>{departure.seats} puestos</Body>
+        <Body muted>
+          {departure.seatsAvailable} de {departure.seats} libres
+        </Body>
       </Row>
       <Body muted>
         {departure.from.name} → {departure.to.name}
@@ -104,6 +109,18 @@ function DepartureCard({ departure }: { departure: Departure }) {
           ? formatMoney(departure.fare.amount, departure.fare.currency)
           : 'Precio en taquilla'}
       </Text>
+      {departure.fare && departure.seatsAvailable > 0 ? (
+        <Button
+          variant="secondary"
+          title="Elegir puestos"
+          onPress={() =>
+            router.push({
+              pathname: '/trip',
+              params: { scheduleId: departure.scheduleId, serviceDate: departure.serviceDate },
+            })
+          }
+        />
+      ) : null}
     </Card>
   );
 }
