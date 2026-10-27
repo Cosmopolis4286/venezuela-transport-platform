@@ -27,6 +27,7 @@ come from `@vtp/shared-types`.
 | Transport | `/`                 | Pending invitations (accept / decline), my organizations and roles, my application status        |
 | Transport | `/application`      | Application data, required documents with upload and review verdicts, submit to review           |
 | Transport | `/application/edit` | Role, organization (searched in the directory), personal data, vehicle for taxi drivers          |
+| Transport | `/scan`             | "Validar boletos" (`tickets.validate`): camera QR scan or booking code + seat; verdict at once   |
 
 Navigation follows the auth state: `Stack.Protected` in each root layout shows the signed-in
 screens only with a session and the sign-in screens only without one, so a screen never decides
@@ -47,6 +48,16 @@ search is public, and `useApi(path, { auth: false })` calls it without a session
 - `AuthProvider` restores the saved session on launch. If the API cannot be reached, it shows a
   retry screen instead of signing the user out.
 - Errors are shown in Spanish through `ApiError.userMessage` (same wording as the web portal).
+
+## Ticket validation (transport app)
+
+Members with `tickets.validate` (owner, admin, inspector) of an active organization see
+**Validar boletos** on the home screen. The camera reads the passenger's QR (`expo-camera`, back
+camera, QR codes only; the same code read again within 4 seconds is ignored), or the inspector
+types the booking code and seat. The result shows at once: green "puede abordar", amber "ya se
+usó" with the boarding time, or red for unpaid tickets and other departures (see
+[payments.md](payments.md#tickets)). The camera permission text is set in `app.json`; the
+microphone is not requested.
 
 ## KYC application (transport app)
 
@@ -70,6 +81,8 @@ emulator. It is a development aid, not a product:
   signs you out. Tokens are never written to `localStorage`.
 - The API must allow the origin: `CORS_ORIGINS` in `apps/api/.env.example` already lists
   `http://localhost:8081` and `http://localhost:8082`.
+- On the web, `expo-camera` decodes QR codes with `zxing-wasm`, downloaded from jsDelivr on first
+  use; phones use the native scanner. Without internet, type the booking code and seat instead.
 
 ## Known limitations
 
