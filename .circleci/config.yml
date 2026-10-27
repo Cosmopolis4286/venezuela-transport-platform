@@ -1,0 +1,48 @@
+# Starter CircleCI pipeline: one job for the pnpm + Turborepo monorepo (all apps and packages
+# share one lockfile and are built, tested and linted by the root scripts).
+version: 2.1
+
+jobs:
+  build-test-lint:
+    docker:
+      # Newest Node the repo allows (package.json engines: >=24.15.0 <25; .nvmrc: 24).
+      - image: cimg/node:24.22
+    environment:
+      # Public, build-time placeholder required by the web app. Not a secret.
+      NEXT_PUBLIC_API_BASE_URL: https://api.example.invalid/api/v1
+      NEXT_TELEMETRY_DISABLED: '1'
+      TURBO_TELEMETRY_DISABLED: '1'
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+    steps:
+      - checkout
+      - run:
+          # The image ships pnpm 12; corepack (also in the image) provides the version pinned
+          # in package.json "packageManager". ~/bin comes first on the image's PATH.
+          name: Use the pnpm version pinned in package.json
+          command: |
+            corepack enable --install-directory ~/bin
+            pnpm --version
+      - restore_cache:
+          keys:
+            - pnpm-store-v1-{{ checksum "pnpm-lock.yaml" }}
+      - run:
+          name: Install dependencies
+          command: pnpm install --frozen-lockfile
+      - save_cache:
+          key: pnpm-store-v1-{{ checksum "pnpm-lock.yaml" }}
+          paths:
+            - ~/.local/share/pnpm/store
+      - run:
+          name: Build
+          command: pnpm build
+      - run:
+          name: Test
+          command: pnpm test
+      - run:
+          name: Lint
+          command: pnpm lint
+
+workflows:
+  build-test-lint:
+    jobs:
+      - build-test-lint
