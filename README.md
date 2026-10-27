@@ -4,9 +4,9 @@ Engineering foundation for a Venezuelan ground-transportation platform connectin
 bus companies, terminals, taxi drivers and transport operators.
 
 > **Status: in development.** Working today: accounts and sign-in, organizations and roles, driver
-> and staff KYC, the transport network (stops, routes, fares, schedules), trip search, seat maps
-> and seat holds. **Not yet: payments, tickets and dispatch.** Do not deploy it with real users or
-> data. CI runs on CircleCI ([repository workflow](docs/development/repository-workflow.md)).
+> and staff KYC, the transport network (stops, routes, fares, schedules), trip search, seat maps,
+> seat holds, payments (simulated provider) and QR tickets. **Not yet: real payment providers,
+> settlements and dispatch.** Do not deploy it with real users or data. CI runs on CircleCI ([repository workflow](docs/development/repository-workflow.md)).
 
 ## Architecture at a glance
 
@@ -123,6 +123,7 @@ Redis is optional and off by default; nothing in the default `pnpm dev` flow nee
 - [Transport network: stops, routes, fares, schedules](docs/architecture/network.md)
 - [Fleet: seat maps](docs/architecture/fleet.md)
 - [Bookings: trips and seat holds](docs/architecture/bookings.md)
+- [Payments and tickets](docs/architecture/payments.md)
 - [Local setup (Windows, macOS, Linux)](docs/development/local-setup.md)
 - [Environment variables](docs/development/environment-variables.md)
 - [Repository workflow](docs/development/repository-workflow.md)

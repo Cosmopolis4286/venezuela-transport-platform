@@ -72,6 +72,14 @@ describe('validateEnv', () => {
     expect(validateEnv(productionValid).SWAGGER_ENABLED).toBe(false);
   });
 
+  it('simulates payments outside production and refuses the simulator in production', () => {
+    expect(validateEnv(valid).PAYMENT_PROVIDER).toBe('simulated');
+    expect(validateEnv(productionValid).PAYMENT_PROVIDER).toBe('disabled');
+    expect(() => validateEnv({ ...productionValid, PAYMENT_PROVIDER: 'simulated' })).toThrow(
+      /PAYMENT_PROVIDER/,
+    );
+  });
+
   it('applies authentication defaults', () => {
     expect(validateEnv(valid)).toMatchObject({
       AUTH_ACCESS_TOKEN_TTL_MINUTES: 15,

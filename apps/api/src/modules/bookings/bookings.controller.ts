@@ -10,7 +10,13 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import type { Booking, TripAvailability, TripManifest, TripSummary } from '@vtp/shared-types';
+import type {
+  Booking,
+  TicketValidation,
+  TripAvailability,
+  TripManifest,
+  TripSummary,
+} from '@vtp/shared-types';
 import { CurrentAuth, Public, ReqMeta } from '../identity/auth.decorators.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import {
@@ -18,8 +24,14 @@ import {
   RequireOrganizationAccess,
   type OrganizationAccess,
 } from '../organizations/organization-access.js';
-import { CreateBookingDto, TripQueryDto, TripsDateQueryDto } from './bookings.dto.js';
+import {
+  CreateBookingDto,
+  TripQueryDto,
+  TripsDateQueryDto,
+  ValidateTicketDto,
+} from './bookings.dto.js';
 import { BookingsService } from './bookings.service.js';
+import { TicketsService } from './tickets.service.js';
 import { TripsService } from './trips.service.js';
 
 @ApiTags('bookings')
@@ -98,5 +110,25 @@ export class OrganizationTripsController {
     @Param('tripId', ParseUUIDPipe) tripId: string,
   ): Promise<TripManifest> {
     return this.bookings.manifest(access, tripId);
+  }
+}
+
+/** Inspectors scan tickets at boarding. */
+@ApiTags('bookings')
+@ApiBearerAuth()
+@Controller({ path: 'organizations/:organizationId/tickets', version: '1' })
+export class OrganizationTicketsController {
+  constructor(private readonly tickets: TicketsService) {}
+
+  @Post('validate')
+  @HttpCode(HttpStatus.OK)
+  @RequireOrganizationAccess('tickets.validate')
+  validate(
+    @CurrentOrganization() access: OrganizationAccess,
+    @Body() body: ValidateTicketDto,
+    @CurrentAuth() auth: Authenticated,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<TicketValidation> {
+    return this.tickets.validate(access, body.qr, auth, meta);
   }
 }

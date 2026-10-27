@@ -3,12 +3,15 @@ import {
   ORGANIZATION_TYPE_LABELS,
   ROLES_BY_ORGANIZATION_TYPE,
   ROUTE_STATUS_LABELS,
+  RATE_CURRENCIES,
   runsRoutes,
+  type ExchangeRate,
   type OrganizationApplicant,
   type OrganizationInvitation,
   type OrganizationMember,
   type OrganizationMembershipSummary,
   type OrganizationType,
+  type RateCurrency,
   type RouteSummary,
   type SeatLayout,
 } from '@vtp/shared-types';
@@ -29,6 +32,7 @@ import {
   removeMember,
   revokeInvitation,
 } from '../../actions';
+import { saveExchangeRates } from './exchange-rates/actions';
 
 export default function OrganizationPage({
   params,
@@ -94,6 +98,12 @@ async function Organization({ params }: { params: Promise<{ organizationId: stri
       ) : null}
       {runsRoutes(organization.type) ? (
         <Routes
+          organizationId={organization.id}
+          canManage={permissions.includes('routes.manage')}
+        />
+      ) : null}
+      {runsRoutes(organization.type) ? (
+        <ExchangeRates
           organizationId={organization.id}
           canManage={permissions.includes('routes.manage')}
         />
@@ -183,6 +193,72 @@ async function Routes({
           ))}
         </ul>
       )}
+    </Card>
+  );
+}
+
+const RATE_LABELS: Record<RateCurrency, string> = {
+  VES: 'Bolívares (Bs.) por dólar — pago móvil y transferencia',
+  BRL: 'Reales (R$) por dólar — PIX',
+};
+
+/** The rates the platform converts this operator's fares with when passengers pay. */
+async function ExchangeRates({
+  organizationId,
+  canManage,
+}: {
+  organizationId: string;
+  canManage: boolean;
+}) {
+  const rates = await apiFetch<ExchangeRate[]>(`/organizations/${organizationId}/exchange-rates`);
+  const rateFor = (currency: RateCurrency) => rates.find((r) => r.currency === currency);
+  return (
+    <Card>
+      <div className="flex flex-col gap-1">
+        <CardTitle>Tasas de cambio</CardTitle>
+        <CardDescription>
+          Con ellas se convierten tus precios al cobrar. USDT se cobra 1:1 con el dólar. Sin tasa,
+          esa forma de pago no se ofrece para precios en otra moneda. El monto se fija cuando el
+          pasajero elige cómo pagar.
+        </CardDescription>
+      </div>
+      <ActionForm action={saveExchangeRates} hidden={{ organizationId }}>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {RATE_CURRENCIES.map((currency) => {
+            const rate = rateFor(currency);
+            return canManage ? (
+              <Field key={currency} label={RATE_LABELS[currency]} htmlFor={`rate-${currency}`}>
+                <Input
+                  id={`rate-${currency}`}
+                  name={`rate:${currency}`}
+                  inputMode="decimal"
+                  defaultValue={rate ? String(Number(rate.unitsPerUsd)) : ''}
+                  placeholder="Sin tasa"
+                />
+              </Field>
+            ) : (
+              <p key={currency} className="text-sm">
+                {RATE_LABELS[currency]}:{' '}
+                {rate ? (
+                  String(Number(rate.unitsPerUsd))
+                ) : (
+                  <span className="text-muted-foreground">sin tasa</span>
+                )}
+              </p>
+            );
+          })}
+        </div>
+        {rates.length ? (
+          <p className="text-xs text-muted-foreground">
+            Actualizadas el {formatDate(rates[0]!.updatedAt)}
+          </p>
+        ) : null}
+        {canManage ? (
+          <div>
+            <SubmitButton>Guardar tasas</SubmitButton>
+          </div>
+        ) : null}
+      </ActionForm>
     </Card>
   );
 }

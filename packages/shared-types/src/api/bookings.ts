@@ -2,6 +2,7 @@ import type { IdentityDocumentType } from './onboarding.js';
 import type { LayoutSeat } from './fleet.js';
 import type { Currency, ServiceClass, StopSummary } from './network.js';
 import type { Organization } from './organizations.js';
+import type { Payment } from './payments.js';
 
 /**
  * Trips and bookings. A trip is one schedule on one service date; it is created the first time
@@ -68,6 +69,8 @@ export interface CreateBookingRequest {
 export interface BookingPassenger extends PassengerInput {
   /** Per passenger, in the fare's currency. */
   fare: string;
+  /** Issued once the booking is confirmed. `qr` is the payload to render as a QR code. */
+  ticket: { qr: string; boardedAt: string | null } | null;
 }
 
 export interface Booking {
@@ -91,6 +94,8 @@ export interface Booking {
   total: { amount: string; currency: Currency };
   /** Only for `held`. */
   expiresAt: string | null;
+  /** The payment in progress, or the one that confirmed (or must be refunded for) the booking. */
+  payment: Payment | null;
   createdAt: string;
 }
 
@@ -116,5 +121,7 @@ export interface TripManifest extends TripSummary {
     bookingStatus: BookingStatus;
     from: StopSummary;
     to: StopSummary;
+    /** When the ticket was scanned at boarding. */
+    boardedAt: string | null;
   })[];
 }

@@ -2,8 +2,8 @@
 
 Two separate apps with Spanish UIs, both on Expo SDK 58 + Expo Router (routes in `src/app/`):
 
-- `apps/passenger-mobile` (_VTP Pasajeros_): trip search (no account needed), sign-in and account.
-  Booking comes later.
+- `apps/passenger-mobile` (_VTP Pasajeros_): trip search (no account needed), seat booking,
+  payment and QR tickets, sign-in and account.
 - `apps/transport-mobile` (_VTP Transportistas_): drivers and staff of bus companies, taxi lines
   and terminals. Sign-in, invitations and the KYC application.
 
@@ -21,7 +21,7 @@ come from `@vtp/shared-types`.
 | Passenger | `/results`          | Departures with times (`+1 d` overnight), duration, operator, class, seats and fare              |
 | Passenger | `/trip`             | Seat map of one departure: taken seats disabled, up to 6 seats, price; public until holding      |
 | Passenger | `/passengers`       | Signed in: name and ID per seat (first prefilled from the account), then hold the seats          |
-| Passenger | `/booking/:id`      | Booking code, status, hold countdown, passengers, total; cancel while held                       |
+| Passenger | `/booking/:id`      | Booking code, status, hold countdown; pay (method, instructions, reference); QR ticket per seat  |
 | Passenger | `/bookings`         | "Mis viajes": the user's bookings, newest first                                                  |
 | Passenger | `/account`          | Signed in only: account and verified contacts, "Mis viajes", sign out                            |
 | Transport | `/`                 | Pending invitations (accept / decline), my organizations and roles, my application status        |

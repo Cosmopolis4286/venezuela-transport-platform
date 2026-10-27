@@ -13,6 +13,7 @@ import { IdentityModule } from './modules/identity/identity.module.js';
 import { NetworkModule } from './modules/network/network.module.js';
 import { OnboardingModule } from './modules/onboarding/onboarding.module.js';
 import { OrganizationsModule } from './modules/organizations/organizations.module.js';
+import { PaymentsModule } from './modules/payments/payments.module.js';
 import { StorageModule } from './storage/storage.module.js';
 
 @Module({
@@ -41,6 +42,7 @@ import { StorageModule } from './storage/storage.module.js';
     FleetModule,
     NetworkModule,
     BookingsModule,
+    PaymentsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
