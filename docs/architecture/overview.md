@@ -5,8 +5,8 @@
 The platform will connect passengers, bus companies, terminals, taxi drivers and transport
 operators in Venezuela: bus search, reservations and tickets with QR validation, seat
 availability, taxi dispatch to/from terminals, payments and settlements, notifications,
-reporting, and organization-based roles. **None of that is implemented yet.** This document
-describes the boundaries the foundation sets up so those features have an obvious home.
+reporting, and organization-based roles. What is built and what is pending is tracked in the
+[roadmap](../roadmap.md). This document describes the module boundaries every feature follows.
 
 ## System diagram
 
@@ -72,7 +72,7 @@ Planned modules, roughly in dependency order:
 
 | Module                 | Owns                                                                                                                                |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `identity`             | Users, credentials, sessions/tokens, device registration                                                                            |
+| `identity` ✅          | Users, credentials, sessions/tokens, one-time codes ([authentication.md](authentication.md))                                        |
 | `organizations` ✅     | Bus companies, taxi lines and terminals; memberships, roles, invitations, platform review ([organizations.md](organizations.md))    |
 | `onboarding` ✅        | Driver/staff applications, KYC documents, platform review, organization acceptance ([onboarding.md](onboarding.md))                 |
 | `network` ✅           | Stop catalog (terminals and stops, PostGIS), routes, fares, recurring schedules, public departure search ([network.md](network.md)) |

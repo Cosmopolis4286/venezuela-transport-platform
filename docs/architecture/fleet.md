@@ -22,8 +22,8 @@ A schedule can reference a layout (`seatLayoutId`). Its `seats` is then the layo
 and editing the layout updates every schedule that uses it. A schedule without a layout keeps a
 plain seat count. A layout in use cannot be deleted.
 
-When bookings arrive, each trip will keep a snapshot of its layout, so editing a layout never
-moves a seat that was already sold.
+Each trip keeps a snapshot of its layout from its first booking ([bookings](bookings.md)), so
+editing a layout never moves a seat that was already sold.
 
 ## Endpoints (`/api/v1`)
 

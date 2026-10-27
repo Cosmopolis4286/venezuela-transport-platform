@@ -81,4 +81,5 @@ Audit events: `stop.created`, `stop.updated`, `route.created`, `route.updated`, 
 
 - Bays/platforms inside terminals and vehicles.
 - Exceptions to schedules (holidays, single cancelled departures) and real-time status.
-- Currency conversion: each fare is shown in the currency the operator set.
+- Showing fares in other currencies: search shows each fare in the currency the operator set;
+  conversion happens only when the passenger pays ([payments](payments.md)).

@@ -7,6 +7,8 @@
 3. Make focused changes. Follow the module and contract rules in
    [architecture overview](docs/architecture/overview.md).
 4. Before pushing: `pnpm format && pnpm check` (and `pnpm build` when touching build config).
+   When behaviour changes, add a line under **Unreleased** in [CHANGELOG.md](CHANGELOG.md) and
+   update [docs/roadmap.md](docs/roadmap.md) if a feature moves from pending to done.
 5. Commit with [Conventional Commits](https://www.conventionalcommits.org/):
    `feat(api): add terminals module`.
 6. Open a pull request using the template. CI must be green before merging.

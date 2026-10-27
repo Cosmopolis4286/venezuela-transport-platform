@@ -22,4 +22,4 @@
 - [ ] New environment variables are added to the relevant `.env.example` and `docs/development/environment-variables.md`
 - [ ] Database changes are delivered as a migration (never edits to the init SQL)
 - [ ] Shared contract changes in `packages/shared-types` are backwards compatible, or every consumer is updated in this PR
-- [ ] Docs updated where behaviour or commands changed
+- [ ] Docs updated where behaviour or commands changed (`CHANGELOG.md` under Unreleased, `docs/roadmap.md` if a feature's status changed)

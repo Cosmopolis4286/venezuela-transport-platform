@@ -3,10 +3,21 @@
 Engineering foundation for a Venezuelan ground-transportation platform connecting passengers,
 bus companies, terminals, taxi drivers and transport operators.
 
-> **Status: in development.** Working today: accounts and sign-in, organizations and roles, driver
-> and staff KYC, the transport network (stops, routes, fares, schedules), trip search, seat maps,
-> seat holds, payments (simulated provider) and QR tickets. **Not yet: real payment providers,
-> settlements and dispatch.** Do not deploy it with real users or data. CI runs on CircleCI ([repository workflow](docs/development/repository-workflow.md)).
+> **Status: in development, not deployed.** The ticket-sale flow works end to end: trip search,
+> seats on the bus map, payment (simulated provider), QR tickets and boarding scans. **Not yet:
+> real payment providers, settlements, refunds, notifications and taxi dispatch.** Do not deploy
+> it with real users or data. Progress and pending work: [roadmap](docs/roadmap.md) · history:
+> [CHANGELOG](CHANGELOG.md) · CI: CircleCI ([repository workflow](docs/development/repository-workflow.md)).
+
+## What it does today
+
+| App                                     | For                              | Features                                                                                                         |
+| --------------------------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Website (`apps/web`)                    | Passengers                       | Trip search (`/buscar`) with free seats                                                                          |
+| Portal (`apps/web`, `/portal`)          | Bus companies, taxi lines, staff | Team and invitations, applicants, routes, fares, schedules, seat maps, exchange rates, trips and passenger lists |
+| Admin panel (`apps/web`, `/admin`)      | Platform staff                   | Approve organizations and KYC applications, stop catalog                                                         |
+| Passenger app (`apps/passenger-mobile`) | Passengers                       | Search, seats on the bus map, hold and pay, QR tickets, "Mis viajes"                                             |
+| Transport app (`apps/transport-mobile`) | Drivers, inspectors, staff       | Invitations, KYC application, ticket scanner at boarding                                                         |
 
 ## Architecture at a glance
 
@@ -113,6 +124,7 @@ Redis is optional and off by default; nothing in the default `pnpm dev` flow nee
 
 ## Documentation
 
+- [Progress and roadmap](docs/roadmap.md) · [Changelog](CHANGELOG.md)
 - [Architecture overview](docs/architecture/overview.md)
 - [Architecture decisions](docs/architecture/decisions.md)
 - [Authentication](docs/architecture/authentication.md)
