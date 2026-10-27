@@ -75,11 +75,21 @@ A confirmed booking returns `ticket: { qr, boardedAt }` for each passenger. The 
 `VTP1.<ticket id>`: an unguessable random id, so the code carries no personal data and needs no
 secret. The passenger app draws it with plain views (`qrcode-generator`, no native module).
 
-Inspectors scan it: `POST /organizations/:id/tickets/validate { qr }` with `tickets.validate`
-(owner, admin, inspector). The ticket must belong to the organization (else 404), its booking must
-be confirmed, and the passenger's boarding time must be within **12 hours** of now (else 409). The
-first scan marks the passenger as boarded (`boarded`); later scans return `already_boarded` with
-the first time, so a copied QR is caught. The manifest shows the boarding time.
+Inspectors scan it with the transport app (**Validar boletos**), which calls
+`POST /organizations/:id/tickets/validate` with `tickets.validate` (owner, admin, inspector). The
+body is `{ qr }`, or `{ bookingCode, seatNumber }` typed by hand when the passenger's screen cannot
+be read (the code is accepted with or without `VTP-`, in any case). A ticket of another
+organization, or one that does not exist, is 404. Otherwise the response says what to do, with the
+passenger's name, ID, seat and segment:
+
+| `result`          | Meaning                                                    |
+| ----------------- | ---------------------------------------------------------- |
+| `boarded`         | Valid: the passenger may board; marked as boarded now      |
+| `already_boarded` | Used before (`boardedAt` says when): a copied or reused QR |
+| `not_paid`        | The booking is held, cancelled or expired                  |
+| `other_departure` | The passenger boards more than **12 hours** away from now  |
+
+Only the first valid check marks boarding. The manifest shows the boarding time.
 
 ## Endpoints (`/api/v1`)
 
@@ -98,5 +108,4 @@ Audit events: `payment.created`, `payment.confirmed`, `payment.refund_due`,
 ## Not yet
 
 Real provider adapters (contracts and legal review first, see ADR-018), refunds and cancellation
-of paid bookings, the platform commission and settlements to operators, the ticket scanner in the
-transport app (the API is ready), and offline validation.
+of paid bookings, the platform commission and settlements to operators, and offline validation.

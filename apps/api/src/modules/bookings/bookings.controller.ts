@@ -13,6 +13,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type {
   Booking,
   TicketValidation,
+  ValidateTicketRequest,
   TripAvailability,
   TripManifest,
   TripSummary,
@@ -129,6 +130,6 @@ export class OrganizationTicketsController {
     @CurrentAuth() auth: Authenticated,
     @ReqMeta() meta: RequestMeta,
   ): Promise<TicketValidation> {
-    return this.tickets.validate(access, body.qr, auth, meta);
+    return this.tickets.validate(access, body as ValidateTicketRequest, auth, meta);
   }
 }

@@ -386,14 +386,28 @@ describe.runIf(expectDatabase)('Payments and tickets (e2e)', () => {
       await validate(qr, ana.auth).expect(404);
       await validate('VTP1.not-a-ticket').expect(404);
       await validate(`VTP1.${randomUUID()}`).expect(404);
-      // Two days before departure the ticket is not accepted yet.
-      const early = await validate(qr).expect(409);
-      expect(early.body.error.message).toMatch(/departure of/);
-      // A held seat has no valid ticket.
+      await http()
+        .post(`${org}/tickets/validate`)
+        .set('Authorization', owner.auth)
+        .send({ bookingCode: 'nope' })
+        .expect(400);
+      // Two days before departure the ticket is not accepted yet, and nothing is marked.
+      const early = (await validate(qr).expect(200)).body as TicketValidation;
+      expect(early).toMatchObject({ result: 'other_departure', boardedAt: null, seatNumber: '1' });
+      // A held seat has no valid ticket; typed by hand with its booking code and seat.
       const pedroHeld = (
         await http().get('/api/v1/me/bookings').set('Authorization', pedro.auth).expect(200)
       ).body as Booking[];
       expect(pedroHeld[0]!.passengers[0]!.ticket).toBeNull();
+      const typed = (bookingCode: string, seatNumber: string) =>
+        http()
+          .post(`${org}/tickets/validate`)
+          .set('Authorization', owner.auth)
+          .send({ bookingCode, seatNumber });
+      expect(
+        ((await typed(pedroHeld[0]!.code, '4').expect(200)).body as TicketValidation).result,
+      ).toBe('not_paid');
+      await typed(pedroHeld[0]!.code, '5').expect(404);
 
       await db
         .update(bookings)
@@ -412,6 +426,10 @@ describe.runIf(expectDatabase)('Payments and tickets (e2e)', () => {
       });
       const again = (await validate(qr).expect(200)).body as TicketValidation;
       expect(again).toMatchObject({ result: 'already_boarded', boardedAt: boarded.boardedAt });
+      // The second seat, typed by hand without the VTP- prefix and in lower case.
+      const bySeat = (await typed(held.code.slice(4).toLowerCase(), '2').expect(200))
+        .body as TicketValidation;
+      expect(bySeat).toMatchObject({ result: 'boarded', seatNumber: '2' });
 
       const manifest = (
         await http()
@@ -421,7 +439,7 @@ describe.runIf(expectDatabase)('Payments and tickets (e2e)', () => {
       ).body as TripManifest;
       expect(manifest.passengers.map((p) => [p.seatNumber, p.boardedAt !== null])).toEqual([
         ['1', true],
-        ['2', false],
+        ['2', true],
         ['3', false],
         ['4', false],
         ['8', false],

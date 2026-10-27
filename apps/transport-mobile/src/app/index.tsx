@@ -113,7 +113,7 @@ export default function Home() {
       {organizations.error ? (
         <Banner tone="error">{organizations.error.userMessage}</Banner>
       ) : organizations.data?.length ? (
-        organizations.data.map(({ organization, role }) => (
+        organizations.data.map(({ organization, role, permissions }) => (
           <Card key={organization.id}>
             <Body>{organization.tradeName ?? organization.legalName}</Body>
             <Body muted>{ORGANIZATION_TYPE_LABELS[organization.type]}</Body>
@@ -124,6 +124,20 @@ export default function Home() {
                 tone={statusTone(organization.status)}
               />
             </Row>
+            {organization.status === 'active' && permissions.includes('tickets.validate') ? (
+              <Button
+                title="Validar boletos"
+                onPress={() =>
+                  router.push({
+                    pathname: '/scan',
+                    params: {
+                      organizationId: organization.id,
+                      name: organization.tradeName ?? organization.legalName,
+                    },
+                  })
+                }
+              />
+            ) : null}
           </Card>
         ))
       ) : organizations.data ? (

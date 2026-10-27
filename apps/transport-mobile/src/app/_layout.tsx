@@ -13,6 +13,7 @@ function RootNavigator() {
         <Stack.Screen name="index" options={{ title: 'VTP Transportistas' }} />
         <Stack.Screen name="application/index" options={{ title: 'Mi solicitud' }} />
         <Stack.Screen name="application/edit" options={{ title: 'Datos de la solicitud' }} />
+        <Stack.Screen name="scan" options={{ title: 'Validar boletos' }} />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />

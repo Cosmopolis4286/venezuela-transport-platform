@@ -100,15 +100,29 @@ export interface Payment {
 /** Prefix of the QR payload of a ticket: `VTP1.<ticket id>`. */
 export const TICKET_QR_PREFIX = 'VTP1.';
 
-/** `POST /organizations/:id/tickets/validate` — the scanned QR payload. */
-export interface ValidateTicketRequest {
-  qr: string;
-}
+/**
+ * `POST /organizations/:id/tickets/validate` — the scanned QR payload, or the booking code and
+ * seat typed by hand when the passenger's screen cannot be read.
+ */
+export type ValidateTicketRequest = { qr: string } | { bookingCode: string; seatNumber: string };
 
-/** `boarded` on the first scan; `already_boarded` when the ticket was used before. */
+/**
+ * `boarded` → valid, marked as boarded now. `already_boarded` → used before (see `boardedAt`).
+ * `not_paid` → the booking is not confirmed (held, cancelled, expired). `other_departure` → the
+ * passenger boards more than 12 hours away from now. Only `boarded` lets the passenger on.
+ */
+export const TICKET_RESULTS = [
+  'boarded',
+  'already_boarded',
+  'not_paid',
+  'other_departure',
+] as const;
+export type TicketResult = (typeof TICKET_RESULTS)[number];
+
 export interface TicketValidation {
-  result: 'boarded' | 'already_boarded';
-  boardedAt: string;
+  result: TicketResult;
+  /** When the passenger boarded; null when they have not. */
+  boardedAt: string | null;
   bookingCode: string;
   bookingStatus: BookingStatus;
   seatNumber: string;
