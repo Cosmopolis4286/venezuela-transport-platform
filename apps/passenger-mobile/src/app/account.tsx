@@ -10,6 +10,7 @@ import {
   useAuth,
   useCurrentUser,
 } from '@vtp/mobile-core';
+import { router } from 'expo-router';
 import { useState } from 'react';
 
 export default function Account() {
@@ -43,6 +44,7 @@ export default function Account() {
           </Row>
         ) : null}
       </Card>
+      <Button title="Mis viajes" onPress={() => router.push('/bookings')} />
       <Button
         variant="secondary"
         title="Cerrar sesión"

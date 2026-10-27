@@ -2,6 +2,7 @@ import { AuthProvider, SplashScreen, useAuth } from '@vtp/mobile-core';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { api } from '@/lib/api';
+import { BookingDraftProvider } from '@/lib/booking-draft';
 import { SearchProvider } from '@/lib/search-context';
 
 function RootNavigator() {
@@ -13,12 +14,16 @@ function RootNavigator() {
       {/* Searching is public: no account needed to look up departures. */}
       <Stack.Screen name="index" options={{ title: 'VTP Pasajeros' }} />
       <Stack.Screen name="results" options={{ title: 'Salidas' }} />
+      <Stack.Screen name="trip" options={{ title: 'Elige tus puestos' }} />
       <Stack.Screen
         name="stop-picker"
         options={{ title: 'Elige la parada', presentation: 'modal' }}
       />
       <Stack.Protected guard={signedIn}>
         <Stack.Screen name="account" options={{ title: 'Mi cuenta' }} />
+        <Stack.Screen name="passengers" options={{ title: 'Pasajeros' }} />
+        <Stack.Screen name="booking/[id]" options={{ title: 'Tu reserva' }} />
+        <Stack.Screen name="bookings" options={{ title: 'Mis viajes' }} />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />
@@ -32,7 +37,9 @@ export default function RootLayout() {
   return (
     <AuthProvider api={api}>
       <SearchProvider>
-        <RootNavigator />
+        <BookingDraftProvider>
+          <RootNavigator />
+        </BookingDraftProvider>
       </SearchProvider>
       <StatusBar style="auto" />
     </AuthProvider>

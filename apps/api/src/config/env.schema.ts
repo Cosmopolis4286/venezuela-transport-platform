@@ -72,6 +72,9 @@ export const envSchema = z
     FILE_STORAGE_LOCAL_DIR: z.string().min(1).default('var/uploads'),
     FILE_UPLOAD_MAX_BYTES: z.coerce.number().int().min(1024).max(52_428_800).default(10_485_760),
 
+    /** How long held seats wait for payment before they are released. */
+    BOOKING_HOLD_MINUTES: z.coerce.number().int().min(5).max(60).default(15),
+
     REDIS_URL: z
       .union([z.url({ protocol: /^rediss?$/ }), z.literal('')])
       .optional()

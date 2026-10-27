@@ -3,6 +3,7 @@ import {
   addDays,
   dayOfWeek,
   isCalendarDate,
+  occurrenceOnServiceDate,
   occurrencesOn,
   todayInVenezuela,
 } from './departures.js';
@@ -50,6 +51,16 @@ describe('occurrencesOn', () => {
     expect(occurrencesOn('2026-10-19', window, 0, 60)).toEqual([]);
     expect(occurrencesOn('2026-10-21', window, 0, 60)).toHaveLength(1);
     expect(occurrencesOn('2026-10-22', window, 0, 60)).toEqual([]);
+  });
+});
+
+describe('occurrenceOnServiceDate', () => {
+  it('matches the boarding-date search for the same trip', () => {
+    const sundayNight = { ...daily, daysOfWeek: [0], departureTime: '22:00' };
+    expect(occurrenceOnServiceDate('2026-10-18', sundayNight, 180, 420)).toEqual(
+      occurrencesOn('2026-10-19', sundayNight, 180, 420)[0],
+    );
+    expect(occurrenceOnServiceDate('2026-10-19', sundayNight, 180, 420)).toBeNull();
   });
 });
 

@@ -111,7 +111,8 @@ function DepartureCard({ departure }: { departure: Departure }) {
         </div>
         <p className="text-sm text-muted-foreground">
           {departure.from.name} → {departure.to.name} · {formatDuration(departure.durationMinutes)}{' '}
-          · {departure.seats} puestos · ruta {departure.route.name}
+          · {departure.seatsAvailable} de {departure.seats} puestos libres · ruta{' '}
+          {departure.route.name}
         </p>
       </div>
       <p className="text-lg font-semibold sm:text-right">

@@ -56,6 +56,7 @@ export const ORGANIZATION_PERMISSIONS = [
   'operations.dispatch',
   'routes.manage',
   'fleet.manage',
+  'bookings.view',
   'tickets.sell',
   'tickets.validate',
   'trips.drive',
@@ -71,13 +72,14 @@ export const ROLE_PERMISSIONS: Record<OrganizationRole, readonly OrganizationPer
     'operations.dispatch',
     'routes.manage',
     'fleet.manage',
+    'bookings.view',
     'tickets.sell',
     'tickets.validate',
   ],
-  dispatcher: ['members.view', 'operations.dispatch'],
-  ticket_agent: ['tickets.sell'],
+  dispatcher: ['members.view', 'operations.dispatch', 'bookings.view'],
+  ticket_agent: ['tickets.sell', 'bookings.view'],
   driver: ['trips.drive'],
-  inspector: ['tickets.validate'],
+  inspector: ['tickets.validate', 'bookings.view'],
 };
 
 export function roleAllowedFor(type: OrganizationType, role: OrganizationRole): boolean {

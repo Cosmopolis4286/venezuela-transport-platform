@@ -52,10 +52,37 @@ Reviewers check, in order:
 For a solo developer: still open PRs (CI runs, history stays readable) and self-review the diff
 on GitHub before merging.
 
+## Continuous integration (CircleCI)
+
+`.circleci/config.yml` runs one workflow, `ci`, on every push to any branch (pull requests
+included). Its four jobs run in parallel:
+
+| Job             | What it proves                                                                                     |
+| --------------- | -------------------------------------------------------------------------------------------------- |
+| `quality`       | `pnpm format:check`, lint, typecheck, unit tests, and builds of web and API                        |
+| `api-e2e`       | Migrations apply twice on PostgreSQL + PostGIS, no schema change lacks a migration, e2e tests pass |
+| `mobile-bundle` | Both Expo apps bundle for Android and iOS (JS only, no signing credentials)                        |
+| `docker-images` | Production Compose file is valid, API and web images build, the web image answers HTTP             |
+
+**One-time setup (repository owner):**
+
+1. In CircleCI, _Projects → Set Up Project_ for `venezuela-transport-platform`, choosing "use
+   the existing `.circleci/config.yml`" (prefer the CircleCI GitHub App, which reports results as
+   GitHub checks).
+2. _Project Settings → Advanced_: turn on **Auto-cancel redundant workflows** (a new push cancels
+   the previous run of the same branch) and keep **Only build pull requests** off so `main` is
+   built after each merge.
+3. On GitHub, _Settings → Branches_: require the CircleCI checks (`ci/circleci: quality`,
+   `api-e2e`, `mobile-bundle`, `docker-images`) before merging into `main`.
+
+The pipeline has no secrets: database credentials and public URLs are throwaway placeholders.
+`docker-images` uses a VM (`machine` executor), which costs more credits than the Docker jobs.
+
 ## Dependency updates
 
 - Dependabot (`.github/dependabot.yml`) opens grouped PRs weekly for npm and monthly for
-  GitHub Actions and Docker images.
+  Docker images. CircleCI images in `.circleci/config.yml` are pinned by hand: bump the Node
+  image together with `.nvmrc` and the production Dockerfiles.
 - **Expo:** upgrade one SDK at a time with `npx expo install expo@^<next> --fix` in each app;
   React and React Native versions follow the SDK — never bump them independently.
 - **Majors** (Next, NestJS, TypeScript, ESLint): one per PR, read the release notes, run the

@@ -18,5 +18,6 @@ import { StopsService } from './stops.service.js';
   imports: [IdentityModule, AuditModule, OrganizationsModule, FleetModule],
   controllers: [StopsController, AdminStopsController, RoutesController, SearchController],
   providers: [StopsService, RoutesService, SearchService],
+  exports: [StopsService],
 })
 export class NetworkModule {}

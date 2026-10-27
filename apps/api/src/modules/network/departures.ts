@@ -91,3 +91,20 @@ export function occurrencesOn(
     },
   ];
 }
+
+/** The same trip seen from its service date (bookings know the date the vehicle leaves). */
+export function occurrenceOnServiceDate(
+  serviceDate: string,
+  schedule: ScheduleWindow,
+  fromOffset: number,
+  toOffset: number,
+): Occurrence | null {
+  if (!runsOn(schedule, serviceDate)) return null;
+  const start = minutesOfDay(schedule.departureTime);
+  return {
+    serviceDate,
+    departsAt: localTimestamp(serviceDate, start + fromOffset),
+    arrivesAt: localTimestamp(serviceDate, start + toOffset),
+    durationMinutes: toOffset - fromOffset,
+  };
+}

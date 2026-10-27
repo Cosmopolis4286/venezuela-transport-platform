@@ -24,7 +24,7 @@ that app.
   source, no build); feature screens stay in each app. Never store tokens outside `secureTokenStore`.
 - Files go through `FileStorage` (`src/storage`), never `fs` directly; validate type by content.
 - Implemented so far: identity (auth), audit, organizations, onboarding (KYC), network (stops, routes,
-  fares, schedules, departure search), fleet (seat maps). Bookings and payments follow ADR-018
+  fares, schedules, departure search), fleet (seat maps), bookings (trips, seat holds, manifests). Payments follow ADR-018
   (platform collects, provider adapters, simulated provider until real ones exist); no dispatch yet.
 - Web forms: use `ActionForm` (pass `resetOnSuccess` only for "add" forms) and map API errors to
   Spanish with `failure(error, messages)` from `src/lib/server/form-actions.ts`.

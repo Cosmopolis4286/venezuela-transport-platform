@@ -6,6 +6,7 @@ import { AppConfigModule } from './config/config.module.js';
 import { AppConfigService } from './config/app-config.service.js';
 import { buildLoggerParams } from './config/logger.config.js';
 import { DatabaseModule } from './database/database.module.js';
+import { BookingsModule } from './modules/bookings/bookings.module.js';
 import { FleetModule } from './modules/fleet/fleet.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { IdentityModule } from './modules/identity/identity.module.js';
@@ -39,6 +40,7 @@ import { StorageModule } from './storage/storage.module.js';
     OnboardingModule,
     FleetModule,
     NetworkModule,
+    BookingsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

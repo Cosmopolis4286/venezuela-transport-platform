@@ -43,6 +43,13 @@
       "when": 1792429273094,
       "tag": "0005_seat_layouts",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792430121180,
+      "tag": "0006_bookings",
+      "breakpoints": true
     }
   ]
 }

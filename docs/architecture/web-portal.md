@@ -18,6 +18,8 @@
 | `/admin/stops`                                     | Platform staff  | Stop catalog: add terminals and stops, search, activate / deactivate                                         |
 | `/portal/organizations/:id/routes/new`             | `routes.manage` | Create a route: name and ordered stops with travel time from the origin                                      |
 | `/portal/organizations/:id/seat-layouts/new`       | `fleet.manage`  | Seat map editor: start from a preset, click cells to add or remove seats                                     |
+| `/portal/organizations/:id/trips?date=`            | `bookings.view` | Trips with bookings on a date: sold, held and free seats                                                     |
+| `/portal/organizations/:id/trips/:tripId`          | `bookings.view` | Passenger list for boarding: seat, name, ID, segment, booking code and status                                |
 | `/portal/organizations/:id/seat-layouts/:layoutId` | Members         | View or edit a seat map (`fleet.manage`); delete when no schedule uses it                                    |
 | `/portal/organizations/:id/routes/:routeId`        | Members         | Stops, fares per pair of stops, schedules; publish / deactivate (`routes.manage` to edit)                    |
 
