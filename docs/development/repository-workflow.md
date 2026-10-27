@@ -83,6 +83,8 @@ The pipeline has no secrets: database credentials and public URLs are throwaway 
 - Dependabot (`.github/dependabot.yml`) opens grouped PRs weekly for npm and monthly for
   Docker images. CircleCI images in `.circleci/config.yml` are pinned by hand: bump the Node
   image together with `.nvmrc` and the production Dockerfiles.
+- **Node types:** `@types/node` stays on the runtime's major (24). Dependabot ignores its majors;
+  upgrade them in the same PR that moves `.nvmrc`, the Dockerfiles and CircleCI.
 - **Expo:** upgrade one SDK at a time with `npx expo install expo@^<next> --fix` in each app;
   React and React Native versions follow the SDK — never bump them independently.
 - **Majors** (Next, NestJS, TypeScript, ESLint): one per PR, read the release notes, run the
