@@ -280,3 +280,19 @@ no personal data and needs no signing key; online validation is what catches cop
 **Trade-offs.** Refunds are manual until settlements exist. Validation needs connectivity; offline
 scanning would need signed QR payloads and a sync of boardings. Simulated payments must never be
 enabled where real passengers book.
+
+## ADR-022: A self-hosted GitHub Actions runner next to CircleCI
+
+**Decision.** `.github/workflows/self-hosted-ci.yml` runs the CircleCI jobs on a GitHub Actions
+runner installed on the maintainer's Windows machine, inside Ubuntu on WSL 2 with Docker Desktop.
+Jobs use the same containers as CircleCI (`node:24.22.0-trixie`, `postgis/postgis:18-3.6`) and
+only run on runners labelled `vtp`; pull requests from forks never run on it. CircleCI stays as
+the cloud pipeline (ADR-019); the owner chooses which checks are required.
+
+**Why.** The cloud CI credits ran out. GitHub charges no minutes for self-hosted runners, the
+jobs stay identical, and nothing else has to be hosted. WSL is needed because GitHub only runs job
+and service containers on Linux runners.
+
+**Trade-offs.** Checks run only while the machine is on; jobs run one after another. The runner
+executes pull request code on a personal machine, so the repository must stay private and fork
+pull requests are skipped. Action versions are watched by Dependabot again.

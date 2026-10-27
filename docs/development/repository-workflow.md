@@ -78,6 +78,13 @@ included). Its four jobs run in parallel:
 The pipeline has no secrets: database credentials and public URLs are throwaway placeholders.
 `docker-images` uses a VM (`machine` executor), which costs more credits than the Docker jobs.
 
+### Self-hosted runner (GitHub Actions)
+
+`.github/workflows/self-hosted-ci.yml` runs the same four jobs on a GitHub Actions runner on the
+maintainer's machine, which costs no minutes or credits (ADR-022). Use it when the CircleCI
+credits run out; require its checks on `main` instead of CircleCI's while that lasts. Setup and
+troubleshooting: [self-hosted-runner.md](self-hosted-runner.md).
+
 ## Dependency updates
 
 - Dependabot (`.github/dependabot.yml`) opens grouped PRs weekly for npm and monthly for

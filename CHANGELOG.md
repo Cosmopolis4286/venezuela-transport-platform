@@ -9,7 +9,12 @@ When a pull request changes behaviour, add a line under **Unreleased** in the sa
 
 ## Unreleased
 
-Nothing yet.
+### Added
+
+- **Self-hosted CI** (ADR-022): a GitHub Actions workflow that runs the CircleCI jobs on a runner
+  on the maintainer's machine (Windows + WSL 2), at no cost. Setup in
+  [docs/development/self-hosted-runner.md](docs/development/self-hosted-runner.md).
+- `CHANGELOG.md` and the [roadmap](docs/roadmap.md).
 
 ## 2026-10-27
 

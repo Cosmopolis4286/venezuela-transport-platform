@@ -138,6 +138,7 @@ Redis is optional and off by default; nothing in the default `pnpm dev` flow nee
 - [Payments and tickets](docs/architecture/payments.md)
 - [Local setup (Windows, macOS, Linux)](docs/development/local-setup.md)
 - [Environment variables](docs/development/environment-variables.md)
-- [Repository workflow](docs/development/repository-workflow.md)
+- [Repository workflow](docs/development/repository-workflow.md) ·
+  [Self-hosted CI runner](docs/development/self-hosted-runner.md)
 - [VPS deployment preparation](docs/deployment/vps-preparation.md)
 - [Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md)

@@ -23,7 +23,7 @@ Legend: ✅ done · 🟡 partial · ⏭️ next · ⬜ pending
 
 | Area                         | Status | Notes                                                                                                                                                                        |
 | ---------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Foundation                   | ✅     | Monorepo, Docker Compose (PostgreSQL + PostGIS), OpenAPI, lint, tests, production images, CircleCI                                                                           |
+| Foundation                   | ✅     | Monorepo, Docker Compose (PostgreSQL + PostGIS), OpenAPI, lint, tests, production images, CircleCI and a self-hosted runner                                                  |
 | Accounts and sign-in         | 🟡     | E-mail + password and one-time codes work. **Codes are only printed to the log**: no SMS / WhatsApp / e-mail provider yet ([authentication](architecture/authentication.md)) |
 | Organizations and roles      | ✅     | Bus companies, taxi lines, terminals; six roles and a permission matrix; invitations; platform review ([organizations](architecture/organizations.md))                       |
 | Driver and staff KYC         | ✅     | Applications, documents, platform review, organization acceptance ([onboarding](architecture/onboarding.md))                                                                 |
