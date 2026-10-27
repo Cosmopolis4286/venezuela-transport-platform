@@ -109,6 +109,9 @@ export const bookingPassengers = pgTable(
     documentType: identityDocumentType().notNull(),
     documentNumber: text().notNull(),
     active: boolean().notNull().default(true),
+    /** Set when the ticket is scanned at boarding. */
+    boardedAt: timestamp({ withTimezone: true }),
+    boardedByUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

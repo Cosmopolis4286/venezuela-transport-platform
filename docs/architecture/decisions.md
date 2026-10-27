@@ -263,3 +263,20 @@ holds under concurrency without application locks. Lazy expiry needs no schedule
 **Trade-offs.** A seat freed at an intermediate stop is not resold. Counts on public reads filter
 by `expiresAt`, so expired rows linger until the next booking on that trip touches them; a
 periodic cleanup can be added when a job runner exists.
+
+## ADR-021: Payment amounts frozen per payment; tickets are random ids in a QR
+
+**Decision.** The converted amount and rate are frozen when the passenger chooses a payment
+method (not when seats are held), so a rate change during the hold applies only to a new choice.
+Money confirms a booking only while it is still `held`, including a hold that ran out but whose
+seats were not released yet; any other money is marked `refund_due`. Without real providers the
+API runs a **simulated provider** that production configuration refuses. A ticket's QR carries
+`VTP1.<random id>`, validated online by the operator's inspectors, the first scan marking boarding.
+
+**Why.** The rate the passenger sees is the rate charged. Confirming only held bookings keeps the
+seat guarantee of ADR-020 without reserving seats after their hold. A random id in the QR carries
+no personal data and needs no signing key; online validation is what catches copied QR codes.
+
+**Trade-offs.** Refunds are manual until settlements exist. Validation needs connectivity; offline
+scanning would need signed QR payloads and a sync of boardings. Simulated payments must never be
+enabled where real passengers book.

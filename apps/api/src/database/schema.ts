@@ -8,3 +8,4 @@ export * from '../modules/onboarding/onboarding.schema.js';
 export * from '../modules/fleet/fleet.schema.js';
 export * from '../modules/network/network.schema.js';
 export * from '../modules/bookings/bookings.schema.js';
+export * from '../modules/payments/payments.schema.js';

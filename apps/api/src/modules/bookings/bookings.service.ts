@@ -3,6 +3,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   MAX_SEATS_PER_BOOKING,
   NETWORK_UTC_OFFSET,
+  TICKET_QR_PREFIX,
   type Booking,
   type CreateBookingRequest,
   type TripManifest,
@@ -10,7 +11,7 @@ import {
 } from '@vtp/shared-types';
 import { and, asc, count, desc, eq, gt, inArray, sql } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
-import { DatabaseService } from '../../database/database.service.js';
+import { DatabaseService, type Transaction } from '../../database/database.service.js';
 import { AppConfigService } from '../../config/app-config.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
@@ -18,6 +19,8 @@ import { routes, routeSchedules } from '../network/network.schema.js';
 import { StopsService } from '../network/stops.service.js';
 import type { OrganizationAccess } from '../organizations/organization-access.js';
 import { organizations } from '../organizations/organizations.schema.js';
+import { currentPayment, toPayment } from '../payments/payment-view.js';
+import { payments } from '../payments/payments.schema.js';
 import {
   bookingPassengers,
   bookings,
@@ -212,6 +215,20 @@ export class BookingsService {
     return (await this.toBookings([cancelled]))[0]!;
   }
 
+  /**
+   * Confirms a held booking once its payment arrived, inside the payment's transaction. Also
+   * accepts a hold that ran out but was not released yet: its seats are still this booking's.
+   * Row locks serialize this with `expireHolds`. Returns false when the booking is no longer held.
+   */
+  async confirmHeld(tx: Transaction, bookingId: string): Promise<boolean> {
+    const [confirmed] = await tx
+      .update(bookings)
+      .set({ status: 'confirmed', confirmedAt: new Date(), expiresAt: null })
+      .where(and(eq(bookings.id, bookingId), eq(bookings.status, 'held')))
+      .returning({ id: bookings.id });
+    return Boolean(confirmed);
+  }
+
   /** Trips of an organization on a service date, with seat counts. */
   async tripsOn(organizationId: string, serviceDate: string): Promise<TripSummary[]> {
     const rows = await this.database.db
@@ -283,6 +300,7 @@ export class BookingsService {
           bookingStatus: booking.status,
           from: stops.get(booking.fromStopId)!,
           to: stops.get(booking.toStopId)!,
+          boardedAt: passenger.boardedAt?.toISOString() ?? null,
         }))
         .sort((a, b) => compareSeats(a.seatNumber, b.seatNumber)),
     };
@@ -298,7 +316,7 @@ export class BookingsService {
     return booking;
   }
 
-  private async toBookings(rows: BookingRow[]): Promise<Booking[]> {
+  async toBookings(rows: BookingRow[]): Promise<Booking[]> {
     if (!rows.length) return [];
     const tripRows = await this.database.db
       .select({
@@ -326,10 +344,23 @@ export class BookingsService {
           rows.map((b) => b.id),
         ),
       );
+    const paymentRows = await this.database.db
+      .select()
+      .from(payments)
+      .where(
+        inArray(
+          payments.bookingId,
+          rows.map((b) => b.id),
+        ),
+      );
     const stops = await this.stops.summaries([
       ...new Set(rows.flatMap((b) => [b.fromStopId, b.toStopId])),
     ]);
     return rows.map((booking) => {
+      const payment = currentPayment(
+        paymentRows.filter((p) => p.bookingId === booking.id),
+        booking.status === 'held',
+      );
       const trip = tripRows.find((t) => t.trip.id === booking.tripId)!;
       return {
         id: booking.id,
@@ -357,10 +388,18 @@ export class BookingsService {
             documentType: p.documentType,
             documentNumber: p.documentNumber,
             fare: booking.fareAmount,
+            ticket:
+              booking.status === 'confirmed' && p.active
+                ? {
+                    qr: `${TICKET_QR_PREFIX}${p.id}`,
+                    boardedAt: p.boardedAt?.toISOString() ?? null,
+                  }
+                : null,
           })),
         total: { amount: booking.totalAmount, currency: booking.currency },
         expiresAt:
           booking.status === 'held' && booking.expiresAt ? booking.expiresAt.toISOString() : null,
+        payment: payment ? toPayment(payment) : null,
         createdAt: booking.createdAt.toISOString(),
       };
     });

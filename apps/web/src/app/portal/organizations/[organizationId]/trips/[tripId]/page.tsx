@@ -57,7 +57,7 @@ async function Manifest({
           <CardTitle>Lista de pasajeros ({manifest.passengers.length})</CardTitle>
           <CardDescription>
             Datos personales: úsalos solo para el abordaje. Las reservas apartadas aún no están
-            pagadas.
+            pagadas; el abordaje se marca al escanear el boleto.
           </CardDescription>
         </div>
         {manifest.passengers.length === 0 ? (
@@ -72,6 +72,7 @@ async function Manifest({
                   <th className="py-2 pr-3 font-normal">Documento</th>
                   <th className="py-2 pr-3 font-normal">Tramo</th>
                   <th className="py-2 pr-3 font-normal">Reserva</th>
+                  <th className="py-2 pr-3 font-normal">Abordaje</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -95,6 +96,9 @@ async function Manifest({
                         {BOOKING_STATUS_LABELS[p.bookingStatus]}
                       </Badge>
                     </td>
+                    <td className="py-2 pr-3 tabular-nums">
+                      {p.boardedAt ? `Abordó ${boardingTime(p.boardedAt)}` : '—'}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -104,4 +108,9 @@ async function Manifest({
       </Card>
     </>
   );
+}
+
+/** Venezuelan time of a UTC instant, `HH:MM`. */
+function boardingTime(iso: string): string {
+  return new Date(Date.parse(iso) - 4 * 3600_000).toISOString().slice(11, 16);
 }

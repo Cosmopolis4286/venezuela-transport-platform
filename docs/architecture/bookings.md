@@ -2,7 +2,7 @@
 
 Module `apps/api/src/modules/bookings`, contracts in `packages/shared-types/src/api/bookings.ts`.
 This is step 2 of ADR-018: passengers choose seats and hold them. Payment, which confirms a
-booking and issues tickets, is the next step.
+booking and issues tickets, is described in [payments.md](payments.md).
 
 ## Concepts
 
@@ -13,7 +13,7 @@ booking and issues tickets, is the next step.
 | **Passenger** | One row per seat: name, ID type and number.                                                                                                                                                                      |
 
 Booking statuses: `held` (seats reserved until `expiresAt`, waiting for payment) → `confirmed`
-(paid, next step) or `cancelled` (by the passenger) or `expired` (the hold ran out).
+(paid, with one ticket per seat, see [payments.md](payments.md)) or `cancelled` (by the passenger) or `expired` (the hold ran out).
 
 ## Rules
 
@@ -39,7 +39,7 @@ Booking statuses: `held` (seats reserved until `expiresAt`, waiting for payment)
 | `POST /bookings`                                                           | Signed in — hold seats                                              |
 | `GET /me/bookings`, `GET /me/bookings/:id`, `POST /me/bookings/:id/cancel` | The booking's owner                                                 |
 | `GET /organizations/:id/trips?date=`                                       | `bookings.view` (owner, admin, dispatcher, ticket agent, inspector) |
-| `GET /organizations/:id/trips/:tripId/manifest`                            | `bookings.view` — passenger list with names and IDs                 |
+| `GET /organizations/:id/trips/:tripId/manifest`                            | `bookings.view` — passenger list with names, IDs and boarding time  |
 
 Audit events: `booking.held`, `booking.cancelled`.
 
@@ -50,5 +50,5 @@ The manifest contains names and ID numbers. Only roles that need it for boarding
 
 ## Not yet
 
-Payment and tickets (QR), cancellation of paid bookings with refunds, operator cancellation of
-a trip, and selling seats per segment.
+Cancellation of paid bookings with refunds, operator cancellation of a trip, and selling seats
+per segment.

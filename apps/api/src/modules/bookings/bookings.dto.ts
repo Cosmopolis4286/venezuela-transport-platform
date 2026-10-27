@@ -5,6 +5,7 @@ import {
   type CreateBookingRequest,
   type IdentityDocumentType,
   type PassengerInput,
+  type ValidateTicketRequest,
 } from '@vtp/shared-types';
 import { Type } from 'class-transformer';
 import {
@@ -95,4 +96,11 @@ export class TripsDateQueryDto {
   @ApiProperty({ example: '2026-11-20' })
   @Matches(ISO_DATE, { message: 'date must be YYYY-MM-DD' })
   date!: string;
+}
+
+export class ValidateTicketDto implements ValidateTicketRequest {
+  @ApiProperty({ example: 'VTP1.6f1c…', description: 'Payload read from the ticket QR' })
+  @IsString()
+  @Length(1, 100)
+  qr!: string;
 }
