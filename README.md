@@ -86,6 +86,8 @@ All commands run from the repository root.
 | Format / check formatting                     | `pnpm format` / `pnpm format:check`                        |
 | Build web + API (+ shared packages)           | `pnpm build` (or `pnpm build:web`, `pnpm build:api`)       |
 | Start database                                | `pnpm infra:up`                                            |
+| Hybrid: database + API in Docker              | `pnpm stack:api`, then `pnpm dev:web`                      |
+| Everything in Docker (database, API, web)     | `pnpm stack:app` (stop: `pnpm stack:down`)                 |
 | Start database + Redis                        | `pnpm infra:up:redis`                                      |
 | Stop infrastructure (keeps data)              | `pnpm infra:down`                                          |
 | Container status / logs                       | `pnpm infra:ps` / `pnpm infra:logs`                        |
@@ -137,6 +139,8 @@ Redis is optional and off by default; nothing in the default `pnpm dev` flow nee
 - [Bookings: trips and seat holds](docs/architecture/bookings.md)
 - [Payments and tickets](docs/architecture/payments.md)
 - [Local setup (Windows, macOS, Linux)](docs/development/local-setup.md)
+- [Running with Docker: local, hybrid, full](docs/development/docker.md)
+- [Testing on Android: Expo Go, emulator, APK](docs/development/android-testing.md)
 - [Environment variables](docs/development/environment-variables.md)
 - [Repository workflow](docs/development/repository-workflow.md) ·
   [Self-hosted CI runner](docs/development/self-hosted-runner.md)

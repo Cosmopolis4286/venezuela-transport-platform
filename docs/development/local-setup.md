@@ -107,6 +107,9 @@ provider is integrated yet.
 
 ## Mobile apps
 
+To run the API (and the website) in Docker instead, see [docker.md](docker.md). Step-by-step
+testing on a phone, an emulator or as an APK: [android-testing.md](android-testing.md).
+
 Docker is **not** used for mobile development. Each app runs its own Metro bundler; open it
 with one of:
 

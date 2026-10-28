@@ -19,6 +19,16 @@ Template: `.env.example`
 | `POSTGRES_PORT`     | no       | no      | `5432`      | Host port, bound to `127.0.0.1`                                   |
 | `REDIS_PORT`        | no       | no      | `6379`      | Host port for the optional Redis, bound to `127.0.0.1`            |
 
+Only for the API and website in Docker (`pnpm stack:api`, `pnpm stack:app`, see [docker.md](docker.md)):
+
+| Variable                      | Required | Secret  | Default                        | Purpose                                                                   |
+| ----------------------------- | -------- | ------- | ------------------------------ | ------------------------------------------------------------------------- |
+| `VTP_API_PORT`                | no       | no      | `4000`                         | Host port of the API container                                            |
+| `VTP_API_PUBLISH_ADDRESS`     | no       | no      | `127.0.0.1`                    | `0.0.0.0` lets phones on your Wi-Fi reach the API (trusted networks only) |
+| `VTP_WEB_PORT`                | no       | no      | `3000`                         | Host port of the website container                                        |
+| `VTP_WEB_PUBLIC_API_BASE_URL` | no       | no      | `http://localhost:4000/api/v1` | API URL the browser uses; baked into the website image at build time      |
+| `VTP_AUTH_SECRET`             | no       | **yes** | local placeholder              | API session secret inside Docker; production refuses the placeholder      |
+
 ## `apps/api/.env` — API
 
 Template: `apps/api/.env.example`. Validated by `apps/api/src/config/env.schema.ts`; the API

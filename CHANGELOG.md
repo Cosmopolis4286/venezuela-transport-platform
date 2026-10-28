@@ -15,6 +15,16 @@ When a pull request changes behaviour, add a line under **Unreleased** in the sa
   on the maintainer's machine (Windows + WSL 2), at no cost. Setup in
   [docs/development/self-hosted-runner.md](docs/development/self-hosted-runner.md).
 - `CHANGELOG.md` and the [roadmap](docs/roadmap.md).
+- **Run the platform in Docker** ([docker.md](docs/development/docker.md)): `pnpm stack:api`
+  (hybrid: database and API in Docker, frontends on your machine) and `pnpm stack:app` (database,
+  API and website from the production images, with development settings). Migrations run
+  automatically.
+- [Android testing guide](docs/development/android-testing.md): Expo Go, emulator and APK.
+
+### Fixed
+
+- The API image no longer fails to start with `NODE_ENV=development`: the pretty log printer is
+  used only when installed.
 
 ## 2026-10-27
 
