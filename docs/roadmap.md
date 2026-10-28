@@ -1,92 +1,95 @@
-# Progress and roadmap
+# Progreso y hoja de ruta
 
-What the platform does today, what is next and what is still pending. Updated with every pull
-request that changes it; the history of changes is in the [CHANGELOG](../CHANGELOG.md).
+Qué hace hoy la plataforma, qué viene después y qué falta. Se actualiza con cada pull request que
+lo cambia; el historial de cambios está en el [CHANGELOG](../CHANGELOG.md).
 
-**Status (2026-10-27): in development, not deployed.** The full ticket-sale flow works end to end
-with a simulated payment provider. Nothing is ready for real users or real money yet; see
-[Before production](#before-production).
+**Estado (2026-10-28): en desarrollo, sin desplegar.** El flujo completo de venta de boletos
+funciona de punta a punta con un proveedor de pagos simulado. Nada está listo todavía para
+usuarios reales ni dinero real; ver [Antes de producción](#antes-de-producción).
 
-Legend: ✅ done · 🟡 partial · ⏭️ next · ⬜ pending
+Leyenda: ✅ listo · 🟡 parcial · ⏭️ siguiente · ⬜ pendiente
 
-## By user
+## Por usuario
 
-| Who                                  | Can do today                                                                                                                                                                          | Missing                                                                      |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| **Passenger** (app, website)         | Search departures (no account needed), choose seats on the bus map, hold them 15 min, pay (simulated) by pago móvil, transfer, PIX or USDT, show one QR ticket per seat, "Mis viajes" | Real payments, refunds and cancelling a paid trip, notifications, taxi rides |
-| **Bus company / taxi line** (portal) | Register and get approved, invite staff with roles, accept verified applicants, publish routes, fares, schedules and seat maps, set exchange rates, see trips and passenger lists     | Settlements (what the platform owes them), vehicles, dispatch, reports       |
-| **Inspector** (transport app)        | Scan tickets at boarding (camera or code + seat), see who boarded in the passenger list                                                                                               | Offline scanning                                                             |
-| **Driver / staff** (transport app)   | Sign in, accept invitations, apply with KYC documents                                                                                                                                 | Assigned trips, dispatch                                                     |
-| **Platform staff** (admin panel)     | Approve organizations and KYC applications, curate the stop catalog                                                                                                                   | Payments to refund, settlements, metrics                                     |
+| Quién                                                   | Puede hacer hoy                                                                                                                                                                                         | Le falta                                                                    |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| **Pasajero** (app, web)                                 | Buscar salidas (sin cuenta), elegir puestos en el mapa del bus, apartarlos 15 min, pagar (simulado) por pago móvil, transferencia, PIX o USDT, mostrar un boleto QR por puesto, "Mis viajes"            | Pagos reales, reembolsos y cancelar un viaje pagado, notificaciones, taxis  |
+| **Empresa de autobuses / línea de taxis** (portal)      | Registrarse y ser aprobada, invitar personal con roles, aceptar solicitantes verificados, publicar rutas, tarifas, horarios y mapas de puestos, fijar tasas de cambio, ver viajes y listas de pasajeros | Liquidaciones (lo que la plataforma le debe), vehículos, despacho, reportes |
+| **Inspector** (app de transportistas)                   | Escanear boletos al abordar (cámara o código + puesto), ver quién abordó en la lista de pasajeros                                                                                                       | Escaneo sin conexión                                                        |
+| **Conductor / personal** (app de transportistas)        | Iniciar sesión, aceptar invitaciones, enviar la solicitud con documentos KYC                                                                                                                            | Viajes asignados, despacho                                                  |
+| **Personal de la plataforma** (panel de administración) | Aprobar organizaciones y solicitudes KYC, administrar el catálogo de paradas                                                                                                                            | Pagos por reembolsar, liquidaciones, métricas                               |
 
-## By area
+## Por área
 
-| Area                         | Status | Notes                                                                                                                                                                        |
-| ---------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Foundation                   | ✅     | Monorepo, Docker Compose (PostgreSQL + PostGIS), OpenAPI, lint, tests, production images, CircleCI and a self-hosted runner                                                  |
-| Accounts and sign-in         | 🟡     | E-mail + password and one-time codes work. **Codes are only printed to the log**: no SMS / WhatsApp / e-mail provider yet ([authentication](architecture/authentication.md)) |
-| Organizations and roles      | ✅     | Bus companies, taxi lines, terminals; six roles and a permission matrix; invitations; platform review ([organizations](architecture/organizations.md))                       |
-| Driver and staff KYC         | ✅     | Applications, documents, platform review, organization acceptance ([onboarding](architecture/onboarding.md))                                                                 |
-| Transport network            | ✅     | Stops, routes, fares per pair of stops, weekly schedules, departure search ([network](architecture/network.md))                                                              |
-| Seat maps                    | ✅     | Layout editor with presets; schedules take their capacity from the map ([fleet](architecture/fleet.md))                                                                      |
-| Bookings                     | ✅     | Seat holds on the bus map, no double booking, passenger lists ([bookings](architecture/bookings.md))                                                                         |
-| Payments                     | 🟡     | Exchange rates, four methods, automatic confirmation through adapters — **simulated provider only** ([payments](architecture/payments.md))                                   |
-| Tickets and boarding         | ✅     | QR per seat, scanner in the transport app, boarding time in the passenger list                                                                                               |
-| Settlements and commission   | ⏭️     | Waiting for the commission decision (see [Decisions needed](#decisions-needed))                                                                                              |
-| Refunds                      | ⬜     | Payments are marked `refund_due`; there is no screen or process to pay them back yet                                                                                         |
-| Taxi dispatch                | ⬜     | Requests, matching and trip lifecycle for taxis to and from terminals                                                                                                        |
-| Vehicles and trip assignment | ⬜     | Plates, documents, assigning a vehicle and driver to each trip                                                                                                               |
-| Notifications                | ⬜     | SMS / WhatsApp / e-mail / push (codes, payment confirmation, trip reminders)                                                                                                 |
-| Reports                      | ⬜     | Sales and occupancy for operators; metrics for the platform                                                                                                                  |
-| Deployment                   | ⬜     | Preparation documented ([VPS](deployment/vps-preparation.md)); nothing deployed                                                                                              |
+| Área                             | Estado | Notas                                                                                                                                                                                                          |
+| -------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Base del proyecto                | ✅     | Monorepo, Docker Compose (PostgreSQL + PostGIS, y modos híbrido y completo), OpenAPI, lint, pruebas, imágenes de producción, CircleCI y un runner propio                                                       |
+| Cuentas e inicio de sesión       | 🟡     | Funcionan correo + contraseña y los códigos de un solo uso. **Los códigos solo se imprimen en el log**: todavía no hay proveedor de SMS / WhatsApp / correo ([authentication](architecture/authentication.md)) |
+| Organizaciones y roles           | ✅     | Empresas de autobuses, líneas de taxis, terminales; seis roles y una matriz de permisos; invitaciones; revisión de la plataforma ([organizations](architecture/organizations.md))                              |
+| KYC de conductores y personal    | ✅     | Solicitudes, documentos, revisión de la plataforma, aceptación de la organización ([onboarding](architecture/onboarding.md))                                                                                   |
+| Red de transporte                | ✅     | Paradas, rutas, tarifas por par de paradas, horarios semanales, búsqueda de salidas ([network](architecture/network.md))                                                                                       |
+| Mapas de puestos                 | ✅     | Editor con plantillas; los horarios toman su capacidad del mapa ([fleet](architecture/fleet.md))                                                                                                               |
+| Reservas                         | ✅     | Puestos apartados en el mapa del bus, sin doble venta, listas de pasajeros ([bookings](architecture/bookings.md))                                                                                              |
+| Pagos                            | 🟡     | Tasas de cambio, cuatro métodos, confirmación automática mediante adaptadores — **solo con el proveedor simulado** ([payments](architecture/payments.md))                                                      |
+| Boletos y abordaje               | ✅     | Un QR por puesto, escáner en la app de transportistas, hora de abordaje en la lista de pasajeros                                                                                                               |
+| Liquidaciones y comisión         | ⏭️     | Esperando la decisión sobre la comisión (ver [Decisiones pendientes](#decisiones-pendientes))                                                                                                                  |
+| Reembolsos                       | ⬜     | Los pagos quedan marcados `refund_due`; todavía no hay pantalla ni proceso para devolverlos                                                                                                                    |
+| Despacho de taxis                | ⬜     | Solicitudes, asignación y ciclo de vida del viaje en taxi desde y hacia los terminales                                                                                                                         |
+| Vehículos y asignación de viajes | ⬜     | Placas, documentos, asignar un vehículo y un conductor a cada viaje                                                                                                                                            |
+| Notificaciones                   | ⬜     | SMS / WhatsApp / correo / push (códigos, confirmación de pago, recordatorios de viaje)                                                                                                                         |
+| Reportes                         | ⬜     | Ventas y ocupación para las empresas; métricas para la plataforma                                                                                                                                              |
+| Despliegue                       | ⬜     | Preparación documentada ([VPS](deployment/vps-preparation.md)); nada desplegado                                                                                                                                |
 
-## Next steps
+## Próximos pasos
 
-In order; each is one pull request.
+En orden; cada uno es un pull request.
 
-1. ⏭️ **Settlements (step 4 of ADR-018).** A ledger of what the platform owes each operator per
-   paid booking (fare minus commission), the operator's balance in the portal, recording payouts,
-   and an admin list of `refund_due` payments to handle.
-2. **Refunds and cancelling paid bookings**, with the policy the product owner sets (deadline,
-   fee).
-3. **Notifications**: a real provider for sign-in codes first (it blocks production), then
-   payment confirmation and trip reminders.
-4. **Vehicles and trip assignment**, the base for dispatch.
-5. **Taxi dispatch** to and from terminals.
-6. **Reports** for operators and platform metrics.
+1. ⏭️ **Liquidaciones (paso 4 del ADR-018).** Un registro de lo que la plataforma le debe a cada
+   empresa por cada reserva pagada (tarifa menos comisión), el saldo de la empresa en el portal,
+   el registro de los pagos hechos y una lista para la administración con los pagos `refund_due`
+   por atender.
+2. **Reembolsos y cancelación de reservas pagadas**, con la política que fije el dueño del
+   producto (plazo, penalidad).
+3. **Notificaciones**: primero un proveedor real para los códigos de acceso (bloquea producción),
+   luego la confirmación de pago y los recordatorios de viaje.
+4. **Vehículos y asignación de viajes**, la base del despacho.
+5. **Despacho de taxis** desde y hacia los terminales.
+6. **Reportes** para las empresas y métricas de la plataforma.
 
-## Backlog (smaller items)
+## Pendientes menores
 
-- Bookings: operator cancels a trip (and refunds its passengers); resell a seat freed at an
-  intermediate stop.
-- Network: schedule exceptions (holidays, single cancelled departures), bays inside terminals,
-  real-time status.
-- Tickets: offline validation (signed QR codes and syncing boardings).
-- Mobile: native date picker; Spanish text for every API validation message; push notifications
-  instead of pull-to-refresh.
-- Payments: periodic cleanup of expired holds (today they are released lazily).
+- Reservas: que la empresa cancele un viaje (y reembolse a sus pasajeros); revender un puesto
+  liberado en una parada intermedia.
+- Red: excepciones a los horarios (feriados, salidas canceladas sueltas), andenes dentro de los
+  terminales, estado en tiempo real.
+- Boletos: validación sin conexión (QR firmados y sincronización de abordajes).
+- Móvil: selector de fecha nativo; texto en español para todos los mensajes de validación de la
+  API; notificaciones push en vez de deslizar para actualizar.
+- Pagos: limpieza periódica de los apartados vencidos (hoy se liberan al vuelo).
 
-## Decisions needed
+## Decisiones pendientes
 
-| Decision                                                                                       | Needed for              |
-| ---------------------------------------------------------------------------------------------- | ----------------------- |
-| Platform commission: percentage, and whether it is the same for every operator                 | Settlements (next step) |
-| How often operators are paid, and how (transfer, pago móvil, USDT)                             | Settlements             |
-| Refund policy: until when a passenger can cancel, and whether a fee is kept                    | Refunds                 |
-| Payment providers to contract: bank or gateway for pago móvil and transfers, PIX, USDT network | Real payments           |
-| SMS / WhatsApp / e-mail provider for sign-in codes                                             | Production              |
+| Decisión                                                                                             | Se necesita para             |
+| ---------------------------------------------------------------------------------------------------- | ---------------------------- |
+| Comisión de la plataforma: porcentaje, y si es la misma para todas las empresas                      | Liquidaciones (próximo paso) |
+| Cada cuánto se les paga a las empresas, y cómo (transferencia, pago móvil, USDT)                     | Liquidaciones                |
+| Política de reembolso: hasta cuándo puede cancelar un pasajero, y si se cobra una penalidad          | Reembolsos                   |
+| Proveedores de pago a contratar: banco o pasarela para pago móvil y transferencias, PIX, red de USDT | Pagos reales                 |
+| Proveedor de SMS / WhatsApp / correo para los códigos de acceso                                      | Producción                   |
 
-## Before production
+## Antes de producción
 
-None of these is done yet:
+Nada de esto está hecho todavía:
 
-- [ ] Legal review: collecting money for third parties and accepting crypto in Venezuela and
-      Brazil (ADR-018).
-- [ ] Real payment provider adapters, with their keys in server configuration
-      (`PAYMENT_PROVIDER=disabled` until then).
-- [ ] A real delivery provider for sign-in codes (`OTP_DELIVERY` is `console` or `disabled` today).
-- [ ] Settlements and a refund process, so money owed to operators and passengers is tracked.
-- [ ] Server, HTTPS, backups with a tested restore, monitoring
-      ([VPS preparation](deployment/vps-preparation.md)).
-- [ ] Mobile builds signed and published (EAS) with the production API URL.
-- [ ] Privacy notice and terms of use (passenger ID numbers are stored).
+- [ ] Revisión legal: cobrar dinero por cuenta de terceros y aceptar criptomonedas en Venezuela y
+      Brasil (ADR-018).
+- [ ] Adaptadores de proveedores de pago reales, con sus claves en la configuración del servidor
+      (`PAYMENT_PROVIDER=disabled` mientras tanto).
+- [ ] Un proveedor real para enviar los códigos de acceso (hoy `OTP_DELIVERY` es `console` o
+      `disabled`).
+- [ ] Liquidaciones y un proceso de reembolsos, para llevar la cuenta del dinero que se les debe a
+      empresas y pasajeros.
+- [ ] Servidor, HTTPS, copias de seguridad con restauración probada, monitoreo
+      ([preparación del VPS](deployment/vps-preparation.md)).
+- [ ] Apps móviles firmadas y publicadas (EAS) con la URL de la API de producción.
+- [ ] Aviso de privacidad y términos de uso (se guardan números de cédula de los pasajeros).

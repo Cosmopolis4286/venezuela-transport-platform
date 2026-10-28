@@ -126,7 +126,7 @@ Redis is optional and off by default; nothing in the default `pnpm dev` flow nee
 
 ## Documentation
 
-- [Progress and roadmap](docs/roadmap.md) · [Changelog](CHANGELOG.md)
+- [Progreso y hoja de ruta (ES)](docs/roadmap.md) · [Changelog](CHANGELOG.md)
 - [Architecture overview](docs/architecture/overview.md)
 - [Architecture decisions](docs/architecture/decisions.md)
 - [Authentication](docs/architecture/authentication.md)
@@ -139,10 +139,10 @@ Redis is optional and off by default; nothing in the default `pnpm dev` flow nee
 - [Bookings: trips and seat holds](docs/architecture/bookings.md)
 - [Payments and tickets](docs/architecture/payments.md)
 - [Local setup (Windows, macOS, Linux)](docs/development/local-setup.md)
-- [Running with Docker: local, hybrid, full](docs/development/docker.md)
-- [Testing on Android: Expo Go, emulator, APK](docs/development/android-testing.md)
+- [Correr con Docker: local, híbrido, completo (ES)](docs/development/docker.md)
+- [Probar en Android: Expo Go, emulador, APK (ES)](docs/development/android-testing.md)
 - [Environment variables](docs/development/environment-variables.md)
 - [Repository workflow](docs/development/repository-workflow.md) ·
-  [Self-hosted CI runner](docs/development/self-hosted-runner.md)
+  [Runner de CI propio (ES)](docs/development/self-hosted-runner.md)
 - [VPS deployment preparation](docs/deployment/vps-preparation.md)
 - [Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md)

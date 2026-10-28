@@ -1,86 +1,90 @@
-# Running the platform with Docker
+# Correr la plataforma con Docker
 
-`docker-compose.yml` (repository root) runs the platform locally in three ways. Pick by what you
-are working on:
+`docker-compose.yml` (raíz del repositorio) corre la plataforma en tu computadora de tres formas.
+Elige según en qué estés trabajando:
 
-| Mode                   | In Docker                | On your machine            | Start                                   |
-| ---------------------- | ------------------------ | -------------------------- | --------------------------------------- |
-| **Local** (default)    | Database                 | API, website, mobile apps  | `pnpm infra:up`, then `pnpm dev`        |
-| **Hybrid** (frontends) | Database + API           | Website and/or mobile apps | `pnpm stack:api`, then `pnpm dev:web` … |
-| **Full Docker**        | Database + API + website | Mobile apps (Expo) only    | `pnpm stack:app`                        |
+| Modo                    | En Docker                 | En tu computadora            | Iniciar                                   |
+| ----------------------- | ------------------------- | ---------------------------- | ----------------------------------------- |
+| **Local** (por defecto) | Base de datos             | API, web y apps móviles      | `pnpm infra:up` y luego `pnpm dev`        |
+| **Híbrido** (frontends) | Base de datos + API       | Web y/o apps móviles         | `pnpm stack:api` y luego `pnpm dev:web` … |
+| **Todo en Docker**      | Base de datos + API + web | Solo las apps móviles (Expo) | `pnpm stack:app`                          |
 
-- **Local** is the usual flow for backend work: hot reload of the API ([local-setup.md](local-setup.md)).
-- **Hybrid** is for frontend work: no API toolchain or migrations to run, the website and the
-  apps reload as you edit them.
-- **Full Docker** runs the **same images as production**, with development settings. Use it to
-  try the whole platform or to check that the images work.
+- **Local** es el flujo habitual para trabajar en el backend: la API se recarga al editar
+  ([local-setup.md](local-setup.md)).
+- **Híbrido** es para trabajar en los frontends: no necesitas las herramientas de la API ni correr
+  migraciones, y la web y las apps se recargan mientras editas.
+- **Todo en Docker** usa **las mismas imágenes que producción**, con ajustes de desarrollo. Sirve
+  para probar la plataforma completa o comprobar que las imágenes funcionan.
 
-The mobile apps never run in Docker: they run on a phone, an emulator or the browser preview
-([android-testing.md](android-testing.md)).
+Las apps móviles nunca corren en Docker: corren en un teléfono, un emulador o la vista previa en
+el navegador ([android-testing.md](android-testing.md)).
 
-## Commands
+## Comandos
 
-| Task                                          | Command                         |
-| --------------------------------------------- | ------------------------------- |
-| Database only                                 | `pnpm infra:up`                 |
-| Database + API (builds the API image)         | `pnpm stack:api`                |
-| Database + API + website (builds both images) | `pnpm stack:app`                |
-| Status                                        | `pnpm infra:ps`                 |
-| Logs of the API and website                   | `pnpm stack:logs`               |
-| Stop everything (data is kept)                | `pnpm stack:down`               |
-| **Delete** local data                         | `pnpm infra:reset` (asks first) |
+| Tarea                                                | Comando                                |
+| ---------------------------------------------------- | -------------------------------------- |
+| Solo la base de datos                                | `pnpm infra:up`                        |
+| Base de datos + API (construye la imagen de la API)  | `pnpm stack:api`                       |
+| Base de datos + API + web (construye ambas imágenes) | `pnpm stack:app`                       |
+| Estado                                               | `pnpm infra:ps`                        |
+| Logs de la API y la web                              | `pnpm stack:logs`                      |
+| Detener todo (los datos se conservan)                | `pnpm stack:down`                      |
+| **Borrar** los datos locales                         | `pnpm infra:reset` (pide confirmación) |
 
-`pnpm stack:*` rebuilds the images when the code changed; the first build takes a few minutes.
-Migrations run automatically (`migrate` service) before the API starts.
+`pnpm stack:*` reconstruye las imágenes cuando el código cambió; la primera vez tarda unos
+minutos. Las migraciones se aplican solas (servicio `migrate`) antes de que arranque la API.
 
-| URL                            | What               |
-| ------------------------------ | ------------------ |
-| http://localhost:3000          | Website and portal |
-| http://localhost:4000/api/v1   | API                |
-| http://localhost:4000/api/docs | Swagger UI         |
+| URL                            | Qué          |
+| ------------------------------ | ------------ |
+| http://localhost:3000          | Web y portal |
+| http://localhost:4000/api/v1   | API          |
+| http://localhost:4000/api/docs | Swagger UI   |
 
-## Development settings inside Docker
+## Ajustes de desarrollo dentro de Docker
 
-The API container runs the production image with `NODE_ENV=development`, so:
+El contenedor de la API usa la imagen de producción con `NODE_ENV=development`, así que:
 
-- **One-time codes** are printed to its log: `docker compose logs api | grep "login code"` (or use
-  e-mail + password).
-- **Payments** use the simulated provider (the apps offer "Simular pago").
-- Uploaded KYC documents are kept in the `api-uploads` volume.
-- Logs are JSON (the pretty printer is a development dependency, not in the image).
-- To grant yourself platform staff rights:
-  `docker compose exec api node dist/cli/platform-grant.js --email you@example.com --role admin`
-  — or run `pnpm platform:grant …` from your machine against the same database.
+- **Los códigos de acceso** se imprimen en su log: `docker compose logs api | grep "login code"`
+  (o entra con correo + contraseña).
+- **Los pagos** usan el proveedor simulado (las apps ofrecen "Simular pago").
+- Los documentos KYC subidos se guardan en el volumen `api-uploads`.
+- Los logs salen en JSON (el formateador bonito es una dependencia de desarrollo y no está en la
+  imagen).
+- Para darte permisos de personal de la plataforma:
+  `docker compose exec api node dist/cli/platform-grant.js --email tu@ejemplo.com --role admin`
+  — o ejecuta `pnpm platform:grant …` desde tu computadora contra la misma base de datos.
 
-The website container is the production build: the browser calls the API at
-`VTP_WEB_PUBLIC_API_BASE_URL` (default `http://localhost:4000/api/v1`) and the server side calls
-it over the Compose network. Its session cookies are `Secure`, which browsers accept on
-`http://localhost`; open it as `localhost`, not by IP.
+El contenedor de la web es la versión de producción: el navegador llama a la API en
+`VTP_WEB_PUBLIC_API_BASE_URL` (por defecto `http://localhost:4000/api/v1`) y el servidor la llama
+por la red interna de Compose. Sus cookies de sesión son `Secure`, y los navegadores las aceptan en
+`http://localhost`; ábrela como `localhost`, no por IP.
 
-## Hybrid mode step by step
+## Modo híbrido paso a paso
 
 ```bash
-pnpm stack:api                  # database + API in Docker, migrations applied
-pnpm dev:web                    # website on http://localhost:3000 (hot reload)
-pnpm dev:passenger              # and/or the passenger app (Metro on :8081)
-pnpm dev:transport              # and/or the transport app (Metro on :8082)
+pnpm stack:api                  # base de datos + API en Docker, migraciones aplicadas
+pnpm dev:web                    # web en http://localhost:3000 (se recarga al editar)
+pnpm dev:passenger              # y/o la app de pasajeros (Metro en :8081)
+pnpm dev:transport              # y/o la app de transportistas (Metro en :8082)
 ```
 
-Do **not** run `pnpm dev` or `pnpm dev:api` at the same time: they start a second API on port 4000. `apps/web/.env.local` keeps its default `NEXT_PUBLIC_API_BASE_URL=http://localhost:4000/api/v1`.
+**No** corras `pnpm dev` ni `pnpm dev:api` al mismo tiempo: arrancan una segunda API en el puerto 4000. `apps/web/.env.local` se queda con su valor por defecto
+`NEXT_PUBLIC_API_BASE_URL=http://localhost:4000/api/v1`.
 
-## Configuration
+## Configuración
 
-The root `.env` (created by `pnpm env:init`) feeds both the database and the containers. The
-`VTP_*` variables are optional ([environment-variables.md](environment-variables.md)): ports, the
-address the API is published on, and the API URL baked into the website image (rebuild with
-`pnpm stack:app` after changing it). `apps/api/.env` is **not** used by the containers.
+El `.env` de la raíz (lo crea `pnpm env:init`) alimenta tanto la base de datos como los
+contenedores. Las variables `VTP_*` son opcionales
+([environment-variables.md](environment-variables.md)): los puertos, la dirección en la que se
+publica la API y la URL de la API que queda dentro de la imagen de la web (reconstruye con
+`pnpm stack:app` después de cambiarla). Los contenedores **no** usan `apps/api/.env`.
 
-## Troubleshooting
+## Problemas frecuentes
 
-| Symptom                                          | Fix                                                                                                            |
-| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| `port is already allocated` (4000 or 3000)       | A local `pnpm dev` is running: stop it, or set `VTP_API_PORT` / `VTP_WEB_PORT` in `.env`.                      |
-| `migrate` exits with an error                    | `docker compose logs migrate`. The database password in `.env` must match the one the volume was created with. |
-| Website loads but sign-in loops back to `/login` | Open it as `http://localhost:3000`, not `127.0.0.1` or a LAN IP (secure cookies).                              |
-| A phone cannot reach the API                     | Set `VTP_API_PUBLISH_ADDRESS=0.0.0.0`, run `pnpm stack:api` again, allow port 4000 in the firewall.            |
-| Images do not pick up your changes               | `pnpm stack:app` rebuilds; force it with `docker compose --profile app build --no-cache`.                      |
+| Síntoma                                               | Solución                                                                                                           |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `port is already allocated` (4000 o 3000)             | Hay un `pnpm dev` local corriendo: detenlo, o define `VTP_API_PORT` / `VTP_WEB_PORT` en `.env`.                    |
+| `migrate` termina con error                           | `docker compose logs migrate`. La contraseña de `.env` debe ser la misma con la que se creó el volumen.            |
+| La web carga pero al iniciar sesión vuelve a `/login` | Ábrela como `http://localhost:3000`, no con `127.0.0.1` ni la IP de la red (cookies seguras).                      |
+| Un teléfono no llega a la API                         | Define `VTP_API_PUBLISH_ADDRESS=0.0.0.0`, corre de nuevo `pnpm stack:api` y permite el puerto 4000 en el firewall. |
+| Las imágenes no toman tus cambios                     | `pnpm stack:app` reconstruye; para forzarlo: `docker compose --profile app build --no-cache`.                      |
