@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { SEAT_LAYOUT_PRESETS, layoutProblem, presetLayout, renumberSeats } from './fleet.js';
+import {
+  SEAT_LAYOUT_PRESETS,
+  layoutProblem,
+  normalizePlate,
+  plateProblem,
+  presetLayout,
+  renumberSeats,
+  vehicleName,
+} from './fleet.js';
 import { roleHasPermission } from './organizations.js';
 
 describe('seat layouts', () => {
@@ -53,5 +61,18 @@ describe('seat layouts', () => {
   it('lets owners and admins manage the fleet', () => {
     expect(roleHasPermission('admin', 'fleet.manage')).toBe(true);
     expect(roleHasPermission('dispatcher', 'fleet.manage')).toBe(false);
+  });
+});
+
+describe('vehicle plates', () => {
+  it('normalizes and validates Venezuelan plates', () => {
+    expect(normalizePlate(' ab-123.cd ')).toBe('AB123CD');
+    expect(plateProblem('AB123CD')).toBeNull();
+    expect(plateProblem('a1b 2c')).toBeNull();
+    expect(plateProblem('AB1')).toMatch(/placa/);
+    expect(plateProblem('AB123CD45')).toMatch(/placa/);
+    expect(plateProblem('AB_123')).toMatch(/placa/);
+    expect(vehicleName({ plate: 'AB123CD', label: 'Unidad 12' })).toBe('AB123CD · Unidad 12');
+    expect(vehicleName({ plate: 'AB123CD', label: null })).toBe('AB123CD');
   });
 });

@@ -35,7 +35,7 @@ cada funcionalidad.
 | ----------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
 | `apps/web`              | Visitantes; personal de empresas de autobuses y terminales   | Sitio público y búsqueda de autobuses (grupo de rutas `(public)`), portal de empresas en `/portal` con su propio layout. Las áreas con sesión `/portal` y `/admin` las protegen `src/proxy.ts` y las verificaciones de la API ([web-portal.md](web-portal.md)). | La API por HTTPS             |
 | `apps/passenger-mobile` | Pasajeros                                                    | Búsqueda de viajes, reserva de puestos, pago, boletos QR y cuenta; solicitudes de taxi más adelante ([mobile-apps.md](mobile-apps.md))                                                                                                                          | La API por HTTPS             |
-| `apps/transport-mobile` | Taxistas, tripulaciones de autobuses, operadores de terminal | Inicio de sesión, invitaciones, solicitud KYC con documentos y validación de boletos QR; despacho más adelante                                                                                                                                                  | La API por HTTPS             |
+| `apps/transport-mobile` | Taxistas, tripulaciones de autobuses, operadores de terminal | Inicio de sesión, invitaciones, solicitud KYC con documentos, validación de boletos QR y viajes asignados al conductor; despacho de taxis más adelante                                                                                                          | La API por HTTPS             |
 | `apps/api`              | Todos los clientes                                           | Única fuente de verdad de las reglas de negocio, la autorización y los datos                                                                                                                                                                                    | PostgreSQL, Redis (opcional) |
 
 Reglas:
@@ -75,18 +75,19 @@ apps/api/src/
 
 Módulos, aproximadamente en orden de dependencia:
 
-| Módulo                        | Es dueño de                                                                                                                                            |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `identity` ✅                 | Usuarios, credenciales, sesiones y tokens, códigos de un solo uso ([authentication.md](authentication.md))                                             |
-| `organizations` ✅            | Empresas de autobuses, líneas de taxis y terminales; membresías, roles, invitaciones, revisión de la plataforma ([organizations.md](organizations.md)) |
-| `onboarding` ✅               | Solicitudes de conductores y personal, documentos KYC, revisión de la plataforma, aceptación de la organización ([onboarding.md](onboarding.md))       |
-| `network` ✅                  | Catálogo de paradas (terminales y paradas, PostGIS), rutas, tarifas, horarios recurrentes, búsqueda pública de salidas ([network.md](network.md))      |
-| `fleet` ✅ (mapas de puestos) | Mapas de puestos por tipo de vehículo ([fleet.md](fleet.md)); los vehículos y la asignación de conductores llegan con el despacho                      |
-| `bookings` ✅                 | Viajes, puestos apartados, listas de pasajeros, validación de boletos al abordar ([bookings.md](bookings.md))                                          |
-| `payments` ✅                 | Tasas de cambio, pagos mediante adaptadores de proveedores, confirmación de reservas ([payments.md](payments.md)); las liquidaciones vienen después    |
-| `taxi-dispatch`               | Solicitudes de taxi, asignación, ciclo de vida del viaje (WebSockets solo si se justifica)                                                             |
-| `notifications`               | Envío de SMS / push / correo, plantillas                                                                                                               |
-| `reporting`                   | Modelos de lectura y exportaciones para las empresas                                                                                                   |
+| Módulo             | Es dueño de                                                                                                                                            |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `identity` ✅      | Usuarios, credenciales, sesiones y tokens, códigos de un solo uso ([authentication.md](authentication.md))                                             |
+| `organizations` ✅ | Empresas de autobuses, líneas de taxis y terminales; membresías, roles, invitaciones, revisión de la plataforma ([organizations.md](organizations.md)) |
+| `onboarding` ✅    | Solicitudes de conductores y personal, documentos KYC, revisión de la plataforma, aceptación de la organización ([onboarding.md](onboarding.md))       |
+| `network` ✅       | Catálogo de paradas (terminales y paradas, PostGIS), rutas, tarifas, horarios recurrentes, búsqueda pública de salidas ([network.md](network.md))      |
+| `fleet` ✅         | Mapas de puestos por tipo de vehículo y vehículos de cada empresa ([fleet.md](fleet.md))                                                               |
+| `bookings` ✅      | Viajes, puestos apartados, listas de pasajeros, validación de boletos al abordar ([bookings.md](bookings.md))                                          |
+| `payments` ✅      | Tasas de cambio, pagos mediante adaptadores de proveedores, confirmación de reservas ([payments.md](payments.md)); las liquidaciones vienen después    |
+| `dispatch` ✅      | Asignación de vehículo y conductor a cada viaje, viajes del conductor ([dispatch.md](dispatch.md))                                                     |
+| `taxi-dispatch`    | Solicitudes de taxi, asignación, ciclo de vida del viaje (WebSockets solo si se justifica)                                                             |
+| `notifications`    | Envío de SMS / push / correo, plantillas                                                                                                               |
+| `reporting`        | Modelos de lectura y exportaciones para las empresas                                                                                                   |
 
 Convenciones para cada módulo nuevo (`apps/api/src/modules/<nombre>/`):
 

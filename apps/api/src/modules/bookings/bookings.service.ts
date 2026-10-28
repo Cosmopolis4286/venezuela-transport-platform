@@ -10,14 +10,16 @@ import {
   type TripSummary,
 } from '@vtp/shared-types';
 import { and, asc, count, desc, eq, gt, inArray, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService, type Transaction } from '../../database/database.service.js';
 import { AppConfigService } from '../../config/app-config.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import { vehicles } from '../fleet/fleet.schema.js';
+import { users } from '../identity/identity.schema.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import { routes, routeSchedules } from '../network/network.schema.js';
 import { StopsService } from '../network/stops.service.js';
-import type { OrganizationAccess } from '../organizations/organization-access.js';
 import { organizations } from '../organizations/organizations.schema.js';
 import { currentPayment, toPayment } from '../payments/payment-view.js';
 import { payments } from '../payments/payments.schema.js';
@@ -52,6 +54,14 @@ const uniqueViolation = (error: unknown): string | undefined => {
 export function toLocalIso(instant: Date): string {
   return `${new Date(instant.getTime() - 4 * 3600_000).toISOString().slice(0, 19)}${NETWORK_UTC_OFFSET}`;
 }
+
+export const drivers = alias(users, 'driver');
+
+/** The trip's vehicle and driver; left-join `vehicles` and `drivers` on the trip. */
+export const assignmentColumns = {
+  vehicle: { id: vehicles.id, plate: vehicles.plate, label: vehicles.label },
+  driver: { userId: drivers.id, firstName: drivers.firstName, lastName: drivers.lastName },
+};
 
 function bookingCode(): string {
   let code = '';
@@ -236,42 +246,44 @@ export class BookingsService {
         trip: trips,
         route: { id: routes.id, name: routes.name },
         serviceClass: routeSchedules.serviceClass,
+        ...assignmentColumns,
       })
       .from(trips)
       .innerJoin(routes, eq(routes.id, trips.routeId))
       .innerJoin(routeSchedules, eq(routeSchedules.id, trips.scheduleId))
+      .leftJoin(vehicles, eq(vehicles.id, trips.vehicleId))
+      .leftJoin(drivers, eq(drivers.id, trips.driverUserId))
       .where(and(eq(trips.organizationId, organizationId), eq(trips.serviceDate, serviceDate)))
       .orderBy(asc(trips.departsAt));
-    const counts = rows.length
-      ? await this.database.db
-          .select({ tripId: bookingPassengers.tripId, status: bookings.status, seats: count() })
-          .from(bookingPassengers)
-          .innerJoin(bookings, and(eq(bookings.id, bookingPassengers.bookingId), occupiesSeat()))
-          .where(
-            and(
-              inArray(
-                bookingPassengers.tripId,
-                rows.map((r) => r.trip.id),
-              ),
-              eq(bookingPassengers.active, true),
-            ),
-          )
-          .groupBy(bookingPassengers.tripId, bookings.status)
-      : [];
-    return rows.map(({ trip, route, serviceClass }) => summary(trip, route, serviceClass, counts));
+    const counts = await this.seatCounts(rows.map((r) => r.trip.id));
+    return rows.map((row) => summary(row, counts));
   }
 
-  async manifest(access: OrganizationAccess, tripId: string): Promise<TripManifest> {
+  /** Occupied seats per trip and booking status, for `summary()`. */
+  async seatCounts(tripIds: string[]): Promise<SeatCount[]> {
+    if (!tripIds.length) return [];
+    return this.database.db
+      .select({ tripId: bookingPassengers.tripId, status: bookings.status, seats: count() })
+      .from(bookingPassengers)
+      .innerJoin(bookings, and(eq(bookings.id, bookingPassengers.bookingId), occupiesSeat()))
+      .where(and(inArray(bookingPassengers.tripId, tripIds), eq(bookingPassengers.active, true)))
+      .groupBy(bookingPassengers.tripId, bookings.status);
+  }
+
+  async manifest(organizationId: string, tripId: string): Promise<TripManifest> {
     const [row] = await this.database.db
       .select({
         trip: trips,
         route: { id: routes.id, name: routes.name },
         serviceClass: routeSchedules.serviceClass,
+        ...assignmentColumns,
       })
       .from(trips)
       .innerJoin(routes, eq(routes.id, trips.routeId))
       .innerJoin(routeSchedules, eq(routeSchedules.id, trips.scheduleId))
-      .where(and(eq(trips.id, tripId), eq(trips.organizationId, access.organization.id)));
+      .leftJoin(vehicles, eq(vehicles.id, trips.vehicleId))
+      .leftJoin(drivers, eq(drivers.id, trips.driverUserId))
+      .where(and(eq(trips.id, tripId), eq(trips.organizationId, organizationId)));
     if (!row) throw notFound('Trip not found');
     const passengers = await this.database.db
       .select({ passenger: bookingPassengers, booking: bookings })
@@ -288,7 +300,7 @@ export class BookingsService {
       }, {}),
     ).map(([status, seats]) => ({ tripId, status: status as BookingRow['status'], seats }));
     return {
-      ...summary(row.trip, row.route, row.serviceClass, counts),
+      ...summary(row, counts),
       passengers: passengers
         .map(({ passenger, booking }) => ({
           seatNumber: passenger.seatNumber,
@@ -406,12 +418,19 @@ export class BookingsService {
   }
 }
 
-function summary(
-  trip: TripRow,
-  route: { id: string; name: string },
-  serviceClass: TripSummary['serviceClass'],
-  counts: { tripId: string; status: BookingRow['status']; seats: number }[],
+export type SeatCount = { tripId: string; status: BookingRow['status']; seats: number };
+
+export function summary(
+  row: {
+    trip: TripRow;
+    route: { id: string; name: string };
+    serviceClass: TripSummary['serviceClass'];
+    vehicle: TripSummary['vehicle'];
+    driver: TripSummary['driver'];
+  },
+  counts: SeatCount[],
 ): TripSummary {
+  const { trip } = row;
   const seatsWith = (status: BookingRow['status']) =>
     counts
       .filter((c) => c.tripId === trip.id && c.status === status)
@@ -420,11 +439,13 @@ function summary(
     id: trip.id,
     scheduleId: trip.scheduleId,
     serviceDate: trip.serviceDate,
-    route,
+    route: row.route,
     departureTime: toLocalIso(trip.departsAt).slice(11, 16),
-    serviceClass,
+    serviceClass: row.serviceClass,
     capacity: trip.capacity,
     soldSeats: seatsWith('confirmed'),
     heldSeats: seatsWith('held'),
+    vehicle: row.vehicle,
+    driver: row.driver,
   };
 }

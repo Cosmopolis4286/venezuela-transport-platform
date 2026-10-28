@@ -13,6 +13,13 @@ pull request.
 
 ### Agregado
 
+- **Vehículos y despacho.** Las empresas registran sus vehículos (placa, nombre interno, mapa de
+  puestos) y asignan un vehículo y un conductor a cada salida desde el tablero de despacho del
+  portal, que muestra todas las salidas del día, tengan reservas o no. La API impide que un
+  vehículo o un conductor esté en dos viajes a la vez y que un vehículo vaya en una salida vendida
+  con otro mapa de puestos. Los conductores ven sus viajes y quién viaja en la app de
+  transportistas (sin los documentos de los pasajeros). Ver
+  [docs/architecture/dispatch.md](docs/architecture/dispatch.md).
 - **CI en un runner propio** (ADR-022): un workflow de GitHub Actions que corre los trabajos de
   CircleCI en un runner instalado en la computadora del mantenedor (Windows + WSL 2), sin costo.
   Instalación en [docs/development/self-hosted-runner.md](docs/development/self-hosted-runner.md).
@@ -23,6 +30,10 @@ pull request.
   aplican solas.
 - [Guía para probar en Android](docs/development/android-testing.md): Expo Go, emulador y APK.
 - Toda la documentación, en español.
+
+### Cambiado
+
+- Los viajes y la lista de pasajeros del portal muestran el vehículo y el conductor asignados.
 
 ### Corregido
 

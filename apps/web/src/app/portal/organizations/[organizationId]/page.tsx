@@ -96,6 +96,19 @@ async function Organization({ params }: { params: Promise<{ organizationId: stri
           </div>
         </Card>
       ) : null}
+      {runsRoutes(organization.type) && permissions.includes('operations.dispatch') ? (
+        <Card>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-col gap-1">
+              <CardTitle>Despacho</CardTitle>
+              <CardDescription>Vehículo y conductor de cada salida del día.</CardDescription>
+            </div>
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/portal/organizations/${organization.id}/dispatch`}>Abrir despacho</Link>
+            </Button>
+          </div>
+        </Card>
+      ) : null}
       {runsRoutes(organization.type) ? (
         <Routes
           organizationId={organization.id}
@@ -113,6 +126,19 @@ async function Organization({ params }: { params: Promise<{ organizationId: stri
           organizationId={organization.id}
           canManage={permissions.includes('fleet.manage')}
         />
+      ) : null}
+      {runsRoutes(organization.type) ? (
+        <Card>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-col gap-1">
+              <CardTitle>Vehículos</CardTitle>
+              <CardDescription>Placas de las unidades y su mapa de puestos.</CardDescription>
+            </div>
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/portal/organizations/${organization.id}/vehicles`}>Ver vehículos</Link>
+            </Button>
+          </div>
+        </Card>
       ) : null}
       {canViewMembers ? (
         <Members

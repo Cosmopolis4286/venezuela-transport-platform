@@ -110,7 +110,7 @@ export class OrganizationTripsController {
     @CurrentOrganization() access: OrganizationAccess,
     @Param('tripId', ParseUUIDPipe) tripId: string,
   ): Promise<TripManifest> {
-    return this.bookings.manifest(access, tripId);
+    return this.bookings.manifest(access.organization.id, tripId);
   }
 }
 

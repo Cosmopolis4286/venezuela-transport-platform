@@ -6,11 +6,11 @@ reserva y emite los boletos, se describe en [payments.md](payments.md).
 
 ## Conceptos
 
-| Concepto     | Notas                                                                                                                                                                                                                                           |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Viaje**    | Un horario en una fecha de servicio (el día en que el vehículo sale del origen de la ruta). Se crea con la primera reserva, con una **copia del mapa de puestos** y la capacidad, así que editar el mapa después nunca mueve un puesto vendido. |
-| **Reserva**  | Los puestos de una persona en un viaje entre dos paradas. Tiene un código como `VTP-7K3QXA`, la tarifa por pasajero y el total congelados al reservar, y las horas de abordaje y llegada de su tramo.                                           |
-| **Pasajero** | Una fila por puesto: nombre, tipo y número de documento.                                                                                                                                                                                        |
+| Concepto     | Notas                                                                                                                                                                                                                                                                                                                                                            |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Viaje**    | Un horario en una fecha de servicio (el día en que el vehículo sale del origen de la ruta). Se crea con la primera reserva (o al asignarle un vehículo, ver [despacho](dispatch.md)), con una **copia del mapa de puestos** y la capacidad, así que editar el mapa después nunca mueve un puesto vendido. Tiene un vehículo y un conductor asignados, o ninguno. |
+| **Reserva**  | Los puestos de una persona en un viaje entre dos paradas. Tiene un código como `VTP-7K3QXA`, la tarifa por pasajero y el total congelados al reservar, y las horas de abordaje y llegada de su tramo.                                                                                                                                                            |
+| **Pasajero** | Una fila por puesto: nombre, tipo y número de documento.                                                                                                                                                                                                                                                                                                         |
 
 Estados de una reserva: `held` (puestos apartados hasta `expiresAt`, esperando el pago) →
 `confirmed` (pagada, con un boleto por puesto, ver [payments.md](payments.md)), `cancelled`
@@ -49,7 +49,8 @@ Eventos de auditoría: `booking.held`, `booking.cancelled`.
 ## Privacidad
 
 La lista de pasajeros contiene nombres y números de documento. Solo la ven los roles que la
-necesitan para el abordaje (`bookings.view`); los conductores no. Los endpoints de reservas nunca
+necesitan para el abordaje (`bookings.view`). El conductor asignado ve la lista de su viaje sin
+los documentos ([despacho](dispatch.md#los-conductores)). Los endpoints de reservas nunca
 devuelven las reservas de otro usuario.
 
 ## Todavía no

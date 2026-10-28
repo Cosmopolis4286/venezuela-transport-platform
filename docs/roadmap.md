@@ -11,13 +11,13 @@ Leyenda: ✅ listo · 🟡 parcial · ⏭️ siguiente · ⬜ pendiente
 
 ## Por usuario
 
-| Quién                                                   | Puede hacer hoy                                                                                                                                                                                         | Le falta                                                                    |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| **Pasajero** (app, web)                                 | Buscar salidas (sin cuenta), elegir puestos en el mapa del bus, apartarlos 15 min, pagar (simulado) por pago móvil, transferencia, PIX o USDT, mostrar un boleto QR por puesto, "Mis viajes"            | Pagos reales, reembolsos y cancelar un viaje pagado, notificaciones, taxis  |
-| **Empresa de autobuses / línea de taxis** (portal)      | Registrarse y ser aprobada, invitar personal con roles, aceptar solicitantes verificados, publicar rutas, tarifas, horarios y mapas de puestos, fijar tasas de cambio, ver viajes y listas de pasajeros | Liquidaciones (lo que la plataforma le debe), vehículos, despacho, reportes |
-| **Inspector** (app de transportistas)                   | Escanear boletos al abordar (cámara o código + puesto), ver quién abordó en la lista de pasajeros                                                                                                       | Escaneo sin conexión                                                        |
-| **Conductor / personal** (app de transportistas)        | Iniciar sesión, aceptar invitaciones, enviar la solicitud con documentos KYC                                                                                                                            | Viajes asignados, despacho                                                  |
-| **Personal de la plataforma** (panel de administración) | Aprobar organizaciones y solicitudes KYC, administrar el catálogo de paradas                                                                                                                            | Pagos por reembolsar, liquidaciones, métricas                               |
+| Quién                                                   | Puede hacer hoy                                                                                                                                                                                                                                                          | Le falta                                                                   |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| **Pasajero** (app, web)                                 | Buscar salidas (sin cuenta), elegir puestos en el mapa del bus, apartarlos 15 min, pagar (simulado) por pago móvil, transferencia, PIX o USDT, mostrar un boleto QR por puesto, "Mis viajes"                                                                             | Pagos reales, reembolsos y cancelar un viaje pagado, notificaciones, taxis |
+| **Empresa de autobuses / línea de taxis** (portal)      | Registrarse y ser aprobada, invitar personal con roles, aceptar solicitantes verificados, publicar rutas, tarifas, horarios y mapas de puestos, fijar tasas de cambio, ver viajes y listas de pasajeros, registrar vehículos, asignar vehículo y conductor a cada salida | Liquidaciones (lo que la plataforma le debe), despacho de taxis, reportes  |
+| **Inspector** (app de transportistas)                   | Escanear boletos al abordar (cámara o código + puesto), ver quién abordó en la lista de pasajeros                                                                                                                                                                        | Escaneo sin conexión                                                       |
+| **Conductor / personal** (app de transportistas)        | Iniciar sesión, aceptar invitaciones, enviar la solicitud con documentos KYC, ver sus viajes asignados y quién viaja                                                                                                                                                     | Avisos de viajes nuevos, marcar salida y llegada, despacho de taxis        |
+| **Personal de la plataforma** (panel de administración) | Aprobar organizaciones y solicitudes KYC, administrar el catálogo de paradas                                                                                                                                                                                             | Pagos por reembolsar, liquidaciones, métricas                              |
 
 ## Por área
 
@@ -35,7 +35,7 @@ Leyenda: ✅ listo · 🟡 parcial · ⏭️ siguiente · ⬜ pendiente
 | Liquidaciones y comisión         | ⏭️     | Esperando la decisión sobre la comisión (ver [Decisiones pendientes](#decisiones-pendientes))                                                                                                                  |
 | Reembolsos                       | ⬜     | Los pagos quedan marcados `refund_due`; todavía no hay pantalla ni proceso para devolverlos                                                                                                                    |
 | Despacho de taxis                | ⬜     | Solicitudes, asignación y ciclo de vida del viaje en taxi desde y hacia los terminales                                                                                                                         |
-| Vehículos y asignación de viajes | ⬜     | Placas, documentos, asignar un vehículo y un conductor a cada viaje                                                                                                                                            |
+| Vehículos y asignación de viajes | ✅     | Placas y mapa de puestos por vehículo, tablero de despacho del día, sin cruces de horario, viajes del conductor en la app ([dispatch](architecture/dispatch.md)); faltan los documentos de los vehículos       |
 | Notificaciones                   | ⬜     | SMS / WhatsApp / correo / push (códigos, confirmación de pago, recordatorios de viaje)                                                                                                                         |
 | Reportes                         | ⬜     | Ventas y ocupación para las empresas; métricas para la plataforma                                                                                                                                              |
 | Despliegue                       | ⬜     | Preparación documentada ([VPS](deployment/vps-preparation.md)); nada desplegado                                                                                                                                |
@@ -52,9 +52,9 @@ En orden; cada uno es un pull request.
    producto (plazo, penalidad).
 3. **Notificaciones**: primero un proveedor real para los códigos de acceso (bloquea producción),
    luego la confirmación de pago y los recordatorios de viaje.
-4. **Vehículos y asignación de viajes**, la base del despacho.
-5. **Despacho de taxis** desde y hacia los terminales.
-6. **Reportes** para las empresas y métricas de la plataforma.
+4. **Despacho de taxis** desde y hacia los terminales, sobre los vehículos y conductores que ya
+   existen.
+5. **Reportes** para las empresas y métricas de la plataforma.
 
 ## Pendientes menores
 
@@ -66,6 +66,8 @@ En orden; cada uno es un pull request.
 - Móvil: selector de fecha nativo; texto en español para todos los mensajes de validación de la
   API; notificaciones push en vez de deslizar para actualizar.
 - Pagos: limpieza periódica de los apartados vencidos (hoy se liberan al vuelo).
+- Despacho: documentos de los vehículos con vencimiento; aviso al conductor cuando le asignan un
+  viaje; que el conductor marque la salida y la llegada.
 
 ## Decisiones pendientes
 

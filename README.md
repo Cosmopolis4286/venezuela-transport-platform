@@ -4,21 +4,21 @@ Plataforma venezolana de transporte terrestre que conecta a pasajeros, empresas 
 terminales, taxistas y operadores de transporte.
 
 > **Estado: en desarrollo, sin desplegar.** El flujo de venta de boletos funciona de punta a
-> punta: búsqueda de viajes, puestos en el mapa del bus, pago (proveedor simulado), boletos QR y
-> escaneo al abordar. **Todavía no: proveedores de pago reales, liquidaciones, reembolsos,
+> punta: búsqueda de viajes, puestos en el mapa del bus, pago (proveedor simulado), boletos QR,
+> escaneo al abordar y asignación de vehículo y conductor. **Todavía no: proveedores de pago reales, liquidaciones, reembolsos,
 > notificaciones ni despacho de taxis.** No la despliegues con usuarios ni datos reales. Progreso
 > y pendientes: [hoja de ruta](docs/roadmap.md) · historial: [CHANGELOG](CHANGELOG.md) · CI:
 > CircleCI y un runner propio ([flujo del repositorio](docs/development/repository-workflow.md)).
 
 ## Qué hace hoy
 
-| App                                             | Para                                             | Funciones                                                                                                                      |
-| ----------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| Web (`apps/web`)                                | Pasajeros                                        | Búsqueda de viajes (`/buscar`) con puestos libres                                                                              |
-| Portal (`apps/web`, `/portal`)                  | Empresas de autobuses, líneas de taxis, personal | Equipo e invitaciones, solicitantes, rutas, tarifas, horarios, mapas de puestos, tasas de cambio, viajes y listas de pasajeros |
-| Panel de administración (`apps/web`, `/admin`)  | Personal de la plataforma                        | Aprobar organizaciones y solicitudes KYC, catálogo de paradas                                                                  |
-| App de pasajeros (`apps/passenger-mobile`)      | Pasajeros                                        | Búsqueda, puestos en el mapa del bus, apartar y pagar, boletos QR, "Mis viajes"                                                |
-| App de transportistas (`apps/transport-mobile`) | Conductores, inspectores, personal               | Invitaciones, solicitud KYC, escáner de boletos al abordar                                                                     |
+| App                                             | Para                                             | Funciones                                                                                                                                           |
+| ----------------------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Web (`apps/web`)                                | Pasajeros                                        | Búsqueda de viajes (`/buscar`) con puestos libres                                                                                                   |
+| Portal (`apps/web`, `/portal`)                  | Empresas de autobuses, líneas de taxis, personal | Equipo e invitaciones, solicitantes, rutas, tarifas, horarios, mapas de puestos, vehículos, despacho, tasas de cambio, viajes y listas de pasajeros |
+| Panel de administración (`apps/web`, `/admin`)  | Personal de la plataforma                        | Aprobar organizaciones y solicitudes KYC, catálogo de paradas                                                                                       |
+| App de pasajeros (`apps/passenger-mobile`)      | Pasajeros                                        | Búsqueda, puestos en el mapa del bus, apartar y pagar, boletos QR, "Mis viajes"                                                                     |
+| App de transportistas (`apps/transport-mobile`) | Conductores, inspectores, personal               | Invitaciones, solicitud KYC, escáner de boletos al abordar, viajes asignados al conductor                                                           |
 
 ## La arquitectura de un vistazo
 
@@ -142,6 +142,7 @@ Redis es opcional y está apagado por defecto; nada del flujo normal de `pnpm de
 - [Flota: mapas de puestos](docs/architecture/fleet.md)
 - [Reservas: viajes y puestos apartados](docs/architecture/bookings.md)
 - [Pagos y boletos](docs/architecture/payments.md)
+- [Despacho: vehículos y conductores de cada viaje](docs/architecture/dispatch.md)
 - [Instalación local (Windows, macOS, Linux)](docs/development/local-setup.md)
 - [Correr con Docker: local, híbrido, completo](docs/development/docker.md)
 - [Probar en Android: Expo Go, emulador, APK](docs/development/android-testing.md)

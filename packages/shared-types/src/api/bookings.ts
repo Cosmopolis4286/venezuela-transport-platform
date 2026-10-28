@@ -1,3 +1,4 @@
+import type { TripDriver, TripVehicle } from './dispatch.js';
 import type { IdentityDocumentType } from './onboarding.js';
 import type { LayoutSeat } from './fleet.js';
 import type { Currency, ServiceClass, StopSummary } from './network.js';
@@ -112,6 +113,9 @@ export interface TripSummary {
   soldSeats: number;
   /** Seats in unexpired holds. */
   heldSeats: number;
+  /** Assigned by a dispatcher. */
+  vehicle: TripVehicle | null;
+  driver: TripDriver | null;
 }
 
 /** `GET /organizations/:id/trips/:tripId/manifest` — passenger list for boarding. */

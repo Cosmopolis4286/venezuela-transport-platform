@@ -21,6 +21,8 @@ API; el servidor web nunca toca la base de datos.
 | `/portal/organizations/:id/seat-layouts/new`       | `fleet.manage`            | Editor de mapas de puestos: partir de una plantilla, hacer clic en las celdas para agregar o quitar puestos         |
 | `/portal/organizations/:id/trips?date=`            | `bookings.view`           | Viajes con reservas en una fecha: puestos vendidos, apartados y libres                                              |
 | `/portal/organizations/:id/trips/:tripId`          | `bookings.view`           | Lista de pasajeros para el abordaje: puesto, nombre, documento, tramo, código de reserva, estado y hora de abordaje |
+| `/portal/organizations/:id/vehicles`               | Miembros                  | Placas, nombre interno y mapa de puestos de cada vehículo; agregar, editar y desactivar (`fleet.manage`)            |
+| `/portal/organizations/:id/dispatch?date=`         | `operations.dispatch`     | Todas las salidas del día con su vehículo y su conductor; asignar o quitar ([despacho](dispatch.md))                |
 | `/portal/organizations/:id/seat-layouts/:layoutId` | Miembros                  | Ver o editar un mapa de puestos (`fleet.manage`); borrarlo si ningún horario lo usa                                 |
 | `/portal/organizations/:id/routes/:routeId`        | Miembros                  | Paradas, tarifas por par de paradas, horarios; publicar / desactivar (`routes.manage` para editar)                  |
 

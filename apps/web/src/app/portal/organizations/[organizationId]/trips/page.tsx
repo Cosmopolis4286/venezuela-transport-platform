@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { assignmentText } from '@/lib/labels';
 import { apiFetch } from '@/lib/server/api';
 
 export default function TripsPage({
@@ -89,6 +90,7 @@ async function Trips({
                     {trip.soldSeats} vendidos · {trip.heldSeats} apartados ·{' '}
                     {trip.capacity - trip.soldSeats - trip.heldSeats} libres de {trip.capacity}
                   </p>
+                  <p className="text-sm text-muted-foreground">{assignmentText(trip)}</p>
                 </div>
                 <Button asChild size="sm" variant="outline">
                   <Link href={`/portal/organizations/${organization.id}/trips/${trip.id}`}>

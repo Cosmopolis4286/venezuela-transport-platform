@@ -16,6 +16,7 @@ import {
 import { BOOKING_STATUSES, type LayoutSeat } from '@vtp/shared-types';
 import { timestamps, users } from '../identity/identity.schema.js';
 import { currency, routes, routeSchedules, stops } from '../network/network.schema.js';
+import { vehicles } from '../fleet/fleet.schema.js';
 import { identityDocumentType } from '../onboarding/onboarding.schema.js';
 import { organizations } from '../organizations/organizations.schema.js';
 
@@ -47,11 +48,16 @@ export const trips = pgTable(
     layout: jsonb().$type<TripLayout>(),
     capacity: integer().notNull(),
     status: tripStatus().notNull().default('scheduled'),
+    /** Assigned by a dispatcher (`operations.dispatch`). */
+    vehicleId: uuid().references(() => vehicles.id, { onDelete: 'restrict' }),
+    driverUserId: uuid().references(() => users.id, { onDelete: 'restrict' }),
     ...timestamps,
   },
   (t) => [
     uniqueIndex('trips_schedule_date_key').on(t.scheduleId, t.serviceDate),
     index('trips_organization_date_idx').on(t.organizationId, t.serviceDate),
+    index('trips_vehicle_departs_idx').on(t.vehicleId, t.departsAt),
+    index('trips_driver_departs_idx').on(t.driverUserId, t.departsAt),
   ],
 );
 

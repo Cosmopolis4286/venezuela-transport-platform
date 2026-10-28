@@ -26,7 +26,8 @@ ADR-016). Los contratos vienen de `@vtp/shared-types`.
 | Pasajeros      | `/booking/:id`      | Código de reserva, estado, cuenta regresiva del apartado; pagar (método, instrucciones, referencia); boleto QR por puesto |
 | Pasajeros      | `/bookings`         | "Mis viajes": las reservas del usuario, de la más reciente a la más antigua                                               |
 | Pasajeros      | `/account`          | Solo con sesión: cuenta y contactos verificados, "Mis viajes", cerrar sesión                                              |
-| Transportistas | `/`                 | Invitaciones pendientes (aceptar / rechazar), mis organizaciones y roles, estado de mi solicitud                          |
+| Transportistas | `/`                 | "Mis viajes" (conductores), invitaciones pendientes (aceptar / rechazar), mis organizaciones y roles, mi solicitud        |
+| Transportistas | `/trip/:tripId`     | Viaje del conductor: horas, vehículo, puestos ocupados y pasajeros con su tramo, pago y abordaje (sin documentos)         |
 | Transportistas | `/application`      | Datos de la solicitud, documentos requeridos con carga y veredictos de la revisión, enviar a revisión                     |
 | Transportistas | `/application/edit` | Rol, organización (buscada en el directorio), datos personales, vehículo para taxistas                                    |
 | Transportistas | `/scan`             | "Validar boletos" (`tickets.validate`): escaneo del QR con la cámara o código de reserva + puesto; veredicto al instante  |
@@ -64,6 +65,12 @@ ignora), o el inspector escribe el código de reserva y el puesto. El resultado 
 verde "puede abordar", ámbar "ya se usó" con la hora de abordaje, o rojo para boletos sin pagar y
 de otras salidas (ver [payments.md](payments.md#boletos)). El texto del permiso de cámara está en
 `app.json`; no se pide el micrófono.
+
+## Mis viajes (app de transportistas)
+
+Los miembros cuyo rol conduce (`trips.drive`) ven en el inicio los viajes que les asignó el
+despachador ([despacho](dispatch.md#los-conductores)), desde los que llegaron hace menos de 12
+horas. Al tocar uno ven quién sube y baja en cada parada, si su reserva está pagada y si ya abordó.
 
 ## Solicitud KYC (app de transportistas)
 

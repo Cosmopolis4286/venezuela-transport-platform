@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
-import { statusVariant } from '@/lib/labels';
+import { assignmentText, statusVariant } from '@/lib/labels';
 import { apiFetch } from '@/lib/server/api';
 
 export default function ManifestPage({
@@ -51,6 +51,7 @@ async function Manifest({
           {manifest.soldSeats} vendidos · {manifest.heldSeats} apartados · capacidad{' '}
           {manifest.capacity}
         </p>
+        <p className="text-sm text-muted-foreground">{assignmentText(manifest)}</p>
       </div>
       <Card>
         <div className="flex flex-col gap-1">

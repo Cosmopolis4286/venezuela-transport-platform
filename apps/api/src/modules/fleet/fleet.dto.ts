@@ -1,12 +1,20 @@
 import { ApiProperty, PartialType } from '@nestjs/swagger';
-import { SEAT_LAYOUT_LIMITS, type LayoutSeat, type SeatLayoutInput } from '@vtp/shared-types';
+import {
+  SEAT_LAYOUT_LIMITS,
+  type LayoutSeat,
+  type SeatLayoutInput,
+  type VehicleInput,
+} from '@vtp/shared-types';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsInt,
+  IsOptional,
   IsString,
+  IsUUID,
   Length,
   Max,
   Min,
@@ -73,3 +81,29 @@ export class SeatLayoutDto implements SeatLayoutInput {
 }
 
 export class UpdateSeatLayoutDto extends PartialType(SeatLayoutDto) {}
+
+/** `plateProblem()` validates the plate itself. */
+export class VehicleDto implements VehicleInput {
+  @ApiProperty({ example: 'AB123CD' })
+  @IsString()
+  @Length(1, 20)
+  plate!: string;
+
+  @ApiProperty({ required: false, nullable: true, example: 'Unidad 12 · Encava 610' })
+  @IsOptional()
+  @IsString()
+  @Length(0, 80)
+  label?: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @IsUUID()
+  seatLayoutId?: string | null;
+
+  @ApiProperty({ required: false, default: true })
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+}
+
+export class UpdateVehicleDto extends PartialType(VehicleDto) {}

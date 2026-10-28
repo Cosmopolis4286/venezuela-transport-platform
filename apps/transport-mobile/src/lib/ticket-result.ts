@@ -14,7 +14,8 @@ export interface TicketVerdict {
 }
 
 /** HH:MM in Venezuela for an instant (UTC−4, no daylight saving). */
-function venezuelanTime(iso: string): string {
+/** `HH:MM` in Venezuela for a UTC instant such as `boardedAt`. */
+export function venezuelanTime(iso: string): string {
   return new Date(Date.parse(iso) - 4 * 3600_000).toISOString().slice(11, 16);
 }
 

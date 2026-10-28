@@ -57,6 +57,13 @@
       "when": 1793120901626,
       "tag": "0007_payments_and_tickets",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793208420815,
+      "tag": "0008_vehicles_and_trip_assignment",
+      "breakpoints": true
     }
   ]
 }

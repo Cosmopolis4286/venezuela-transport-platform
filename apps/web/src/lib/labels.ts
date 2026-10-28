@@ -1,3 +1,5 @@
+import { vehicleName } from '@vtp/shared-types';
+
 export { APPLICATION_STATUS_LABELS, ORGANIZATION_STATUS_LABELS } from '@vtp/shared-types';
 
 export function statusVariant(status: string): 'success' | 'warning' | 'destructive' | 'secondary' {
@@ -19,4 +21,16 @@ export function formatDate(iso: string): string {
     dateStyle: 'medium',
     timeZone: 'America/Caracas',
   }).format(new Date(iso));
+}
+
+/** "Unidad AB123CD · Conductor: Ana Pérez", or what is still missing. */
+export function assignmentText(trip: {
+  vehicle: { plate: string; label: string | null } | null;
+  driver: { firstName: string | null; lastName: string | null } | null;
+}): string {
+  const vehicle = trip.vehicle ? `Vehículo ${vehicleName(trip.vehicle)}` : 'Sin vehículo';
+  const driver = trip.driver
+    ? `Conductor: ${[trip.driver.firstName, trip.driver.lastName].filter(Boolean).join(' ') || 'sin nombre'}`
+    : 'sin conductor';
+  return `${vehicle} · ${driver}`;
 }
