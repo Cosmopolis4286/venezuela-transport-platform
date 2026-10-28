@@ -1,97 +1,105 @@
-# Changelog
+# Registro de cambios
 
-Notable changes to the Venezuela Transport Platform, newest first. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project has no releases yet, so
-changes are grouped by the date they reached `main`, with the pull request that brought them.
-What is done and what is still pending is tracked in [docs/roadmap.md](docs/roadmap.md).
+Cambios importantes de la Venezuela Transport Platform, del más reciente al más antiguo. El
+formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); el proyecto todavía no
+tiene versiones publicadas, así que los cambios se agrupan por la fecha en que llegaron a `main`,
+con el pull request que los trajo. Lo que está hecho y lo que falta se sigue en
+[docs/roadmap.md](docs/roadmap.md).
 
-When a pull request changes behaviour, add a line under **Unreleased** in the same pull request.
+Cuando un pull request cambia el comportamiento, agrega una línea en **Sin publicar** en el mismo
+pull request.
 
-## Unreleased
+## Sin publicar
 
-### Added
+### Agregado
 
-- **Self-hosted CI** (ADR-022): a GitHub Actions workflow that runs the CircleCI jobs on a runner
-  on the maintainer's machine (Windows + WSL 2), at no cost. Setup in
-  [docs/development/self-hosted-runner.md](docs/development/self-hosted-runner.md).
-- `CHANGELOG.md` and the [roadmap](docs/roadmap.md).
-- **Run the platform in Docker** ([docker.md](docs/development/docker.md)): `pnpm stack:api`
-  (hybrid: database and API in Docker, frontends on your machine) and `pnpm stack:app` (database,
-  API and website from the production images, with development settings). Migrations run
-  automatically.
-- [Android testing guide](docs/development/android-testing.md): Expo Go, emulator and APK.
+- **CI en un runner propio** (ADR-022): un workflow de GitHub Actions que corre los trabajos de
+  CircleCI en un runner instalado en la computadora del mantenedor (Windows + WSL 2), sin costo.
+  Instalación en [docs/development/self-hosted-runner.md](docs/development/self-hosted-runner.md).
+- `CHANGELOG.md` y la [hoja de ruta](docs/roadmap.md).
+- **Correr la plataforma en Docker** ([docker.md](docs/development/docker.md)): `pnpm stack:api`
+  (híbrido: base de datos y API en Docker, frontends en tu computadora) y `pnpm stack:app` (base
+  de datos, API y web con las imágenes de producción y ajustes de desarrollo). Las migraciones se
+  aplican solas.
+- [Guía para probar en Android](docs/development/android-testing.md): Expo Go, emulador y APK.
+- Toda la documentación, en español.
 
-### Fixed
+### Corregido
 
-- The API image no longer fails to start with `NODE_ENV=development`: the pretty log printer is
-  used only when installed.
+- La imagen de la API ya no falla al arrancar con `NODE_ENV=development`: el formateador bonito de
+  logs solo se usa si está instalado.
 
 ## 2026-10-27
 
-### Added
+### Agregado
 
-- **Ticket scanner in the transport app** (#29). Inspectors, admins and owners scan the
-  passenger's QR with the camera, or type the booking code and seat, and see at once whether the
-  passenger may board. The first valid scan marks boarding; a reused QR shows when it was used.
-  Ticket validation now reports `not_paid` and `other_departure` with the passenger's details
-  instead of an error.
-- **Payments and QR tickets** (#23, step 3 of ADR-018). Operators set exchange rates (bolívares
-  and reais per dollar). Passengers pay a held booking by pago móvil, bank transfer, PIX or USDT,
-  with the amount converted and frozen, and get one QR ticket per seat once the payment is
-  confirmed. A simulated provider drives the flow until real providers are contracted; production
-  configuration refuses it. Late or wrong payments are marked for refund.
-- **Seat bookings** (#20, step 2 of ADR-018). Passengers choose seats on the bus map and hold
-  them for 15 minutes (`BOOKING_HOLD_MINUTES`); no seat can be sold twice, even under concurrent
-  requests. "Mis viajes" in the passenger app. Operators see trips by date and the passenger list
-  for boarding. Search results show free seats.
-- Migrations `0006_bookings` and `0007_payments_and_tickets`.
-- New configuration: `BOOKING_HOLD_MINUTES`, `PAYMENT_PROVIDER`.
+- **Escáner de boletos en la app de transportistas** (#29). Inspectores, administradores y dueños
+  escanean el QR del pasajero con la cámara, o escriben el código de reserva y el puesto, y ven al
+  instante si puede abordar. El primer escaneo válido marca el abordaje; un QR reutilizado muestra
+  cuándo se usó. La validación de boletos ahora informa `not_paid` y `other_departure` con los
+  datos del pasajero, en lugar de un error.
+- **Pagos y boletos QR** (#23, paso 3 del ADR-018). Las empresas fijan sus tasas de cambio
+  (bolívares y reales por dólar). Los pasajeros pagan una reserva apartada por pago móvil,
+  transferencia bancaria, PIX o USDT, con el monto convertido y congelado, y reciben un boleto QR
+  por puesto cuando se confirma el pago. Un proveedor simulado mueve el flujo hasta que se
+  contraten proveedores reales; la configuración de producción lo rechaza. Los pagos tardíos o con
+  monto incorrecto quedan marcados para reembolso.
+- **Reservas de puestos** (#20, paso 2 del ADR-018). Los pasajeros eligen puestos en el mapa del
+  bus y los apartan por 15 minutos (`BOOKING_HOLD_MINUTES`); ningún puesto se puede vender dos
+  veces, ni siquiera con solicitudes simultáneas. "Mis viajes" en la app de pasajeros. Las empresas
+  ven los viajes por fecha y la lista de pasajeros para el abordaje. La búsqueda muestra los
+  puestos libres.
+- Migraciones `0006_bookings` y `0007_payments_and_tickets`.
+- Configuración nueva: `BOOKING_HOLD_MINUTES`, `PAYMENT_PROVIDER`.
 
-### Changed
+### Cambiado
 
-- **CI moved from GitHub Actions to CircleCI** (#20, ADR-019): quality, API e2e on PostGIS,
-  mobile bundles and Docker images.
-- Dependabot no longer proposes major `@types/node` updates: the types follow the Node 24
-  runtime (#28).
-- Dependency updates: Next.js group (#16), Expo SDK 58 patches (#15), development tooling (#26),
-  runtime patches (#27).
+- **La CI pasó de GitHub Actions a CircleCI** (#20, ADR-019): calidad, pruebas e2e de la API con
+  PostGIS, bundles móviles e imágenes Docker.
+- Dependabot ya no propone versiones mayores de `@types/node`: los tipos siguen al runtime de
+  Node 24 (#28).
+- Actualizaciones de dependencias: grupo Next.js (#16), parches del SDK 58 de Expo (#15),
+  herramientas de desarrollo (#26), parches de runtime (#27).
 
 ## 2026-10-19
 
-### Added
+### Agregado
 
-- **Seat maps** (#14): operators draw each vehicle type's layout (presets, one or two decks) in the
-  portal; schedules take their capacity from the map.
-- **Trip search** (#13) on the website (`/buscar`) and in the passenger app: origin, destination
-  and date, with times, duration, operator, class and fare. Works without an account.
-- **Transport network** (#12): stop catalog (terminals and stops, PostGIS) curated by the
-  platform; routes with ordered stops, fares per pair of stops and weekly schedules published by
-  each bus company or taxi line; public departure search.
+- **Mapas de puestos** (#14): las empresas dibujan la distribución de cada tipo de vehículo
+  (plantillas, uno o dos pisos) en el portal; los horarios toman su capacidad del mapa.
+- **Búsqueda de viajes** (#13) en la web (`/buscar`) y en la app de pasajeros: origen, destino y
+  fecha, con horas, duración, empresa, clase y tarifa. Funciona sin cuenta.
+- **Red de transporte** (#12): catálogo de paradas (terminales y paradas, PostGIS) administrado
+  por la plataforma; rutas con paradas ordenadas, tarifas por par de paradas y horarios semanales
+  publicados por cada empresa de autobuses o línea de taxis; búsqueda pública de salidas.
 
 ## 2026-10-18
 
-### Added
+### Agregado
 
-- **Mobile sign-in** (#11) in both apps, shared through `@vtp/mobile-core` with tokens in the
-  device keychain; KYC application with document upload in the transport app.
-- **Web portal and admin panel** (#10): sign-in, organization portal (team, invitations,
-  applicants), platform review of organizations and KYC applications.
-- **Driver and staff applications with KYC documents** (#9): applications, document upload with
-  type checks by content, platform review, organization acceptance.
-- **Organizations** (#7): bus companies, taxi lines and terminals; roles (owner, admin,
-  dispatcher, ticket agent, driver, inspector) with a permission matrix, invitations bound to
-  verified contacts, platform review.
-- **Identity** (#6): accounts with e-mail + password or one-time codes (SMS, WhatsApp, e-mail),
-  rotating refresh tokens, audit log.
+- **Inicio de sesión móvil** (#11) en las dos apps, compartido mediante `@vtp/mobile-core`, con
+  los tokens en el llavero del dispositivo; solicitud KYC con carga de documentos en la app de
+  transportistas.
+- **Portal web y panel de administración** (#10): inicio de sesión, portal de la organización
+  (equipo, invitaciones, solicitantes), revisión de organizaciones y solicitudes KYC por la
+  plataforma.
+- **Solicitudes de conductores y personal con documentos KYC** (#9): solicitudes, carga de
+  documentos con verificación del tipo por contenido, revisión de la plataforma, aceptación de la
+  organización.
+- **Organizaciones** (#7): empresas de autobuses, líneas de taxis y terminales; roles (dueño,
+  administrador, despachador, taquillero, conductor, inspector) con una matriz de permisos,
+  invitaciones ligadas a contactos verificados, revisión de la plataforma.
+- **Identidad** (#6): cuentas con correo + contraseña o códigos de un solo uso (SMS, WhatsApp,
+  correo), tokens de renovación rotativos, registro de auditoría.
 
-### Changed
+### Cambiado
 
-- CI action and Redis image updates (#8).
+- Actualización de acciones de CI y de la imagen de Redis (#8).
 
 ## 2026-10-17
 
-### Added
+### Agregado
 
-- **Engineering foundation** (#1): pnpm + Turborepo monorepo with the Next.js website, two Expo
-  apps, the NestJS API (OpenAPI), shared contracts, PostgreSQL 18 + PostGIS 3.6 in Docker
-  Compose, lint, formatting, tests, production images and documentation.
+- **Base del proyecto** (#1): monorepo con pnpm + Turborepo con la web en Next.js, dos apps Expo,
+  la API NestJS (OpenAPI), contratos compartidos, PostgreSQL 18 + PostGIS 3.6 en Docker Compose,
+  lint, formato, pruebas, imágenes de producción y documentación.

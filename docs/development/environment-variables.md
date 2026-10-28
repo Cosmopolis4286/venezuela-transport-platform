@@ -1,107 +1,110 @@
-# Environment variables
+# Variables de entorno
 
-`pnpm env:init` copies every template below to its git-ignored target. It never overwrites.
+`pnpm env:init` copia cada plantilla de abajo a su destino (ignorado por git). Nunca sobrescribe.
 
-> **Public vs secret.** Variables prefixed `NEXT_PUBLIC_` (web) or `EXPO_PUBLIC_` (mobile) are
-> compiled into code that runs on users' devices. Anyone can read them. **Never put a secret in
-> them.** Mobile apps have no safe place for API secrets; anything shipped in the app is public.
-> Server-side secrets belong only in the API's environment.
+> **Públicas y secretas.** Las variables con prefijo `NEXT_PUBLIC_` (web) o `EXPO_PUBLIC_` (móvil)
+> se compilan dentro del código que corre en los dispositivos de los usuarios. Cualquiera puede
+> leerlas. **Nunca pongas un secreto en ellas.** Las apps móviles no tienen un lugar seguro para
+> secretos de API; todo lo que va dentro de la app es público. Los secretos del servidor van solo
+> en el entorno de la API.
 
-## Root `.env` — Docker Compose (local development only)
+## `.env` de la raíz — Docker Compose (solo desarrollo local)
 
-Template: `.env.example`
+Plantilla: `.env.example`
 
-| Variable            | Required | Secret  | Default     | Purpose                                                           |
-| ------------------- | -------- | ------- | ----------- | ----------------------------------------------------------------- |
-| `POSTGRES_DB`       | yes      | no      | `vtp_dev`   | Database created on first start                                   |
-| `POSTGRES_USER`     | yes      | no      | `vtp`       | Superuser created on first start                                  |
-| `POSTGRES_PASSWORD` | yes      | **yes** | placeholder | Superuser password. Applied only when the volume is first created |
-| `POSTGRES_PORT`     | no       | no      | `5432`      | Host port, bound to `127.0.0.1`                                   |
-| `REDIS_PORT`        | no       | no      | `6379`      | Host port for the optional Redis, bound to `127.0.0.1`            |
+| Variable            | Obligatoria | Secreta | Por defecto      | Para qué                                                                        |
+| ------------------- | ----------- | ------- | ---------------- | ------------------------------------------------------------------------------- |
+| `POSTGRES_DB`       | sí          | no      | `vtp_dev`        | Base de datos creada en el primer arranque                                      |
+| `POSTGRES_USER`     | sí          | no      | `vtp`            | Superusuario creado en el primer arranque                                       |
+| `POSTGRES_PASSWORD` | sí          | **sí**  | valor de ejemplo | Contraseña del superusuario. Solo se aplica al crear el volumen por primera vez |
+| `POSTGRES_PORT`     | no          | no      | `5432`           | Puerto del host, enlazado a `127.0.0.1`                                         |
+| `REDIS_PORT`        | no          | no      | `6379`           | Puerto del host para el Redis opcional, enlazado a `127.0.0.1`                  |
 
-Only for the API and website in Docker (`pnpm stack:api`, `pnpm stack:app`, see [docker.md](docker.md)):
+Solo para la API y la web en Docker (`pnpm stack:api`, `pnpm stack:app`, ver [docker.md](docker.md)):
 
-| Variable                      | Required | Secret  | Default                        | Purpose                                                                   |
-| ----------------------------- | -------- | ------- | ------------------------------ | ------------------------------------------------------------------------- |
-| `VTP_API_PORT`                | no       | no      | `4000`                         | Host port of the API container                                            |
-| `VTP_API_PUBLISH_ADDRESS`     | no       | no      | `127.0.0.1`                    | `0.0.0.0` lets phones on your Wi-Fi reach the API (trusted networks only) |
-| `VTP_WEB_PORT`                | no       | no      | `3000`                         | Host port of the website container                                        |
-| `VTP_WEB_PUBLIC_API_BASE_URL` | no       | no      | `http://localhost:4000/api/v1` | API URL the browser uses; baked into the website image at build time      |
-| `VTP_AUTH_SECRET`             | no       | **yes** | local placeholder              | API session secret inside Docker; production refuses the placeholder      |
+| Variable                      | Obligatoria | Secreta | Por defecto                    | Para qué                                                                                   |
+| ----------------------------- | ----------- | ------- | ------------------------------ | ------------------------------------------------------------------------------------------ |
+| `VTP_API_PORT`                | no          | no      | `4000`                         | Puerto del host para el contenedor de la API                                               |
+| `VTP_API_PUBLISH_ADDRESS`     | no          | no      | `127.0.0.1`                    | `0.0.0.0` permite que los teléfonos de tu Wi-Fi lleguen a la API (solo redes de confianza) |
+| `VTP_WEB_PORT`                | no          | no      | `3000`                         | Puerto del host para el contenedor de la web                                               |
+| `VTP_WEB_PUBLIC_API_BASE_URL` | no          | no      | `http://localhost:4000/api/v1` | URL de la API que usa el navegador; queda dentro de la imagen de la web al compilarla      |
+| `VTP_AUTH_SECRET`             | no          | **sí**  | valor de ejemplo local         | Secreto de sesión de la API dentro de Docker; producción rechaza el valor de ejemplo       |
 
 ## `apps/api/.env` — API
 
-Template: `apps/api/.env.example`. Validated by `apps/api/src/config/env.schema.ts`; the API
-refuses to start and lists invalid variable **names** (never values).
+Plantilla: `apps/api/.env.example`. La valida `apps/api/src/config/env.schema.ts`; la API no
+arranca y lista los **nombres** de las variables inválidas (nunca sus valores).
 
-| Variable                        | Required | Secret                         | Default                  | Purpose                                                                                                                                                        |
-| ------------------------------- | -------- | ------------------------------ | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `NODE_ENV`                      | no       | no                             | `development`            | `development` \| `test` \| `production`. In production `.env` files are ignored                                                                                |
-| `APP_VERSION`                   | no       | no                             | `0.0.0-dev`              | Reported by `/api/v1/health`. Set to release tag / git SHA                                                                                                     |
-| `API_HOST`                      | no       | no                             | `127.0.0.1`              | Bind address. `0.0.0.0` for physical devices on the LAN or inside containers                                                                                   |
-| `API_PORT`                      | no       | no                             | `4000`                   | HTTP port                                                                                                                                                      |
-| `CORS_ORIGINS`                  | no       | no                             | empty                    | Comma-separated allowed browser origins (web portal; `:8081`/`:8082` for the mobile browser previews in development). Empty = none. `*` rejected in production |
-| `API_TRUST_PROXY_HOPS`          | no       | no                             | `0`                      | Reverse-proxy hops trusted for `X-Forwarded-For`. `1` behind a single Caddy/Nginx; never more than the real number of proxies                                  |
-| `RATE_LIMIT_TTL_SECONDS`        | no       | no                             | `60`                     | Rate-limit window                                                                                                                                              |
-| `RATE_LIMIT_MAX`                | no       | no                             | `120`                    | Max requests per client IP per window (health endpoints exempt)                                                                                                |
-| `LOG_LEVEL`                     | no       | no                             | `info`                   | `fatal`…`trace`, or `silent`                                                                                                                                   |
-| `SWAGGER_ENABLED`               | no       | no                             | on, except in production | Serve `/api/docs`                                                                                                                                              |
-| `DATABASE_HOST`                 | yes      | no                             | —                        | PostgreSQL host                                                                                                                                                |
-| `DATABASE_PORT`                 | no       | no                             | `5432`                   | PostgreSQL port                                                                                                                                                |
-| `DATABASE_NAME`                 | yes      | no                             | —                        | Database name (match `POSTGRES_DB` locally)                                                                                                                    |
-| `DATABASE_USER`                 | yes      | no                             | —                        | Database user (match `POSTGRES_USER` locally)                                                                                                                  |
-| `DATABASE_PASSWORD`             | yes      | **yes**                        | —                        | In production: 16+ characters and must not contain `change-me`                                                                                                 |
-| `DATABASE_SSL`                  | no       | no                             | `false`                  | `true` to require TLS with certificate verification                                                                                                            |
-| `DATABASE_POOL_MAX`             | no       | no                             | `10`                     | Max pool connections (1–100)                                                                                                                                   |
-| `AUTH_SECRET`                   | yes      | **yes**                        | —                        | HMAC key for session-token and OTP hashes, 32+ chars. Rotating it signs everyone out. Production rejects values containing `change-me`                         |
-| `AUTH_ACCESS_TOKEN_TTL_MINUTES` | no       | no                             | `15`                     | Access-token lifetime (1–60)                                                                                                                                   |
-| `AUTH_REFRESH_TOKEN_TTL_DAYS`   | no       | no                             | `30`                     | Refresh-token / session lifetime (1–90)                                                                                                                        |
-| `AUTH_RATE_LIMIT_MAX`           | no       | no                             | `10`                     | Per-IP requests per minute to login, register, refresh and OTP endpoints                                                                                       |
-| `OTP_DELIVERY`                  | no       | no                             | `console`                | `console` prints codes to the API log (development only — rejected in production) or `disabled` (code requests return 503)                                     |
-| `OTP_TTL_MINUTES`               | no       | no                             | `5`                      | Code validity (1–30)                                                                                                                                           |
-| `OTP_MAX_ATTEMPTS`              | no       | no                             | `5`                      | Wrong guesses allowed per code                                                                                                                                 |
-| `OTP_RESEND_SECONDS`            | no       | no                             | `60`                     | Minimum wait between codes to the same destination                                                                                                             |
-| `OTP_MAX_PER_HOUR`              | no       | no                             | `5`                      | Codes per destination per hour (limits SMS cost abuse)                                                                                                         |
-| `FILE_STORAGE_DRIVER`           | no       | no                             | `local`                  | Where KYC documents are stored. Only `local` exists today (S3-compatible planned)                                                                              |
-| `FILE_STORAGE_LOCAL_DIR`        | no       | no                             | `var/uploads`            | Directory for the local driver (relative to the API's working directory). In production mount a persistent, backed-up volume                                   |
-| `FILE_UPLOAD_MAX_BYTES`         | no       | no                             | `10485760`               | Max upload size (10 MiB); larger uploads get `413 PAYLOAD_TOO_LARGE`                                                                                           |
-| `BOOKING_HOLD_MINUTES`          | no       | no                             | `15`                     | Minutes held seats wait for payment before they are released (5–60)                                                                                            |
-| `PAYMENT_PROVIDER`              | no       | no                             | see description          | `simulated` (dev only, refused in production) or `disabled`. Default: simulated outside production. See payments.md                                            |
-| `REDIS_URL`                     | no       | **yes** (may embed a password) | empty                    | `redis://` or `rediss://` URL. Unused until a feature needs Redis                                                                                              |
-| `E2E_EXPECT_DATABASE`           | no       | no                             | —                        | Test-only: `true` makes e2e tests assert DB readiness                                                                                                          |
+| Variable                        | Obligatoria | Secreta                              | Por defecto                 | Para qué                                                                                                                                                                         |
+| ------------------------------- | ----------- | ------------------------------------ | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`                      | no          | no                                   | `development`               | `development` \| `test` \| `production`. En producción se ignoran los archivos `.env`                                                                                            |
+| `APP_VERSION`                   | no          | no                                   | `0.0.0-dev`                 | La informa `/api/v1/health`. Pon la etiqueta de la versión o el sha de git                                                                                                       |
+| `API_HOST`                      | no          | no                                   | `127.0.0.1`                 | Dirección en la que escucha. `0.0.0.0` para dispositivos físicos en la red local o dentro de contenedores                                                                        |
+| `API_PORT`                      | no          | no                                   | `4000`                      | Puerto HTTP                                                                                                                                                                      |
+| `CORS_ORIGINS`                  | no          | no                                   | vacío                       | Orígenes de navegador permitidos, separados por comas (portal web; `:8081`/`:8082` para las vistas previas móviles en desarrollo). Vacío = ninguno. `*` se rechaza en producción |
+| `API_TRUST_PROXY_HOPS`          | no          | no                                   | `0`                         | Saltos de proxy inverso de confianza para `X-Forwarded-For`. `1` detrás de un solo Caddy/Nginx; nunca más que los proxies reales                                                 |
+| `RATE_LIMIT_TTL_SECONDS`        | no          | no                                   | `60`                        | Ventana del límite de solicitudes                                                                                                                                                |
+| `RATE_LIMIT_MAX`                | no          | no                                   | `120`                       | Máximo de solicitudes por IP de cliente en cada ventana (los endpoints de salud quedan exentos)                                                                                  |
+| `LOG_LEVEL`                     | no          | no                                   | `info`                      | `fatal`…`trace`, o `silent`                                                                                                                                                      |
+| `SWAGGER_ENABLED`               | no          | no                                   | activo, salvo en producción | Servir `/api/docs`                                                                                                                                                               |
+| `DATABASE_HOST`                 | sí          | no                                   | —                           | Host de PostgreSQL                                                                                                                                                               |
+| `DATABASE_PORT`                 | no          | no                                   | `5432`                      | Puerto de PostgreSQL                                                                                                                                                             |
+| `DATABASE_NAME`                 | sí          | no                                   | —                           | Nombre de la base de datos (igual a `POSTGRES_DB` en local)                                                                                                                      |
+| `DATABASE_USER`                 | sí          | no                                   | —                           | Usuario de la base de datos (igual a `POSTGRES_USER` en local)                                                                                                                   |
+| `DATABASE_PASSWORD`             | sí          | **sí**                               | —                           | En producción: 16 caracteres o más y sin `change-me`                                                                                                                             |
+| `DATABASE_SSL`                  | no          | no                                   | `false`                     | `true` para exigir TLS con verificación del certificado                                                                                                                          |
+| `DATABASE_POOL_MAX`             | no          | no                                   | `10`                        | Máximo de conexiones del pool (1–100)                                                                                                                                            |
+| `AUTH_SECRET`                   | sí          | **sí**                               | —                           | Clave HMAC para los hashes de los tokens de sesión y de los códigos, 32 caracteres o más. Cambiarla cierra la sesión de todos. Producción rechaza valores con `change-me`        |
+| `AUTH_ACCESS_TOKEN_TTL_MINUTES` | no          | no                                   | `15`                        | Duración del token de acceso (1–60)                                                                                                                                              |
+| `AUTH_REFRESH_TOKEN_TTL_DAYS`   | no          | no                                   | `30`                        | Duración del token de renovación / de la sesión (1–90)                                                                                                                           |
+| `AUTH_RATE_LIMIT_MAX`           | no          | no                                   | `10`                        | Solicitudes por minuto por IP a los endpoints de inicio de sesión, registro, renovación y códigos                                                                                |
+| `OTP_DELIVERY`                  | no          | no                                   | `console`                   | `console` imprime los códigos en el log de la API (solo desarrollo — se rechaza en producción) o `disabled` (pedir un código devuelve 503)                                       |
+| `OTP_TTL_MINUTES`               | no          | no                                   | `5`                         | Validez del código (1–30)                                                                                                                                                        |
+| `OTP_MAX_ATTEMPTS`              | no          | no                                   | `5`                         | Intentos fallidos permitidos por código                                                                                                                                          |
+| `OTP_RESEND_SECONDS`            | no          | no                                   | `60`                        | Espera mínima entre códigos al mismo destino                                                                                                                                     |
+| `OTP_MAX_PER_HOUR`              | no          | no                                   | `5`                         | Códigos por destino por hora (limita el abuso del costo de SMS)                                                                                                                  |
+| `FILE_STORAGE_DRIVER`           | no          | no                                   | `local`                     | Dónde se guardan los documentos KYC. Hoy solo existe `local` (compatible con S3, planificado)                                                                                    |
+| `FILE_STORAGE_LOCAL_DIR`        | no          | no                                   | `var/uploads`               | Carpeta del driver local (relativa a la carpeta de trabajo de la API). En producción monta un volumen persistente y respaldado                                                   |
+| `FILE_UPLOAD_MAX_BYTES`         | no          | no                                   | `10485760`                  | Tamaño máximo de carga (10 MiB); las cargas más grandes reciben `413 PAYLOAD_TOO_LARGE`                                                                                          |
+| `BOOKING_HOLD_MINUTES`          | no          | no                                   | `15`                        | Minutos que los puestos apartados esperan el pago antes de liberarse (5–60)                                                                                                      |
+| `PAYMENT_PROVIDER`              | no          | no                                   | ver descripción             | `simulated` (solo desarrollo, se rechaza en producción) o `disabled`. Por defecto: simulated fuera de producción. Ver [payments.md](../architecture/payments.md)                 |
+| `REDIS_URL`                     | no          | **sí** (puede llevar una contraseña) | vacío                       | URL `redis://` o `rediss://`. Sin uso hasta que una funcionalidad necesite Redis                                                                                                 |
+| `E2E_EXPECT_DATABASE`           | no          | no                                   | —                           | Solo pruebas: `true` hace que las pruebas e2e exijan que la base de datos esté lista                                                                                             |
 
 ## `apps/web/.env.local` — web (Next.js)
 
-Template: `apps/web/.env.example`. Validated in `apps/web/src/lib/env.ts`; build fails if invalid.
+Plantilla: `apps/web/.env.example`. Se valida en `apps/web/src/lib/env.ts`; la compilación falla si
+es inválida.
 
-| Variable                   | Required | Secret          | Default                        | Purpose                                                                                  |
-| -------------------------- | -------- | --------------- | ------------------------------ | ---------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_API_BASE_URL` | yes      | **no — public** | `http://localhost:4000/api/v1` | API base URL used by the browser. Inlined at **build** time; changing it needs a rebuild |
+| Variable                   | Obligatoria | Secreta          | Por defecto                    | Para qué                                                                                                                                                                                           |
+| -------------------------- | ----------- | ---------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_API_BASE_URL` | sí          | **no — pública** | `http://localhost:4000/api/v1` | URL base de la API que usa el navegador. Se inserta al **compilar**; cambiarla requiere recompilar                                                                                                 |
+| `API_INTERNAL_BASE_URL`    | no          | no               | —                              | Solo en el servidor. URL de la API que usa el servidor web (Server Actions, proxy); en Docker, la dirección privada, por ejemplo `http://api:4000/api/v1`. Por defecto, `NEXT_PUBLIC_API_BASE_URL` |
 
-| `API_INTERNAL_BASE_URL` | no | no | — | Server-only. API URL used by the web server (Server Actions, proxy); set to the private address in Docker, e.g. `http://api:4000/api/v1`. Defaults to `NEXT_PUBLIC_API_BASE_URL` |
+Las variables de la web que son solo del servidor **no** deben usar el prefijo `NEXT_PUBLIC_`.
 
-Server-only web variables must **not** use the `NEXT_PUBLIC_` prefix.
+## `apps/passenger-mobile/.env` y `apps/transport-mobile/.env` — móvil (Expo)
 
-## `apps/passenger-mobile/.env` and `apps/transport-mobile/.env` — mobile (Expo)
+Plantillas: `apps/*-mobile/.env.example`. Se validan en `src/config/env.ts`.
 
-Templates: `apps/*-mobile/.env.example`. Validated in `src/config/env.ts`.
+| Variable                   | Obligatoria | Secreta          | Por defecto                    | Para qué                                       |
+| -------------------------- | ----------- | ---------------- | ------------------------------ | ---------------------------------------------- |
+| `EXPO_PUBLIC_API_BASE_URL` | sí          | **no — pública** | `http://localhost:4000/api/v1` | URL base de la API incluida en el bundle de JS |
 
-| Variable                   | Required | Secret          | Default                        | Purpose                                |
-| -------------------------- | -------- | --------------- | ------------------------------ | -------------------------------------- |
-| `EXPO_PUBLIC_API_BASE_URL` | yes      | **no — public** | `http://localhost:4000/api/v1` | API base URL embedded in the JS bundle |
+Valores según el destino:
 
-Values per target:
+| Destino                      | Valor                                                                               |
+| ---------------------------- | ----------------------------------------------------------------------------------- |
+| Simulador de iOS (macOS)     | `http://localhost:4000/api/v1`                                                      |
+| Emulador de Android          | `http://10.0.2.2:4000/api/v1`                                                       |
+| Dispositivo físico (Expo Go) | `http://<IP-de-la-computadora>:4000/api/v1` y `API_HOST=0.0.0.0` en `apps/api/.env` |
 
-| Target                    | Value                                                                            |
-| ------------------------- | -------------------------------------------------------------------------------- |
-| iOS Simulator (macOS)     | `http://localhost:4000/api/v1`                                                   |
-| Android emulator          | `http://10.0.2.2:4000/api/v1`                                                    |
-| Physical device (Expo Go) | `http://<computer-LAN-IP>:4000/api/v1` and `API_HOST=0.0.0.0` in `apps/api/.env` |
-
-Restart Metro with `--clear` after changing these values.
+Reinicia Metro con `--clear` después de cambiar estos valores.
 
 ## CI
 
-CircleCI sets placeholder public URLs and throwaway database credentials inline in
-`.circleci/config.yml`. They are not secrets. Real deployment secrets will go in CircleCI
-**contexts** (restricted to the deploy job), never in the config file.
+CircleCI y el runner propio definen en su configuración (`.circleci/config.yml`,
+`.github/workflows/self-hosted-ci.yml`) URLs públicas de ejemplo y credenciales de base de datos
+desechables. No son secretos. Los secretos reales de despliegue irán en los **contexts** de
+CircleCI o en los secretos de entorno de GitHub (restringidos al trabajo de despliegue), nunca en
+los archivos de configuración.

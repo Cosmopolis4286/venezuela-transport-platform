@@ -1,82 +1,92 @@
-# Authentication
+# Autenticación
 
-Implemented in `apps/api/src/modules/identity`. Contracts in `packages/shared-types/src/api/auth.ts`.
+Implementada en `apps/api/src/modules/identity`. Contratos en `packages/shared-types/src/api/auth.ts`.
 
-## Ways to sign in
+## Formas de iniciar sesión
 
-| Method                                     | Who                                            | Endpoints                                            |
-| ------------------------------------------ | ---------------------------------------------- | ---------------------------------------------------- |
-| E-mail + password                          | Passengers (and anyone with an e-mail account) | `POST /auth/register`, `POST /auth/login`            |
-| One-time code by SMS, WhatsApp or e-mail   | Passengers; first use creates the account      | `POST /auth/otp/request` → `POST /auth/otp/verify`   |
-| Add/verify a phone or e-mail on an account | Any signed-in user                             | `POST /me/contact-verification/request` → `/confirm` |
+| Método                                                | Quién                                             | Endpoints                                            |
+| ----------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------- |
+| Correo + contraseña                                   | Pasajeros (y cualquiera con una cuenta de correo) | `POST /auth/register`, `POST /auth/login`            |
+| Código de un solo uso por SMS, WhatsApp o correo      | Pasajeros; el primer uso crea la cuenta           | `POST /auth/otp/request` → `POST /auth/otp/verify`   |
+| Agregar o verificar un teléfono o correo en la cuenta | Cualquier usuario con sesión                      | `POST /me/contact-verification/request` → `/confirm` |
 
-All paths are under `/api/v1`. Drivers, crews and terminal operators use the same accounts;
-what they may do inside a company comes from **organization memberships** (next module), granted
-by invitation or after an approved application (KYC). Signing in never grants organization access
-by itself.
+Todas las rutas están bajo `/api/v1`. Conductores, tripulaciones y operadores de terminal usan las
+mismas cuentas; lo que pueden hacer dentro de una empresa viene de sus **membresías en
+organizaciones** ([organizations.md](organizations.md)), que se obtienen por invitación o después
+de una solicitud aprobada (KYC, [onboarding.md](onboarding.md)). Iniciar sesión nunca da acceso a
+una organización por sí solo.
 
-## Tokens and sessions
+## Tokens y sesiones
 
-- Every sign-in creates a **session** for one client (`web`, `passenger`, `transport`) and returns
-  an **access token** (15 min) and a **refresh token** (30 days). Both are opaque random strings
-  (`vtp_at_…`, `vtp_rt_…`); the database stores only their HMAC-SHA256 (keyed with `AUTH_SECRET`).
-- Send `Authorization: Bearer <accessToken>`. When a request fails with `SESSION_EXPIRED`, call
-  `POST /auth/refresh` once and retry. If refresh also fails, send the user to sign in.
-- **Refresh rotates both tokens.** Presenting a refresh token that was already rotated revokes the
-  whole session (it was stolen or replayed). Clients must therefore **serialize refresh calls** —
-  never refresh twice in parallel.
-- `POST /auth/logout` revokes the current session only. Suspended users cannot sign in or refresh.
+- Cada inicio de sesión crea una **sesión** para un cliente (`web`, `passenger`, `transport`) y
+  devuelve un **token de acceso** (15 min) y un **token de renovación** (30 días). Ambos son
+  cadenas aleatorias opacas (`vtp_at_…`, `vtp_rt_…`); la base de datos solo guarda su HMAC-SHA256
+  (con la clave `AUTH_SECRET`).
+- Envía `Authorization: Bearer <accessToken>`. Cuando una solicitud falla con `SESSION_EXPIRED`,
+  llama una vez a `POST /auth/refresh` y reintenta. Si la renovación también falla, lleva al
+  usuario a iniciar sesión.
+- **La renovación rota los dos tokens.** Presentar un token de renovación que ya fue rotado revoca
+  toda la sesión (fue robado o reutilizado). Por eso los clientes deben **serializar las
+  renovaciones** — nunca renovar dos veces en paralelo.
+- `POST /auth/logout` revoca solo la sesión actual. Los usuarios suspendidos no pueden iniciar
+  sesión ni renovar.
 
-### Where clients keep tokens
+### Dónde guardan los tokens los clientes
 
-| Client      | Storage                                                                                                                                           |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Mobile apps | `expo-secure-store` (Keychain / Android Keystore). Never AsyncStorage.                                                                            |
-| Web portal  | Next.js server keeps tokens in `httpOnly`, `Secure`, `SameSite=Lax` cookies and calls the API server-side. Tokens never reach browser JavaScript. |
+| Cliente      | Almacenamiento                                                                                                                                                                 |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Apps móviles | `expo-secure-store` (Keychain / Android Keystore). Nunca AsyncStorage.                                                                                                         |
+| Portal web   | El servidor Next.js guarda los tokens en cookies `httpOnly`, `Secure`, `SameSite=Lax` y llama a la API desde el servidor. Los tokens nunca llegan al JavaScript del navegador. |
 
-## Passwords
+## Contraseñas
 
-- scrypt (N=2^17, r=8, p=1, 16-byte salt) via Node's built-in `crypto` — no native dependency.
-- 10–128 characters, no composition rules (NIST SP 800-63B). Unicode is NFKC-normalized.
-- Wrong password and unknown e-mail return the same `INVALID_CREDENTIALS` error and take the same
-  time (a dummy hash is verified when the account does not exist).
+- scrypt (N=2^17, r=8, p=1, sal de 16 bytes) con el `crypto` integrado de Node — sin dependencias
+  nativas.
+- De 10 a 128 caracteres, sin reglas de composición (NIST SP 800-63B). El Unicode se normaliza con
+  NFKC.
+- Una contraseña incorrecta y un correo inexistente devuelven el mismo error
+  `INVALID_CREDENTIALS` y tardan lo mismo (se verifica un hash ficticio cuando la cuenta no
+  existe).
 
-## One-time codes
+## Códigos de un solo uso
 
-- 6 digits, valid `OTP_TTL_MINUTES` (5), `OTP_MAX_ATTEMPTS` (5) wrong guesses, single use
-  (enforced with a conditional update). Codes are stored hashed.
-- Per destination: one code every `OTP_RESEND_SECONDS` (60) and at most `OTP_MAX_PER_HOUR` (5),
-  which also caps SMS spend. Per IP: `AUTH_RATE_LIMIT_MAX` (10) requests/minute on all auth routes.
-- Phone numbers are normalized to E.164 with Venezuela as the default region
+- 6 dígitos, válidos `OTP_TTL_MINUTES` (5), con `OTP_MAX_ATTEMPTS` (5) intentos fallidos, de un
+  solo uso (garantizado con una actualización condicional). Los códigos se guardan como hash.
+- Por destino: un código cada `OTP_RESEND_SECONDS` (60) y como máximo `OTP_MAX_PER_HOUR` (5), lo
+  que también limita el gasto en SMS. Por IP: `AUTH_RATE_LIMIT_MAX` (10) solicitudes por minuto en
+  todas las rutas de autenticación.
+- Los teléfonos se normalizan a E.164 con Venezuela como región por defecto
   (`0412-1234567` → `+584121234567`).
-- Delivery is pluggable (`OtpSender` in `otp/otp-sender.ts`):
-  - `OTP_DELIVERY=console` — development: prints the code to the API log.
-  - `OTP_DELIVERY=disabled` — requests fail with 503. Use this in production until a provider is
-    integrated. Production refuses to start with `console`.
-  - **To add a provider** (e.g. an SMS gateway, WhatsApp Business, an e-mail service): implement
-    `OtpSender`, add its credentials to the env schema, and select it in `identity.module.ts`.
+- El envío es intercambiable (`OtpSender` en `otp/otp-sender.ts`):
+  - `OTP_DELIVERY=console` — desarrollo: imprime el código en el log de la API.
+  - `OTP_DELIVERY=disabled` — las solicitudes fallan con 503. Úsalo en producción hasta integrar
+    un proveedor. Producción se niega a arrancar con `console`.
+  - **Para agregar un proveedor** (por ejemplo una pasarela de SMS, WhatsApp Business o un
+    servicio de correo): implementa `OtpSender`, agrega sus credenciales al esquema de
+    configuración y selecciónalo en `identity.module.ts`.
 
-## Error codes clients should handle
+## Códigos de error que los clientes deben manejar
 
-| Code                  | Status | Meaning / client action                               |
-| --------------------- | ------ | ----------------------------------------------------- |
-| `UNAUTHORIZED`        | 401    | No token sent → sign in                               |
-| `SESSION_EXPIRED`     | 401    | Token invalid/expired → refresh once, else sign in    |
-| `INVALID_CREDENTIALS` | 401    | Wrong e-mail or password                              |
-| `OTP_INVALID`         | 400    | Wrong or already-used code                            |
-| `OTP_EXPIRED`         | 400    | Code expired or too many attempts → request a new one |
-| `RATE_LIMITED`        | 429    | Wait (`resendAvailableAt` tells when for codes)       |
-| `CONFLICT`            | 409    | E-mail/phone already belongs to another account       |
-| `FORBIDDEN`           | 403    | Account suspended                                     |
-| `SERVICE_UNAVAILABLE` | 503    | Code delivery not configured                          |
+| Código                | Estado | Significado / qué hacer en el cliente                             |
+| --------------------- | ------ | ----------------------------------------------------------------- |
+| `UNAUTHORIZED`        | 401    | No se envió token → iniciar sesión                                |
+| `SESSION_EXPIRED`     | 401    | Token inválido o vencido → renovar una vez; si no, iniciar sesión |
+| `INVALID_CREDENTIALS` | 401    | Correo o contraseña incorrectos                                   |
+| `OTP_INVALID`         | 400    | Código incorrecto o ya usado                                      |
+| `OTP_EXPIRED`         | 400    | Código vencido o demasiados intentos → pedir uno nuevo            |
+| `RATE_LIMITED`        | 429    | Esperar (`resendAvailableAt` indica cuándo, para los códigos)     |
+| `CONFLICT`            | 409    | El correo o teléfono ya pertenece a otra cuenta                   |
+| `FORBIDDEN`           | 403    | Cuenta suspendida                                                 |
+| `SERVICE_UNAVAILABLE` | 503    | El envío de códigos no está configurado                           |
 
-## Audit events
+## Eventos de auditoría
 
 `auth.register`, `auth.login.password`, `auth.login.password_failed`, `auth.login.otp`,
 `auth.otp.requested`, `auth.refresh.reuse_detected`, `auth.logout`, `user.contact_verified`,
-`user.profile_updated` — stored in `audit_events` with user id, IP and non-sensitive metadata.
+`user.profile_updated` — guardados en `audit_events` con el id del usuario, la IP y metadatos no
+sensibles.
 
-## Not implemented yet
+## Todavía no implementado
 
-Password reset (will reuse one-time codes), listing/revoking other sessions, organization roles
-and permissions, KYC, social login, 2FA for staff accounts.
+Restablecer la contraseña (reutilizará los códigos de un solo uso), ver y revocar las otras
+sesiones, inicio de sesión con redes sociales y doble factor para las cuentas del personal.

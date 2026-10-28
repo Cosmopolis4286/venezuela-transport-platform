@@ -1,147 +1,158 @@
-# Architecture overview
+# Visión general de la arquitectura
 
-## Context
+## Contexto
 
-The platform will connect passengers, bus companies, terminals, taxi drivers and transport
-operators in Venezuela: bus search, reservations and tickets with QR validation, seat
-availability, taxi dispatch to/from terminals, payments and settlements, notifications,
-reporting, and organization-based roles. What is built and what is pending is tracked in the
-[roadmap](../roadmap.md). This document describes the module boundaries every feature follows.
+La plataforma conecta a pasajeros, empresas de autobuses, terminales, taxistas y operadores de
+transporte en Venezuela: búsqueda de autobuses, reservas y boletos con validación por QR,
+disponibilidad de puestos, despacho de taxis desde y hacia los terminales, pagos y liquidaciones,
+notificaciones, reportes y roles por organización. Lo que está construido y lo que falta se sigue
+en la [hoja de ruta](../roadmap.md). Este documento describe los límites entre módulos que sigue
+cada funcionalidad.
 
-## System diagram
+## Diagrama del sistema
 
 ```
  ┌────────────────────┐  ┌────────────────────────┐  ┌──────────────────────────┐
  │ apps/web (Next.js) │  │ apps/passenger-mobile   │  │ apps/transport-mobile    │
- │  /        public   │  │ (Expo, passengers)      │  │ (Expo, drivers/operators)│
- │  /portal  operators│  │                         │  │                          │
+ │  /        público  │  │ (Expo, pasajeros)       │  │ (Expo, conductores y     │
+ │  /portal  empresas │  │                         │  │  operadores)             │
  └─────────┬──────────┘  └───────────┬────────────┘  └────────────┬─────────────┘
-           │        HTTPS · JSON · /api/v1/*  (shared contracts: @vtp/shared-types)
+           │        HTTPS · JSON · /api/v1/*  (contratos compartidos: @vtp/shared-types)
            └─────────────────────────┼────────────────────────────┘
                                      ▼
                      ┌──────────────────────────────────┐
-                     │ apps/api — NestJS modular monolith│
-                     │  config · logging · validation    │
-                     │  modules/health (+ future modules) │
+                     │ apps/api — monolito modular NestJS │
+                     │  configuración · logs · validación │
+                     │  modules/* (identidad, reservas…)  │
                      └───────────┬──────────────┬───────┘
-                                 ▼              ▼ (optional, later)
+                                 ▼              ▼ (opcional, más adelante)
                      PostgreSQL 18 + PostGIS    Redis 8 / BullMQ
 ```
 
-## Applications
+## Aplicaciones
 
-| App                     | Audience                                              | Responsibility                                                                                                                                                                                                                  | Talks to                     |
-| ----------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| `apps/web`              | Public visitors; staff of bus companies and terminals | Public site and bus search (route group `(public)`), operator portal under `/portal` with its own layout. Signed-in areas `/portal` and `/admin` are guarded by `src/proxy.ts` and API checks ([web-portal.md](web-portal.md)). | API over HTTPS               |
-| `apps/passenger-mobile` | Passengers                                            | Trip search and account today; booking, tickets, taxi requests later ([mobile-apps.md](mobile-apps.md))                                                                                                                         | API over HTTPS               |
-| `apps/transport-mobile` | Taxi drivers, bus crews, terminal operators           | Sign-in, invitations, KYC application with documents today; dispatch and QR ticket validation later                                                                                                                             | API over HTTPS               |
-| `apps/api`              | All clients                                           | Single source of truth for business rules, authorization and data                                                                                                                                                               | PostgreSQL, Redis (optional) |
+| App                     | Público                                                      | Responsabilidad                                                                                                                                                                                                                                                 | Habla con                    |
+| ----------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `apps/web`              | Visitantes; personal de empresas de autobuses y terminales   | Sitio público y búsqueda de autobuses (grupo de rutas `(public)`), portal de empresas en `/portal` con su propio layout. Las áreas con sesión `/portal` y `/admin` las protegen `src/proxy.ts` y las verificaciones de la API ([web-portal.md](web-portal.md)). | La API por HTTPS             |
+| `apps/passenger-mobile` | Pasajeros                                                    | Búsqueda de viajes, reserva de puestos, pago, boletos QR y cuenta; solicitudes de taxi más adelante ([mobile-apps.md](mobile-apps.md))                                                                                                                          | La API por HTTPS             |
+| `apps/transport-mobile` | Taxistas, tripulaciones de autobuses, operadores de terminal | Inicio de sesión, invitaciones, solicitud KYC con documentos y validación de boletos QR; despacho más adelante                                                                                                                                                  | La API por HTTPS             |
+| `apps/api`              | Todos los clientes                                           | Única fuente de verdad de las reglas de negocio, la autorización y los datos                                                                                                                                                                                    | PostgreSQL, Redis (opcional) |
 
-Rules:
+Reglas:
 
-- **Clients never talk to the database or to each other.** Everything goes through the API.
-- **The two mobile apps stay separate.** Different users, permissions, release cadence and
-  app-store listings. Besides _contracts_ (`@vtp/shared-types`) they share only session handling,
-  the API client and the sign-in screens (`@vtp/mobile-core`, [ADR-016](decisions.md)); every
-  feature screen lives in its own app ([mobile-apps.md](mobile-apps.md)).
-- **Web and mobile do not share UI components.** React DOM and React Native components are
-  different; sharing would couple their release cycles for little gain.
-- The public website and the operator portal share one Next.js app but use separate route
-  trees and layouts, so they can get separate auth middleware later without a new deployment.
+- **Los clientes nunca hablan con la base de datos ni entre sí.** Todo pasa por la API.
+- **Las dos apps móviles se mantienen separadas.** Distintos usuarios, permisos, ritmo de
+  publicación y fichas en las tiendas. Además de los _contratos_ (`@vtp/shared-types`), solo
+  comparten el manejo de la sesión, el cliente de la API y las pantallas de inicio de sesión
+  (`@vtp/mobile-core`, [ADR-016](decisions.md)); cada pantalla de funcionalidad vive en su propia
+  app ([mobile-apps.md](mobile-apps.md)).
+- **La web y el móvil no comparten componentes de interfaz.** Los componentes de React DOM y React
+  Native son distintos; compartirlos ataría sus ciclos de publicación a cambio de poco.
+- La web pública y el portal de empresas comparten una app Next.js pero usan árboles de rutas y
+  layouts separados, así pueden tener middleware de autenticación distinto sin un despliegue
+  aparte.
 
-## Backend: modular monolith
+## Backend: monolito modular
 
-One deployable NestJS process, internally split into modules with explicit boundaries.
+Un solo proceso NestJS desplegable, dividido por dentro en módulos con límites explícitos.
 
 ```
 apps/api/src/
-├── main.ts               # bootstrap: listen, log URLs
-├── app.setup.ts          # prefix /api, URI versioning, validation, error filter, CORS, Swagger
-├── app.module.ts         # wires config, logger, database, feature modules
-├── common/               # cross-cutting: filters/, pipes/, interceptors/
-├── config/               # env schema (zod), typed AppConfigService, logger config
-├── database/             # pg Pool lifecycle + ping (no ORM yet — see decisions.md)
-├── docs/                 # OpenAPI/Swagger setup
-└── modules/
-    └── health/           # liveness + readiness
+├── main.ts               # arranque: escuchar, mostrar las URLs
+├── app.setup.ts          # prefijo /api, versionado por URI, validación, filtro de errores, CORS, Swagger
+├── app.module.ts         # conecta configuración, logger, base de datos y módulos de funcionalidad
+├── cli/                  # comandos de servidor (platform-grant)
+├── common/               # transversal: filters/, pipes/, interceptors/, errors/
+├── config/               # esquema de entorno (zod), AppConfigService tipado, configuración de logs
+├── database/             # Drizzle ORM sobre un pool de pg, migraciones, schema.ts que reúne las tablas
+├── docs/                 # configuración de OpenAPI/Swagger
+├── storage/              # FileStorage (documentos KYC)
+└── modules/              # audit, health, identity, organizations, onboarding, network,
+                          # fleet, bookings, payments
 ```
 
-### Adding a feature module
+### Agregar un módulo de funcionalidad
 
-Planned modules, roughly in dependency order:
+Módulos, aproximadamente en orden de dependencia:
 
-| Module                 | Owns                                                                                                                                |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `identity` ✅          | Users, credentials, sessions/tokens, one-time codes ([authentication.md](authentication.md))                                        |
-| `organizations` ✅     | Bus companies, taxi lines and terminals; memberships, roles, invitations, platform review ([organizations.md](organizations.md))    |
-| `onboarding` ✅        | Driver/staff applications, KYC documents, platform review, organization acceptance ([onboarding.md](onboarding.md))                 |
-| `network` ✅           | Stop catalog (terminals and stops, PostGIS), routes, fares, recurring schedules, public departure search ([network.md](network.md)) |
-| `fleet` ✅ (seat maps) | Seat layouts per vehicle type ([fleet.md](fleet.md)); vehicles and drivers' assignments come with dispatch                          |
-| `bookings` ✅          | Trips, seat holds, passenger manifests, ticket validation at boarding ([bookings.md](bookings.md))                                  |
-| `taxi-dispatch`        | Taxi requests, matching, trip lifecycle (WebSockets only if justified)                                                              |
-| `payments` ✅          | Exchange rates, payments through provider adapters, booking confirmation ([payments.md](payments.md)); settlements next             |
-| `notifications`        | SMS / push / e-mail delivery, templates                                                                                             |
-| `reporting`            | Read models and exports for operators                                                                                               |
+| Módulo                        | Es dueño de                                                                                                                                            |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `identity` ✅                 | Usuarios, credenciales, sesiones y tokens, códigos de un solo uso ([authentication.md](authentication.md))                                             |
+| `organizations` ✅            | Empresas de autobuses, líneas de taxis y terminales; membresías, roles, invitaciones, revisión de la plataforma ([organizations.md](organizations.md)) |
+| `onboarding` ✅               | Solicitudes de conductores y personal, documentos KYC, revisión de la plataforma, aceptación de la organización ([onboarding.md](onboarding.md))       |
+| `network` ✅                  | Catálogo de paradas (terminales y paradas, PostGIS), rutas, tarifas, horarios recurrentes, búsqueda pública de salidas ([network.md](network.md))      |
+| `fleet` ✅ (mapas de puestos) | Mapas de puestos por tipo de vehículo ([fleet.md](fleet.md)); los vehículos y la asignación de conductores llegan con el despacho                      |
+| `bookings` ✅                 | Viajes, puestos apartados, listas de pasajeros, validación de boletos al abordar ([bookings.md](bookings.md))                                          |
+| `payments` ✅                 | Tasas de cambio, pagos mediante adaptadores de proveedores, confirmación de reservas ([payments.md](payments.md)); las liquidaciones vienen después    |
+| `taxi-dispatch`               | Solicitudes de taxi, asignación, ciclo de vida del viaje (WebSockets solo si se justifica)                                                             |
+| `notifications`               | Envío de SMS / push / correo, plantillas                                                                                                               |
+| `reporting`                   | Modelos de lectura y exportaciones para las empresas                                                                                                   |
 
-Conventions for each new module (`apps/api/src/modules/<name>/`):
+Convenciones para cada módulo nuevo (`apps/api/src/modules/<nombre>/`):
 
-1. `<name>.module.ts`, controllers, services, DTOs (`class-validator`), and tests next to the code.
-2. **A module exposes a service API via `exports`; other modules use only that.** No reaching into
-   another module's tables or internal providers. If two modules need the same data, one owns it
-   and the other asks through its exported service.
-3. Each module owns its tables. Cross-module foreign keys are allowed only toward the owning
-   module's identifiers (e.g. `organization_id`).
-4. Controllers declare `version: '1'`; DTOs that cross the wire have a matching contract type in
-   `@vtp/shared-types` once a client consumes them.
-5. Register the module in `app.module.ts` and add an e2e test for its main endpoints.
-6. Split a module into its own service **only** with evidence (independent scaling, team
-   ownership, failure isolation). Clean module boundaries keep that option cheap.
+1. `<nombre>.module.ts`, controladores, servicios, DTO (`class-validator`) y pruebas junto al
+   código.
+2. **Un módulo expone una API de servicio mediante `exports`; los demás módulos solo usan eso.**
+   Nada de meterse en las tablas o los providers internos de otro módulo para escribir. Si dos
+   módulos necesitan los mismos datos, uno es el dueño y el otro los pide a través de su servicio
+   exportado.
+3. Cada módulo es dueño de sus tablas. Las claves foráneas entre módulos solo se permiten hacia
+   los identificadores del módulo dueño (por ejemplo, `organization_id`).
+4. Los controladores declaran `version: '1'`; los DTO que viajan por la red tienen un tipo de
+   contrato equivalente en `@vtp/shared-types` en cuanto un cliente los consume.
+5. Registra el módulo en `app.module.ts` y agrega una prueba e2e de sus endpoints principales.
+6. Separa un módulo en su propio servicio **solo** con evidencia (escalado independiente, equipo
+   propio, aislamiento de fallos). Unos límites limpios entre módulos mantienen esa opción barata.
 
-### Cross-cutting behaviour already in place
+### Comportamiento transversal que ya existe
 
-| Concern          | Implementation                                                                                                                                                                                                                          |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Versioning       | Global prefix `api` + URI versioning, default `v1` → `/api/v1/...`                                                                                                                                                                      |
-| Validation       | Global `ValidationPipe`: whitelist, reject unknown fields, transform; never echoes values                                                                                                                                               |
-| Errors           | `HttpExceptionFilter` → `ApiErrorResponse` (`packages/shared-types/src/api/errors.ts`)                                                                                                                                                  |
-| Config           | `zod` schema validated at boot; process exits listing invalid variable names                                                                                                                                                            |
-| Logging          | `nestjs-pino`: JSON in prod, pretty in dev; request IDs (`x-request-id`); auth headers/cookies redacted; query strings and bodies not logged                                                                                            |
-| CORS             | Explicit allowlist from `CORS_ORIGINS`; `*` rejected in production                                                                                                                                                                      |
-| API docs         | Swagger at `/api/docs`, on by default outside production                                                                                                                                                                                |
-| Shutdown         | `enableShutdownHooks()`; DB pool closed on SIGTERM/SIGINT                                                                                                                                                                               |
-| Health           | `/api/v1/health` (liveness), `/api/v1/health/ready` (DB readiness, 503 when down)                                                                                                                                                       |
-| Security headers | `helmet` defaults (CSP, HSTS, nosniff, frame-ancestors…); `x-powered-by` removed                                                                                                                                                        |
-| Rate limiting    | `@nestjs/throttler` global guard per client IP (`RATE_LIMIT_*`); health probes exempt via `@SkipThrottle()`. In-memory store: move to Redis storage before running more than one API instance                                           |
-| Proxies          | `trust proxy` set from `API_TRUST_PROXY_HOPS` so client IPs are correct behind Caddy/Nginx                                                                                                                                              |
-| Authentication   | Global `AuthGuard`: every route requires a bearer access token unless marked `@Public()`. See [authentication.md](authentication.md)                                                                                                    |
-| Authorization    | `@RequireOrganizationAccess(permission)` resolves `:organizationId` to the caller's membership (404 for non-members, 403 without the permission); `@RequirePlatformRole()` for platform staff. See [organizations.md](organizations.md) |
-| Audit log        | `AuditService.record()` → `audit_events` (identifiers only, never secrets or raw PII)                                                                                                                                                   |
+| Aspecto                 | Implementación                                                                                                                                                                                                                                  |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Versionado              | Prefijo global `api` + versionado por URI, `v1` por defecto → `/api/v1/...`                                                                                                                                                                     |
+| Validación              | `ValidationPipe` global: lista blanca, rechazo de campos desconocidos, transformación; nunca devuelve los valores                                                                                                                               |
+| Errores                 | `HttpExceptionFilter` → `ApiErrorResponse` (`packages/shared-types/src/api/errors.ts`)                                                                                                                                                          |
+| Configuración           | Esquema `zod` validado al arrancar; el proceso termina listando los nombres de las variables inválidas                                                                                                                                          |
+| Logs                    | `nestjs-pino`: JSON en producción, legible en desarrollo; ids de solicitud (`x-request-id`); cabeceras de autenticación y cookies ocultas; no se registran query strings ni cuerpos                                                             |
+| CORS                    | Lista explícita de orígenes en `CORS_ORIGINS`; `*` se rechaza en producción                                                                                                                                                                     |
+| Documentación de la API | Swagger en `/api/docs`, activo por defecto fuera de producción                                                                                                                                                                                  |
+| Apagado                 | `enableShutdownHooks()`; el pool de la base de datos se cierra con SIGTERM/SIGINT                                                                                                                                                               |
+| Salud                   | `/api/v1/health` (vida), `/api/v1/health/ready` (base de datos lista, 503 si está caída)                                                                                                                                                        |
+| Cabeceras de seguridad  | Valores por defecto de `helmet` (CSP, HSTS, nosniff, frame-ancestors…); sin `x-powered-by`                                                                                                                                                      |
+| Límite de solicitudes   | Guardia global de `@nestjs/throttler` por IP de cliente (`RATE_LIMIT_*`); las sondas de salud quedan exentas con `@SkipThrottle()`. Almacén en memoria: pásalo a Redis antes de correr más de una instancia de la API                           |
+| Proxies                 | `trust proxy` según `API_TRUST_PROXY_HOPS`, para que las IPs de los clientes sean correctas detrás de Caddy/Nginx                                                                                                                               |
+| Autenticación           | `AuthGuard` global: cada ruta exige un token de acceso bearer salvo que esté marcada con `@Public()`. Ver [authentication.md](authentication.md)                                                                                                |
+| Autorización            | `@RequireOrganizationAccess(permiso)` resuelve `:organizationId` a la membresía de quien llama (404 si no es miembro, 403 sin el permiso); `@RequirePlatformRole()` para el personal de la plataforma. Ver [organizations.md](organizations.md) |
+| Registro de auditoría   | `AuditService.record()` → `audit_events` (solo identificadores, nunca secretos ni datos personales en bruto)                                                                                                                                    |
 
-**Not in place yet (do not assume they exist):** notifications (no SMS/e-mail provider), cloud file
-storage, background jobs.
+**Todavía no existen (no asumas que están):** notificaciones (no hay proveedor de SMS ni correo),
+almacenamiento de archivos en la nube, trabajos en segundo plano.
 
-## Data
+## Datos
 
-- **PostgreSQL 18 + PostGIS 3.6.** PostGIS covers terminal locations, route geometry and
-  nearest-taxi queries without a separate geo service.
-- Extensions enabled on first init: `postgis`, `pgcrypto`, `citext`, `pg_trgm`
+- **PostgreSQL 18 + PostGIS 3.6.** PostGIS cubre la ubicación de los terminales, la geometría de
+  las rutas y las consultas del taxi más cercano sin un servicio geográfico aparte.
+- Extensiones activadas en la primera inicialización: `postgis`, `pgcrypto`, `citext`, `pg_trgm`
   (`infrastructure/docker/postgres/init/001-extensions.sql`).
-- Time zone: containers run in `America/Caracas`; **store timestamps as `timestamptz`** and
-  convert at the edges.
-- Schema changes go through committed SQL migrations generated with drizzle-kit and applied by
-  `pnpm db:migrate` — see [decisions](decisions.md#adr-007-drizzle-orm-with-committed-sql-migrations).
-  Each module owns its tables in `src/modules/<name>/<name>.schema.ts`.
+- Zona horaria: los contenedores corren en `America/Caracas`; **las fechas se guardan como
+  `timestamptz`** y se convierten en los extremos.
+- Los cambios de esquema pasan por migraciones SQL versionadas en el repositorio, generadas con
+  drizzle-kit y aplicadas con `pnpm db:migrate` — ver las
+  [decisiones](decisions.md#adr-007-drizzle-orm-con-migraciones-sql-versionadas). Cada módulo es
+  dueño de sus tablas en `src/modules/<nombre>/<nombre>.schema.ts`.
 
-## Shared contracts (`@vtp/shared-types`)
+## Contratos compartidos (`@vtp/shared-types`)
 
-- Pure TypeScript: no React, React Native, Next.js or NestJS imports, no runtime dependencies.
-- Holds wire contracts only: request/response shapes, error codes, API version constants.
-  **Not** entities, ORM models or internal service types.
-- Built to `dist/` (ESM + `.d.ts`); Turbo builds it before any dependant (`dependsOn: ["^build"]`).
+- TypeScript puro: sin imports de React, React Native, Next.js ni NestJS, sin dependencias en
+  tiempo de ejecución.
+- Solo contiene contratos de la red: formas de solicitudes y respuestas, códigos de error,
+  constantes de versión de la API y funciones de presentación compartidas. **No** entidades,
+  modelos del ORM ni tipos internos de los servicios.
+- Se compila a `dist/` (ESM + `.d.ts`); Turbo lo compila antes que cualquier paquete que dependa
+  de él (`dependsOn: ["^build"]`).
 
-### Error convention
+### Convención de errores
 
-Every non-2xx response has this body:
+Toda respuesta que no sea 2xx tiene este cuerpo:
 
 ```json
 {
@@ -155,24 +166,27 @@ Every non-2xx response has this body:
 }
 ```
 
-Clients branch on `code` (a closed list, `API_ERROR_CODES`), show `message`, and display
-`requestId` in support flows. `isApiErrorResponse()` is a runtime guard for clients.
+Los clientes deciden según `code` (una lista cerrada, `API_ERROR_CODES`), muestran `message` y
+enseñan `requestId` en los flujos de soporte. `isApiErrorResponse()` es una comprobación en tiempo
+de ejecución para los clientes.
 
-### Evolving contracts
+### Evolución de los contratos
 
-- **Additive changes** (new optional field, new endpoint, new error code) are fine within `v1`.
-- **Breaking changes** (removing/renaming a field, changing a type, making a field required in a
-  request) need either a new endpoint version (`version: '2'`) or a coordinated change that
-  updates the API and every consumer in the same PR — and, for mobile, only after old app
-  versions in the field are unsupported. **Assume mobile clients lag behind by weeks.**
-- Keep OpenAPI (generated from the NestJS controllers) as the external reference; shared types
-  are the internal TypeScript convenience. Consider generating one from the other once the API
-  grows.
+- **Los cambios que solo agregan** (un campo opcional nuevo, un endpoint nuevo, un código de error
+  nuevo) se pueden hacer dentro de `v1`.
+- **Los cambios que rompen** (quitar o renombrar un campo, cambiar un tipo, volver obligatorio un
+  campo de una solicitud) necesitan una nueva versión del endpoint (`version: '2'`) o un cambio
+  coordinado que actualice la API y a todos sus consumidores en el mismo PR — y, para el móvil,
+  solo cuando las versiones viejas de la app en la calle ya no se soporten. **Asume que los
+  clientes móviles van semanas atrasados.**
+- OpenAPI (generado desde los controladores de NestJS) es la referencia externa; los tipos
+  compartidos son la comodidad interna en TypeScript. Considera generar uno a partir del otro
+  cuando la API crezca.
 
-## Communication
+## Comunicación
 
-- REST/JSON over HTTPS, versioned under `/api/v1`.
-- WebSockets only when a feature needs server push (e.g. live taxi position). Polling is
-  acceptable for the first iterations.
-- Background work (notifications, settlements) → BullMQ on Redis once a real job exists; the
-  Compose `redis` profile is ready for it.
+- REST/JSON por HTTPS, versionado bajo `/api/v1`.
+- WebSockets solo cuando una funcionalidad necesite que el servidor empuje datos (por ejemplo, la
+  posición de un taxi en vivo). Consultar periódicamente es aceptable en las primeras versiones.
+- Trabajo en segundo plano (notificaciones, liquidaciones) → BullMQ sobre Redis cuando exista un
+  trabajo real; el perfil `redis` de Compose está listo para eso.

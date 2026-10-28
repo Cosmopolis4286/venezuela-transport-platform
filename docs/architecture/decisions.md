@@ -1,298 +1,333 @@
-# Architecture decisions
+# Decisiones de arquitectura
 
-Lightweight ADRs. Add a new entry instead of rewriting an old one; mark superseded entries.
+ADR livianos (registros de decisiones de arquitectura). Agrega una entrada nueva en lugar de
+reescribir una vieja; marca las que quedan reemplazadas. Cada ADR describe lo que se decidió en su
+momento, así que puede mencionar como futuro algo que ya existe.
 
-## ADR-001: One monorepo with separate apps
+## ADR-001: Un monorepo con apps separadas
 
-**Decision.** A single Git repository (`venezuela-transport-platform`) using a pnpm workspace
-and Turborepo, with each application isolated in `apps/*`.
+**Decisión.** Un solo repositorio Git (`venezuela-transport-platform`) con un pnpm workspace y
+Turborepo, con cada aplicación aislada en `apps/*`.
 
-**Why.** One developer (or a small team) maintains everything; API contract changes and their
-consumers can land in one PR; one CI pipeline, one set of tooling; no cross-repo version
-syncing. Turborepo only runs tasks for affected packages and caches the rest.
+**Por qué.** Una persona (o un equipo pequeño) mantiene todo; los cambios de contrato de la API y
+sus consumidores pueden entrar en un mismo PR; un solo pipeline de CI y un solo conjunto de
+herramientas; no hay que sincronizar versiones entre repositorios. Turborepo solo corre las tareas
+de los paquetes afectados y guarda en caché el resto.
 
-**Trade-offs.** CI and installs cover more code; repository permissions are all-or-nothing.
-If an app later needs a separate team or access control, `git subtree split` can extract it.
+**Compromisos.** La CI y las instalaciones abarcan más código; los permisos del repositorio son
+todo o nada. Si una app necesita más adelante un equipo o un control de acceso aparte,
+`git subtree split` puede extraerla.
 
-**Rejected.** Four repositories (sync overhead with no current benefit).
+**Descartado.** Cuatro repositorios (costo de sincronización sin beneficio actual).
 
-## ADR-002: Separate repository from PlayRKE
+## ADR-002: Repositorio separado de PlayRKE
 
-The machine this was set up on already contained the unrelated PlayRKE project
-(Laravel + Nuxt). This platform lives in its **own** repository so neither project's history,
-CI or tooling affects the other. Nothing was copied from PlayRKE.
+La máquina en la que se preparó esto ya tenía el proyecto PlayRKE, que no tiene relación (Laravel
 
-## ADR-003: Runtime and package manager versions
+- Nuxt). Esta plataforma vive en su **propio** repositorio, para que ni el historial, ni la CI, ni
+  las herramientas de un proyecto afecten al otro. No se copió nada de PlayRKE.
 
-| Choice               | Why                                                                                                                                 |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Node.js **24 LTS**   | Current Active LTS. Node 22 was rejected because `@nestjs/schematics` 12 requires `>=22.22.3` and 24 has the longer support window. |
-| pnpm **10.34.x**     | Mature line, fully supported by Expo, Turborepo and `pnpm/action-setup`. pnpm 11/12 exist; upgrade deliberately later.              |
-| TypeScript **6.0.x** | TypeScript 7 is released, but `typescript-eslint` 8 supports `<6.1`. Revisit when it adds TS 7 support.                             |
-| ESLint **9.39.x**    | ESLint 10 is out, but `eslint-config-expo` depends on `eslint-plugin-react`/`-import` that only declare support up to ESLint 9.     |
-| pnpm `catalog:`      | Shared versions (TypeScript, React, ESLint, zod, vitest…) declared once in `pnpm-workspace.yaml`.                                   |
+## ADR-003: Versiones del runtime y del gestor de paquetes
 
-## ADR-004: Framework versions & generators
+| Elección             | Por qué                                                                                                                                        |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Node.js **24 LTS**   | La LTS activa actual. Se descartó Node 22 porque `@nestjs/schematics` 12 exige `>=22.22.3` y la 24 tiene una ventana de soporte más larga.     |
+| pnpm **10.34.x**     | Línea madura, soportada por completo por Expo, Turborepo y `pnpm/action-setup`. Existen pnpm 11 y 12; se actualizará a propósito más adelante. |
+| TypeScript **6.0.x** | TypeScript 7 ya salió, pero `typescript-eslint` 8 soporta `<6.1`. Se revisará cuando agregue soporte para TS 7.                                |
+| ESLint **9.39.x**    | ESLint 10 ya salió, pero `eslint-config-expo` depende de `eslint-plugin-react`/`-import`, que solo declaran soporte hasta ESLint 9.            |
+| `catalog:` de pnpm   | Las versiones compartidas (TypeScript, React, ESLint, zod, vitest…) se declaran una sola vez en `pnpm-workspace.yaml`.                         |
 
-All apps were created with their official generators (`create-next-app@16.4.2`,
-`create-expo-app` with the SDK 58 `blank-typescript` template, `@nestjs/cli@12`) and then
-trimmed. Notable consequences:
+## ADR-004: Versiones de los frameworks y generadores
 
-- **NestJS 12 is ESM** (`"type": "module"`, `.js` import suffixes) and its CLI now generates
-  **Vitest** instead of Jest; we kept Vitest. Its default `oxlint` was replaced by ESLint so
-  every package uses the same linter.
-- **Next.js 16.4** uses Turbopack and `@tailwindcss/turbopack`; `cacheComponents` and
-  `partialPrefetching` are left on as generated. Google Fonts were removed so builds work
-  offline and do not depend on third-party font fetches.
-- **Expo SDK 58** with Expo Router; routes live in `src/app/`. Native `ios/` and `android/`
-  folders are generated (CNG) and git-ignored.
+Todas las apps se crearon con sus generadores oficiales (`create-next-app@16.4.2`,
+`create-expo-app` con la plantilla `blank-typescript` del SDK 58, `@nestjs/cli@12`) y luego se
+recortaron. Consecuencias importantes:
 
-## ADR-005: pnpm isolated `node_modules` (no hoisting)
+- **NestJS 12 es ESM** (`"type": "module"`, sufijos `.js` en los imports) y su CLI ahora genera
+  **Vitest** en lugar de Jest; nos quedamos con Vitest. Su `oxlint` por defecto se reemplazó por
+  ESLint para que todos los paquetes usen el mismo linter.
+- **Next.js 16.4** usa Turbopack y `@tailwindcss/turbopack`; `cacheComponents` y
+  `partialPrefetching` se dejan activados como vienen. Se quitaron las Google Fonts para que la
+  compilación funcione sin conexión y no dependa de descargar fuentes de terceros.
+- **Expo SDK 58** con Expo Router; las rutas viven en `src/app/`. Las carpetas nativas `ios/` y
+  `android/` se generan (CNG) y están ignoradas por git.
 
-Expo SDK 58's Metro config handles pnpm's isolated layout; both apps were verified with
-`expo export` for Android and iOS. We therefore do **not** set `node-linker=hoisted`. If a
-future native library breaks under isolation, switching to `node-linker=hoisted` in `.npmrc`
-is the documented fallback.
+## ADR-005: `node_modules` aislados de pnpm (sin hoisting)
 
-## ADR-006: shadcn/ui installed manually
+La configuración de Metro del SDK 58 de Expo maneja la estructura aislada de pnpm; las dos apps se
+verificaron con `expo export` para Android e iOS. Por eso **no** definimos `node-linker=hoisted`.
+Si una biblioteca nativa futura falla con el aislamiento, cambiar a `node-linker=hoisted` en
+`.npmrc` es la alternativa documentada.
 
-The environment used for the initial setup could not reach `ui.shadcn.com`, so shadcn/ui was
-configured following its manual-installation guide: `components.json`, `src/lib/utils.ts`
-(`cn`), theme tokens in `globals.css`, and the `Button` component. The CLI works normally on
-an unrestricted network: `pnpm --filter @vtp/web exec shadcn add <component>`.
+## ADR-006: shadcn/ui instalado a mano
 
-## ADR-007: Drizzle ORM with committed SQL migrations
+El entorno usado para la preparación inicial no llegaba a `ui.shadcn.com`, así que shadcn/ui se
+configuró siguiendo su guía de instalación manual: `components.json`, `src/lib/utils.ts` (`cn`),
+los tokens del tema en `globals.css` y el componente `Button`. La CLI funciona normalmente en una
+red sin restricciones: `pnpm --filter @vtp/web exec shadcn add <componente>`.
 
-_Supersedes the initial "defer the ORM" decision from the foundation PR._
+## ADR-007: Drizzle ORM con migraciones SQL versionadas
 
-**Decision.** Drizzle ORM (`drizzle-orm` 0.45) for queries and `drizzle-kit` 0.31 to generate
-SQL migrations. Migrations are applied by our own runner (`apps/api/src/database/migrate.ts`,
-`pnpm db:migrate`), which uses Drizzle's migrator and its `drizzle.__drizzle_migrations` table.
+_Reemplaza la decisión inicial de "posponer el ORM" del PR de la base del proyecto._
 
-**Why.** Generated migrations are plain, reviewable SQL files; custom SQL migrations
-(`--custom`) cover PostGIS features the schema DSL does not; queries stay close to SQL and
-fully typed; no code-generation step or engine binary (unlike Prisma, whose PostGIS support is
-weaker). Kysely was the runner-up; it needs a separate migration tool.
+**Decisión.** Drizzle ORM (`drizzle-orm` 0.45) para las consultas y `drizzle-kit` 0.31 para
+generar las migraciones SQL. Las migraciones las aplica nuestro propio ejecutor
+(`apps/api/src/database/migrate.ts`, `pnpm db:migrate`), que usa el migrador de Drizzle y su tabla
+`drizzle.__drizzle_migrations`.
 
-**How it works.**
+**Por qué.** Las migraciones generadas son archivos SQL simples y revisables; las migraciones SQL
+escritas a mano (`--custom`) cubren las funciones de PostGIS que el DSL del esquema no cubre; las
+consultas quedan cerca de SQL y con tipos completos; no hay paso de generación de código ni un
+binario de motor (a diferencia de Prisma, cuyo soporte de PostGIS es más débil). Kysely quedó en
+segundo lugar; necesita una herramienta de migraciones aparte.
 
-| Piece                          | Location                                                                              |
-| ------------------------------ | ------------------------------------------------------------------------------------- |
-| Module tables                  | `src/modules/<name>/<name>.schema.ts`, re-exported from `src/database/schema.ts`      |
-| Migrations                     | `apps/api/drizzle/NNNN_<name>.sql` + `meta/` journal and snapshots (commit all of it) |
-| Generate after a schema change | `pnpm db:generate --name=<change>`                                                    |
-| Hand-written SQL migration     | `pnpm --filter @vtp/api exec drizzle-kit generate --custom --name=<change>`           |
-| Apply                          | `pnpm db:migrate` (dev) · `node dist/database/migrate.js` (production image)          |
-| Query from a module            | inject `DatabaseService`, use `database.db` (Drizzle) or `database.pool` (raw SQL)    |
+**Cómo funciona.**
 
-`0000_baseline_extensions.sql` creates `postgis`, `pgcrypto`, `citext` and `pg_trgm` with
-`IF NOT EXISTS`, so production databases that never ran the Docker init SQL get them too.
-PostGIS is not a trusted extension: on managed databases an admin may have to create it first.
+| Pieza                             | Ubicación                                                                                    |
+| --------------------------------- | -------------------------------------------------------------------------------------------- |
+| Tablas de los módulos             | `src/modules/<nombre>/<nombre>.schema.ts`, reexportadas desde `src/database/schema.ts`       |
+| Migraciones                       | `apps/api/drizzle/NNNN_<nombre>.sql` + el diario y las instantáneas de `meta/` (súbelo todo) |
+| Generar tras un cambio de esquema | `pnpm db:generate --name=<cambio>`                                                           |
+| Migración SQL escrita a mano      | `pnpm --filter @vtp/api exec drizzle-kit generate --custom --name=<cambio>`                  |
+| Aplicar                           | `pnpm db:migrate` (desarrollo) · `node dist/database/migrate.js` (imagen de producción)      |
+| Consultar desde un módulo         | inyecta `DatabaseService` y usa `database.db` (Drizzle) o `database.pool` (SQL directo)      |
 
-CI applies migrations twice (idempotence) and fails if `db:generate` would produce a migration
-that is not committed (schema drift).
+`0000_baseline_extensions.sql` crea `postgis`, `pgcrypto`, `citext` y `pg_trgm` con
+`IF NOT EXISTS`, así las bases de datos de producción que nunca corrieron el SQL de inicialización
+de Docker también las tienen. PostGIS no es una extensión de confianza: en bases de datos
+administradas, puede que un administrador tenga que crearla primero.
 
-**Migration rules.**
+La CI aplica las migraciones dos veces (idempotencia) y falla si `db:generate` produciría una
+migración que no está en el repositorio (desfase del esquema).
 
-- Migrations are committed, reviewed like code, forward-only in production, and run as a
-  separate deploy step _before_ the new API version starts (never automatically at app boot).
-- Never edit a migration that has been applied anywhere shared; add a new one.
-- `infrastructure/docker/postgres/init/` only enables extensions. It runs once on an empty
-  volume and must never contain tables.
-- Destructive changes use expand → migrate data → contract across releases.
+**Reglas de las migraciones.**
 
-## ADR-008: Optional Redis via a Compose profile
+- Las migraciones se suben al repositorio, se revisan como código, solo avanzan en producción y
+  corren como un paso aparte del despliegue _antes_ de que arranque la nueva versión de la API
+  (nunca automáticamente al arrancar la app).
+- Nunca edites una migración que ya se aplicó en algún entorno compartido; agrega una nueva.
+- `infrastructure/docker/postgres/init/` solo activa extensiones. Corre una vez sobre un volumen
+  vacío y nunca debe contener tablas.
+- Los cambios destructivos usan expandir → migrar los datos → contraer a lo largo de varias
+  versiones.
 
-Redis is defined under the `redis` profile and is not started by `pnpm infra:up`. BullMQ is
-**not** installed. Add it with the first real background job (notifications, settlements).
-`REDIS_URL` is validated if set and ignored otherwise.
+## ADR-008: Redis opcional con un perfil de Compose
 
-## ADR-009: Configuration and secrets
+Redis está definido bajo el perfil `redis` y `pnpm infra:up` no lo arranca. BullMQ **no** está
+instalado. Se agregará con el primer trabajo en segundo plano real (notificaciones,
+liquidaciones). `REDIS_URL` se valida si está definida y se ignora si no.
 
-- Each app validates its own environment at start-up (API: zod in `config/env.schema.ts`; web:
-  `src/lib/env.ts`; mobile: `src/config/env.ts`).
-- Secrets exist only on the server side (API). `NEXT_PUBLIC_*` and `EXPO_PUBLIC_*` values are
-  **public by definition** — they ship inside browser bundles and app binaries.
-- Production reads real environment variables; the API ignores `.env` files when
+## ADR-009: Configuración y secretos
+
+- Cada app valida su propio entorno al arrancar (API: zod en `config/env.schema.ts`; web:
+  `src/lib/env.ts`; móvil: `src/config/env.ts`).
+- Los secretos solo existen del lado del servidor (API). Los valores `NEXT_PUBLIC_*` y
+  `EXPO_PUBLIC_*` son **públicos por definición** — viajan dentro de los bundles del navegador y de
+  los binarios de las apps.
+- Producción lee variables de entorno reales; la API ignora los archivos `.env` cuando
   `NODE_ENV=production`.
 
-## ADR-010: Testing stack
+## ADR-010: Herramientas de pruebas
 
-Vitest for the API, shared packages and web utilities; `jest-expo` for the mobile apps (Expo's
-supported path). API e2e tests use Supertest against the real app configuration
-(`configureApp`) and, in CI, a PostGIS service container.
+Vitest para la API, los paquetes compartidos y las utilidades de la web; `jest-expo` para las apps
+móviles (el camino soportado por Expo). Las pruebas e2e de la API usan Supertest contra la
+configuración real de la app (`configureApp`) y, en la CI, un contenedor de servicio con PostGIS.
 
-## ADR-011: What we deliberately did not add
+## ADR-011: Lo que deliberadamente no agregamos
 
-Kubernetes, Terraform, microservices, paid observability, a component library shared between
-web and mobile, GraphQL and an auth provider. Each needs a concrete requirement first.
+Kubernetes, Terraform, microservicios, observabilidad de pago, una biblioteca de componentes
+compartida entre la web y el móvil, GraphQL y un proveedor de autenticación. Cada uno necesita
+antes un requisito concreto.
 
-## ADR-012: Reference production images and Compose
+## ADR-012: Imágenes y Compose de referencia para producción
 
-Multi-stage Dockerfiles on `node:24.22.0-trixie-slim` (glibc, so native modules need no
-musl rebuilds) and a single-VPS Compose stack with **Caddy** for automatic HTTPS. Chosen over
-Nginx + certbot for fewer moving parts. Images are built in CI but not pushed; publishing and
-deployment need registry credentials and an explicit decision. Image sizes at creation:
-API ≈ 490 MB, web ≈ 390 MB (mostly the Node base image).
+Dockerfiles multietapa sobre `node:24.22.0-trixie-slim` (glibc, así los módulos nativos no
+necesitan recompilarse para musl) y un stack de Compose para un solo VPS con **Caddy** para HTTPS
+automático. Se eligió sobre Nginx + certbot porque tiene menos piezas. Las imágenes se construyen
+en la CI pero no se publican; publicar y desplegar necesita credenciales del registro y una
+decisión explícita. Tamaño de las imágenes al crearlas: API ≈ 490 MB, web ≈ 390 MB (casi todo es la
+imagen base de Node).
 
-## ADR-013: Opaque session tokens, scrypt passwords and one-time codes
+## ADR-013: Tokens de sesión opacos, contraseñas con scrypt y códigos de un solo uso
 
-**Decision.** Opaque random access/refresh tokens stored as HMAC hashes in a `sessions` table,
-instead of JWTs. Passwords hashed with Node's built-in scrypt. Passengers can sign in with
-e-mail + password or with one-time codes (SMS, WhatsApp, e-mail); staff accounts are the same users
-with organization memberships added by invitation or after KYC approval.
+**Decisión.** Tokens de acceso y de renovación aleatorios y opacos, guardados como hashes HMAC en
+una tabla `sessions`, en lugar de JWT. Contraseñas con el scrypt integrado de Node. Los pasajeros
+pueden iniciar sesión con correo + contraseña o con códigos de un solo uso (SMS, WhatsApp,
+correo); las cuentas del personal son los mismos usuarios, con membresías en organizaciones
+agregadas por invitación o tras la aprobación KYC.
 
-**Why.** Every session is revocable immediately (logout, suspension, token replay) without a
-deny-list; there is no signing-key management; the per-request lookup is one indexed query, which
-is fine at this scale and can be cached later. scrypt needs no native module. Codes cover users
-without e-mail, which is common for passengers in Venezuela.
+**Por qué.** Cada sesión se puede revocar de inmediato (cierre de sesión, suspensión, reutilización
+del token) sin una lista de bloqueo; no hay que administrar claves de firma; la búsqueda por
+solicitud es una consulta indexada, que está bien a esta escala y se puede cachear más adelante.
+scrypt no necesita módulos nativos. Los códigos cubren a los usuarios sin correo, algo común entre
+los pasajeros en Venezuela.
 
-**Trade-offs.** Each authenticated request hits the database; if that becomes a bottleneck, cache
-session lookups in Redis. Code delivery costs money per message, so it is rate-limited per
-destination and per IP, and stays `disabled` in production until a provider is chosen.
+**Compromisos.** Cada solicitud autenticada consulta la base de datos; si eso se vuelve un cuello
+de botella, se cachean las sesiones en Redis. Enviar códigos cuesta dinero por mensaje, por eso
+tiene límites por destino y por IP, y queda `disabled` en producción hasta elegir un proveedor.
 
-## ADR-014: Organization roles in code, invitations bound to verified contacts
+## ADR-014: Roles de organización en el código, invitaciones ligadas a contactos verificados
 
-**Decision.** One enum of organization roles, a per-type allow-list (taxi lines have no ticket
-agents or inspectors) and a role → permission matrix defined in `@vtp/shared-types`, enforced by
-the API through a route guard. Invitations target an e-mail or phone, and are accepted by a
-signed-in user who has verified that contact; there are no invitation links or tokens.
+**Decisión.** Un solo enum de roles de organización, una lista de roles permitidos por tipo (las
+líneas de taxis no tienen taquilleros ni inspectores) y una matriz rol → permiso definida en
+`@vtp/shared-types`, aplicada por la API con una guardia de ruta. Las invitaciones apuntan a un
+correo o teléfono, y las acepta un usuario con sesión que haya verificado ese contacto; no hay
+enlaces ni tokens de invitación.
 
-**Why.** A fixed matrix is easy to review and test, and enough for the known roles; per-tenant
-custom roles can come later if operators ask for them. Contact-bound invitations need no extra
-secret, work before any SMS/e-mail provider exists, and cannot be used by whoever intercepts a
-message.
+**Por qué.** Una matriz fija es fácil de revisar y probar, y alcanza para los roles conocidos; los
+roles personalizados por empresa pueden llegar después si las empresas los piden. Las invitaciones
+ligadas a un contacto no necesitan un secreto extra, funcionan antes de que exista un proveedor de
+SMS o correo, y no le sirven a quien intercepte un mensaje.
 
-**Trade-offs.** Changing a role's permissions is a code change and a release. One role per
-membership: a person who both dispatches and drives needs the broader role (e.g. owner/admin) or
-the matrix extended.
+**Compromisos.** Cambiar los permisos de un rol es un cambio de código y una nueva versión. Un rol
+por membresía: una persona que despacha y también conduce necesita el rol más amplio (por ejemplo,
+dueño o administrador) o ampliar la matriz.
 
-## ADR-015: KYC applications with platform review and organization consent
+## ADR-015: Solicitudes KYC con revisión de la plataforma y consentimiento de la organización
 
-**Decision.** Drivers and staff who are not invited submit an application with documents. Platform
-reviewers verify identity and documents; if the applicant named an organization, that organization
-then accepts or declines. Files go through a `FileStorage` interface, local disk for now.
+**Decisión.** Los conductores y el personal que no fueron invitados envían una solicitud con
+documentos. Los revisores de la plataforma verifican la identidad y los documentos; si el
+solicitante indicó una organización, esa organización luego lo acepta o lo rechaza. Los archivos
+pasan por una interfaz `FileStorage`, por ahora en el disco local.
 
-**Why.** KYC is a platform responsibility (consistent checks, one place for personal data), while
-hiring stays the organization's decision. A storage interface lets the MVP run on one VPS and move
-to S3-compatible storage without touching business code.
+**Por qué.** El KYC es responsabilidad de la plataforma (verificaciones consistentes, un solo lugar
+para los datos personales), mientras que contratar sigue siendo decisión de la organización. Una
+interfaz de almacenamiento permite que el MVP corra en un VPS y pase a un almacenamiento compatible
+con S3 sin tocar el código de negocio.
 
-**Trade-offs.** Local storage ties the API to one server and its volume must be backed up with the
-database. No automated identity verification yet: reviewers check documents by hand.
+**Compromisos.** El almacenamiento local ata la API a un servidor, y su volumen debe respaldarse
+junto con la base de datos. Todavía no hay verificación automática de identidad: los revisores
+revisan los documentos a mano.
 
-## ADR-016: Shared mobile session package, tokens in the device keychain
+## ADR-016: Paquete de sesión móvil compartido, tokens en el llavero del dispositivo
 
-**Decision.** `packages/mobile-core` (`@vtp/mobile-core`) holds the API client, session handling,
-a small UI kit and the sign-in and registration screens used by both Expo apps. Metro consumes it as
-TypeScript source (no build step). Tokens are stored with `expo-secure-store` (iOS Keychain /
-Android Keystore, `WHEN_UNLOCKED_THIS_DEVICE_ONLY`). Feature screens stay inside each app.
+**Decisión.** `packages/mobile-core` (`@vtp/mobile-core`) contiene el cliente de la API, el manejo
+de la sesión, un pequeño kit de interfaz y las pantallas de inicio de sesión y registro que usan
+las dos apps Expo. Metro lo consume como código fuente TypeScript (sin paso de compilación). Los
+tokens se guardan con `expo-secure-store` (Keychain de iOS / Android Keystore,
+`WHEN_UNLOCKED_THIS_DEVICE_ONLY`). Las pantallas de cada funcionalidad se quedan dentro de cada
+app.
 
-**Why.** Sign-in, token refresh and secure storage are security-sensitive and identical in both
-apps; two copies would drift. Refresh tokens rotate and a replay revokes the session, so the
-serialised refresh logic must exist exactly once and be unit-tested.
+**Por qué.** El inicio de sesión, la renovación de tokens y el almacenamiento seguro son sensibles
+para la seguridad e idénticos en las dos apps; dos copias terminarían diferenciándose. Los tokens
+de renovación rotan y una reutilización revoca la sesión, así que la lógica de renovación
+serializada debe existir una sola vez y tener pruebas unitarias.
 
-**Trade-offs.** A change to the shared screens ships in both apps' next builds. `react` and
-`react-native` must stay on the same versions in the package and the apps, or Metro bundles two
-copies of React; CI's mobile bundle job would not catch a duplicate, so keep them in the catalog
-or pinned identically. The browser preview (`expo start --web`) has no secure storage and keeps the
-session in memory only.
+**Compromisos.** Un cambio en las pantallas compartidas llega en la siguiente versión de ambas
+apps. `react` y `react-native` deben tener la misma versión en el paquete y en las apps, o Metro
+empaqueta dos copias de React; el trabajo de bundles móviles de la CI no detectaría la duplicación,
+así que mantenlos en el catálogo o fijados igual. La vista previa en el navegador
+(`expo start --web`) no tiene almacenamiento seguro y guarda la sesión solo en memoria.
 
-## ADR-017: One network module, departures computed from schedules
+## ADR-017: Un módulo de red, salidas calculadas a partir de los horarios
 
-**Decision.** Stops, routes, fares and schedules live in one `network` module. Stops are a shared
-catalog curated by platform staff; routes store travel minutes from the origin per stop; schedules
-are recurring (time, weekdays, validity). Departures are computed at search time instead of being
-stored as trips. Fares are per pair of stops in `USD` or `VES`.
+**Decisión.** Paradas, rutas, tarifas y horarios viven en un módulo `network`. Las paradas son un
+catálogo compartido administrado por el personal de la plataforma; las rutas guardan los minutos
+de viaje desde el origen para cada parada; los horarios son recurrentes (hora, días de la semana,
+vigencia). Las salidas se calculan al buscar en lugar de guardarse como viajes. Las tarifas son
+por par de paradas, en `USD` o `VES`.
 
-**Why.** These concepts change together and are small; separate modules would add wiring without
-real boundaries. A shared stop catalog is what makes cross-operator search possible. Computing
-departures keeps the data an operator maintains minimal (a nightly bus is one row, not 365), and
-travel offsets make overnight and intermediate-stop times exact.
+**Por qué.** Estos conceptos cambian juntos y son pequeños; módulos separados agregarían conexiones
+sin límites reales. Un catálogo de paradas compartido es lo que hace posible buscar entre empresas.
+Calcular las salidas mantiene al mínimo los datos que mantiene una empresa (un bus nocturno es una
+fila, no 365), y los desfases de viaje hacen exactas las horas nocturnas y de paradas intermedias.
 
-**Trade-offs.** No per-trip state yet: cancelling a single departure or holding seats needs a trip
-record, which bookings will add (generated from the same calculation). Operators depend on staff to
-add missing stops. Prices are not converted between currencies.
+**Compromisos.** Todavía no hay estado por viaje: cancelar una salida concreta o apartar puestos
+necesita un registro de viaje, que agregarán las reservas (generado con el mismo cálculo). Las
+empresas dependen del personal para agregar las paradas que falten. Los precios no se convierten
+entre monedas.
 
-## ADR-018: The platform collects payments, verified automatically through provider adapters
+## ADR-018: La plataforma cobra los pagos, verificados automáticamente mediante adaptadores de proveedores
 
-**Decision.** Passengers pay the platform, not the operator, by pago móvil, bank transfer, PIX or
-USDT. Payments are confirmed automatically: each method is a `PaymentProvider` adapter behind
-one interface (create the payment instruction, receive or poll its confirmation). Until real
-providers are contracted, a **simulated provider** drives the whole flow in development and tests.
-Amounts are converted with an exchange rate each operator sets and frozen when the booking is made.
-The platform keeps a ledger of what it owes each operator (fares minus commission). Seats are
-chosen on the operator's seat map (`fleet`).
+**Decisión.** Los pasajeros le pagan a la plataforma, no a la empresa, por pago móvil,
+transferencia bancaria, PIX o USDT. Los pagos se confirman automáticamente: cada método es un
+adaptador `PaymentProvider` detrás de una sola interfaz (crear la instrucción de pago, recibir o
+consultar su confirmación). Hasta que se contraten proveedores reales, un **proveedor simulado**
+mueve todo el flujo en desarrollo y en las pruebas. Los montos se convierten con una tasa de
+cambio que fija cada empresa y se congelan al hacer la reserva. La plataforma lleva un registro de
+lo que le debe a cada empresa (tarifas menos comisión). Los puestos se eligen en el mapa de
+puestos de la empresa (`fleet`).
 
-**Why.** Decided by the product owner. One checkout across operators, a single place to verify
-payments and issue tickets, and a commission model. Adapters keep each bank, PIX institution or
-blockchain watcher replaceable and keep their credentials in server-side configuration only.
+**Por qué.** Lo decidió el dueño del producto. Un solo pago para todas las empresas, un solo lugar
+para verificar los pagos y emitir los boletos, y un modelo de comisión. Los adaptadores mantienen
+reemplazable cada banco, institución PIX o vigilante de blockchain, y sus credenciales solo en la
+configuración del servidor.
 
-**Trade-offs and prerequisites.** Real verification needs contracts and API access with providers
-(a Venezuelan bank or gateway for pago móvil and transfers, a PIX institution, and a wallet on a
-chosen network for USDT); their keys go in environment variables, never in code or chat.
-Collecting money for third parties and accepting crypto may require registration or licences in
-Venezuela and Brazil: legal review is needed before production. The platform also takes on
-reconciliation, refunds and payouts to operators.
+**Compromisos y requisitos previos.** La verificación real necesita contratos y acceso a las APIs
+de los proveedores (un banco o pasarela venezolana para pago móvil y transferencias, una
+institución PIX y una billetera en una red elegida para USDT); sus claves van en variables de
+entorno, nunca en el código ni en un chat. Cobrar dinero por cuenta de terceros y aceptar
+criptomonedas puede requerir registros o licencias en Venezuela y Brasil: hace falta una revisión
+legal antes de producción. La plataforma también asume la conciliación, los reembolsos y los pagos
+a las empresas.
 
-## ADR-019: CircleCI for pipelines
+## ADR-019: CircleCI para los pipelines
 
-**Decision.** Continuous integration runs on CircleCI (`.circleci/config.yml`) instead of GitHub
-Actions, decided by the product owner. The jobs are the same as before: quality, API e2e on
-PostGIS, mobile bundles and production images. The config uses no orbs, only shell steps on the
-official `node:24.22.0-trixie` image (same Node as `.nvmrc` and production) and a `machine` VM
-for Docker builds.
+**Decisión.** La integración continua corre en CircleCI (`.circleci/config.yml`) en lugar de
+GitHub Actions, por decisión del dueño del producto. Los trabajos son los mismos de antes:
+calidad, pruebas e2e de la API con PostGIS, bundles móviles e imágenes de producción. La
+configuración no usa orbs, solo pasos de shell sobre la imagen oficial `node:24.22.0-trixie` (el
+mismo Node que `.nvmrc` y producción) y una máquina virtual `machine` para construir con Docker.
 
-**Why.** The team's pipelines live on CircleCI. Plain shell keeps the config readable, makes
-every step reproducible locally (`docker run node:24.22.0-trixie …`), and avoids third-party orb
-code with access to the build.
+**Por qué.** Los pipelines del equipo viven en CircleCI. Usar shell simple mantiene la
+configuración legible, hace que cada paso se pueda reproducir en local
+(`docker run node:24.22.0-trixie …`) y evita código de orbs de terceros con acceso a la
+compilación.
 
-**Trade-offs.** The CircleCI project must be connected and the required checks configured on
-GitHub by the repository owner. The Node image is pinned by hand (Dependabot does not update
-CircleCI configs). Machine executors cost more credits than Docker executors.
+**Compromisos.** El dueño del repositorio debe conectar el proyecto de CircleCI y configurar los
+checks obligatorios en GitHub. La imagen de Node se fija a mano (Dependabot no actualiza la
+configuración de CircleCI). Los executors `machine` cuestan más créditos que los de Docker.
 
-## ADR-020: Trips created on demand; seats held for the whole trip
+## ADR-020: Viajes creados bajo demanda; puestos ocupados durante todo el viaje
 
-**Decision.** A trip row (schedule + service date) is created on the first booking and keeps a
-snapshot of the seat map. Seats are held for `BOOKING_HOLD_MINUTES` and taken for the whole trip.
-A partial unique index on active `(trip, seat)` rows is the guarantee against double booking;
-expired holds are released lazily rather than by a background job.
+**Decisión.** La fila de un viaje (horario + fecha de servicio) se crea con la primera reserva y
+guarda una copia del mapa de puestos. Los puestos se apartan por `BOOKING_HOLD_MINUTES` y quedan
+ocupados durante todo el viaje. Un índice único parcial sobre las filas activas `(viaje, puesto)`
+es la garantía contra la doble venta; los apartados vencidos se liberan al vuelo en lugar de con
+un trabajo en segundo plano.
 
-**Why.** Departures stay computed (ADR-017) and only booked ones get state. The database index
-holds under concurrency without application locks. Lazy expiry needs no scheduler on a single VPS.
+**Por qué.** Las salidas siguen calculándose (ADR-017) y solo las reservadas tienen estado. El
+índice de la base de datos resiste la concurrencia sin bloqueos en la aplicación. La expiración al
+vuelo no necesita un programador de tareas en un solo VPS.
 
-**Trade-offs.** A seat freed at an intermediate stop is not resold. Counts on public reads filter
-by `expiresAt`, so expired rows linger until the next booking on that trip touches them; a
-periodic cleanup can be added when a job runner exists.
+**Compromisos.** Un puesto liberado en una parada intermedia no se revende. Los conteos de las
+lecturas públicas filtran por `expiresAt`, así que las filas vencidas quedan hasta que la siguiente
+reserva de ese viaje las toque; se puede agregar una limpieza periódica cuando exista un ejecutor
+de trabajos.
 
-## ADR-021: Payment amounts frozen per payment; tickets are random ids in a QR
+## ADR-021: Montos congelados por pago; los boletos son ids aleatorios en un QR
 
-**Decision.** The converted amount and rate are frozen when the passenger chooses a payment
-method (not when seats are held), so a rate change during the hold applies only to a new choice.
-Money confirms a booking only while it is still `held`, including a hold that ran out but whose
-seats were not released yet; any other money is marked `refund_due`. Without real providers the
-API runs a **simulated provider** that production configuration refuses. A ticket's QR carries
-`VTP1.<random id>`, validated online by the operator's inspectors, the first scan marking boarding.
+**Decisión.** El monto convertido y la tasa se congelan cuando el pasajero elige un método de pago
+(no al apartar los puestos), así un cambio de tasa durante el apartado solo se aplica a una nueva
+elección. El dinero solo confirma una reserva mientras siga `held`, incluido un apartado vencido
+cuyos puestos todavía no se liberaron; cualquier otro dinero queda como `refund_due`. Sin
+proveedores reales, la API usa un **proveedor simulado** que la configuración de producción
+rechaza. El QR de un boleto lleva `VTP1.<id aleatorio>`, que los inspectores de la empresa validan
+en línea; el primer escaneo marca el abordaje.
 
-**Why.** The rate the passenger sees is the rate charged. Confirming only held bookings keeps the
-seat guarantee of ADR-020 without reserving seats after their hold. A random id in the QR carries
-no personal data and needs no signing key; online validation is what catches copied QR codes.
+**Por qué.** La tasa que ve el pasajero es la tasa que se cobra. Confirmar solo reservas apartadas
+mantiene la garantía de puestos del ADR-020 sin reservar puestos después de su apartado. Un id
+aleatorio en el QR no lleva datos personales ni necesita una clave de firma; la validación en línea
+es lo que detecta los QR copiados.
 
-**Trade-offs.** Refunds are manual until settlements exist. Validation needs connectivity; offline
-scanning would need signed QR payloads and a sync of boardings. Simulated payments must never be
-enabled where real passengers book.
+**Compromisos.** Los reembolsos son manuales hasta que existan las liquidaciones. La validación
+necesita conexión; escanear sin conexión necesitaría QR firmados y sincronizar los abordajes. Los
+pagos simulados nunca deben activarse donde reservan pasajeros reales.
 
-## ADR-022: A self-hosted GitHub Actions runner next to CircleCI
+## ADR-022: Un runner propio de GitHub Actions junto a CircleCI
 
-**Decision.** `.github/workflows/self-hosted-ci.yml` runs the CircleCI jobs on a GitHub Actions
-runner installed on the maintainer's Windows machine, inside Ubuntu on WSL 2 with Docker Desktop.
-Jobs use the same containers as CircleCI (`node:24.22.0-trixie`, `postgis/postgis:18-3.6`) and
-only run on runners labelled `vtp`; pull requests from forks never run on it. CircleCI stays as
-the cloud pipeline (ADR-019); the owner chooses which checks are required.
+**Decisión.** `.github/workflows/self-hosted-ci.yml` corre los trabajos de CircleCI en un runner de
+GitHub Actions instalado en la computadora Windows del mantenedor, dentro de Ubuntu en WSL 2 con
+Docker Desktop. Los trabajos usan los mismos contenedores que CircleCI (`node:24.22.0-trixie`,
+`postgis/postgis:18-3.6`) y solo corren en runners con la etiqueta `vtp`; los pull requests de
+forks nunca corren en él. CircleCI sigue como pipeline en la nube (ADR-019); el dueño elige qué
+checks son obligatorios.
 
-**Why.** The cloud CI credits ran out. GitHub charges no minutes for self-hosted runners, the
-jobs stay identical, and nothing else has to be hosted. WSL is needed because GitHub only runs job
-and service containers on Linux runners.
+**Por qué.** Se acabaron los créditos de la CI en la nube. GitHub no cobra minutos por los runners
+propios, los trabajos quedan idénticos y no hay que alojar nada más. Hace falta WSL porque GitHub
+solo corre contenedores de trabajo y de servicio en runners Linux.
 
-**Trade-offs.** Checks run only while the machine is on; jobs run one after another. The runner
-executes pull request code on a personal machine, so the repository must stay private and fork
-pull requests are skipped. Action versions are watched by Dependabot again.
+**Compromisos.** Los checks solo corren mientras la computadora está encendida; los trabajos corren
+uno tras otro. El runner ejecuta el código de los pull requests en una computadora personal, así
+que el repositorio debe seguir siendo privado y se saltan los pull requests de forks. Dependabot
+vuelve a vigilar las versiones de las acciones.

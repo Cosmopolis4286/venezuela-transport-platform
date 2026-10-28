@@ -1,169 +1,178 @@
-# Local setup
+# Instalación local
 
-Tested on Linux (Ubuntu 24.04, Node 24.22.0, pnpm 10.34.7, Docker 29.8 / Compose 5.6).
-macOS and Windows steps follow the official installers; they have not been run in CI.
+Probado en Linux (Ubuntu 24.04, Node 24.22.0, pnpm 10.34.7, Docker 29.8 / Compose 5.6). Los pasos
+de macOS y Windows siguen los instaladores oficiales; no se corren en la CI.
 
-## 1. Install the tools
+## 1. Instalar las herramientas
 
 ### macOS
 
 ```bash
-# Node via a version manager (reads .nvmrc)
+# Node con un gestor de versiones (lee .nvmrc)
 brew install fnm && fnm install 24 && fnm use 24
 corepack enable
-# Docker Desktop (or OrbStack / Colima)
+# Docker Desktop (u OrbStack / Colima)
 brew install --cask docker
-# iOS Simulator: install Xcode from the App Store, then
+# Simulador de iOS: instala Xcode desde la App Store y luego
 xcode-select --install
 ```
 
 ### Linux (Ubuntu/Debian)
 
 ```bash
-curl -fsSL https://fnm.vercel.app/install | bash   # or nvm
+curl -fsSL https://fnm.vercel.app/install | bash   # o nvm
 fnm install 24 && fnm use 24
 corepack enable
-# Docker Engine + Compose plugin: https://docs.docker.com/engine/install/ubuntu/
-sudo usermod -aG docker "$USER"   # log out and back in afterwards
+# Docker Engine + plugin de Compose: https://docs.docker.com/engine/install/ubuntu/
+sudo usermod -aG docker "$USER"   # cierra sesión y vuelve a entrar después
 ```
 
 ### Windows
 
-Use **WSL 2 (Ubuntu)** for the repository and all commands; it avoids path, line-ending and
-file-watching problems with Metro and Next.js.
+Usa **WSL 2 (Ubuntu)** para el repositorio y todos los comandos; evita problemas de rutas, finales
+de línea y detección de cambios en Metro y Next.js.
 
-1. `wsl --install -d Ubuntu` (PowerShell as admin), reboot.
-2. Install **Docker Desktop** with the WSL 2 backend and enable integration for Ubuntu.
-3. Inside Ubuntu, follow the Linux steps above. Clone the repo into the Linux filesystem
-   (`~/code/...`), **not** under `/mnt/c/`.
-4. Android emulator runs on Windows (Android Studio). See _Mobile apps_ below for networking.
+1. `wsl --install -d Ubuntu` (PowerShell como administrador) y reinicia.
+2. Instala **Docker Desktop** con el backend de WSL 2 y activa la integración con Ubuntu.
+3. Dentro de Ubuntu, sigue los pasos de Linux de arriba. Clona el repositorio en el sistema de
+   archivos de Linux (`~/code/...`), **no** en `/mnt/c/`.
+4. El emulador de Android corre en Windows (Android Studio). Ver _Apps móviles_ más abajo para la
+   red.
 
-`.gitattributes` forces LF line endings, so Windows Git settings do not matter.
+`.gitattributes` fuerza finales de línea LF, así que la configuración de Git en Windows no
+importa.
 
-## 2. Clone, install, configure
+## 2. Clonar, instalar y configurar
 
 ```bash
 git clone https://github.com/Cosmopolis4286/venezuela-transport-platform.git
 cd venezuela-transport-platform
 corepack enable
-pnpm install          # uses pnpm-lock.yaml; fails on wrong Node/pnpm versions (engine-strict)
-pnpm env:init         # creates .env, apps/api/.env, apps/web/.env.local, apps/*-mobile/.env
+pnpm install          # usa pnpm-lock.yaml; falla con versiones incorrectas de Node/pnpm (engine-strict)
+pnpm env:init         # crea .env, apps/api/.env, apps/web/.env.local, apps/*-mobile/.env
 ```
 
-The generated files contain placeholders that work together out of the box. If you change
-the database password, change it in **both** `.env` (`POSTGRES_PASSWORD`) and `apps/api/.env`
-(`DATABASE_PASSWORD`). See [environment-variables.md](environment-variables.md).
+Los archivos generados tienen valores de ejemplo que funcionan juntos sin tocar nada. Si cambias
+la contraseña de la base de datos, cámbiala en **los dos**: `.env` (`POSTGRES_PASSWORD`) y
+`apps/api/.env` (`DATABASE_PASSWORD`). Ver [environment-variables.md](environment-variables.md).
 
-## 3. Database
+## 3. Base de datos
 
 ```bash
-pnpm infra:up         # starts postgis/postgis:18-3.6 and waits for the health check
+pnpm infra:up         # arranca postgis/postgis:18-3.6 y espera el chequeo de salud
 pnpm db:check         # OK: PostgreSQL 18.x, PostGIS 3.6.x at 127.0.0.1:5432/vtp_dev
-pnpm db:migrate       # applies apps/api/drizzle/*.sql
-pnpm db:psql          # interactive psql inside the container
+pnpm db:migrate       # aplica apps/api/drizzle/*.sql
+pnpm db:psql          # psql interactivo dentro del contenedor
 ```
 
-**Initialization strategy.** On the _first_ start with an empty volume, the image creates the
-database/user from `.env` and runs `infrastructure/docker/postgres/init/*.sql`, which enables
-`postgis`, `pgcrypto`, `citext` and `pg_trgm`. Later starts reuse the volume and skip
-initialization. Tables come from migrations — apply them after the database starts:
+**Inicialización.** En el _primer_ arranque con el volumen vacío, la imagen crea la base de datos
+y el usuario con los datos de `.env` y ejecuta `infrastructure/docker/postgres/init/*.sql`, que
+activa `postgis`, `pgcrypto`, `citext` y `pg_trgm`. Los arranques siguientes reutilizan el volumen
+y se saltan la inicialización. Las tablas vienen de las migraciones — aplícalas después de que
+arranque la base de datos:
 
 ```bash
-pnpm db:migrate       # idempotent; safe to run any time
+pnpm db:migrate       # idempotente; se puede correr en cualquier momento
 ```
 
-See [decisions](../architecture/decisions.md#adr-007-drizzle-orm-with-committed-sql-migrations)
-for generating new migrations.
+Ver las [decisiones](../architecture/decisions.md#adr-007-drizzle-orm-con-migraciones-sql-versionadas)
+para generar migraciones nuevas.
 
-**Data lifetime.** Data lives in the named volume `vtp_postgres-data`. `pnpm infra:down` keeps
-it. `pnpm infra:reset` **permanently deletes it** (asks you to type `vtp`). Back up first if needed:
+**Duración de los datos.** Los datos viven en el volumen `vtp_postgres-data`. `pnpm infra:down`
+los conserva. `pnpm infra:reset` **los borra para siempre** (te pide escribir `vtp`). Si hace
+falta, haz antes una copia:
 
 ```bash
 docker compose exec postgres sh -c 'pg_dump -U "$POSTGRES_USER" -Fc "$POSTGRES_DB"' > backup.dump
-# restore into a fresh database:
+# restaurar en una base de datos nueva:
 docker compose exec -T postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists' < backup.dump
 ```
 
-Ports are bound to `127.0.0.1`, so the database is not reachable from other machines.
+Los puertos están enlazados a `127.0.0.1`, así que no se puede llegar a la base de datos desde
+otras máquinas.
 
-Optional Redis: `pnpm infra:up:redis` (adds `redis:8.10-alpine` on `127.0.0.1:6379`).
+Redis opcional: `pnpm infra:up:redis` (agrega `redis:8.10-alpine` en `127.0.0.1:6379`).
 
-## 4. Run the apps
+## 4. Correr las apps
 
 ```bash
 pnpm dev              # web http://localhost:3000 + API http://localhost:4000/api/v1
-pnpm dev:api          # API only (watch mode) — Swagger at http://localhost:4000/api/docs
-pnpm dev:web          # web only
-pnpm dev:passenger    # Metro for the passenger app on :8081
-pnpm dev:transport    # Metro for the transport-provider app on :8082
-pnpm dev:all          # all of the above in one Turborepo TUI
+pnpm dev:api          # solo la API (se recarga al editar) — Swagger en http://localhost:4000/api/docs
+pnpm dev:web          # solo la web
+pnpm dev:passenger    # Metro para la app de pasajeros en :8081
+pnpm dev:transport    # Metro para la app de transportistas en :8082
+pnpm dev:all          # todo lo anterior en una sola interfaz de Turborepo
 ```
 
-The API starts even if the database is down; `/api/v1/health/ready` then returns 503.
+La API arranca aunque la base de datos esté caída; en ese caso `/api/v1/health/ready` devuelve 503.
 
-In development, one-time sign-in codes are **printed to the API console** (`OTP_DELIVERY=console`),
-look for `[DEV ONLY] login code for +58 *** ***4567 via sms: 123456`. No SMS/WhatsApp/e-mail
-provider is integrated yet.
+En desarrollo, los códigos de acceso de un solo uso **se imprimen en la consola de la API**
+(`OTP_DELIVERY=console`); busca `[DEV ONLY] login code for +58 *** ***4567 via sms: 123456`.
+Todavía no hay ningún proveedor de SMS, WhatsApp ni correo integrado.
 
-## Mobile apps
+Para correr la API (y la web) en Docker, ver [docker.md](docker.md).
 
-To run the API (and the website) in Docker instead, see [docker.md](docker.md). Step-by-step
-testing on a phone, an emulator or as an APK: [android-testing.md](android-testing.md).
+## Apps móviles
 
-Docker is **not** used for mobile development. Each app runs its own Metro bundler; open it
-with one of:
+Probar paso a paso en un teléfono, un emulador o como APK:
+[android-testing.md](android-testing.md).
 
-| Target           | How                                                                   | Requirements                     |
-| ---------------- | --------------------------------------------------------------------- | -------------------------------- |
-| Physical phone   | Install **Expo Go**, scan the QR code printed by `pnpm dev:passenger` | Same Wi-Fi as the computer       |
-| Android emulator | Press `a` in the Metro terminal                                       | Android Studio + an AVD (any OS) |
-| iOS Simulator    | Press `i` in the Metro terminal                                       | **macOS with Xcode only**        |
+Docker **no** se usa para el desarrollo móvil. Cada app corre su propio Metro; ábrela con una de
+estas opciones:
 
-**Reaching the API from a device.** `localhost` inside a phone or emulator is the device
-itself. Set `EXPO_PUBLIC_API_BASE_URL` in the app's `.env`:
+| Destino             | Cómo                                                                        | Requisitos                                  |
+| ------------------- | --------------------------------------------------------------------------- | ------------------------------------------- |
+| Teléfono físico     | Instala **Expo Go** y escanea el código QR que muestra `pnpm dev:passenger` | La misma red Wi-Fi que la computadora       |
+| Emulador de Android | Pulsa `a` en la terminal de Metro                                           | Android Studio + un AVD (cualquier sistema) |
+| Simulador de iOS    | Pulsa `i` en la terminal de Metro                                           | **Solo macOS con Xcode**                    |
 
-- Android emulator → `http://10.0.2.2:4000/api/v1`
-- Physical device → `http://<your-LAN-IP>:4000/api/v1`, and set `API_HOST=0.0.0.0` in
-  `apps/api/.env` so the API listens on the network (only do this on trusted networks).
-- WSL 2 + physical device → either use `npx expo start --tunnel` for Metro and expose the API
-  via your Windows host IP with a port proxy, or enable WSL "mirrored" networking mode.
+**Llegar a la API desde un dispositivo.** Dentro de un teléfono o emulador, `localhost` es el
+propio dispositivo. Define `EXPO_PUBLIC_API_BASE_URL` en el `.env` de la app:
 
-Then restart Metro with a clean cache:
+- Emulador de Android → `http://10.0.2.2:4000/api/v1`
+- Dispositivo físico → `http://<tu-IP-de-red>:4000/api/v1`, y pon `API_HOST=0.0.0.0` en
+  `apps/api/.env` para que la API escuche en la red (solo en redes de confianza).
+- WSL 2 + dispositivo físico → usa `npx expo start --tunnel` para Metro y expón la API con la IP
+  de Windows y un reenvío de puertos, o activa el modo de red "mirrored" de WSL.
+
+Luego reinicia Metro limpiando la caché:
 `pnpm --filter @vtp/passenger-mobile exec expo start --clear --port 8081`.
 
-**Browser preview.** `pnpm --filter @vtp/transport-mobile dev --web` (or `passenger-mobile`)
-opens the app in a browser at http://localhost:8082 (8081), handy for checking screens without an
-emulator. The session lives in memory there, so a page reload signs you out
-([details](../architecture/mobile-apps.md#browser-preview)). If you created `apps/api/.env` before
-this was added, add `http://localhost:8081,http://localhost:8082` to its `CORS_ORIGINS`.
+**Vista previa en el navegador.** `pnpm --filter @vtp/transport-mobile dev --web` (o
+`passenger-mobile`) abre la app en un navegador en http://localhost:8082 (8081), útil para revisar
+pantallas sin emulador. Ahí la sesión vive en memoria, así que recargar la página la cierra
+([detalles](../architecture/mobile-apps.md#vista-previa-en-el-navegador)). Si creaste
+`apps/api/.env` antes de que existiera esto, agrega `http://localhost:8081,http://localhost:8082` a
+su `CORS_ORIGINS`.
 
-**Limitations.**
+**Limitaciones.**
 
-- Expo Go only contains Expo's bundled native modules. Adding a library with custom native
-  code requires a development build (`npx expo run:android|ios` or EAS Build).
-- Store builds and signing need Apple/Google accounts and EAS credentials; none are configured.
-  CI only produces JS bundles (`expo export`), which require no credentials.
-- `pnpm --filter @vtp/passenger-mobile doctor` runs `expo-doctor`, which needs internet access
-  to Expo's API.
+- Expo Go solo trae los módulos nativos incluidos por Expo. Agregar una biblioteca con código
+  nativo propio requiere una development build (`npx expo run:android|ios` o EAS Build).
+- Las versiones para las tiendas y su firma necesitan cuentas de Apple/Google y credenciales de
+  EAS; no hay ninguna configurada. La CI solo produce bundles de JS (`expo export`), que no
+  necesitan credenciales.
+- `pnpm --filter @vtp/passenger-mobile doctor` ejecuta `expo-doctor`, que necesita acceso a
+  internet a la API de Expo.
 
-## Platform administrator (first time)
+## Administrador de la plataforma (la primera vez)
 
-Sign up once (e.g. with a code to your phone), then grant yourself the admin role from the
-repository root:
+Regístrate una vez (por ejemplo, con un código a tu teléfono) y luego date el rol de
+administrador desde la raíz del repositorio:
 
 ```bash
 pnpm platform:grant --phone 0414-1234567 --role admin
 ```
 
-Admins and reviewers approve newly registered organizations. See
+Los administradores y revisores aprueban las organizaciones recién registradas. Ver
 [organizations.md](../architecture/organizations.md).
 
-## 5. Verify everything
+## 5. Verificar todo
 
 ```bash
-pnpm check                              # lint + typecheck + unit tests
-pnpm build                              # web + API production builds
-E2E_EXPECT_DATABASE=true pnpm test:e2e  # API e2e against the local database
-pnpm turbo run export                   # Metro bundles for both mobile apps
-curl -s localhost:4000/api/v1/health    # {"status":"ok",...} while pnpm dev:api runs
+pnpm check                              # lint + tipos + pruebas unitarias
+pnpm build                              # compilación de producción de la web y la API
+E2E_EXPECT_DATABASE=true pnpm test:e2e  # pruebas e2e de la API contra la base de datos local
+pnpm turbo run export                   # bundles de Metro de las dos apps móviles
+curl -s localhost:4000/api/v1/health    # {"status":"ok",...} mientras corre pnpm dev:api
 ```

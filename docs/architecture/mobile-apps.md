@@ -1,92 +1,103 @@
-# Mobile apps (Expo)
+# Apps móviles (Expo)
 
-Two separate apps with Spanish UIs, both on Expo SDK 58 + Expo Router (routes in `src/app/`):
+Dos apps separadas con interfaz en español, ambas con Expo SDK 58 + Expo Router (rutas en
+`src/app/`):
 
-- `apps/passenger-mobile` (_VTP Pasajeros_): trip search (no account needed), seat booking,
-  payment and QR tickets, sign-in and account.
-- `apps/transport-mobile` (_VTP Transportistas_): drivers and staff of bus companies, taxi lines
-  and terminals. Sign-in, invitations and the KYC application.
+- `apps/passenger-mobile` (_VTP Pasajeros_): búsqueda de viajes (sin cuenta), reserva de puestos,
+  pago y boletos QR, inicio de sesión y cuenta.
+- `apps/transport-mobile` (_VTP Transportistas_): conductores y personal de empresas de autobuses,
+  líneas de taxis y terminales. Inicio de sesión, invitaciones, la solicitud KYC y el escáner de
+  boletos.
 
-Code both apps need lives in `packages/mobile-core` (`@vtp/mobile-core`, see ADR-016). Contracts
-come from `@vtp/shared-types`.
+El código que necesitan las dos apps está en `packages/mobile-core` (`@vtp/mobile-core`, ver
+ADR-016). Los contratos vienen de `@vtp/shared-types`.
 
-## Screens
+## Pantallas
 
-| App       | Route               | What                                                                                             |
-| --------- | ------------------- | ------------------------------------------------------------------------------------------------ |
-| Both      | `/sign-in`          | Code by SMS, WhatsApp or e-mail (creates the account on first use), or e-mail + password         |
-| Both      | `/register`         | Create an account with e-mail + password                                                         |
-| Passenger | `/`                 | Trip search: origin, destination (stop picker), date chips for the next 7 days; works signed out |
-| Passenger | `/stop-picker`      | Modal search over active terminals and stops (`GET /stops?q=`)                                   |
-| Passenger | `/results`          | Departures with times (`+1 d` overnight), duration, operator, class, seats and fare              |
-| Passenger | `/trip`             | Seat map of one departure: taken seats disabled, up to 6 seats, price; public until holding      |
-| Passenger | `/passengers`       | Signed in: name and ID per seat (first prefilled from the account), then hold the seats          |
-| Passenger | `/booking/:id`      | Booking code, status, hold countdown; pay (method, instructions, reference); QR ticket per seat  |
-| Passenger | `/bookings`         | "Mis viajes": the user's bookings, newest first                                                  |
-| Passenger | `/account`          | Signed in only: account and verified contacts, "Mis viajes", sign out                            |
-| Transport | `/`                 | Pending invitations (accept / decline), my organizations and roles, my application status        |
-| Transport | `/application`      | Application data, required documents with upload and review verdicts, submit to review           |
-| Transport | `/application/edit` | Role, organization (searched in the directory), personal data, vehicle for taxi drivers          |
-| Transport | `/scan`             | "Validar boletos" (`tickets.validate`): camera QR scan or booking code + seat; verdict at once   |
+| App            | Ruta                | Qué                                                                                                                       |
+| -------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Ambas          | `/sign-in`          | Código por SMS, WhatsApp o correo (crea la cuenta en el primer uso), o correo + contraseña                                |
+| Ambas          | `/register`         | Crear una cuenta con correo + contraseña                                                                                  |
+| Pasajeros      | `/`                 | Búsqueda de viajes: origen, destino (selector de paradas), fechas de los próximos 7 días; funciona sin sesión             |
+| Pasajeros      | `/stop-picker`      | Búsqueda en ventana modal entre los terminales y paradas activos (`GET /stops?q=`)                                        |
+| Pasajeros      | `/results`          | Salidas con horas (`+1 d` si llegan al día siguiente), duración, empresa, clase, puestos y tarifa                         |
+| Pasajeros      | `/trip`             | Mapa de puestos de una salida: puestos ocupados deshabilitados, hasta 6 puestos, precio; público hasta apartar            |
+| Pasajeros      | `/passengers`       | Con sesión: nombre y documento por puesto (el primero se llena con la cuenta), luego apartar los puestos                  |
+| Pasajeros      | `/booking/:id`      | Código de reserva, estado, cuenta regresiva del apartado; pagar (método, instrucciones, referencia); boleto QR por puesto |
+| Pasajeros      | `/bookings`         | "Mis viajes": las reservas del usuario, de la más reciente a la más antigua                                               |
+| Pasajeros      | `/account`          | Solo con sesión: cuenta y contactos verificados, "Mis viajes", cerrar sesión                                              |
+| Transportistas | `/`                 | Invitaciones pendientes (aceptar / rechazar), mis organizaciones y roles, estado de mi solicitud                          |
+| Transportistas | `/application`      | Datos de la solicitud, documentos requeridos con carga y veredictos de la revisión, enviar a revisión                     |
+| Transportistas | `/application/edit` | Rol, organización (buscada en el directorio), datos personales, vehículo para taxistas                                    |
+| Transportistas | `/scan`             | "Validar boletos" (`tickets.validate`): escaneo del QR con la cámara o código de reserva + puesto; veredicto al instante  |
 
-Navigation follows the auth state: `Stack.Protected` in each root layout shows the signed-in
-screens only with a session and the sign-in screens only without one, so a screen never decides
-where to go after signing in or out. The passenger search screens sit outside both guards: the
-search is public, and `useApi(path, { auth: false })` calls it without a session.
+La navegación sigue el estado de la sesión: `Stack.Protected` en cada layout raíz muestra las
+pantallas con sesión solo cuando hay sesión, y las de inicio de sesión solo cuando no la hay, así
+que ninguna pantalla decide a dónde ir después de iniciar o cerrar sesión. Las pantallas de
+búsqueda de pasajeros quedan fuera de ambas protecciones: la búsqueda es pública, y
+`useApi(path, { auth: false })` la llama sin sesión.
 
-## Session handling (`@vtp/mobile-core`)
+## Manejo de la sesión (`@vtp/mobile-core`)
 
-- `ApiClient` signs in with `client: 'passenger'` or `client: 'transport'`; sessions are never
-  shared between apps.
-- Tokens are stored by `secureTokenStore()` in the iOS Keychain / Android Keystore, readable only
-  while the device is unlocked and not restored onto another device from a backup.
-- The access token is refreshed 30 seconds before it expires. Refresh tokens rotate and the API
-  revokes the session when an old one is replayed, so concurrent requests share **one** in-flight
-  refresh, and the rotated tokens are saved before any request uses them. A 401 triggers one
-  refresh and a retry; if the refresh is rejected the session ends and the app returns to sign-in
-  with a notice. Network errors and 5xx keep the session.
-- `AuthProvider` restores the saved session on launch. If the API cannot be reached, it shows a
-  retry screen instead of signing the user out.
-- Errors are shown in Spanish through `ApiError.userMessage` (same wording as the web portal).
+- `ApiClient` inicia sesión con `client: 'passenger'` o `client: 'transport'`; las sesiones nunca
+  se comparten entre apps.
+- `secureTokenStore()` guarda los tokens en el Keychain de iOS / Android Keystore, legibles solo
+  con el dispositivo desbloqueado y sin restaurarse en otro dispositivo desde una copia de
+  seguridad.
+- El token de acceso se renueva 30 segundos antes de vencer. Los tokens de renovación rotan y la
+  API revoca la sesión cuando se reutiliza uno viejo, así que las solicitudes simultáneas
+  comparten **una** renovación en curso, y los tokens rotados se guardan antes de que cualquier
+  solicitud los use. Un 401 provoca una renovación y un reintento; si la renovación se rechaza, la
+  sesión termina y la app vuelve al inicio de sesión con un aviso. Los errores de red y los 5xx
+  conservan la sesión.
+- `AuthProvider` restaura la sesión guardada al abrir la app. Si no se puede llegar a la API,
+  muestra una pantalla para reintentar en lugar de cerrar la sesión.
+- Los errores se muestran en español con `ApiError.userMessage` (los mismos textos que el portal
+  web).
 
-## Ticket validation (transport app)
+## Validación de boletos (app de transportistas)
 
-Members with `tickets.validate` (owner, admin, inspector) of an active organization see
-**Validar boletos** on the home screen. The camera reads the passenger's QR (`expo-camera`, back
-camera, QR codes only; the same code read again within 4 seconds is ignored), or the inspector
-types the booking code and seat. The result shows at once: green "puede abordar", amber "ya se
-usó" with the boarding time, or red for unpaid tickets and other departures (see
-[payments.md](payments.md#tickets)). The camera permission text is set in `app.json`; the
-microphone is not requested.
+Los miembros con `tickets.validate` (dueño, administrador, inspector) de una organización activa
+ven **Validar boletos** en la pantalla de inicio. La cámara lee el QR del pasajero (`expo-camera`,
+cámara trasera, solo códigos QR; si vuelve a leer el mismo código en menos de 4 segundos, lo
+ignora), o el inspector escribe el código de reserva y el puesto. El resultado aparece al instante:
+verde "puede abordar", ámbar "ya se usó" con la hora de abordaje, o rojo para boletos sin pagar y
+de otras salidas (ver [payments.md](payments.md#boletos)). El texto del permiso de cámara está en
+`app.json`; no se pide el micrófono.
 
-## KYC application (transport app)
+## Solicitud KYC (app de transportistas)
 
-1. The user picks the role and, optionally, the organization: `GET /organizations/directory`
-   lists active organizations, filtered in the app to those that have the chosen role.
-2. Personal data and, for taxi drivers with their own vehicle, the vehicle.
-3. Documents: `requiredDocuments(role, providesVehicle)` from the contracts decides which ones.
-   Each is picked with `expo-document-picker` (JPG, PNG or PDF) and uploaded as multipart to
-   `PUT /me/application/documents/:kind`, optionally with its expiry date. The API checks the
-   real type by content and the 10 MB limit.
-4. **Enviar a revisión** once nothing is missing. Review notes, rejected documents and the final
-   decision (including the organization's answer) are shown on the application screen.
+1. El usuario elige el rol y, si quiere, la organización: `GET /organizations/directory` lista las
+   organizaciones activas, filtradas en la app a las que tienen el rol elegido.
+2. Datos personales y, para los taxistas con vehículo propio, el vehículo.
+3. Documentos: `requiredDocuments(role, providesVehicle)` de los contratos decide cuáles. Cada uno
+   se elige con `expo-document-picker` (JPG, PNG o PDF) y se sube como multipart a
+   `PUT /me/application/documents/:kind`, con su fecha de vencimiento si la tiene. La API verifica
+   el tipo real por el contenido y el límite de 10 MB.
+4. **Enviar a revisión** cuando no falta nada. Las notas de la revisión, los documentos rechazados
+   y la decisión final (incluida la respuesta de la organización) se muestran en la pantalla de la
+   solicitud.
 
-## Browser preview
+## Vista previa en el navegador
 
-`app.json` includes the `web` platform so both apps can be opened in a browser
-(`pnpm --filter @vtp/passenger-mobile dev --web`, `pnpm --filter @vtp/transport-mobile dev --web`) to check screens without an
-emulator. It is a development aid, not a product:
+`app.json` incluye la plataforma `web` para que las dos apps se puedan abrir en un navegador
+(`pnpm --filter @vtp/passenger-mobile dev --web`, `pnpm --filter @vtp/transport-mobile dev --web`)
+y revisar pantallas sin emulador. Es una ayuda de desarrollo, no un producto:
 
-- There is no secure storage in the browser, so the session lives in memory and a page reload
-  signs you out. Tokens are never written to `localStorage`.
-- The API must allow the origin: `CORS_ORIGINS` in `apps/api/.env.example` already lists
-  `http://localhost:8081` and `http://localhost:8082`.
-- On the web, `expo-camera` decodes QR codes with `zxing-wasm`, downloaded from jsDelivr on first
-  use; phones use the native scanner. Without internet, type the booking code and seat instead.
+- En el navegador no hay almacenamiento seguro, así que la sesión vive en memoria y recargar la
+  página la cierra. Los tokens nunca se escriben en `localStorage`.
+- La API debe permitir el origen: `CORS_ORIGINS` en `apps/api/.env.example` ya incluye
+  `http://localhost:8081` y `http://localhost:8082`.
+- En la web, `expo-camera` decodifica los códigos QR con `zxing-wasm`, que se descarga de jsDelivr
+  la primera vez; los teléfonos usan el escáner nativo. Sin internet, escribe el código de reserva
+  y el puesto.
 
-## Known limitations
+## Limitaciones conocidas
 
-- Validation messages from the API are in English. The screens replace the common ones (file
-  rejected, documents missing) with Spanish text; translating API messages is a later task.
-- Dates are typed as `AAAA-MM-DD`; a native date picker can replace that later.
-- No push notifications yet: the user pulls to refresh to see review results.
+- Los mensajes de validación de la API están en inglés. Las pantallas reemplazan los más comunes
+  (archivo rechazado, documentos faltantes) por texto en español; traducir los mensajes de la API
+  queda pendiente.
+- Las fechas se escriben como `AAAA-MM-DD`; un selector de fecha nativo puede reemplazarlo más
+  adelante.
+- Todavía no hay notificaciones push: el usuario desliza hacia abajo para ver los resultados de la
+  revisión.

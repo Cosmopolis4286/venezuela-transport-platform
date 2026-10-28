@@ -1,58 +1,69 @@
-# VPS deployment preparation
+# Preparación del despliegue en un VPS
 
-> **Nothing is deployed.** This is the plan and checklist for a first Linux VPS deployment of
-> the API and web app. Reference production files live in `infrastructure/docker/production/`:
-> `api.Dockerfile`, `web.Dockerfile`, `compose.yml` (Caddy + API + web + PostGIS + one-off
-> `migrate`), `Caddyfile` and `env.example`. CI builds both images on every PR but **does not
-> push them anywhere**. Do not reuse the development `docker-compose.yml`.
+> **No hay nada desplegado.** Este es el plan y la lista de verificación para un primer despliegue
+> de la API y la web en un VPS Linux. Los archivos de referencia para producción están en
+> `infrastructure/docker/production/`: `api.Dockerfile`, `web.Dockerfile`, `compose.yml` (Caddy +
+> API + web + PostGIS + `migrate` de una sola vez), `Caddyfile` y `env.example`. La CI construye
+> las dos imágenes en cada PR pero **no las publica en ningún lado**. No reutilices el
+> `docker-compose.yml` de desarrollo.
 
-## Target topology (single VPS, low cost)
+## Topología objetivo (un solo VPS, bajo costo)
 
 ```
-Internet ──443──▶ Caddy (or Nginx + certbot)  ── TLS termination, HTTP→HTTPS, security headers
+Internet ──443──▶ Caddy (o Nginx + certbot)  ── TLS, HTTP→HTTPS, cabeceras de seguridad
                       ├── app.example.ve  ──▶ web  (Next.js, `next start`, 127.0.0.1:3000)
                       └── api.example.ve  ──▶ api  (NestJS, 127.0.0.1:4000)
-                                                 └──▶ PostgreSQL 18 + PostGIS (localhost / Docker network only)
+                                                 └──▶ PostgreSQL 18 + PostGIS (solo localhost / red de Docker)
 ```
 
-A 2 vCPU / 4 GB RAM VPS (Ubuntu 24.04 LTS) is enough to start. Managed PostgreSQL is a valid
-alternative if backups and PostGIS are supported.
+Para empezar basta un VPS de 2 vCPU / 4 GB de RAM (Ubuntu 24.04 LTS). Un PostgreSQL administrado
+es una alternativa válida si incluye copias de seguridad y PostGIS.
 
-## 1. Server baseline
+## 1. Base del servidor
 
-- [ ] Create a non-root sudo user; disable password and root SSH login (`PermitRootLogin no`,
-      `PasswordAuthentication no`); use SSH keys only.
-- [ ] `ufw default deny incoming`; allow `22/tcp` (or a custom SSH port), `80/tcp`, `443/tcp` only.
-- [ ] `unattended-upgrades` for security patches; `fail2ban` for SSH.
-- [ ] Install Docker Engine + Compose plugin. Never publish the database port to the internet;
-      Docker's port publishing bypasses `ufw`, so bind to `127.0.0.1` or use an internal network.
-- [ ] Set the server time zone to UTC (store `timestamptz`; display in `America/Caracas`).
+- [ ] Crea un usuario con sudo que no sea root; desactiva el inicio de sesión SSH con contraseña y
+      como root (`PermitRootLogin no`, `PasswordAuthentication no`); usa solo llaves SSH.
+- [ ] `ufw default deny incoming`; permite solo `22/tcp` (o un puerto SSH propio), `80/tcp` y
+      `443/tcp`.
+- [ ] `unattended-upgrades` para los parches de seguridad; `fail2ban` para SSH.
+- [ ] Instala Docker Engine + el plugin de Compose. Nunca publiques el puerto de la base de datos
+      a internet; la publicación de puertos de Docker se salta `ufw`, así que enlaza a
+      `127.0.0.1` o usa una red interna.
+- [ ] Pon la zona horaria del servidor en UTC (se guarda `timestamptz`; se muestra en
+      `America/Caracas`).
 
-## 2. HTTPS and reverse proxy
+## 2. HTTPS y proxy inverso
 
-- [ ] DNS A/AAAA records for the web and API hostnames.
-- [ ] Caddy obtains and renews Let's Encrypt certificates automatically (or Nginx + certbot).
-- [ ] Forward `X-Forwarded-For`/`X-Forwarded-Proto` and set `API_TRUST_PROXY_HOPS=1` so rate
-      limiting sees real client IPs (otherwise every request appears to come from the proxy).
-- [ ] Add HSTS, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, and a CSP for the web app.
-- [ ] Limit request body size (e.g. 1 MB) and enable gzip/zstd at the proxy.
+- [ ] Registros DNS A/AAAA para los dominios de la web y la API.
+- [ ] Caddy obtiene y renueva los certificados de Let's Encrypt automáticamente (o Nginx +
+      certbot).
+- [ ] Reenvía `X-Forwarded-For`/`X-Forwarded-Proto` y define `API_TRUST_PROXY_HOPS=1` para que el
+      límite de solicitudes vea las IPs reales de los clientes (si no, todas las solicitudes
+      parecen venir del proxy).
+- [ ] Agrega HSTS, `X-Content-Type-Options: nosniff`, `Referrer-Policy` y una CSP para la web.
+- [ ] Limita el tamaño del cuerpo de las solicitudes (por ejemplo 1 MB, más para los documentos
+      KYC) y activa gzip/zstd en el proxy.
 
-## 3. Secrets and configuration
+## 3. Secretos y configuración
 
-- [ ] Production variables are supplied as real environment variables (Compose `env_file:`
-      with a root-owned `chmod 600` file outside the repo, or GitHub Environments secrets
-      injected by the deploy job). The API ignores `.env` files when `NODE_ENV=production`.
-- [ ] `NODE_ENV=production`, `API_HOST=0.0.0.0` (inside the container), explicit `CORS_ORIGINS`
-      (`https://app.example.ve`), `SWAGGER_ENABLED=false` unless deliberately public,
-      `APP_VERSION=<git sha>`.
-- [ ] Unique, strong `DATABASE_PASSWORD` (the API rejects weak/placeholder ones in production).
-      Use a dedicated app role with least privilege, separate from the migration/owner role.
-- [ ] `NEXT_PUBLIC_API_BASE_URL` is set at **build** time for the web image.
-- [ ] Rotate any secret that was ever pasted into chat, a ticket or a log.
+- [ ] Las variables de producción se entregan como variables de entorno reales (`env_file:` de
+      Compose con un archivo de root con `chmod 600` fuera del repositorio, o secretos de GitHub
+      Environments inyectados por el trabajo de despliegue). La API ignora los archivos `.env`
+      cuando `NODE_ENV=production`.
+- [ ] `NODE_ENV=production`, `API_HOST=0.0.0.0` (dentro del contenedor), `CORS_ORIGINS` explícito
+      (`https://app.example.ve`), `SWAGGER_ENABLED=false` salvo que sea público a propósito,
+      `APP_VERSION=<sha de git>`.
+- [ ] `DATABASE_PASSWORD` única y fuerte (la API rechaza en producción las débiles o de ejemplo).
+      Usa un rol de la aplicación con los mínimos privilegios, separado del rol dueño que corre las
+      migraciones.
+- [ ] `OTP_DELIVERY=disabled` y `PAYMENT_PROVIDER=disabled` hasta integrar proveedores reales (la
+      API rechaza `console` y `simulated` en producción).
+- [ ] `NEXT_PUBLIC_API_BASE_URL` se define al **compilar** la imagen de la web.
+- [ ] Rota cualquier secreto que alguna vez se haya pegado en un chat, un ticket o un log.
 
-## 4. Build and release
+## 4. Compilación y publicación
 
-Images are built from the repository root:
+Las imágenes se construyen desde la raíz del repositorio:
 
 ```bash
 docker build -f infrastructure/docker/production/api.Dockerfile -t vtp-api:$(git rev-parse --short HEAD) .
@@ -61,51 +72,59 @@ docker build -f infrastructure/docker/production/web.Dockerfile \
   -t vtp-web:$(git rev-parse --short HEAD) .
 ```
 
-- API image: `pnpm deploy --prod` output only (no dev dependencies, no sources), runs as
-  `node`, `HEALTHCHECK` on `/api/v1/health`, migrations shipped in `drizzle/`.
-- Web image: Next.js `standalone` output (enabled by `NEXT_OUTPUT=standalone` in the
-  Dockerfile only), runs as `node`. `NEXT_PUBLIC_API_BASE_URL` is fixed at build time, so
-  build one image per environment.
-- Behind a TLS-intercepting proxy, pass its CA as a build secret:
-  `--secret id=ca_bundle,src=/path/to/ca.crt` (never copied into a layer).
-- [ ] Push to a registry (GitHub Container Registry is free for private repos within limits),
-      tagged with the git SHA. Requires a deploy workflow and registry credentials — not set up.
-- [ ] Deploy = `pull` → `run --rm migrate` → `up -d` → check `https://<api>/api/v1/health/ready`
-      (commands at the top of `compose.yml`).
+- Imagen de la API: solo la salida de `pnpm deploy --prod` (sin dependencias de desarrollo ni
+  código fuente), corre como `node`, `HEALTHCHECK` sobre `/api/v1/health`, las migraciones van en
+  `drizzle/`.
+- Imagen de la web: la salida `standalone` de Next.js (activada con `NEXT_OUTPUT=standalone` solo
+  en el Dockerfile), corre como `node`. `NEXT_PUBLIC_API_BASE_URL` queda fijo al compilar, así que
+  se construye una imagen por entorno.
+- Detrás de un proxy que intercepta TLS, pasa su CA como secreto de compilación:
+  `--secret id=ca_bundle,src=/ruta/a/ca.crt` (nunca se copia en una capa).
+- [ ] Publica en un registro (GitHub Container Registry es gratis para repositorios privados
+      dentro de ciertos límites), con el sha de git como etiqueta. Requiere un workflow de
+      despliegue y credenciales del registro — todavía no está configurado.
+- [ ] Desplegar = `pull` → `run --rm migrate` → `up -d` → comprobar
+      `https://<api>/api/v1/health/ready` (los comandos están al inicio de `compose.yml`).
 
-## 5. Database migrations
+## 5. Migraciones de la base de datos
 
-- [ ] Migrations run as a **separate one-off step** before starting the new API version
-      (`docker compose run --rm api node dist/database/migrate.js`), never automatically on API boot.
-- [ ] Backwards-compatible migrations only (expand → deploy → contract) so the previous API
-      version keeps working during and after the migration, which keeps rollback possible.
+- [ ] Las migraciones corren como un **paso separado de una sola vez** antes de arrancar la nueva
+      versión de la API (`docker compose run --rm migrate`), nunca automáticamente al arrancar la
+      API.
+- [ ] Solo migraciones compatibles hacia atrás (expandir → desplegar → contraer), para que la
+      versión anterior de la API siga funcionando durante y después de la migración, lo que
+      mantiene posible la vuelta atrás.
 
-## 6. Backups
+## 6. Copias de seguridad
 
-- [ ] Nightly `pg_dump -Fc` to a different provider/bucket (encrypted, e.g. with `age`),
-      retention 7 daily + 4 weekly + 6 monthly. Consider WAL archiving (pgBackRest/WAL-G)
-      when data loss tolerance drops below 24 h.
-- [ ] Monthly **restore test** into a scratch database; a backup that was never restored is
-      not a backup.
-- [ ] Back up the `api-uploads` volume (KYC documents) with the same schedule and encryption as
-      the database — the two must be restorable together.
-- [ ] Back up the reverse-proxy config and the production env file (encrypted) as well.
+- [ ] `pg_dump -Fc` cada noche a otro proveedor o bucket (cifrado, por ejemplo con `age`), con
+      retención de 7 diarias + 4 semanales + 6 mensuales. Considera archivar el WAL
+      (pgBackRest/WAL-G) cuando la tolerancia a la pérdida de datos baje de 24 h.
+- [ ] **Prueba de restauración** mensual en una base de datos temporal; una copia que nunca se
+      restauró no es una copia.
+- [ ] Respalda el volumen `api-uploads` (documentos KYC) con el mismo horario y cifrado que la
+      base de datos — los dos deben poder restaurarse juntos.
+- [ ] Respalda también la configuración del proxy inverso y el archivo de entorno de producción
+      (cifrados).
 
-## 7. Health checks and monitoring
+## 7. Chequeos de salud y monitoreo
 
-- [ ] Container/orchestrator health check on `GET /api/v1/health`; load balancer / deploy gate
-      on `GET /api/v1/health/ready` (503 while the database is unreachable).
-- [ ] Free uptime monitoring (e.g. Uptime Kuma self-hosted, or a free external pinger) on both
-      endpoints and the web home page.
-- [ ] Logs are JSON on stdout; rotate with Docker's `local` log driver (`max-size`, `max-file`).
-      Logs must not contain secrets or passenger PII (the API redacts auth headers and omits
-      query strings and bodies by default).
+- [ ] Chequeo de salud del contenedor u orquestador sobre `GET /api/v1/health`; el balanceador o
+      la puerta del despliegue sobre `GET /api/v1/health/ready` (503 mientras no se llega a la base
+      de datos).
+- [ ] Monitoreo de disponibilidad gratuito (por ejemplo Uptime Kuma en el propio servidor, o un
+      servicio externo gratuito) sobre ambos endpoints y la página de inicio de la web.
+- [ ] Los logs salen en JSON por stdout; rótalos con el driver de logs `local` de Docker
+      (`max-size`, `max-file`). Los logs no deben contener secretos ni datos personales de
+      pasajeros (la API oculta las cabeceras de autenticación y por defecto omite query strings y
+      cuerpos).
 
-## 8. Rollback
+## 8. Volver atrás
 
-- [ ] Keep the previous image tags. Rollback = redeploy the previous SHA; no rebuild needed.
-- [ ] Because migrations are backwards compatible, the previous version runs against the new
-      schema. If a migration must be undone, restore from backup is the last resort —
-      document the decision in the incident notes.
-- [ ] Write down the exact rollback command next to the deploy command and practise it once
-      before the first real launch.
+- [ ] Conserva las etiquetas de las imágenes anteriores. Volver atrás = redesplegar el sha
+      anterior; no hace falta recompilar.
+- [ ] Como las migraciones son compatibles hacia atrás, la versión anterior funciona con el
+      esquema nuevo. Si hay que deshacer una migración, restaurar desde la copia de seguridad es
+      el último recurso — documenta la decisión en las notas del incidente.
+- [ ] Anota el comando exacto para volver atrás junto al comando de despliegue, y practícalo una
+      vez antes del primer lanzamiento real.
