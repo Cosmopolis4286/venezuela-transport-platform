@@ -3,6 +3,7 @@ import {
   TICKET_QR_PREFIX,
   type TicketValidation,
   type ValidateTicketRequest,
+  toNetworkIso,
 } from '@vtp/shared-types';
 import { and, desc, eq, isNull, type SQL } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
@@ -13,7 +14,6 @@ import { routes } from '../network/network.schema.js';
 import { StopsService } from '../network/stops.service.js';
 import type { OrganizationAccess } from '../organizations/organization-access.js';
 import { bookingPassengers, bookings, trips } from './bookings.schema.js';
-import { toLocalIso } from './bookings.service.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** A ticket is accepted from 12 hours before to 12 hours after the passenger's boarding time. */
@@ -98,7 +98,7 @@ export class TicketsService {
       documentNumber: `${passenger.documentType}-${passenger.documentNumber}`,
       route: row.route,
       serviceDate: row.trip.serviceDate,
-      departsAt: toLocalIso(booking.departsAt),
+      departsAt: toNetworkIso(booking.departsAt),
       from: stops.get(booking.fromStopId)!,
       to: stops.get(booking.toStopId)!,
     };

@@ -2,6 +2,7 @@ import {
   BOOKING_STATUS_LABELS,
   SERVICE_CLASS_LABELS,
   longDate,
+  networkClock,
   type OrganizationMembershipSummary,
   type TripManifest,
 } from '@vtp/shared-types';
@@ -98,7 +99,7 @@ async function Manifest({
                       </Badge>
                     </td>
                     <td className="py-2 pr-3 tabular-nums">
-                      {p.boardedAt ? `Abordó ${boardingTime(p.boardedAt)}` : '—'}
+                      {p.boardedAt ? `Abordó ${networkClock(p.boardedAt)}` : '—'}
                     </td>
                   </tr>
                 ))}
@@ -109,9 +110,4 @@ async function Manifest({
       </Card>
     </>
   );
-}
-
-/** Venezuelan time of a UTC instant, `HH:MM`. */
-function boardingTime(iso: string): string {
-  return new Date(Date.parse(iso) - 4 * 3600_000).toISOString().slice(11, 16);
 }

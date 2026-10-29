@@ -225,9 +225,26 @@ export function formatDuration(minutes: number): string {
 
 // --- Display helpers (web and mobile) -------------------------------------------------------
 
+/** `NETWORK_UTC_OFFSET` in milliseconds; the only place it is turned into a number. */
+const NETWORK_OFFSET_MS = (() => {
+  const [, sign, hours, minutes] = /^([+-])(\d{2}):(\d{2})$/.exec(NETWORK_UTC_OFFSET)!;
+  return (sign === '-' ? -1 : 1) * (Number(hours) * 60 + Number(minutes)) * 60_000;
+})();
+
+/** An instant as a Venezuelan ISO timestamp: `2026-10-20T21:30:00-04:00`. */
+export function toNetworkIso(instant: Date | string | number): string {
+  const ms = new Date(instant).getTime() + NETWORK_OFFSET_MS;
+  return `${new Date(ms).toISOString().slice(0, 19)}${NETWORK_UTC_OFFSET}`;
+}
+
+/** `HH:MM` in Venezuela for an instant, e.g. a UTC `boardedAt` from the API. */
+export function networkClock(instant: Date | string | number): string {
+  return toNetworkIso(instant).slice(11, 16);
+}
+
 /** Today's date in Venezuela (UTC−4, no daylight saving), `YYYY-MM-DD`. */
 export function todayInVenezuela(now = new Date()): string {
-  return new Date(now.getTime() - 4 * 3600_000).toISOString().slice(0, 10);
+  return toNetworkIso(now).slice(0, 10);
 }
 
 /** `HH:MM` of a local ISO timestamp such as `2026-10-20T21:30:00-04:00`. */

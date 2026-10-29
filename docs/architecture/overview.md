@@ -171,6 +171,12 @@ Los clientes deciden según `code` (una lista cerrada, `API_ERROR_CODES`), muest
 enseñan `requestId` en los flujos de soporte. `isApiErrorResponse()` es una comprobación en tiempo
 de ejecución para los clientes.
 
+Cuando `code` no basta para saber qué pasó (casi siempre un `CONFLICT`), la respuesta trae además
+**`reason`**, un valor estable de `API_ERROR_REASONS`, por ejemplo `"reason": "SEAT_TAKEN"`. Los
+clientes lo traducen con `API_ERROR_REASON_MESSAGES` (español) y **nunca** comparan el texto de
+`message`, que puede cambiar. En la API: `throw ApiException.conflict('Mensaje', 'SEAT_TAKEN')`.
+Agregar un `reason` es compatible hacia atrás; quitarlo o renombrarlo, no.
+
 ### Evolución de los contratos
 
 - **Los cambios que solo agregan** (un campo opcional nuevo, un endpoint nuevo, un código de error

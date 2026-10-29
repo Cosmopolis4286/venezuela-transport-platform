@@ -200,7 +200,10 @@ describe.runIf(expectDatabase)('Taxi dispatch (e2e)', () => {
       await requestTaxi(ana.auth, { passengers: 9 }).expect(400);
       const ride1 = (await requestTaxi(ana.auth).expect(201)).body as TaxiRide;
       expect(ride1).toMatchObject({ status: 'requested', fare: null, driver: null });
-      expect((await requestTaxi(ana.auth).expect(409)).body.error.message).toMatch(/already have/);
+      expect((await requestTaxi(ana.auth).expect(409)).body.error).toMatchObject({
+        reason: 'TAXI_RIDE_OPEN',
+        message: expect.stringMatching(/already have/),
+      });
 
       // Drivers of both lines see it, without the passenger's phone.
       const board = async (auth: string) =>
@@ -276,6 +279,10 @@ describe.runIf(expectDatabase)('Taxi dispatch (e2e)', () => {
         accept(b1.auth, ride2.id, lineB.id, carB.id),
       ]);
       expect(race.map((r) => r.status).sort()).toEqual([200, 409]);
+      expect(race.find((r) => r.status === 409)!.body.error).toMatchObject({
+        code: 'CONFLICT',
+        reason: 'TAXI_RIDE_TAKEN',
+      });
       const winner = race[0]!.status === 200 ? a2 : b1;
 
       // --- The ride itself.

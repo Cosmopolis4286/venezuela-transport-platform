@@ -1,7 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
-  ORGANIZATION_ROLES,
-  roleHasPermission,
+  rolesWith,
   TAXI_REQUEST_MINUTES,
   type AcceptTaxiRideRequest,
   type DriverTaxiBoard,
@@ -32,13 +31,13 @@ import {
 } from '../organizations/organizations.schema.js';
 import { taxiRides, taxiServiceAreas, type TaxiRideRow } from './taxi.schema.js';
 
-const DRIVING_ROLES = ORGANIZATION_ROLES.filter((role) => roleHasPermission(role, 'trips.drive'));
+const DRIVING_ROLES = rolesWith('trips.drive');
 const ACTIVE = ['accepted', 'in_progress'] as const;
 const MINUTE_MS = 60_000;
 /** Finished rides stay on the dispatcher's board for this long. */
 const RECENT_MS = 24 * 3600_000;
 
-const conflict = (message: string) => new ApiException('CONFLICT', message, HttpStatus.CONFLICT);
+const conflict = ApiException.conflict;
 const invalid = (message: string) =>
   new ApiException('VALIDATION_FAILED', message, HttpStatus.BAD_REQUEST);
 const notFound = () => new ApiException('NOT_FOUND', 'Taxi ride not found', HttpStatus.NOT_FOUND);
@@ -99,7 +98,7 @@ export class TaxiService {
     meta: RequestMeta,
   ): Promise<TaxiRide> {
     const terminal = (await this.terminals()).find((t) => t.id === input.terminalStopId);
-    if (!terminal) throw conflict('No taxi line serves this terminal');
+    if (!terminal) throw conflict('No taxi line serves this terminal', 'TAXI_TERMINAL_NOT_SERVED');
     const address = input.address.trim();
     if (address.length < 5) throw invalid('Describe the address in at least 5 characters');
     let contactPhone: string | null = auth.user.phoneVerifiedAt ? auth.user.phone : null;
@@ -125,7 +124,7 @@ export class TaxiService {
         .returning()) as [TaxiRideRow];
     } catch (error) {
       if (violated(error) === 'taxi_rides_passenger_open_key') {
-        throw conflict('You already have a taxi ride in progress');
+        throw conflict('You already have a taxi ride in progress', 'TAXI_RIDE_OPEN');
       }
       throw error;
     }
@@ -156,7 +155,7 @@ export class TaxiService {
       .set({ status: 'cancelled', cancelledAt: new Date() })
       .where(and(eq(taxiRides.id, ride.id), inArray(taxiRides.status, ['requested', 'accepted'])))
       .returning();
-    if (!row) throw conflict('This ride can no longer be cancelled');
+    if (!row) throw conflict('This ride can no longer be cancelled', 'TAXI_RIDE_NOT_CANCELLABLE');
     await this.record('taxi_ride.cancelled', row, auth, meta);
     return (await this.toRides([row]))[0]!;
   }
@@ -232,6 +231,7 @@ export class TaxiService {
     if (!row) {
       throw conflict(
         step === 'pickup' ? 'This ride is not waiting for pickup' : 'This ride is not in progress',
+        'TAXI_RIDE_WRONG_STEP',
       );
     }
     await this.record(
@@ -366,10 +366,11 @@ export class TaxiService {
     actor: Authenticated,
     meta: RequestMeta,
   ): Promise<OperatorTaxiRide> {
-    if (line.status !== 'active') throw conflict('The taxi line is not active');
+    if (line.status !== 'active')
+      throw conflict('The taxi line is not active', 'TAXI_LINE_INACTIVE');
     if (Number(input.fareAmount) <= 0) throw invalid('The fare must be greater than zero');
     const vehicle = await this.vehicles.require(line.id, input.vehicleId);
-    if (!vehicle.active) throw conflict('This vehicle is inactive');
+    if (!vehicle.active) throw conflict('This vehicle is inactive', 'VEHICLE_INACTIVE');
     await expireTaxiRequests(this.database.db);
     let row: TaxiRideRow | undefined;
     try {
@@ -402,17 +403,19 @@ export class TaxiService {
     } catch (error) {
       const constraint = violated(error);
       if (constraint === 'taxi_rides_driver_active_key') {
-        throw conflict('This driver is already on a ride');
+        throw conflict('This driver is already on a ride', 'DRIVER_BUSY');
       }
       if (constraint === 'taxi_rides_vehicle_active_key') {
-        throw conflict('This vehicle is already on a ride');
+        throw conflict('This vehicle is already on a ride', 'VEHICLE_BUSY');
       }
       throw error;
     }
     if (!row) {
       const [ride] = await this.openRequests([line.id], undefined, rideId, true);
       // Not at this line's terminals → 404; otherwise someone was faster, or it closed.
-      throw ride ? conflict('This request was already taken or is no longer open') : notFound();
+      throw ride
+        ? conflict('This request was already taken or is no longer open', 'TAXI_RIDE_TAKEN')
+        : notFound();
     }
     await this.record('taxi_ride.accepted', row, actor, meta);
     return (await this.toOperatorRides([row]))[0]!;
@@ -434,7 +437,7 @@ export class TaxiService {
       })
       .where(and(eq(taxiRides.id, ride.id), eq(taxiRides.status, 'accepted')))
       .returning();
-    if (!row) throw conflict('Only an accepted ride can be released');
+    if (!row) throw conflict('Only an accepted ride can be released', 'TAXI_RIDE_NOT_RELEASABLE');
     await this.record('taxi_ride.released', row, actor, meta, {
       organizationId: ride.organizationId,
       driverUserId: ride.driverUserId,
@@ -653,7 +656,8 @@ export class TaxiService {
 }
 
 function assertTaxiLine(organization: OrganizationRow): OrganizationRow {
-  if (organization.type !== 'taxi_line') throw conflict('Only taxi lines dispatch taxis');
+  if (organization.type !== 'taxi_line')
+    throw conflict('Only taxi lines dispatch taxis', 'NOT_A_TAXI_LINE');
   return organization;
 }
 

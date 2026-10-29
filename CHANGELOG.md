@@ -42,6 +42,14 @@ pull request.
 
 - Los viajes y la lista de pasajeros del portal muestran el vehículo y el conductor asignados.
 - Los teléfonos se muestran en formato venezolano (`0414-1234567`) en el portal y las apps.
+- Las respuestas de error de la API pueden traer un **`reason`** estable (por ejemplo
+  `SEAT_TAKEN`, `DRIVER_BUSY`, `TAXI_RIDE_TAKEN`) además del `code`; es un campo nuevo y opcional,
+  así que los clientes existentes siguen funcionando. Reservas, pagos, vehículos, despacho y taxis
+  ya lo envían, y el portal y las apps lo muestran en español: varios rechazos que las apps
+  móviles mostraban en inglés ahora salen en español.
+- La hora de Venezuela se calcula en un solo lugar (`toNetworkIso`, `networkClock` en
+  `@vtp/shared-types`); los roles que conducen (`rolesWith`) y la normalización de placas se
+  comparten. Las placas de las solicitudes KYC ahora también aceptan puntos (`AB.123.CD`).
 - La [hoja de ruta](docs/roadmap.md) lista todas las decisiones pendientes con una recomendación,
   los valores por defecto para confirmar y los riesgos y la deuda técnica conocidos.
 

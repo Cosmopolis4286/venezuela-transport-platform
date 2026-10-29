@@ -14,7 +14,10 @@ that app.
   from `src/database/schema.ts`; then `pnpm db:generate --name=<change>` and commit
   `apps/api/drizzle/`. Never edit an applied migration.
 - API routes are **private by default** (global `AuthGuard`); mark public ones with `@Public()`
-  and get the caller with `@CurrentAuth()`. Use `ApiException` for errors with a stable code.
+  and get the caller with `@CurrentAuth()`. Use `ApiException` for errors with a stable code; when
+  the code is too coarse (a 409), add a `reason` from `API_ERROR_REASONS` with its Spanish text in
+  `API_ERROR_REASON_MESSAGES` (`ApiException.conflict(message, reason)`). Clients never match on
+  `message`. Venezuelan time: `toNetworkIso`/`networkClock` from `@vtp/shared-types`.
 - Organization routes use `@RequireOrganizationAccess(permission)`; roles and the permission
   matrix live in `packages/shared-types/src/api/organizations.ts`.
 - Web (`apps/web`): pages that read the session render inside `<Suspense>` (Cache Components);

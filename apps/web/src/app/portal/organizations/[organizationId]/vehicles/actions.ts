@@ -3,20 +3,14 @@
 import type { VehicleInput } from '@vtp/shared-types';
 import { refresh } from 'next/cache';
 import type { FormState } from '@/lib/form-state';
-import { ApiError, apiRequest } from '@/lib/server/api';
+import { apiRequest } from '@/lib/server/api';
 import { failure, text } from '@/lib/server/form-actions';
 
-// The API checks `fleet.manage` and validates the plate (its message is in Spanish).
+// The API checks `fleet.manage` and validates the plate (its message is in Spanish); a repeated
+// plate comes back with a reason that `failure` turns into Spanish.
 
 const vehiclesPath = (form: FormData) =>
   `/organizations/${encodeURIComponent(text(form, 'organizationId'))}/vehicles`;
-
-function vehicleFailure(error: unknown): FormState {
-  if (error instanceof ApiError && error.code === 'CONFLICT' && /plate/.test(error.message)) {
-    return { error: 'Ya tienes un vehículo con esa placa.' };
-  }
-  return failure(error);
-}
 
 export async function createVehicle(_: FormState, form: FormData): Promise<FormState> {
   const body: VehicleInput = {
@@ -27,7 +21,7 @@ export async function createVehicle(_: FormState, form: FormData): Promise<FormS
   try {
     await apiRequest(vehiclesPath(form), { method: 'POST', body });
   } catch (error) {
-    return vehicleFailure(error);
+    return failure(error);
   }
   refresh();
   return { success: 'Vehículo agregado.' };
@@ -45,7 +39,7 @@ export async function updateVehicle(_: FormState, form: FormData): Promise<FormS
       body,
     });
   } catch (error) {
-    return vehicleFailure(error);
+    return failure(error);
   }
   refresh();
   return { success: 'Vehículo guardado.' };

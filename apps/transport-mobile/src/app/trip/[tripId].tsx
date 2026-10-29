@@ -1,4 +1,4 @@
-import { BOOKING_STATUS_LABELS, type DriverManifest } from '@vtp/shared-types';
+import { BOOKING_STATUS_LABELS, networkClock, type DriverManifest } from '@vtp/shared-types';
 import {
   Badge,
   Banner,
@@ -13,7 +13,6 @@ import {
 import { useLocalSearchParams } from 'expo-router';
 import { RefreshControl } from 'react-native';
 import { tripLoad, tripWhen } from '@/lib/driver-trip';
-import { venezuelanTime } from '@/lib/ticket-result';
 import { useRefreshOnFocus } from '@/lib/use-refresh-on-focus';
 
 /** A driver's trip: when, which vehicle, and who boards and alights at each stop. */
@@ -56,7 +55,7 @@ export default function TripScreen() {
                 </Body>
                 <Row>
                   {passenger.boardedAt ? (
-                    <Badge label={`Abordó ${venezuelanTime(passenger.boardedAt)}`} tone="success" />
+                    <Badge label={`Abordó ${networkClock(passenger.boardedAt)}`} tone="success" />
                   ) : passenger.bookingStatus === 'held' ? (
                     <Badge label={BOOKING_STATUS_LABELS.held} tone="warning" />
                   ) : (

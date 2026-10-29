@@ -86,6 +86,11 @@ export function roleAllowedFor(type: OrganizationType, role: OrganizationRole): 
   return ROLES_BY_ORGANIZATION_TYPE[type].includes(role);
 }
 
+/** Roles whose permissions include `permission`, e.g. who can drive (`trips.drive`). */
+export function rolesWith(permission: OrganizationPermission): OrganizationRole[] {
+  return ORGANIZATION_ROLES.filter((role) => roleHasPermission(role, permission));
+}
+
 export function roleHasPermission(
   role: OrganizationRole,
   permission: OrganizationPermission,

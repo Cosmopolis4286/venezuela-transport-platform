@@ -1,4 +1,10 @@
-import { isApiErrorResponse, type ApiErrorCode, type ApiFieldError } from '@vtp/shared-types';
+import {
+  API_ERROR_REASON_MESSAGES,
+  isApiErrorResponse,
+  type ApiErrorCode,
+  type ApiErrorReason,
+  type ApiFieldError,
+} from '@vtp/shared-types';
 
 /** User-facing Spanish messages for API error codes. Same wording as the web portal. */
 const MESSAGES: Partial<Record<ApiErrorCode, string>> = {
@@ -24,6 +30,8 @@ export class ApiError extends Error {
     readonly code: ApiErrorCode | 'NETWORK',
     readonly apiMessage: string,
     readonly details: ApiFieldError[] = [],
+    /** What exactly went wrong, when `code` is too coarse (see API_ERROR_REASONS). */
+    readonly reason?: ApiErrorReason,
   ) {
     super(`${status} ${code}: ${apiMessage}`);
     this.name = 'ApiError';
@@ -37,6 +45,7 @@ export class ApiError extends Error {
         body.error.code,
         body.error.message,
         body.error.details ?? [],
+        body.error.reason,
       );
     }
     return new ApiError(response.status, 'INTERNAL_ERROR', response.statusText);
@@ -48,9 +57,12 @@ export class ApiError extends Error {
     return error;
   }
 
-  /** Spanish text to show the user. Validation and conflict messages from the API are specific enough. */
+  /** Spanish text to show the user: the reason's or the code's message, else the API's own. */
   get userMessage(): string {
     if (this.code === 'NETWORK') return NETWORK_MESSAGE;
+    if (this.reason && API_ERROR_REASON_MESSAGES[this.reason]) {
+      return API_ERROR_REASON_MESSAGES[this.reason];
+    }
     if (MESSAGES[this.code]) return MESSAGES[this.code]!;
     if (this.details.length) return this.details.map((d) => d.message).join('\n');
     return this.apiMessage || MESSAGES.INTERNAL_ERROR!;

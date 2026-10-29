@@ -2,6 +2,7 @@ import {
   BOOKING_STATUS_LABELS,
   localTime,
   longDate,
+  networkClock,
   type TicketValidation,
 } from '@vtp/shared-types';
 
@@ -14,11 +15,6 @@ export interface TicketVerdict {
 }
 
 /** HH:MM in Venezuela for an instant (UTC−4, no daylight saving). */
-/** `HH:MM` in Venezuela for a UTC instant such as `boardedAt`. */
-export function venezuelanTime(iso: string): string {
-  return new Date(Date.parse(iso) - 4 * 3600_000).toISOString().slice(11, 16);
-}
-
 /** What the inspector reads first after a scan. */
 export function ticketVerdict(validation: TicketValidation): TicketVerdict {
   switch (validation.result) {
@@ -30,7 +26,7 @@ export function ticketVerdict(validation: TicketValidation): TicketVerdict {
         tone: 'warning',
         title: 'Este boleto ya se usó',
         detail: validation.boardedAt
-          ? `Abordó a las ${venezuelanTime(validation.boardedAt)}. Verifica el documento.`
+          ? `Abordó a las ${networkClock(validation.boardedAt)}. Verifica el documento.`
           : null,
       };
     case 'not_paid':

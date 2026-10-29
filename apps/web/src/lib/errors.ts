@@ -1,4 +1,8 @@
-import type { ApiErrorCode } from '@vtp/shared-types';
+import {
+  API_ERROR_REASON_MESSAGES,
+  type ApiErrorCode,
+  type ApiErrorReason,
+} from '@vtp/shared-types';
 
 /** User-facing Spanish messages for API error codes. Field-level details are shown as returned. */
 const MESSAGES: Partial<Record<ApiErrorCode, string>> = {
@@ -15,8 +19,16 @@ const MESSAGES: Partial<Record<ApiErrorCode, string>> = {
   INTERNAL_ERROR: 'Ocurrió un error inesperado. Inténtalo de nuevo.',
 };
 
-/** Prefers our Spanish message; for validation and conflicts the API message is specific enough. */
-export function errorMessage(code: ApiErrorCode | undefined, apiMessage?: string): string {
+/**
+ * Prefers our Spanish message: the reason's, then the code's. Otherwise the API's message, which
+ * for validation and older conflicts is specific enough.
+ */
+export function errorMessage(
+  code: ApiErrorCode | undefined,
+  apiMessage?: string,
+  reason?: ApiErrorReason,
+): string {
+  if (reason && API_ERROR_REASON_MESSAGES[reason]) return API_ERROR_REASON_MESSAGES[reason];
   if (code && MESSAGES[code]) return MESSAGES[code];
   return apiMessage || MESSAGES.INTERNAL_ERROR!;
 }

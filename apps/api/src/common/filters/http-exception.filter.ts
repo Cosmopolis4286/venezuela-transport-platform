@@ -6,7 +6,12 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import type { ApiErrorCode, ApiErrorResponse, ApiFieldError } from '@vtp/shared-types';
+import type {
+  ApiErrorCode,
+  ApiErrorReason,
+  ApiErrorResponse,
+  ApiFieldError,
+} from '@vtp/shared-types';
 import type { Request, Response } from 'express';
 import { ApiException } from '../errors/api.exception.js';
 
@@ -49,10 +54,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
       STATUS_TO_CODE[status] ?? (status >= 500 ? 'INTERNAL_ERROR' : 'BAD_REQUEST');
     let message = 'Internal server error';
     let details: ApiFieldError[] | undefined;
+    let reason: ApiErrorReason | undefined;
 
     if (exception instanceof ApiException) {
       code = exception.code;
       message = exception.message;
+      reason = exception.reason;
     } else if (exception instanceof RequestValidationException) {
       code = 'VALIDATION_FAILED';
       message = exception.message;
@@ -68,6 +75,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const body: ApiErrorResponse = {
       error: {
         code,
+        ...(reason ? { reason } : {}),
         message,
         ...(details ? { details } : {}),
         ...(request.id !== undefined ? { requestId: String(request.id) } : {}),

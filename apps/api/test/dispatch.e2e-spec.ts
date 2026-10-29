@@ -291,8 +291,17 @@ describe.runIf(expectDatabase)('Dispatch (e2e)', () => {
       });
       const conflictMessage = async (res: Promise<request.Response>) =>
         ((await res).body as { error: { message: string } }).error.message;
+      const reason = async (res: Promise<request.Response>) =>
+        ((await res).body as { error: { reason?: string } }).error.reason;
       expect(await conflictMessage(assign(afternoon, coachBus.id, null).expect(409))).toMatch(
         /seat map/,
+      );
+      expect(await reason(assign(afternoon, coachBus.id, null).expect(409))).toBe(
+        'VEHICLE_LAYOUT_MISMATCH',
+      );
+      expect(await reason(assign(afternoon, bus.id, null).expect(409))).toBe('VEHICLE_BUSY');
+      expect(await reason(assign(afternoon, spare.id, driver.user.id).expect(409))).toBe(
+        'DRIVER_BUSY',
       );
       expect(await conflictMessage(assign(afternoon, bus.id, null).expect(409))).toMatch(
         /vehicle is on another trip/,

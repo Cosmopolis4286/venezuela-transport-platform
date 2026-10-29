@@ -3,6 +3,7 @@ import {
   TAXI_RIDE_STATUS_LABELS,
   formatMoney,
   localPhone,
+  networkClock,
   vehicleName,
   type OrganizationMembershipSummary,
   type Stop,
@@ -33,9 +34,6 @@ export default function TaxiPage({
 
 const person = (p: { firstName: string | null; lastName: string | null }) =>
   [p.firstName, p.lastName].filter(Boolean).join(' ') || 'Sin nombre';
-
-/** `HH:MM` in Venezuela for a UTC instant. */
-const clock = (iso: string) => new Date(Date.parse(iso) - 4 * 3600_000).toISOString().slice(11, 16);
 
 const route = (ride: Pick<TaxiRequest, 'direction' | 'terminal' | 'address'>) =>
   ride.direction === 'from_terminal'
@@ -127,7 +125,8 @@ async function Taxi({ params }: { params: Promise<{ organizationId: string }> })
                       <p className="text-sm text-muted-foreground">
                         {TAXI_DIRECTION_LABELS[request.direction]} · {request.passengers}{' '}
                         {request.passengers === 1 ? 'pasajero' : 'pasajeros'} · pedido a las{' '}
-                        {clock(request.requestedAt)} · vence a las {clock(request.expiresAt)}
+                        {networkClock(request.requestedAt)} · vence a las{' '}
+                        {networkClock(request.expiresAt)}
                         {request.notes ? ` · ${request.notes}` : ''}
                       </p>
                     </div>
@@ -226,7 +225,7 @@ async function Taxi({ params }: { params: Promise<{ organizationId: string }> })
                         {formatMoney(ride.fare.amount, ride.fare.currency)} · pasajero{' '}
                         {person(ride.passenger)}
                         {ride.passenger.phone ? ` (${localPhone(ride.passenger.phone)})` : ''} ·
-                        tomado a las {clock(ride.acceptedAt)}
+                        tomado a las {networkClock(ride.acceptedAt)}
                       </p>
                     </div>
                     {ride.status === 'accepted' ? (

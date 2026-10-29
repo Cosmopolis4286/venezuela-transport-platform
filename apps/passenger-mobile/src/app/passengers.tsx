@@ -69,14 +69,8 @@ export default function PassengersScreen() {
       router.push({ pathname: '/booking/[id]', params: { id: booking.id } });
     } catch (e) {
       setBusy(false);
-      if (e instanceof ApiError && e.code === 'CONFLICT') {
-        setError(
-          /taken/.test(e.apiMessage)
-            ? 'Alguien acaba de apartar uno de esos puestos. Vuelve atrás y elige otro.'
-            : /pending/.test(e.apiMessage)
-              ? 'Tienes reservas sin pagar. Págalas o cancélalas antes de apartar más puestos.'
-              : 'Esta salida ya no se puede reservar.',
-        );
+      if (e instanceof ApiError && e.code === 'CONFLICT' && !e.reason) {
+        setError('Esta salida ya no se puede reservar.');
       } else if (e instanceof ApiError && e.code === 'VALIDATION_FAILED') {
         setError('Revisa los nombres y números de documento.');
       } else {

@@ -127,15 +127,11 @@ Hoy funcionan con estos valores; cambiarlos es sencillo, pero conviene confirmar
 
 Lo que hoy funciona pero conviene corregir antes de crecer:
 
-- **Errores identificados por su texto.** Varias acciones del portal traducen los conflictos
-  (`409`) buscando palabras del mensaje en inglés de la API (vehículos, despacho, taxis). Un
-  cambio de redacción en la API rompe la traducción sin que falle ninguna prueba. Solución: códigos
-  de error estables por caso (por ejemplo `TAXI_RIDE_TAKEN`) en `API_ERROR_CODES`.
-- **Zona horaria repetida.** El desfase de Venezuela (`-04:00`) está escrito en una docena de
-  lugares. Venezuela no cambia de hora hoy, pero lo cambió en 2016; conviene una sola función
-  compartida.
-- **Código repetido.** La lista de roles que conducen está en dos servicios (`dispatch`, `taxi`),
-  y la normalización de placas existe dos veces (`onboarding` y `shared-types`).
+- **Conflictos antiguos sin `reason`.** Las reservas, los pagos, los vehículos, el despacho y los
+  taxis ya dicen por qué rechazan algo con un `reason` estable. Los conflictos de cuentas,
+  organizaciones, invitaciones, solicitudes KYC, paradas y rutas todavía muestran el mensaje en
+  inglés de la API en las apps móviles (el portal traduce los suyos). Agregarles un `reason` es
+  trabajo mecánico.
 - **Sin pruebas de navegador en la CI.** Los flujos del portal y de las apps se probaron en
   Chromium con guiones manuales; la CI solo corre pruebas unitarias, e2e de la API y
   compilaciones. Una batería mínima con Playwright evitaría regresiones en las pantallas.
@@ -148,6 +144,11 @@ Lo que hoy funciona pero conviene corregir antes de crecer:
   de terminales hará falta una búsqueda.
 - **La CI depende de una PC personal**: si está apagada, los checks quedan en cola y nada se puede
   fusionar con las reglas de protección de `main`.
+
+Ya corregido (2026-10-29): los errores del portal ya no se identifican por su texto en inglés,
+sino por un `reason` estable que también traduce las apps móviles; la hora de Venezuela se
+calcula en un solo lugar (`toNetworkIso`, `networkClock`); los roles que conducen y la
+normalización de placas se comparten en vez de repetirse.
 
 ## Antes de producción
 

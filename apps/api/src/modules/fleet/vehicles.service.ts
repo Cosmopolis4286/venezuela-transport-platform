@@ -123,10 +123,9 @@ export class VehiclesService {
       return row!;
     } catch (error) {
       if (isUniqueViolation(error)) {
-        throw new ApiException(
-          'CONFLICT',
+        throw ApiException.conflict(
           'Another vehicle already has this plate',
-          HttpStatus.CONFLICT,
+          'VEHICLE_PLATE_TAKEN',
         );
       }
       throw error;

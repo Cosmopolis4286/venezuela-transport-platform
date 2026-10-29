@@ -1,8 +1,8 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   NETWORK_UTC_OFFSET,
-  ORGANIZATION_ROLES,
-  roleHasPermission,
+  rolesWith,
+  toNetworkIso,
   type AssignTripRequest,
   type DispatchBoard,
   type DispatchDeparture,
@@ -15,7 +15,7 @@ import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService, type Transaction } from '../../database/database.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { trips, type TripRow } from '../bookings/bookings.schema.js';
-import { BookingsService, summary, toLocalIso } from '../bookings/bookings.service.js';
+import { BookingsService, summary } from '../bookings/bookings.service.js';
 import { TripsService } from '../bookings/trips.service.js';
 import { vehicles } from '../fleet/fleet.schema.js';
 import { VehiclesService } from '../fleet/vehicles.service.js';
@@ -40,9 +40,9 @@ const AHEAD_DAYS = 180;
 const DRIVER_GRACE_MS = 12 * 3600_000;
 const MINUTE_MS = 60_000;
 
-const DRIVING_ROLES = ORGANIZATION_ROLES.filter((role) => roleHasPermission(role, 'trips.drive'));
+const DRIVING_ROLES = rolesWith('trips.drive');
 
-const conflict = (message: string) => new ApiException('CONFLICT', message, HttpStatus.CONFLICT);
+const conflict = ApiException.conflict;
 const invalid = (message: string) =>
   new ApiException('VALIDATION_FAILED', message, HttpStatus.BAD_REQUEST);
 const tripNotFound = () => new ApiException('NOT_FOUND', 'Trip not found', HttpStatus.NOT_FOUND);
@@ -160,7 +160,7 @@ export class DispatchService {
     const vehicle = input.vehicleId
       ? await this.vehicles.require(organizationId, input.vehicleId)
       : null;
-    if (vehicle && !vehicle.active) throw conflict('This vehicle is inactive');
+    if (vehicle && !vehicle.active) throw conflict('This vehicle is inactive', 'VEHICLE_INACTIVE');
     if (
       input.driverUserId &&
       !(await this.drivers(organizationId)).some((d) => d.userId === input.driverUserId)
@@ -168,7 +168,7 @@ export class DispatchService {
       throw invalid('The driver must be a member whose role drives');
     }
     const trip = await this.trips.ensure(organizationId, input.scheduleId, input.serviceDate);
-    if (trip.status !== 'scheduled') throw conflict('This trip is cancelled');
+    if (trip.status !== 'scheduled') throw conflict('This trip is cancelled', 'TRIP_CANCELLED');
     const [schedule] = await this.database.db
       .select({ seatLayoutId: routeSchedules.seatLayoutId })
       .from(routeSchedules)
@@ -178,7 +178,10 @@ export class DispatchService {
       schedule?.seatLayoutId &&
       vehicle.seatLayoutId !== schedule.seatLayoutId
     ) {
-      throw conflict('This vehicle has a different seat map than the departure');
+      throw conflict(
+        'This vehicle has a different seat map than the departure',
+        'VEHICLE_LAYOUT_MISMATCH',
+      );
     }
 
     const duration = (await this.routeEnds([trip.routeId])).get(trip.routeId)?.duration ?? 0;
@@ -192,13 +195,13 @@ export class DispatchService {
         input.vehicleId &&
         (await this.busy(tx, trips.vehicleId, input.vehicleId, trip, window))
       ) {
-        throw conflict('This vehicle is on another trip at that time');
+        throw conflict('This vehicle is on another trip at that time', 'VEHICLE_BUSY');
       }
       if (
         input.driverUserId &&
         (await this.busy(tx, trips.driverUserId, input.driverUserId, trip, window))
       ) {
-        throw conflict('This driver is on another trip at that time');
+        throw conflict('This driver is on another trip at that time', 'DRIVER_BUSY');
       }
       await tx
         .update(trips)
@@ -378,8 +381,8 @@ export class DispatchService {
         {
           ...trip,
           organization: row.organization,
-          departsAt: toLocalIso(row.trip.departsAt),
-          arrivesAt: toLocalIso(arrival),
+          departsAt: toNetworkIso(row.trip.departsAt),
+          arrivesAt: toNetworkIso(arrival),
           from: stops.get(end.firstStopId)!,
           to: stops.get(end.lastStopId)!,
           vehicle: row.vehicle,
@@ -399,5 +402,5 @@ function assertDate(date: string, pastDays: number) {
 
 /** Local ISO timestamp `minutes` after another one. */
 function later(localIso: string, minutes: number): string {
-  return toLocalIso(new Date(Date.parse(localIso) + minutes * MINUTE_MS));
+  return toNetworkIso(new Date(Date.parse(localIso) + minutes * MINUTE_MS));
 }
