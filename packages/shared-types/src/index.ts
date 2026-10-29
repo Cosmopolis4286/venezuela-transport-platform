@@ -9,3 +9,4 @@ export * from './api/fleet.js';
 export * from './api/bookings.js';
 export * from './api/payments.js';
 export * from './api/dispatch.js';
+export * from './api/taxi.js';

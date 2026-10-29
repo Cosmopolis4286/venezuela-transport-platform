@@ -64,6 +64,13 @@
       "when": 1793208420815,
       "tag": "0008_vehicles_and_trip_assignment",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793210368127,
+      "tag": "0009_taxi_rides",
+      "breakpoints": true
     }
   ]
 }
