@@ -41,6 +41,9 @@ pull request.
 ### Cambiado
 
 - Los viajes y la lista de pasajeros del portal muestran el vehículo y el conductor asignados.
+- Los teléfonos se muestran en formato venezolano (`0414-1234567`) en el portal y las apps.
+- La [hoja de ruta](docs/roadmap.md) lista todas las decisiones pendientes con una recomendación,
+  los valores por defecto para confirmar y los riesgos y la deuda técnica conocidos.
 
 ### Corregido
 

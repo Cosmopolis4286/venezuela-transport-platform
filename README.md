@@ -7,7 +7,8 @@ terminales, taxistas y operadores de transporte.
 > punta: búsqueda de viajes, puestos en el mapa del bus, pago (proveedor simulado), boletos QR,
 > escaneo al abordar, asignación de vehículo y conductor, y taxis desde y hacia los terminales. **Todavía no: proveedores de pago reales, liquidaciones, reembolsos,
 > notificaciones ni cobro de los taxis en la app.** No la despliegues con usuarios ni datos reales. Progreso
-> y pendientes: [hoja de ruta](docs/roadmap.md) · historial: [CHANGELOG](CHANGELOG.md) · CI:
+> y pendientes: [hoja de ruta](docs/roadmap.md) · lo que necesita tu decisión:
+> [decisiones pendientes](docs/roadmap.md#decisiones-pendientes) · historial: [CHANGELOG](CHANGELOG.md) · CI:
 > CircleCI y un runner propio ([flujo del repositorio](docs/development/repository-workflow.md)).
 
 ## Qué hace hoy
