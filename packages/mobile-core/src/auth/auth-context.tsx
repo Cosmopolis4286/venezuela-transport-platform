@@ -1,9 +1,10 @@
-import type {
-  AuthResponse,
-  OtpChallengeResponse,
-  OtpChannel,
-  RegisterRequest,
-  UserProfile,
+import {
+  sharedMessages,
+  type AuthResponse,
+  type OtpChallengeResponse,
+  type OtpChannel,
+  type RegisterRequest,
+  type UserProfile,
 } from '@vtp/shared-types';
 import {
   createContext,
@@ -16,6 +17,7 @@ import {
 } from 'react';
 import type { ApiClient } from '../api/client';
 import { ApiError, userMessage } from '../api/errors';
+import { currentLocale } from '../i18n/active-locale';
 
 export type AuthState =
   | { status: 'loading' }
@@ -61,7 +63,10 @@ export function AuthProvider({ api, children }: { api: ApiClient; children: Reac
       if (active) setState(next);
     });
     const unsubscribe = api.onSessionEnded(() =>
-      setState({ status: 'signedOut', notice: 'Tu sesión expiró. Inicia sesión de nuevo.' }),
+      setState({
+        status: 'signedOut',
+        notice: sharedMessages(currentLocale()).errors.SESSION_EXPIRED,
+      }),
     );
     return () => {
       active = false;

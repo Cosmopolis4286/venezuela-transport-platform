@@ -1,3 +1,4 @@
+import { SHARED_MESSAGES } from '../i18n/shared-messages.js';
 import type { TripDriver, TripVehicle } from './dispatch.js';
 import type { IdentityDocumentType } from './onboarding.js';
 import type { LayoutSeat } from './fleet.js';
@@ -20,12 +21,8 @@ export const MAX_SEATS_PER_BOOKING = 6;
 export const BOOKING_STATUSES = ['held', 'confirmed', 'cancelled', 'expired'] as const;
 export type BookingStatus = (typeof BOOKING_STATUSES)[number];
 
-export const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
-  held: 'Apartada, pendiente de pago',
-  confirmed: 'Confirmada',
-  cancelled: 'Cancelada',
-  expired: 'Vencida',
-};
+export const BOOKING_STATUS_LABELS: Record<BookingStatus, string> =
+  SHARED_MESSAGES.es.bookingStatus;
 
 /** What the operator sells for one departure, as seen from a pair of stops. */
 export interface TripAvailability {

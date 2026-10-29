@@ -1,5 +1,6 @@
 import { ActivityIndicator } from 'react-native';
 import { useAuth } from '../auth/auth-context';
+import { useI18n } from '../i18n/i18n-context';
 import { Banner, Button, Centered } from '../ui/components';
 import { useColors } from '../ui/theme';
 
@@ -7,6 +8,7 @@ import { useColors } from '../ui/theme';
 export function SplashScreen() {
   const { state, reload, signOut } = useAuth();
   const colors = useColors();
+  const t = useI18n().core.splash;
   if (state.status !== 'unavailable') {
     return (
       <Centered>
@@ -17,8 +19,8 @@ export function SplashScreen() {
   return (
     <Centered>
       <Banner tone="error">{state.message}</Banner>
-      <Button title="Reintentar" onPress={() => void reload()} />
-      <Button variant="link" title="Cerrar sesión" onPress={() => void signOut()} />
+      <Button title={t.retry} onPress={() => void reload()} />
+      <Button variant="link" title={t.signOut} onPress={() => void signOut()} />
     </Centered>
   );
 }

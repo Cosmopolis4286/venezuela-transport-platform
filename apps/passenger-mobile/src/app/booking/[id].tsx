@@ -14,14 +14,11 @@ import {
   userMessage,
 } from '@vtp/mobile-core';
 import {
-  BOOKING_STATUS_LABELS,
   daysBetween,
   formatMoney,
   formatPaymentAmount,
   localTime,
   longDate,
-  PAYMENT_METHOD_LABELS,
-  SERVICE_CLASS_LABELS,
   type Booking,
 } from '@vtp/shared-types';
 import { useLocalSearchParams } from 'expo-router';
@@ -29,6 +26,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { PaymentPanel } from '@/components/payment-panel';
 import { QrCode } from '@/components/qr-code';
+import { useT } from '@/i18n/use-t';
 import { BOOKING_TONE } from '@/lib/booking-labels';
 import { formatClock, useSecondsLeft } from '@/lib/use-countdown';
 
@@ -36,6 +34,7 @@ export default function BookingScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { api } = useAuth();
   const colors = useColors();
+  const { t, shared, locale } = useT();
   const booking = useApi<Booking>(id ? `/me/bookings/${id}` : null);
   const secondsLeft = useSecondsLeft(booking.data?.expiresAt ?? null);
   const [busy, setBusy] = useState(false);
@@ -74,46 +73,33 @@ export default function BookingScreen() {
 
   return (
     <Screen>
-      <Body muted>Código de reserva</Body>
+      <Body muted>{t.booking.code}</Body>
       <Text
-        accessibilityLabel={`Código ${data.code}`}
+        accessibilityLabel={t.booking.codeA11y(data.code)}
         style={{ color: colors.text, fontSize: 30, fontWeight: '800', letterSpacing: 2 }}
       >
         {data.code}
       </Text>
-      <Badge label={BOOKING_STATUS_LABELS[status]} tone={BOOKING_TONE[status]} />
+      <Badge label={shared.bookingStatus[status]} tone={BOOKING_TONE[status]} />
       {status === 'held' ? (
-        <Banner tone="warning">
-          Tus puestos están apartados por {formatClock(secondsLeft)} minutos. Paga antes de que
-          termine el tiempo.
-        </Banner>
+        <Banner tone="warning">{t.booking.held(formatClock(secondsLeft))}</Banner>
       ) : null}
-      {status === 'confirmed' ? (
-        <Banner tone="success">
-          Pago confirmado. Muestra el código QR de cada pasajero al abordar.
-        </Banner>
-      ) : null}
-      {status === 'expired' ? (
-        <Banner tone="error">El tiempo para pagar terminó y los puestos se liberaron.</Banner>
-      ) : null}
-      {refundDue ? (
-        <Banner tone="warning">
-          Tu pago llegó cuando la reserva ya no estaba activa. Te lo devolveremos.
-        </Banner>
-      ) : null}
+      {status === 'confirmed' ? <Banner tone="success">{t.booking.confirmed}</Banner> : null}
+      {status === 'expired' ? <Banner tone="error">{t.booking.expired}</Banner> : null}
+      {refundDue ? <Banner tone="warning">{t.booking.refundDue}</Banner> : null}
 
       <Card>
         <Heading>
           {data.from.city} → {data.to.city}
         </Heading>
         <Body>
-          {longDate(data.trip.departsAt)} · {localTime(data.trip.departsAt)} →{' '}
+          {longDate(data.trip.departsAt, locale)} · {localTime(data.trip.departsAt)} →{' '}
           {localTime(data.trip.arrivesAt)}
-          {extraDays ? ` (+${extraDays} d)` : ''}
+          {extraDays ? t.dayOffset(extraDays) : ''}
         </Body>
         <Body muted>
           {data.operator.tradeName ?? data.operator.legalName} ·{' '}
-          {SERVICE_CLASS_LABELS[data.trip.serviceClass]}
+          {shared.serviceClass[data.trip.serviceClass]}
         </Body>
         <Body muted>
           {data.from.name} → {data.to.name}
@@ -124,13 +110,13 @@ export default function BookingScreen() {
         <PaymentPanel booking={data} onBooking={booking.mutate} reload={booking.reload} />
       ) : null}
 
-      <Subheading>{status === 'confirmed' ? 'Boletos' : 'Pasajeros'}</Subheading>
+      <Subheading>{status === 'confirmed' ? t.booking.tickets : t.booking.passengers}</Subheading>
       {data.passengers.map((p) =>
         p.ticket ? (
           <Card key={p.seatNumber}>
             <Row>
-              <Badge label={`Puesto ${p.seatNumber}`} />
-              {p.ticket.boardedAt ? <Badge label="Abordó" tone="success" /> : null}
+              <Badge label={t.seat(p.seatNumber)} />
+              {p.ticket.boardedAt ? <Badge label={t.booking.boarded} tone="success" /> : null}
             </Row>
             <Heading>
               {p.firstName} {p.lastName}
@@ -144,26 +130,30 @@ export default function BookingScreen() {
           </Card>
         ) : (
           <Row key={p.seatNumber}>
-            <Badge label={`Puesto ${p.seatNumber}`} />
+            <Badge label={t.seat(p.seatNumber)} />
             <Body>
               {p.firstName} {p.lastName} · {p.documentType}-{p.documentNumber}
             </Body>
           </Row>
         ),
       )}
-      <Body>Total: {formatMoney(data.total.amount, data.total.currency)}</Body>
+      <Body>
+        {t.booking.total}: {formatMoney(data.total.amount, data.total.currency, locale)}
+      </Body>
       {data.payment?.status === 'confirmed' ? (
         <Body muted>
-          Pagado con {PAYMENT_METHOD_LABELS[data.payment.method]}:{' '}
-          {formatPaymentAmount(data.payment.amount, data.payment.currency)} · ref.{' '}
-          {data.payment.reference}
+          {t.booking.paidWith(
+            shared.paymentMethod[data.payment.method],
+            formatPaymentAmount(data.payment.amount, data.payment.currency, locale),
+            data.payment.reference,
+          )}
         </Body>
       ) : null}
       {error ? <Banner tone="error">{error}</Banner> : null}
       {status === 'held' ? (
         <Button
           variant="secondary"
-          title="Cancelar reserva"
+          title={t.booking.cancel}
           loading={busy}
           onPress={() => void cancel()}
         />

@@ -1,3 +1,5 @@
+import { DEFAULT_LOCALE, INTL_LOCALES, type Locale } from '../i18n/locales.js';
+import { SHARED_MESSAGES } from '../i18n/shared-messages.js';
 import type { Organization, OrganizationType } from './organizations.js';
 
 /**
@@ -23,10 +25,7 @@ export function runsRoutes(type: OrganizationType): boolean {
 export const STOP_KINDS = ['terminal', 'stop'] as const;
 export type StopKind = (typeof STOP_KINDS)[number];
 
-export const STOP_KIND_LABELS: Record<StopKind, string> = {
-  terminal: 'Terminal',
-  stop: 'Parada',
-};
+export const STOP_KIND_LABELS: Record<StopKind, string> = SHARED_MESSAGES.es.stopKind;
 
 export interface Stop {
   id: string;
@@ -98,11 +97,7 @@ export interface Fare {
 export const SERVICE_CLASSES = ['standard', 'executive', 'sleeper'] as const;
 export type ServiceClass = (typeof SERVICE_CLASSES)[number];
 
-export const SERVICE_CLASS_LABELS: Record<ServiceClass, string> = {
-  standard: 'Convencional',
-  executive: 'Ejecutivo',
-  sleeper: 'Buscama',
-};
+export const SERVICE_CLASS_LABELS: Record<ServiceClass, string> = SHARED_MESSAGES.es.serviceClass;
 
 /** 0 = domingo … 6 = sábado (same as `Date#getUTCDay`). */
 export const DAY_OF_WEEK_LABELS = [
@@ -258,9 +253,9 @@ export function daysBetween(fromIso: string, toIso: string): number {
   return Math.round((day(toIso) - day(fromIso)) / 86_400_000);
 }
 
-/** "martes, 20 de octubre" */
-export function longDate(isoDate: string): string {
-  return new Intl.DateTimeFormat('es-VE', {
+/** "martes, 20 de octubre" / "Tuesday, October 20" / "terça-feira, 20 de outubro" */
+export function longDate(isoDate: string, locale: Locale = DEFAULT_LOCALE): string {
+  return new Intl.DateTimeFormat(INTL_LOCALES[locale], {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -268,9 +263,13 @@ export function longDate(isoDate: string): string {
   }).format(new Date(`${isoDate.slice(0, 10)}T12:00:00Z`));
 }
 
-/** "US$ 35,00" / "Bs. 600,00" */
-export function formatMoney(amount: string, currency: Currency): string {
-  const value = new Intl.NumberFormat('es-VE', {
+/** "US$ 35,00" / "Bs. 600,00" (Spanish); "US$ 35.00" (English) */
+export function formatMoney(
+  amount: string,
+  currency: Currency,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  const value = new Intl.NumberFormat(INTL_LOCALES[locale], {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(Number(amount));

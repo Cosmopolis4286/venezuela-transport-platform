@@ -11,17 +11,11 @@ import {
   useAuth,
   userMessage,
 } from '@vtp/mobile-core';
-import {
-  TAXI_DIRECTION_LABELS,
-  TAXI_RIDE_STATUS_LABELS,
-  formatMoney,
-  taxiRideHint,
-  vehicleName,
-  type TaxiRide,
-} from '@vtp/shared-types';
+import { formatMoney, taxiRideHint, vehicleName, type TaxiRide } from '@vtp/shared-types';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { RefreshControl } from 'react-native';
+import { useT } from '@/i18n/use-t';
 import { driverLine, isOpenRide } from '@/lib/taxi';
 import { formatClock, useSecondsLeft } from '@/lib/use-countdown';
 
@@ -40,6 +34,7 @@ const TONES = {
 export default function TaxiRideScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { api } = useAuth();
+  const { t, shared, locale } = useT();
   const ride = useApi<TaxiRide>(`/me/taxi-rides/${encodeURIComponent(id)}`);
   const { reload, mutate } = ride;
   const [busy, setBusy] = useState(false);
@@ -73,37 +68,43 @@ export default function TaxiRideScreen() {
       {ride.error ? <Banner tone="error">{ride.error.userMessage}</Banner> : null}
       {data ? (
         <>
-          <Heading>{TAXI_DIRECTION_LABELS[data.direction]}</Heading>
-          <Badge label={TAXI_RIDE_STATUS_LABELS[data.status]} tone={TONES[data.status]} />
-          <Body>{taxiRideHint(data)}</Body>
+          <Heading>{shared.taxiDirection[data.direction]}</Heading>
+          <Badge label={shared.taxiRideStatus[data.status]} tone={TONES[data.status]} />
+          <Body>{taxiRideHint(data, locale)}</Body>
           {data.status === 'requested' ? (
-            <Body muted>La solicitud espera {formatClock(secondsLeft)} más.</Body>
+            <Body muted>{t.taxi.waitsFor(formatClock(secondsLeft))}</Body>
           ) : null}
 
           {data.vehicle ? (
             <Card>
-              <Subheading>Tu taxi</Subheading>
-              <Body>Placa {vehicleName(data.vehicle)}</Body>
-              <Body>{driverLine(data.driver)}</Body>
+              <Subheading>{t.taxi.yourTaxi}</Subheading>
+              <Body>{t.taxi.plate(vehicleName(data.vehicle))}</Body>
+              <Body>{driverLine(data.driver, t.taxi.driver)}</Body>
               {data.organization ? (
                 <Body muted>{data.organization.tradeName ?? data.organization.legalName}</Body>
               ) : null}
               {data.fare ? (
-                <Body>Tarifa: {formatMoney(data.fare.amount, data.fare.currency)}</Body>
+                <Body>
+                  {t.taxi.fare(formatMoney(data.fare.amount, data.fare.currency, locale))}
+                </Body>
               ) : null}
             </Card>
           ) : null}
 
           <Card>
             <Body>
-              {data.direction === 'from_terminal' ? 'Desde' : 'Hacia'} {data.terminal.name} (
-              {data.terminal.city})
+              {(data.direction === 'from_terminal' ? t.taxi.from : t.taxi.to)(
+                data.terminal.name,
+                data.terminal.city,
+              )}
             </Body>
             <Body muted>
-              {data.direction === 'from_terminal' ? 'Destino' : 'Te buscan en'}: {data.address}
+              {(data.direction === 'from_terminal' ? t.taxi.destination : t.taxi.pickup)(
+                data.address,
+              )}
             </Body>
             <Body muted>
-              {data.passengers} {data.passengers === 1 ? 'pasajero' : 'pasajeros'}
+              {t.taxi.people(data.passengers)}
               {data.notes ? ` · ${data.notes}` : ''}
             </Body>
           </Card>
@@ -112,14 +113,12 @@ export default function TaxiRideScreen() {
           {data.status === 'requested' || data.status === 'accepted' ? (
             <Button
               variant="secondary"
-              title="Cancelar el taxi"
+              title={t.taxi.cancel}
               loading={busy}
               onPress={() => void cancel()}
             />
           ) : null}
-          {!open ? (
-            <Button title="Pedir otro taxi" onPress={() => router.replace('/taxi')} />
-          ) : null}
+          {!open ? <Button title={t.taxi.another} onPress={() => router.replace('/taxi')} /> : null}
         </>
       ) : null}
     </Screen>

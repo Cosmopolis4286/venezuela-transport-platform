@@ -1,3 +1,5 @@
+import { DEFAULT_LOCALE, type Locale } from '../i18n/locales.js';
+import { SHARED_MESSAGES } from '../i18n/shared-messages.js';
 import type { TripVehicle } from './dispatch.js';
 import type { Currency, StopSummary } from './network.js';
 import type { Organization } from './organizations.js';
@@ -12,10 +14,8 @@ import type { Organization } from './organizations.js';
 export const TAXI_DIRECTIONS = ['from_terminal', 'to_terminal'] as const;
 export type TaxiDirection = (typeof TAXI_DIRECTIONS)[number];
 
-export const TAXI_DIRECTION_LABELS: Record<TaxiDirection, string> = {
-  from_terminal: 'Desde el terminal',
-  to_terminal: 'Hacia el terminal',
-};
+export const TAXI_DIRECTION_LABELS: Record<TaxiDirection, string> =
+  SHARED_MESSAGES.es.taxiDirection;
 
 /**
  * `requested` → `accepted` (driver, vehicle and fare set) → `in_progress` (passenger on board) →
@@ -32,14 +32,8 @@ export const TAXI_RIDE_STATUSES = [
 ] as const;
 export type TaxiRideStatus = (typeof TAXI_RIDE_STATUSES)[number];
 
-export const TAXI_RIDE_STATUS_LABELS: Record<TaxiRideStatus, string> = {
-  requested: 'Buscando taxi',
-  accepted: 'Taxi asignado',
-  in_progress: 'En camino',
-  completed: 'Terminado',
-  cancelled: 'Cancelado',
-  expired: 'Sin taxi disponible',
-};
+export const TAXI_RIDE_STATUS_LABELS: Record<TaxiRideStatus, string> =
+  SHARED_MESSAGES.es.taxiRideStatus;
 
 /** Statuses in which a ride still needs something to happen. */
 export const OPEN_TAXI_RIDE_STATUSES = ['requested', 'accepted', 'in_progress'] as const;
@@ -151,24 +145,14 @@ export interface ReplaceTaxiTerminalsRequest {
   stopIds: string[];
 }
 
-/** Spanish explanation of what the passenger should do next. */
-export function taxiRideHint(ride: Pick<TaxiRide, 'status' | 'direction'>): string {
-  switch (ride.status) {
-    case 'requested':
-      return 'Las líneas de taxi del terminal están viendo tu solicitud.';
-    case 'accepted':
-      return ride.direction === 'from_terminal'
-        ? 'Tu taxi va a la parada de taxis del terminal. Verifica la placa antes de subir.'
-        : 'Tu taxi va a buscarte a la dirección que indicaste. Verifica la placa antes de subir.';
-    case 'in_progress':
-      return 'Buen viaje. Paga la tarifa acordada al conductor.';
-    case 'completed':
-      return 'Viaje terminado.';
-    case 'cancelled':
-      return 'El viaje se canceló.';
-    case 'expired':
-      return 'Ningún taxi tomó la solicitud a tiempo. Puedes pedir otro.';
-  }
+/** What the passenger should do next, in `locale`. */
+export function taxiRideHint(
+  ride: Pick<TaxiRide, 'status' | 'direction'>,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  const hints = SHARED_MESSAGES[locale].taxiRideHint;
+  if (ride.status !== 'accepted') return hints[ride.status];
+  return ride.direction === 'from_terminal' ? hints.acceptedFromTerminal : hints.acceptedToTerminal;
 }
 
 /** `+584141234567` → `0414-1234567`, how Venezuelans write phone numbers; others unchanged. */

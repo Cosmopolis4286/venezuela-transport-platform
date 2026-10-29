@@ -1,4 +1,4 @@
-import { AuthProvider, SplashScreen, useAuth } from '@vtp/mobile-core';
+import { AuthProvider, I18nProvider, SplashScreen, useAuth } from '@vtp/mobile-core';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { api } from '@/lib/api';
@@ -27,9 +27,12 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider api={api}>
-      <RootNavigator />
-      <StatusBar style="auto" />
-    </AuthProvider>
+    // Staff screens are Spanish only for now (passenger app: es, en, pt-BR).
+    <I18nProvider fixedLocale="es">
+      <AuthProvider api={api}>
+        <RootNavigator />
+        <StatusBar style="auto" />
+      </AuthProvider>
+    </I18nProvider>
   );
 }

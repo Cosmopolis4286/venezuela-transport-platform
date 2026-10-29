@@ -1,27 +1,11 @@
 import {
-  API_ERROR_REASON_MESSAGES,
+  apiErrorText,
   isApiErrorResponse,
   type ApiErrorCode,
   type ApiErrorReason,
   type ApiFieldError,
 } from '@vtp/shared-types';
-
-/** User-facing Spanish messages for API error codes. Same wording as the web portal. */
-const MESSAGES: Partial<Record<ApiErrorCode, string>> = {
-  INVALID_CREDENTIALS: 'Correo o contraseña incorrectos.',
-  SESSION_EXPIRED: 'Tu sesión expiró. Inicia sesión de nuevo.',
-  UNAUTHORIZED: 'Inicia sesión para continuar.',
-  FORBIDDEN: 'No tienes permiso para hacer esto.',
-  NOT_FOUND: 'No encontramos lo que buscas.',
-  OTP_INVALID: 'El código no es válido.',
-  OTP_EXPIRED: 'El código expiró o hubo demasiados intentos. Pide uno nuevo.',
-  RATE_LIMITED: 'Demasiados intentos. Espera un momento e inténtalo de nuevo.',
-  SERVICE_UNAVAILABLE: 'El servicio no está disponible en este momento.',
-  PAYLOAD_TOO_LARGE: 'El archivo es demasiado grande.',
-  INTERNAL_ERROR: 'Ocurrió un error inesperado. Inténtalo de nuevo.',
-};
-
-const NETWORK_MESSAGE = 'No pudimos conectar con el servidor. Revisa tu conexión.';
+import { currentLocale } from '../i18n/active-locale';
 
 export class ApiError extends Error {
   constructor(
@@ -52,24 +36,25 @@ export class ApiError extends Error {
   }
 
   static network(cause: unknown): ApiError {
-    const error = new ApiError(0, 'NETWORK', NETWORK_MESSAGE);
+    const error = new ApiError(0, 'NETWORK', 'Network request failed');
     error.cause = cause;
     return error;
   }
 
-  /** Spanish text to show the user: the reason's or the code's message, else the API's own. */
+  /**
+   * Text to show the user, in the app's language: the reason's or the code's message, else the
+   * validation details or the API's own message.
+   */
   get userMessage(): string {
-    if (this.code === 'NETWORK') return NETWORK_MESSAGE;
-    if (this.reason && API_ERROR_REASON_MESSAGES[this.reason]) {
-      return API_ERROR_REASON_MESSAGES[this.reason];
-    }
-    if (MESSAGES[this.code]) return MESSAGES[this.code]!;
-    if (this.details.length) return this.details.map((d) => d.message).join('\n');
-    return this.apiMessage || MESSAGES.INTERNAL_ERROR!;
+    return apiErrorText(currentLocale(), {
+      code: this.code,
+      reason: this.reason,
+      message: this.details.map((d) => d.message).join('\n') || this.apiMessage,
+    });
   }
 }
 
 /** Message for any thrown value, for screens that catch broadly. */
 export function userMessage(error: unknown): string {
-  return error instanceof ApiError ? error.userMessage : MESSAGES.INTERNAL_ERROR!;
+  return error instanceof ApiError ? error.userMessage : apiErrorText(currentLocale(), {});
 }

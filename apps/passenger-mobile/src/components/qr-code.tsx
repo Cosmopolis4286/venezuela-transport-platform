@@ -1,6 +1,7 @@
 import createQr from 'qrcode-generator';
 import { useMemo } from 'react';
 import { View } from 'react-native';
+import { useT } from '@/i18n/use-t';
 
 const QUIET_ZONE = 4;
 
@@ -27,12 +28,13 @@ function qrRows(value: string): { dark: boolean; length: number }[][] {
  * so scanners read it.
  */
 export function QrCode({ value, size = 220 }: { value: string; size?: number }) {
+  const { t } = useT();
   const rows = useMemo(() => qrRows(value), [value]);
   const cell = Math.floor(size / (rows.length + QUIET_ZONE * 2));
   return (
     <View
       accessibilityRole="image"
-      accessibilityLabel="Código QR del boleto"
+      accessibilityLabel={t.booking.qrA11y}
       style={{ backgroundColor: '#ffffff', padding: cell * QUIET_ZONE, alignSelf: 'center' }}
     >
       {rows.map((runs, row) => (

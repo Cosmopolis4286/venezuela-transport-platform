@@ -1,3 +1,5 @@
+import { SHARED_MESSAGES } from '../i18n/shared-messages.js';
+
 /**
  * Stable, machine-readable error codes. Clients branch on `code`, never on `message`.
  * Add new codes freely; renaming or removing one is a breaking change.
@@ -53,28 +55,8 @@ export const API_ERROR_REASONS = [
 
 export type ApiErrorReason = (typeof API_ERROR_REASONS)[number];
 
-/** What to tell the user for each reason, in Spanish. */
-export const API_ERROR_REASON_MESSAGES: Record<ApiErrorReason, string> = {
-  SEAT_TAKEN: 'Alguien acaba de apartar uno de esos puestos. Vuelve atrás y elige otro.',
-  TOO_MANY_HOLDS: 'Tienes reservas sin pagar. Págalas o cancélalas antes de apartar más puestos.',
-  DEPARTURE_NOT_BOOKABLE: 'Esta salida ya no se puede reservar.',
-  BOOKING_NOT_AWAITING_PAYMENT: 'Esta reserva ya no está esperando el pago.',
-  PAYMENT_METHOD_UNAVAILABLE: 'Ese método de pago no está disponible para esta reserva.',
-  VEHICLE_PLATE_TAKEN: 'Ya tienes un vehículo con esa placa.',
-  VEHICLE_INACTIVE: 'Ese vehículo está inactivo.',
-  VEHICLE_LAYOUT_MISMATCH: 'Ese vehículo tiene otro mapa de puestos que esta salida.',
-  VEHICLE_BUSY: 'Ese vehículo ya está en otro viaje a esa hora.',
-  DRIVER_BUSY: 'Ese conductor ya está en otro viaje a esa hora.',
-  TRIP_CANCELLED: 'Esta salida está cancelada.',
-  TAXI_TERMINAL_NOT_SERVED: 'Ninguna línea de taxi atiende ese terminal en este momento.',
-  TAXI_RIDE_OPEN: 'Ya tienes un taxi en curso. Ábrelo para ver su estado.',
-  TAXI_RIDE_TAKEN: 'Otro taxi tomó la solicitud, o ya venció.',
-  TAXI_RIDE_NOT_CANCELLABLE: 'Este taxi ya no se puede cancelar.',
-  TAXI_RIDE_NOT_RELEASABLE: 'Solo se puede liberar un viaje que aún no ha empezado.',
-  TAXI_RIDE_WRONG_STEP: 'El viaje cambió de estado. Actualiza la pantalla.',
-  TAXI_LINE_INACTIVE: 'La línea de taxi no está activa.',
-  NOT_A_TAXI_LINE: 'Solo las líneas de taxi atienden solicitudes de taxi.',
-};
+/** What to tell the user for each reason, in Spanish (other languages: `sharedMessages`). */
+export const API_ERROR_REASON_MESSAGES: Record<ApiErrorReason, string> = SHARED_MESSAGES.es.reasons;
 
 /** One problem with a specific input field. */
 export interface ApiFieldError {

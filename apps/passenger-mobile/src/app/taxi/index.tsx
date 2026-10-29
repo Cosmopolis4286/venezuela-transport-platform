@@ -14,8 +14,7 @@ import {
   userMessage,
 } from '@vtp/mobile-core';
 import {
-  TAXI_DIRECTION_LABELS,
-  TAXI_RIDE_STATUS_LABELS,
+  TAXI_DIRECTIONS,
   type TaxiDirection,
   type TaxiRide,
   type TaxiTerminal,
@@ -23,19 +22,21 @@ import {
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, Text } from 'react-native';
+import { useT } from '@/i18n/use-t';
 import { isOpenRide } from '@/lib/taxi';
 import { useRefreshOnFocus } from '@/lib/use-refresh-on-focus';
 
-const DIRECTIONS = (['from_terminal', 'to_terminal'] as const).map((value) => ({
-  value,
-  label: TAXI_DIRECTION_LABELS[value],
-}));
 const PASSENGERS = (['1', '2', '3', '4'] as const).map((value) => ({ value, label: value }));
 
 /** Ask for a taxi to or from a terminal; the taxi lines there take it. */
 export default function RequestTaxiScreen() {
   const { api } = useAuth();
   const colors = useColors();
+  const { t, shared } = useT();
+  const directions = TAXI_DIRECTIONS.map((value) => ({
+    value,
+    label: shared.taxiDirection[value],
+  }));
   const terminals = useApi<TaxiTerminal[]>('/taxi/terminals', { auth: false });
   const rides = useApi<TaxiRide[]>('/me/taxi-rides');
   useRefreshOnFocus(rides.reload);
@@ -76,28 +77,23 @@ export default function RequestTaxiScreen() {
 
   return (
     <Screen>
-      <Heading>Taxi desde o hacia el terminal</Heading>
-      <Body muted>
-        Las líneas de taxi del terminal ven tu solicitud; la primera que la toma te dice la tarifa.
-        Pagas al conductor.
-      </Body>
+      <Heading>{t.taxi.heading}</Heading>
+      <Body muted>{t.taxi.intro}</Body>
 
       {open ? (
         <Card>
-          <Body>Ya tienes un taxi: {TAXI_RIDE_STATUS_LABELS[open.status].toLowerCase()}.</Body>
+          <Body>{t.taxi.alreadyHave(shared.taxiRideStatus[open.status])}</Body>
           <Button
-            title="Ver mi taxi"
+            title={t.taxi.viewMine}
             onPress={() => router.push({ pathname: '/taxi/[id]', params: { id: open.id } })}
           />
         </Card>
       ) : (
         <>
-          <Subheading>Terminal</Subheading>
+          <Subheading>{t.taxi.terminal}</Subheading>
           {terminals.error ? <Banner tone="error">{terminals.error.userMessage}</Banner> : null}
           {terminals.loading && !terminals.data ? <ActivityIndicator color={colors.text} /> : null}
-          {terminals.data?.length === 0 ? (
-            <Body muted>Todavía ninguna línea de taxi ofrece este servicio.</Body>
-          ) : null}
+          {terminals.data?.length === 0 ? <Body muted>{t.taxi.noneYet}</Body> : null}
           {terminals.data?.map((terminal) => {
             const selected = terminal.id === terminalId;
             return (
@@ -118,8 +114,7 @@ export default function RequestTaxiScreen() {
                     {terminal.name}
                   </Text>
                   <Body muted>
-                    {terminal.city} · {terminal.lines}{' '}
-                    {terminal.lines === 1 ? 'línea de taxi' : 'líneas de taxi'}
+                    {terminal.city} · {t.taxi.lines(terminal.lines)}
                   </Body>
                 </Card>
               </Pressable>
@@ -128,34 +123,34 @@ export default function RequestTaxiScreen() {
 
           <Card>
             <Segmented
-              label="Viaje"
-              options={DIRECTIONS}
+              label={t.taxi.trip}
+              options={directions}
               value={direction}
               onChange={setDirection}
             />
             <Field
-              label={direction === 'from_terminal' ? '¿A dónde vas?' : '¿Dónde te buscamos?'}
-              placeholder="Calle, sector y un punto de referencia"
+              label={direction === 'from_terminal' ? t.taxi.whereTo : t.taxi.whereFrom}
+              placeholder={t.taxi.addressPlaceholder}
               value={address}
               onChangeText={setAddress}
               maxLength={200}
             />
             <Segmented
-              label="Pasajeros"
+              label={t.taxi.passengers}
               options={PASSENGERS}
               value={passengers}
               onChange={setPassengers}
             />
             <Field
-              label="Notas (opcional)"
-              placeholder="Equipaje, mascotas, silla de ruedas…"
+              label={t.taxi.notes}
+              placeholder={t.taxi.notesPlaceholder}
               value={notes}
               onChangeText={setNotes}
               maxLength={200}
             />
             <Field
-              label="Teléfono de contacto (opcional)"
-              hint="Solo lo ve el conductor que tome tu viaje. Si no lo escribes, usamos el de tu cuenta."
+              label={t.taxi.phone}
+              hint={t.taxi.phoneHint}
               placeholder="0414-1234567"
               keyboardType="phone-pad"
               value={phone}
@@ -163,7 +158,7 @@ export default function RequestTaxiScreen() {
             />
             {error ? <Banner tone="error">{error}</Banner> : null}
             <Button
-              title="Pedir taxi"
+              title={t.taxi.request}
               loading={busy}
               disabled={!ready}
               onPress={() => void submit()}
@@ -174,7 +169,7 @@ export default function RequestTaxiScreen() {
 
       {rides.data?.some((r) => !isOpenRide(r)) ? (
         <>
-          <Subheading>Taxis anteriores</Subheading>
+          <Subheading>{t.taxi.previous}</Subheading>
           {rides.data
             .filter((r) => !isOpenRide(r))
             .slice(0, 5)
@@ -186,10 +181,10 @@ export default function RequestTaxiScreen() {
               >
                 <Card>
                   <Body>
-                    {TAXI_DIRECTION_LABELS[ride.direction]} · {ride.terminal.name}
+                    {shared.taxiDirection[ride.direction]} · {ride.terminal.name}
                   </Body>
                   <Body muted>
-                    {ride.address} · {TAXI_RIDE_STATUS_LABELS[ride.status]}
+                    {ride.address} · {shared.taxiRideStatus[ride.status]}
                   </Body>
                 </Card>
               </Pressable>
