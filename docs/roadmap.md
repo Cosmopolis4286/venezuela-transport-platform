@@ -8,7 +8,8 @@ proveedor de pagos simulado:
 
 - la venta de boletos: búsqueda, puestos en el mapa, pago, QR y abordaje;
 - la operación de las empresas: vehículos, y vehículo y conductor por salida;
-- los taxis desde y hacia los terminales.
+- los taxis desde y hacia los terminales;
+- para el pasajero, en español, inglés y portugués de Brasil.
 
 Nada está listo todavía para usuarios reales ni dinero real; ver
 [Antes de producción](#antes-de-producción). Lo que necesita una decisión del dueño del producto
@@ -45,6 +46,7 @@ Leyenda: ✅ listo · 🟡 parcial · ⏭️ siguiente · ⬜ pendiente
 | Vehículos y asignación de viajes | ✅     | Placas y mapa de puestos por vehículo, tablero de despacho del día, sin cruces de horario, viajes del conductor en la app ([dispatch](architecture/dispatch.md)); faltan los documentos de los vehículos         |
 | Notificaciones                   | ⬜     | SMS / WhatsApp / correo / push (códigos, confirmación de pago, recordatorios de viaje)                                                                                                                           |
 | Reportes                         | ⬜     | Ventas y ocupación para las empresas; métricas para la plataforma                                                                                                                                                |
+| Idiomas                          | ✅     | Web pública y app de pasajeros en español, inglés y portugués de Brasil ([i18n](architecture/i18n.md)); portal y app de transportistas solo en español                                                           |
 | Despliegue                       | ⬜     | Preparación documentada ([VPS](deployment/vps-preparation.md)); nada desplegado                                                                                                                                  |
 
 ## Próximos pasos
@@ -71,6 +73,8 @@ En orden; cada uno es un pull request.
 - Móvil: selector de fecha nativo; texto en español para todos los mensajes de validación de la
   API; notificaciones push en vez de deslizar para actualizar.
 - Pagos: limpieza periódica de los apartados vencidos (hoy se liberan al vuelo).
+- Idiomas: traducir el portal y la app de transportistas si llegan empresas o conductores que no
+  hablen español; mensajes de validación de la API en el idioma del usuario.
 - Taxis: cobro dentro de la plataforma, tarifas fijas por zona, ubicación en vivo, avisos push,
   calificaciones.
 - Despacho: documentos de los vehículos con vencimiento; aviso al conductor cuando le asignan un

@@ -3,9 +3,8 @@ import {
   formatDuration,
   formatMoney,
   localTime,
+  localeSegment,
   longDate,
-  ORGANIZATION_TYPE_LABELS,
-  SERVICE_CLASS_LABELS,
   type Departure,
 } from '@vtp/shared-types';
 import type { Metadata } from 'next';
@@ -14,16 +13,21 @@ import { Suspense } from 'react';
 import { SearchForm } from '@/components/search/search-form';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { getMessages } from '@/i18n/locale';
 import { searchDepartures } from '@/lib/server/network';
 
-export const metadata: Metadata = { title: 'Buscar viajes' };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getMessages();
+  return { title: t.meta.search };
+}
 
 const param = (value: string | string[] | undefined) => (typeof value === 'string' ? value : '');
 
-export default function SearchPage({ searchParams }: PageProps<'/buscar'>) {
+export default async function SearchPage({ searchParams }: PageProps<'/[lang]/buscar'>) {
+  const { t } = await getMessages();
   return (
     <section className="flex flex-col gap-6">
-      <Suspense fallback={<p className="text-muted-foreground">Buscando…</p>}>
+      <Suspense fallback={<p className="text-muted-foreground">{t.results.searching}</p>}>
         <Results searchParams={searchParams} />
       </Suspense>
     </section>
@@ -36,39 +40,39 @@ async function Results({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
+  const { locale, t } = await getMessages();
   const from = param(params.from);
   const to = param(params.to);
   const date = param(params.date);
   const complete = from && to && date;
-  const result = complete ? await searchDepartures(from, to, date) : null;
+  const result = complete ? await searchDepartures(from, to, date, locale) : null;
   const first = result?.departures?.[0];
 
   return (
     <>
       <SearchForm from={from} to={to} date={date || undefined} />
       {!complete ? (
-        <Alert>Elige el origen, el destino y la fecha.</Alert>
+        <Alert>{t.results.choose}</Alert>
       ) : result?.error ? (
         <Alert variant="destructive">{result.error}</Alert>
       ) : (
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h1 className="text-xl font-semibold">
-              {first ? `${first.from.city} → ${first.to.city}` : 'Resultados'}
+              {first ? `${first.from.city} → ${first.to.city}` : t.results.heading}
             </h1>
             <p className="text-sm text-muted-foreground">
-              {longDate(date)} · {result!.departures!.length}{' '}
-              {result!.departures!.length === 1 ? 'salida' : 'salidas'} ·{' '}
-              <Link href={`/buscar?from=${to}&to=${from}&date=${date}`} className="underline">
-                Ver el regreso
+              {longDate(date, locale)} · {t.results.departures(result!.departures!.length)} ·{' '}
+              <Link
+                href={`/${localeSegment(locale)}/buscar?from=${to}&to=${from}&date=${date}`}
+                className="underline"
+              >
+                {t.results.returnTrip}
               </Link>
             </p>
           </div>
           {result!.departures!.length === 0 ? (
-            <Alert>
-              No hay salidas publicadas para ese día. Prueba con otra fecha o con una terminal
-              cercana.
-            </Alert>
+            <Alert>{t.results.none}</Alert>
           ) : (
             <ul className="flex flex-col gap-3">
               {result!.departures!.map((departure) => (
@@ -79,17 +83,15 @@ async function Results({
               ))}
             </ul>
           )}
-          <p className="text-xs text-muted-foreground">
-            Horas de Venezuela. La compra de boletos en línea llegará pronto; por ahora compra en la
-            taquilla de la empresa.
-          </p>
+          <p className="text-xs text-muted-foreground">{t.results.footnote}</p>
         </div>
       )}
     </>
   );
 }
 
-function DepartureCard({ departure }: { departure: Departure }) {
+async function DepartureCard({ departure }: { departure: Departure }) {
+  const { locale, t, shared } = await getMessages();
   const extraDays = daysBetween(departure.departsAt, departure.arrivesAt);
   const operator = departure.operator.tradeName ?? departure.operator.legalName;
   return (
@@ -98,28 +100,30 @@ function DepartureCard({ departure }: { departure: Departure }) {
         <time dateTime={departure.departsAt}>{localTime(departure.departsAt)}</time>
         <span className="text-sm font-normal text-muted-foreground">
           → {localTime(departure.arrivesAt)}
-          {extraDays ? ` (+${extraDays} d)` : ''}
+          {extraDays ? t.results.dayOffset(extraDays) : ''}
         </span>
       </div>
       <div className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center gap-2">
           <p className="font-medium">{operator}</p>
-          <Badge variant="outline">{SERVICE_CLASS_LABELS[departure.serviceClass]}</Badge>
+          <Badge variant="outline">{shared.serviceClass[departure.serviceClass]}</Badge>
           {departure.operator.type === 'taxi_line' ? (
-            <Badge variant="secondary">{ORGANIZATION_TYPE_LABELS.taxi_line}</Badge>
+            <Badge variant="secondary">{shared.organizationType.taxi_line}</Badge>
           ) : null}
         </div>
         <p className="text-sm text-muted-foreground">
           {departure.from.name} → {departure.to.name} · {formatDuration(departure.durationMinutes)}{' '}
-          · {departure.seatsAvailable} de {departure.seats} puestos libres · ruta{' '}
-          {departure.route.name}
+          · {t.results.seatsFree(departure.seatsAvailable, departure.seats)} ·{' '}
+          {t.results.route(departure.route.name)}
         </p>
       </div>
       <p className="text-lg font-semibold sm:text-right">
         {departure.fare ? (
-          formatMoney(departure.fare.amount, departure.fare.currency)
+          formatMoney(departure.fare.amount, departure.fare.currency, locale)
         ) : (
-          <span className="text-sm font-normal text-muted-foreground">Precio en taquilla</span>
+          <span className="text-sm font-normal text-muted-foreground">
+            {t.results.priceAtCounter}
+          </span>
         )}
       </p>
     </li>

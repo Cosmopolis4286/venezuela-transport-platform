@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getCurrentUser } from '@/lib/server/session';
-import { logout } from '@/app/portal/actions';
+import { logout } from '@/app/(site)/portal/actions';
 
 /** Reads the session: render inside <Suspense>. */
 export async function UserMenu() {

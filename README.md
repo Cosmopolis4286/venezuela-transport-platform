@@ -15,10 +15,10 @@ terminales, taxistas y operadores de transporte.
 
 | App                                             | Para                                             | Funciones                                                                                                                                                  |
 | ----------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Web (`apps/web`)                                | Pasajeros                                        | Búsqueda de viajes (`/buscar`) con puestos libres                                                                                                          |
+| Web (`apps/web`)                                | Pasajeros                                        | Búsqueda de viajes (`/es/buscar`, también en inglés y portugués) con puestos libres                                                                        |
 | Portal (`apps/web`, `/portal`)                  | Empresas de autobuses, líneas de taxis, personal | Equipo e invitaciones, solicitantes, rutas, tarifas, horarios, mapas de puestos, vehículos, despacho, taxis, tasas de cambio, viajes y listas de pasajeros |
 | Panel de administración (`apps/web`, `/admin`)  | Personal de la plataforma                        | Aprobar organizaciones y solicitudes KYC, catálogo de paradas                                                                                              |
-| App de pasajeros (`apps/passenger-mobile`)      | Pasajeros                                        | Búsqueda, puestos en el mapa del bus, apartar y pagar, boletos QR, "Mis viajes", pedir un taxi                                                             |
+| App de pasajeros (`apps/passenger-mobile`)      | Pasajeros                                        | Búsqueda, puestos en el mapa del bus, apartar y pagar, boletos QR, "Mis viajes", pedir un taxi; en español, inglés y portugués                             |
 | App de transportistas (`apps/transport-mobile`) | Conductores, inspectores, personal               | Invitaciones, solicitud KYC, escáner de boletos al abordar, viajes asignados al conductor                                                                  |
 
 ## La arquitectura de un vistazo
@@ -145,6 +145,7 @@ Redis es opcional y está apagado por defecto; nada del flujo normal de `pnpm de
 - [Pagos y boletos](docs/architecture/payments.md)
 - [Despacho: vehículos y conductores de cada viaje](docs/architecture/dispatch.md)
 - [Taxis desde y hacia los terminales](docs/architecture/taxis.md)
+- [Idiomas: español, inglés y portugués de Brasil](docs/architecture/i18n.md)
 - [Instalación local (Windows, macOS, Linux)](docs/development/local-setup.md)
 - [Correr con Docker: local, híbrido, completo](docs/development/docker.md)
 - [Probar en Android: Expo Go, emulador, APK](docs/development/android-testing.md)

@@ -13,6 +13,12 @@ pull request.
 
 ### Agregado
 
+- **Inglés y portugués de Brasil para el pasajero.** La web pública (`/es`, `/en`, `/pt-br`) y toda
+  la app de pasajeros, incluidos el inicio de sesión, los estados, los métodos de pago y los
+  mensajes de error, ahora también están en inglés y en portugués de Brasil. El idioma se toma del
+  navegador o del teléfono y se puede cambiar con un selector; la elección se recuerda. `/` y
+  `/buscar` redirigen al idioma del visitante. El portal y la app de transportistas siguen en
+  español. Ver [docs/architecture/i18n.md](docs/architecture/i18n.md).
 - **Taxis desde y hacia los terminales.** Los pasajeros piden un taxi en la app (terminal,
   sentido, dirección); las líneas de taxi que operan en ese terminal ven la solicitud, y la
   primera que la toma (un conductor desde su app o un despachador desde el portal) fija el
@@ -40,6 +46,8 @@ pull request.
 
 ### Cambiado
 
+- La web pública cambió de dirección: `/es` y `/es/buscar` (las anteriores, `/` y `/buscar`,
+  redirigen). Los textos que decían que la compra de boletos "llegará pronto" ya no lo dicen.
 - Los viajes y la lista de pasajeros del portal muestran el vehículo y el conductor asignados.
 - Los teléfonos se muestran en formato venezolano (`0414-1234567`) en el portal y las apps.
 - Las respuestas de error de la API pueden traer un **`reason`** estable (por ejemplo

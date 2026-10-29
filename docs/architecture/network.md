@@ -58,7 +58,7 @@ primera reserva, a partir del mismo cálculo ([bookings.md](bookings.md)).
 
 ## Dónde buscan los pasajeros
 
-- **Web** `/` y `/buscar?from=&to=&date=`: un formulario GET simple, así los resultados funcionan
+- **Web** `/{idioma}` y `/{idioma}/buscar?from=&to=&date=` ([idiomas](i18n.md)): un formulario GET simple, así los resultados funcionan
   sin JavaScript y se pueden compartir como enlaces. La lista de paradas se guarda en caché unos
   minutos; las salidas nunca. El formulario lee las paradas solo al atender la solicitud, así que
   la compilación nunca llama a la API.

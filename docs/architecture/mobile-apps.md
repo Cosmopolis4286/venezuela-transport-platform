@@ -41,6 +41,12 @@ que ninguna pantalla decide a dónde ir después de iniciar o cerrar sesión. La
 búsqueda de pasajeros quedan fuera de ambas protecciones: la búsqueda es pública, y
 `useApi(path, { auth: false })` la llama sin sesión.
 
+## Idiomas
+
+La app de pasajeros está en español, inglés y portugués de Brasil: toma el idioma del teléfono y
+se puede cambiar en **Idioma** (inicio y Mi cuenta); la elección se recuerda en el dispositivo. La
+app de transportistas está fijada en español. Detalles en [i18n.md](i18n.md).
+
 ## Manejo de la sesión (`@vtp/mobile-core`)
 
 - `ApiClient` inicia sesión con `client: 'passenger'` o `client: 'transport'`; las sesiones nunca

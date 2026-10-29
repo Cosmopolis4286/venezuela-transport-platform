@@ -8,7 +8,7 @@ API; el servidor web nunca toca la base de datos.
 
 | Ruta                                               | Quién                     | Qué                                                                                                                                                                        |
 | -------------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`, `/buscar`                                     | Cualquiera                | Búsqueda de viajes: origen, destino y fecha; salidas con horas, empresa, clase, tarifa y puestos libres                                                                    |
+| `/es`, `/es/buscar` (y `/en`, `/pt-br`)            | Cualquiera                | Búsqueda de viajes en español, inglés o portugués ([idiomas](i18n.md)): origen, destino y fecha; salidas con horas, empresa, clase, tarifa y puestos libres                |
 | `/login`                                           | Cualquiera                | Iniciar sesión con un código (SMS / WhatsApp / correo) o con correo + contraseña                                                                                           |
 | `/register`                                        | Cualquiera                | Crear una cuenta con correo + contraseña                                                                                                                                   |
 | `/portal`                                          | Con sesión                | Mis organizaciones, invitaciones pendientes (aceptar / rechazar)                                                                                                           |
@@ -29,6 +29,9 @@ API; el servidor web nunca toca la base de datos.
 
 Las secciones que un rol no puede usar no se muestran, pero **la API aplica cada permiso**; la
 interfaz solo lo refleja (`permissions` viene con cada membresía).
+
+El portal y el panel de administración están solo en español; la web pública también en inglés y
+portugués de Brasil ([idiomas](i18n.md)).
 
 ## Manejo de la sesión
 

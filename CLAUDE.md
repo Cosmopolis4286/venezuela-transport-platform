@@ -31,6 +31,10 @@ that app.
   ticket validation), payments (exchange rates, `PaymentProvider` adapters, simulated provider until real
   ones exist; ADR-018/021), dispatch (vehicle and driver per trip, driver's trips), taxi (rides to and from terminals,
   first line to accept wins, paid to the driver for now). No settlements yet.
+- Passenger texts are translated (es source, en, pt-BR; see `docs/architecture/i18n.md`): add new
+  strings to the dictionaries (`shared-types/src/i18n`, `mobile-core/src/i18n`,
+  `apps/passenger-mobile/src/i18n`, `apps/web/src/i18n`), never inline. Public web pages live in
+  `app/[lang]`; portal, admin and login in `app/(site)` (Spanish).
 - Web forms: use `ActionForm` (pass `resetOnSuccess` only for "add" forms) and map API errors to
   Spanish with `failure(error, messages)` from `src/lib/server/form-actions.ts`.
 - Docs live in `docs/`; update `.env.example` files and `docs/development/environment-variables.md`

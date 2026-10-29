@@ -1,11 +1,15 @@
 import type { AuthResponse } from '@vtp/shared-types';
 import { NextResponse, type NextRequest } from 'next/server';
+import { LOCALE_COOKIE, localeRoute } from './lib/locale-routing';
 import { cookieNames, needsRefresh, sessionCookies } from './lib/server/cookies';
 import { createDedupedRefresh } from './lib/server/refresh';
 
 /**
- * Optimistic gate for signed-in areas: redirects to /login without a session and refreshes the
- * access token shortly before it expires. Real authorization happens in the API on every call.
+ * Two jobs:
+ * - Public pages: sends `/` and `/buscar` to the visitor's language (`/es`, `/en`, `/pt-br`) and
+ *   remembers the language of every localized page visited.
+ * - Signed-in areas: redirects to /login without a session and refreshes the access token shortly
+ *   before it expires. Real authorization happens in the API on every call.
  */
 const production = process.env.NODE_ENV === 'production';
 const names = cookieNames(production);
@@ -34,7 +38,35 @@ function toLogin(request: NextRequest, expired: boolean): NextResponse {
   return response;
 }
 
+const YEAR_SECONDS = 365 * 24 * 3600;
+
+function localize(request: NextRequest): NextResponse {
+  const route = localeRoute(
+    request.nextUrl.pathname,
+    request.cookies.get(LOCALE_COOKIE)?.value,
+    request.headers.get('accept-language'),
+  );
+  if ('redirect' in route) {
+    const url = request.nextUrl.clone();
+    url.pathname = route.redirect;
+    return NextResponse.redirect(url);
+  }
+  const response = NextResponse.next();
+  if (request.cookies.get(LOCALE_COOKIE)?.value !== route.locale) {
+    response.cookies.set(LOCALE_COOKIE, route.locale, {
+      path: '/',
+      sameSite: 'lax',
+      secure: production,
+      maxAge: YEAR_SECONDS,
+    });
+  }
+  return response;
+}
+
 export async function proxy(request: NextRequest): Promise<NextResponse> {
+  const { pathname } = request.nextUrl;
+  if (!pathname.startsWith('/portal') && !pathname.startsWith('/admin')) return localize(request);
+
   const refreshToken = request.cookies.get(names.refresh)?.value;
   if (!refreshToken) return toLogin(request, false);
 
@@ -54,5 +86,12 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 }
 
 export const config = {
-  matcher: ['/portal/:path*', '/admin/:path*'],
+  matcher: [
+    '/portal/:path*',
+    '/admin/:path*',
+    '/',
+    '/buscar',
+    '/(es|en|pt-br)',
+    '/(es|en|pt-br)/:path*',
+  ],
 };
