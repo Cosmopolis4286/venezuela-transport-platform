@@ -3,7 +3,7 @@
 Módulo `apps/api/src/modules/dispatch`, contratos en `packages/shared-types/src/api/dispatch.ts`.
 Los despachadores asignan un **vehículo** ([flota](fleet.md#vehículos)) y un **conductor** a cada
 salida, y los conductores ven en la app de transportistas los viajes que les tocan y quién viaja.
-Es la base del despacho de taxis, que viene después.
+Los taxis desde y hacia los terminales funcionan aparte, por solicitud: ver [taxis](taxis.md).
 
 ## Tablero del día
 
@@ -64,5 +64,4 @@ Un viaje de otro conductor, o de una organización de la que ya no conduce, da 4
 ## Todavía no
 
 Documentos de los vehículos (registro, póliza) con vencimiento, avisos al conductor cuando le
-asignan un viaje, que el conductor marque la salida y la llegada, ubicación en tiempo real y el
-despacho de taxis desde y hacia los terminales.
+asignan un viaje, que el conductor marque la salida y la llegada, y ubicación en tiempo real.

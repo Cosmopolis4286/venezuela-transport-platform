@@ -24,6 +24,8 @@ function RootNavigator() {
         <Stack.Screen name="passengers" options={{ title: 'Pasajeros' }} />
         <Stack.Screen name="booking/[id]" options={{ title: 'Tu reserva' }} />
         <Stack.Screen name="bookings" options={{ title: 'Mis viajes' }} />
+        <Stack.Screen name="taxi/index" options={{ title: 'Pedir un taxi' }} />
+        <Stack.Screen name="taxi/[id]" options={{ title: 'Tu taxi' }} />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />

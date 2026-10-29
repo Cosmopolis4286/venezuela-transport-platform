@@ -96,6 +96,21 @@ async function Organization({ params }: { params: Promise<{ organizationId: stri
           </div>
         </Card>
       ) : null}
+      {organization.type === 'taxi_line' ? (
+        <Card>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-col gap-1">
+              <CardTitle>Taxis</CardTitle>
+              <CardDescription>
+                Terminales donde opera la línea y solicitudes de los pasajeros.
+              </CardDescription>
+            </div>
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/portal/organizations/${organization.id}/taxi`}>Abrir taxis</Link>
+            </Button>
+          </div>
+        </Card>
+      ) : null}
       {runsRoutes(organization.type) && permissions.includes('operations.dispatch') ? (
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-3">

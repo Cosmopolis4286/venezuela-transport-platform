@@ -170,3 +170,9 @@ export function taxiRideHint(ride: Pick<TaxiRide, 'status' | 'direction'>): stri
       return 'Ningún taxi tomó la solicitud a tiempo. Puedes pedir otro.';
   }
 }
+
+/** `+584141234567` → `0414-1234567`, how Venezuelans write phone numbers; others unchanged. */
+export function localPhone(e164: string): string {
+  const match = /^\+58(\d{3})(\d{7})$/.exec(e164);
+  return match ? `0${match[1]}-${match[2]}` : e164;
+}

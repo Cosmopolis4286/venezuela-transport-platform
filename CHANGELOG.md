@@ -13,6 +13,13 @@ pull request.
 
 ### Agregado
 
+- **Taxis desde y hacia los terminales.** Los pasajeros piden un taxi en la app (terminal,
+  sentido, dirección); las líneas de taxi que operan en ese terminal ven la solicitud, y la
+  primera que la toma (un conductor desde su app o un despachador desde el portal) fija el
+  vehículo y la tarifa. El pasajero ve la placa, el conductor y la tarifa; el conductor marca
+  pasajero a bordo y viaje terminado. La base de datos garantiza un taxi abierto por pasajero y
+  un viaje activo por conductor y por vehículo. Por ahora el pago es directo al conductor. Ver
+  [docs/architecture/taxis.md](docs/architecture/taxis.md).
 - **Vehículos y despacho.** Las empresas registran sus vehículos (placa, nombre interno, mapa de
   puestos) y asignan un vehículo y un conductor a cada salida desde el tablero de despacho del
   portal, que muestra todas las salidas del día, tengan reservas o no. La API impide que un

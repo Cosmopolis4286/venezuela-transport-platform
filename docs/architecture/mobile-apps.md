@@ -25,8 +25,11 @@ ADR-016). Los contratos vienen de `@vtp/shared-types`.
 | Pasajeros      | `/passengers`       | Con sesión: nombre y documento por puesto (el primero se llena con la cuenta), luego apartar los puestos                  |
 | Pasajeros      | `/booking/:id`      | Código de reserva, estado, cuenta regresiva del apartado; pagar (método, instrucciones, referencia); boleto QR por puesto |
 | Pasajeros      | `/bookings`         | "Mis viajes": las reservas del usuario, de la más reciente a la más antigua                                               |
+| Pasajeros      | `/taxi`             | Pedir un taxi desde o hacia un terminal: terminal, sentido, dirección, pasajeros, notas, teléfono; taxis anteriores       |
+| Pasajeros      | `/taxi/:id`         | El taxi pedido: estado (se actualiza cada 5 s), placa, conductor, tarifa; cancelar antes de subir                         |
 | Pasajeros      | `/account`          | Solo con sesión: cuenta y contactos verificados, "Mis viajes", cerrar sesión                                              |
 | Transportistas | `/`                 | "Mis viajes" (conductores), invitaciones pendientes (aceptar / rechazar), mis organizaciones y roles, mi solicitud        |
+| Transportistas | `/taxi`             | Taxistas: solicitudes de sus terminales, tomar una con vehículo y tarifa, pasajero a bordo, terminar o liberar el viaje   |
 | Transportistas | `/trip/:tripId`     | Viaje del conductor: horas, vehículo, puestos ocupados y pasajeros con su tramo, pago y abordaje (sin documentos)         |
 | Transportistas | `/application`      | Datos de la solicitud, documentos requeridos con carga y veredictos de la revisión, enviar a revisión                     |
 | Transportistas | `/application/edit` | Rol, organización (buscada en el directorio), datos personales, vehículo para taxistas                                    |
@@ -71,6 +74,12 @@ de otras salidas (ver [payments.md](payments.md#boletos)). El texto del permiso 
 Los miembros cuyo rol conduce (`trips.drive`) ven en el inicio los viajes que les asignó el
 despachador ([despacho](dispatch.md#los-conductores)), desde los que llegaron hace menos de 12
 horas. Al tocar uno ven quién sube y baja en cada parada, si su reserva está pagada y si ya abordó.
+
+## Taxis (las dos apps)
+
+Los pasajeros piden un taxi desde el inicio (**Pedir un taxi**) y siguen su estado; los
+conductores de una línea de taxi activa ven **Solicitudes de taxi** en su organización y toman
+una con su vehículo y la tarifa. Detalles en [taxis.md](taxis.md).
 
 ## Solicitud KYC (app de transportistas)
 

@@ -163,6 +163,11 @@ export default function Home() {
                 tone={statusTone(organization.status)}
               />
             </Row>
+            {organization.status === 'active' &&
+            organization.type === 'taxi_line' &&
+            permissions.includes('trips.drive') ? (
+              <Button title="Solicitudes de taxi" onPress={() => router.push('/taxi')} />
+            ) : null}
             {organization.status === 'active' && permissions.includes('tickets.validate') ? (
               <Button
                 title="Validar boletos"

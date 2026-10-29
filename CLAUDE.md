@@ -26,8 +26,8 @@ that app.
 - Implemented so far: identity (auth), audit, organizations, onboarding (KYC), network (stops, routes,
   fares, schedules, departure search), fleet (seat maps, vehicles), bookings (trips, seat holds, manifests,
   ticket validation), payments (exchange rates, `PaymentProvider` adapters, simulated provider until real
-  ones exist; ADR-018/021), dispatch (vehicle and driver per trip, driver's trips). No settlements or taxi
-  dispatch yet.
+  ones exist; ADR-018/021), dispatch (vehicle and driver per trip, driver's trips), taxi (rides to and from terminals,
+  first line to accept wins, paid to the driver for now). No settlements yet.
 - Web forms: use `ActionForm` (pass `resetOnSuccess` only for "add" forms) and map API errors to
   Spanish with `failure(error, messages)` from `src/lib/server/form-actions.ts`.
 - Docs live in `docs/`; update `.env.example` files and `docs/development/environment-variables.md`

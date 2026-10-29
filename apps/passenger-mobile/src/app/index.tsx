@@ -77,6 +77,16 @@ export default function SearchScreen() {
         <Button title="Buscar salidas" disabled={!ready} onPress={() => router.push('/results')} />
       </Card>
 
+      <Card>
+        <Subheading>Taxi en el terminal</Subheading>
+        <Body muted>Pide un taxi para salir del terminal o para llegar a tiempo a tu autobús.</Body>
+        <Button
+          variant="secondary"
+          title="Pedir un taxi"
+          onPress={() => router.push(state.status === 'signedIn' ? '/taxi' : '/sign-in')}
+        />
+      </Card>
+
       <Subheading>Tu cuenta</Subheading>
       {state.status === 'signedIn' ? (
         <Button variant="secondary" title="Mi cuenta" onPress={() => router.push('/account')} />
