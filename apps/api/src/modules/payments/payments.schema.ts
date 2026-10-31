@@ -68,6 +68,8 @@ export const payments = pgTable(
     receivedAmount: numeric({ precision: 14, scale: 2 }),
     expiresAt: timestamp({ withTimezone: true }),
     confirmedAt: timestamp({ withTimezone: true }),
+    /** Part of `amount` that goes back after the passenger cancelled; null: all that arrived. */
+    refundAmount: numeric({ precision: 14, scale: 2 }),
     /** Set when platform staff send a `refund_due` payment back (`refunded`). */
     refundedAt: timestamp({ withTimezone: true }),
     refundReference: text(),

@@ -12,6 +12,7 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type {
   Booking,
+  CancellationQuote,
   TicketValidation,
   ValidateTicketRequest,
   TripAvailability,
@@ -74,6 +75,15 @@ export class BookingsController {
     @Param('bookingId', ParseUUIDPipe) bookingId: string,
   ): Promise<Booking> {
     return this.bookings.getMine(auth.user.id, bookingId);
+  }
+
+  @ApiBearerAuth()
+  @Get('me/bookings/:bookingId/cancellation')
+  cancellation(
+    @CurrentAuth() auth: Authenticated,
+    @Param('bookingId', ParseUUIDPipe) bookingId: string,
+  ): Promise<CancellationQuote> {
+    return this.bookings.cancellationQuote(auth.user.id, bookingId);
   }
 
   @ApiBearerAuth()

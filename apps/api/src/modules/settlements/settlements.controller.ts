@@ -17,6 +17,7 @@ import type {
   Payout,
   RefundDuePayment,
   SettlementEntry,
+  SettlementPolicy,
 } from '@vtp/shared-types';
 import { CurrentAuth, ReqMeta } from '../identity/auth.decorators.js';
 import { RequirePlatformRole } from '../identity/platform-role.guard.js';
@@ -29,8 +30,9 @@ import {
 import {
   CreatePayoutDto,
   MarkRefundedDto,
-  SetCommissionDto,
+  SetOrganizationPolicyDto,
   SettlementEntriesQueryDto,
+  SettlementPolicyDto,
   VoidPayoutDto,
 } from './settlements.dto.js';
 import { SettlementsService } from './settlements.service.js';
@@ -95,14 +97,28 @@ export class AdminSettlementsController {
     return this.settlements.payouts(organizationId);
   }
 
-  @Put('organizations/:organizationId/commission')
-  setCommission(
+  @Get('settlement-policy')
+  platformPolicy(): Promise<SettlementPolicy> {
+    return this.settlements.platformPolicy();
+  }
+
+  @Put('settlement-policy')
+  setPlatformPolicy(
+    @Body() body: SettlementPolicyDto,
+    @CurrentAuth() auth: Authenticated,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<SettlementPolicy> {
+    return this.settlements.setPlatformPolicy(body, auth, meta);
+  }
+
+  @Put('organizations/:organizationId/policy')
+  setOrganizationPolicy(
     @Param('organizationId', ParseUUIDPipe) organizationId: string,
-    @Body() body: SetCommissionDto,
+    @Body() body: SetOrganizationPolicyDto,
     @CurrentAuth() auth: Authenticated,
     @ReqMeta() meta: RequestMeta,
   ): Promise<OrganizationSettlement> {
-    return this.settlements.setCommission(organizationId, body.rate, auth, meta);
+    return this.settlements.setOrganizationPolicy(organizationId, body, auth, meta);
   }
 
   @Post('organizations/:organizationId/payouts')

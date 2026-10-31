@@ -14,6 +14,7 @@ import {
   type RefundDuePayment,
   type Route,
   type SettlementEntry,
+  type SettlementPolicy,
   type Stop,
 } from '@vtp/shared-types';
 import { eq, sql } from 'drizzle-orm';
@@ -49,7 +50,6 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
     process.env.RATE_LIMIT_MAX = '10000';
     process.env.OTP_RESEND_SECONDS = '0';
     process.env.OTP_MAX_PER_HOUR = '100';
-    process.env.PLATFORM_COMMISSION_PERCENT = '10';
     const { AppModule } = await import('../src/app.module.js');
     const { configureApp } = await import('../src/app.setup.js');
     const { OTP_SENDER } = await import('../src/modules/identity/otp/otp-sender.js');
@@ -63,7 +63,6 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
   });
 
   afterAll(async () => {
-    delete process.env.PLATFORM_COMMISSION_PERCENT;
     await app?.close();
   });
 
@@ -206,11 +205,35 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
         (await http().get(`${org}/settlement`).set('Authorization', auth).expect(200))
           .body as OrganizationSettlement;
 
+      // --- The platform policy: admins read and edit it; reviewers cannot.
+      const platformPolicy = (
+        await http()
+          .get('/api/v1/admin/settlement-policy')
+          .set('Authorization', admin.auth)
+          .expect(200)
+      ).body as SettlementPolicy;
+      const putPlatform = (body: object, auth = admin.auth) =>
+        http().put('/api/v1/admin/settlement-policy').set('Authorization', auth).send(body);
+      await putPlatform(platformPolicy, reviewer.auth).expect(403);
+      await putPlatform({ ...platformPolicy, commissionRate: '120' }).expect(400);
+      await putPlatform({ ...platformPolicy, refundTiers: [] }).expect(400);
+      await putPlatform({
+        ...platformPolicy,
+        refundTiers: [
+          { hoursBefore: 2, percent: 50 },
+          { hoursBefore: 48, percent: 100 },
+        ],
+      }).expect(400);
+      // Saving the same values back leaves the shared default untouched for other tests.
+      expect((await putPlatform(platformPolicy).expect(200)).body).toEqual(platformPolicy);
+
       // --- Nothing earned yet: the platform default applies.
       expect(await settlement()).toEqual({
         organizationId: organization.id,
-        commissionRate: '10.00',
+        commissionRate: platformPolicy.commissionRate,
         commissionOverride: null,
+        refundTiers: platformPolicy.refundTiers,
+        refundTiersOverride: null,
         balances: [],
       });
       // Active bus companies are listed for the admins before their first sale.
@@ -223,12 +246,32 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
               .expect(200)
           ).body as AdminSettlementSummary[]
         ).find((s) => s.organization.id === organization.id),
-      ).toMatchObject({ commissionRate: '10.00', balances: [] });
+      ).toMatchObject({ commissionRate: platformPolicy.commissionRate, balances: [] });
       // Non-members do not see it; platform reviewers cannot touch money.
       await http().get(`${org}/settlement`).set('Authorization', passenger.auth).expect(404);
       await http().get('/api/v1/admin/settlements').set('Authorization', reviewer.auth).expect(403);
 
-      // --- Two seats paid at the default 10 %: 50.00 gross, 5.00 commission, 45.00 earned.
+      // --- An agreed policy for this operator applies to bookings paid from then on.
+      const policy = (
+        commissionRate: string | null | number,
+        auth = admin.auth,
+        refundTiers: object[] | null = null,
+      ) =>
+        http()
+          .put(`/api/v1/admin/organizations/${organization.id}/policy`)
+          .set('Authorization', auth)
+          .send({ commissionRate, refundTiers });
+      await policy('10', admin.auth, [{ hoursBefore: 24, percent: 90 }])
+        .expect(200)
+        .expect((res) =>
+          expect(res.body).toMatchObject({
+            commissionRate: '10.00',
+            commissionOverride: '10.00',
+            refundTiers: [{ hoursBefore: 24, percent: 90 }],
+          }),
+        );
+
+      // --- Two seats paid at 10 %: 50.00 gross, 5.00 commission, 45.00 earned.
       const first = await payUsdt(await book(['1', '2']));
       expect(first.booking.status).toBe('confirmed');
       // A repeated notification does not earn twice.
@@ -238,17 +281,13 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
         .send({})
         .expect(200);
 
-      // --- An agreed commission for this operator applies to bookings paid from then on.
-      const commission = (rate: string | null | number, auth = admin.auth) =>
-        http()
-          .put(`/api/v1/admin/organizations/${organization.id}/commission`)
-          .set('Authorization', auth)
-          .send({ rate });
-      await commission('8.5', reviewer.auth).expect(403);
-      await commission('101').expect(400);
-      await commission('8.555').expect(400);
-      await commission(8).expect(400);
-      await commission('8.5', admin.auth)
+      // --- A new commission applies to bookings paid from then on.
+      await policy('8.5', reviewer.auth).expect(403);
+      await policy('101').expect(400);
+      await policy('8.555').expect(400);
+      await policy(8).expect(400);
+      await policy('8.5', admin.auth, [{ hoursBefore: 24, percent: 101 }]).expect(400);
+      await policy('8.5', admin.auth)
         .expect(200)
         .expect((res) =>
           expect(res.body).toMatchObject({ commissionRate: '8.50', commissionOverride: '8.50' }),
@@ -355,11 +394,12 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
         .set('Authorization', admin.auth)
         .expect(404);
 
-      // Back to the default: new bookings pay 10 % again; earned entries keep their rate.
-      await commission(null).expect(200);
+      // Back to the default: earned entries keep their rate.
+      await policy(null).expect(200);
       expect(await settlement()).toMatchObject({
-        commissionRate: '10.00',
+        commissionRate: platformPolicy.commissionRate,
         commissionOverride: null,
+        refundTiersOverride: null,
       });
 
       // --- Refunds: short money is refunded; platform admins mark it as sent back.

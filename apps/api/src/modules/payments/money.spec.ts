@@ -12,7 +12,7 @@ describe('money', () => {
     expect(toScaled('1.50', 2)).toBe(150n);
     expect(toScaled('1.500', 2)).toBe(150n);
     expect(() => toScaled('1.505', 2)).toThrow(/decimals/);
-    expect(() => toScaled('-1', 2)).toThrow();
+    expect(() => toScaled('+1', 2)).toThrow();
     expect(fromScaled(5n, 2)).toBe('0.05');
     expect(fromScaled(123_456n, 2)).toBe('1234.56');
   });
@@ -43,5 +43,14 @@ describe('money', () => {
     expect(compareAmounts('10.00', '10')).toBe(0);
     expect(compareAmounts('9.99', '10.00')).toBe(-1);
     expect(compareAmounts('10.01', '10.00')).toBe(1);
+  });
+});
+
+describe('signed amounts', () => {
+  it('round-trips negative values', () => {
+    expect(toScaled('-1.5', 2)).toBe(-150n);
+    expect(fromScaled(-150n, 2)).toBe('-1.50');
+    expect(fromScaled(-5n, 2)).toBe('-0.05');
+    expect(fromScaled(0n, 2)).toBe('0.00');
   });
 });

@@ -4,7 +4,9 @@ import {
   MAX_SEATS_PER_BOOKING,
   TICKET_QR_PREFIX,
   toNetworkIso,
+  refundPercentFor,
   type Booking,
+  type CancellationQuote,
   type CreateBookingRequest,
   type TripManifest,
   type TripSummary,
@@ -12,7 +14,11 @@ import {
 import { and, asc, count, desc, eq, gt, inArray, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { ApiException } from '../../common/errors/api.exception.js';
-import { DatabaseService, type Transaction } from '../../database/database.service.js';
+import {
+  DatabaseService,
+  type Database,
+  type Transaction,
+} from '../../database/database.service.js';
 import { AppConfigService } from '../../config/app-config.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { vehicles } from '../fleet/fleet.schema.js';
@@ -22,7 +28,8 @@ import { routes, routeSchedules } from '../network/network.schema.js';
 import { StopsService } from '../network/stops.service.js';
 import { organizations } from '../organizations/organizations.schema.js';
 import { currentPayment, toPayment } from '../payments/payment-view.js';
-import { payments } from '../payments/payments.schema.js';
+import { payments, type PaymentRow } from '../payments/payments.schema.js';
+import { percentOf, policyFor, recordCancellation } from '../settlements/ledger.js';
 import {
   bookingPassengers,
   bookings,
@@ -198,23 +205,56 @@ export class BookingsService {
     return (await this.toBookings([await this.requireMine(userId, bookingId)]))[0]!;
   }
 
-  /** Releases the seats of a held booking. Paid bookings are cancelled through refunds (payments). */
+  /** What cancelling a paid booking now would refund, per the operator's policy (ADR-025). */
+  async cancellationQuote(userId: string, bookingId: string): Promise<CancellationQuote> {
+    const booking = await this.requireMine(userId, bookingId);
+    if (booking.status !== 'confirmed')
+      throw conflict('Only paid bookings have a refund quote', 'BOOKING_NOT_CANCELLABLE');
+    return (await this.quote(this.database.db, booking)).quote;
+  }
+
+  /**
+   * Cancels a booking and frees its seats. A held one simply goes; a paid one is refunded per the
+   * operator's policy (the refund joins the admins' queue) until the bus leaves or someone boards.
+   */
   async cancelMine(auth: Authenticated, bookingId: string, meta: RequestMeta): Promise<Booking> {
     const booking = await this.requireMine(auth.user.id, bookingId);
-    if (booking.status !== 'held')
-      throw conflict(`A ${booking.status} booking cannot be cancelled here`);
+    if (booking.status !== 'held' && booking.status !== 'confirmed') {
+      throw conflict(`A ${booking.status} booking cannot be cancelled`, 'BOOKING_NOT_CANCELLABLE');
+    }
+    let refundPercent: number | null = null;
     const cancelled = await this.database.db.transaction(async (tx) => {
+      // Lock the booking: a payment confirming it, or a second cancel, waits for this one.
+      const [locked] = await tx
+        .select()
+        .from(bookings)
+        .where(eq(bookings.id, booking.id))
+        .for('update');
+      if (locked?.status !== booking.status) throw conflict('The booking changed, reload and retry');
+      if (locked.status === 'confirmed') {
+        const { quote, payment, fareRefund } = await this.quote(tx, locked);
+        if (!quote.cancellable) {
+          throw conflict('The bus left or a passenger boarded', 'BOOKING_NOT_CANCELLABLE');
+        }
+        refundPercent = quote.refundPercent;
+        if (payment && quote.refund) {
+          await tx
+            .update(payments)
+            .set({ status: 'refund_due', refundAmount: quote.refund.amount })
+            .where(eq(payments.id, payment.id));
+        }
+        if (quote.refundPercent > 0) await recordCancellation(tx, locked.id, fareRefund);
+      }
       const [row] = await tx
         .update(bookings)
         .set({ status: 'cancelled', cancelledAt: new Date(), expiresAt: null })
-        .where(and(eq(bookings.id, booking.id), eq(bookings.status, 'held')))
+        .where(eq(bookings.id, locked.id))
         .returning();
-      if (!row) throw conflict('The booking changed, reload and retry');
       await tx
         .update(bookingPassengers)
         .set({ active: false })
-        .where(eq(bookingPassengers.bookingId, booking.id));
-      return row;
+        .where(eq(bookingPassengers.bookingId, locked.id));
+      return row!;
     });
     await this.audit.record({
       action: 'booking.cancelled',
@@ -222,8 +262,50 @@ export class BookingsService {
       targetType: 'booking',
       targetId: booking.id,
       ip: meta.ip,
+      metadata: refundPercent === null ? undefined : { paid: true, refundPercent },
     });
     return (await this.toBookings([cancelled]))[0]!;
+  }
+
+  /** Refund for a confirmed booking now: in the payment's currency, and in the fare's. */
+  private async quote(
+    db: Database | Transaction,
+    booking: BookingRow,
+  ): Promise<{ quote: CancellationQuote; payment: PaymentRow | undefined; fareRefund: string }> {
+    const [trip] = await db
+      .select({ organizationId: trips.organizationId })
+      .from(trips)
+      .where(eq(trips.id, booking.tripId));
+    const { refundTiers } = await policyFor(db, trip!.organizationId);
+    const [boarded] = await db
+      .select({ n: count() })
+      .from(bookingPassengers)
+      .where(
+        and(
+          eq(bookingPassengers.bookingId, booking.id),
+          sql`${bookingPassengers.boardedAt} is not null`,
+        ),
+      );
+    const [payment] = await db
+      .select()
+      .from(payments)
+      .where(and(eq(payments.bookingId, booking.id), eq(payments.status, 'confirmed')));
+    const hoursLeft = (booking.departsAt.getTime() - Date.now()) / 3_600_000;
+    const cancellable = hoursLeft > 0 && (boarded?.n ?? 0) === 0;
+    const refundPercent = cancellable ? refundPercentFor(refundTiers, hoursLeft) : 0;
+    const refundAmount = payment ? percentOf(payment.amount, refundPercent) : '0.00';
+    return {
+      quote: {
+        cancellable,
+        hoursBeforeDeparture: Math.round(hoursLeft * 10) / 10,
+        refundPercent,
+        refund:
+          payment && refundPercent > 0 ? { amount: refundAmount, currency: payment.currency } : null,
+        policy: refundTiers,
+      },
+      payment,
+      fareRefund: percentOf(booking.totalAmount, refundPercent),
+    };
   }
 
   /**

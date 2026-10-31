@@ -318,10 +318,11 @@ describe.runIf(expectDatabase)('Payments and tickets (e2e)', () => {
       );
       await options(ana.auth, held.id).expect(409);
       await pay(ana.auth, held.id, 'usdt').expect(409);
+      // A paid booking can be cancelled with a refund (see cancellations.e2e-spec.ts).
       await http()
-        .post(`/api/v1/me/bookings/${held.id}/cancel`)
+        .get(`/api/v1/me/bookings/${held.id}/cancellation`)
         .set('Authorization', ana.auth)
-        .expect(409);
+        .expect(200);
 
       // --- Money that arrives just after the hold ran out still confirms if the seats are free.
       const late = await book(luis.auth, ['3']);
