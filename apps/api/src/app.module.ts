@@ -15,6 +15,7 @@ import { NetworkModule } from './modules/network/network.module.js';
 import { OnboardingModule } from './modules/onboarding/onboarding.module.js';
 import { OrganizationsModule } from './modules/organizations/organizations.module.js';
 import { PaymentsModule } from './modules/payments/payments.module.js';
+import { SettlementsModule } from './modules/settlements/settlements.module.js';
 import { TaxiModule } from './modules/taxi/taxi.module.js';
 import { StorageModule } from './storage/storage.module.js';
 
@@ -45,6 +46,7 @@ import { StorageModule } from './storage/storage.module.js';
     NetworkModule,
     BookingsModule,
     PaymentsModule,
+    SettlementsModule,
     DispatchModule,
     TaxiModule,
   ],

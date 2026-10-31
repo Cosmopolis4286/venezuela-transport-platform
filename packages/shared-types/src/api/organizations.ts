@@ -59,6 +59,7 @@ export const ORGANIZATION_PERMISSIONS = [
   'tickets.sell',
   'tickets.validate',
   'trips.drive',
+  'finance.view',
 ] as const;
 export type OrganizationPermission = (typeof ORGANIZATION_PERMISSIONS)[number];
 
@@ -74,6 +75,7 @@ export const ROLE_PERMISSIONS: Record<OrganizationRole, readonly OrganizationPer
     'bookings.view',
     'tickets.sell',
     'tickets.validate',
+    'finance.view',
   ],
   dispatcher: ['members.view', 'operations.dispatch', 'bookings.view'],
   ticket_agent: ['tickets.sell', 'bookings.view'],

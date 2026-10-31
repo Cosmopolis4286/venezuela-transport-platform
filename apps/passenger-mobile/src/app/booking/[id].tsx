@@ -55,6 +55,7 @@ export default function BookingScreen() {
   // The server releases the seats when the hold runs out; reflect it without waiting for a reload.
   const status = data.status === 'held' && secondsLeft === 0 ? 'expired' : data.status;
   const refundDue = data.payment?.status === 'refund_due' && status !== 'held';
+  const refunded = data.payment?.status === 'refunded' && status !== 'held';
   const extraDays = daysBetween(data.trip.departsAt, data.trip.arrivesAt);
 
   const cancel = async () => {
@@ -87,6 +88,7 @@ export default function BookingScreen() {
       {status === 'confirmed' ? <Banner tone="success">{t.booking.confirmed}</Banner> : null}
       {status === 'expired' ? <Banner tone="error">{t.booking.expired}</Banner> : null}
       {refundDue ? <Banner tone="warning">{t.booking.refundDue}</Banner> : null}
+      {refunded ? <Banner tone="info">{t.booking.refunded}</Banner> : null}
 
       <Card>
         <Heading>

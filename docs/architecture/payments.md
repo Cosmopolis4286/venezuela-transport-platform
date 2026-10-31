@@ -3,7 +3,8 @@
 Módulo `apps/api/src/modules/payments`, contratos en `packages/shared-types/src/api/payments.ts`.
 Es el paso 3 del ADR-018: el pasajero paga una reserva apartada, la plataforma confirma el pago
 automáticamente y cada puesto recibe un boleto con un código QR que los inspectores escanean al
-abordar. Las liquidaciones a las empresas (tarifas menos comisión) son el paso siguiente.
+abordar. Lo que cada reserva pagada le deja a la empresa (tarifa menos comisión) y la cola de
+reembolsos están en [settlements.md](settlements.md).
 
 ## Flujo
 
@@ -42,6 +43,7 @@ ofrece. Con una tarifa en bolívares, el pago móvil y la transferencia no neces
 | `confirmed`  | Llegó a tiempo; la reserva queda confirmada                                                   |
 | `cancelled`  | Reemplazado por otro método, o la reserva se canceló o venció antes de que llegara el dinero  |
 | `refund_due` | Llegó dinero para una reserva que ya no se puede confirmar, o llegó de menos o en otra moneda |
+| `refunded`   | Un administrador de la plataforma devolvió un pago `refund_due` (con su referencia)           |
 
 Reglas:
 
@@ -49,7 +51,9 @@ Reglas:
   mientras sus puestos no se hayan liberado (nadie más puede apartarlos antes de eso). Los bloqueos
   de fila ordenan la confirmación y la liberación de apartados vencidos.
 - El dinero de un pago anulado, o de menos, queda como `refund_due` y nunca confirma la reserva.
-  Pagar de más la confirma. Los reembolsos se hacen a mano hasta el paso de liquidaciones.
+  Pagar de más la confirma. Los reembolsos se hacen a mano y se registran en **Reembolsos**
+  ([settlements.md](settlements.md)).
+- Confirmar una reserva escribe, en la misma transacción, lo que gana la empresa.
 - `receive` es idempotente: una notificación repetida no cambia nada.
 - Los pagos pendientes de reservas canceladas o vencidas se anulan al vuelo, igual que los
   apartados vencidos.
@@ -114,6 +118,5 @@ Eventos de auditoría: `payment.created`, `payment.confirmed`, `payment.refund_d
 
 ## Todavía no
 
-Adaptadores de proveedores reales (primero contratos y revisión legal, ver ADR-018), reembolsos y
-cancelación de reservas pagadas, la comisión de la plataforma y las liquidaciones a las empresas,
-y la validación sin conexión.
+Adaptadores de proveedores reales (primero contratos y revisión legal, ver ADR-018), cancelación
+de reservas pagadas con su reembolso, y la validación sin conexión.

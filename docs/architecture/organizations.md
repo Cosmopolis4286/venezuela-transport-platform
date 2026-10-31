@@ -32,6 +32,7 @@ Un rol por persona en cada organización. Una persona puede pertenecer a varias 
 | `tickets.sell`                                    |  ✅   |  ✅   |            |      ✅      |        |           |
 | `tickets.validate` (escanear boletos)             |  ✅   |  ✅   |            |              |        |    ✅     |
 | `trips.drive`                                     |  ✅   |       |            |              |   ✅   |           |
+| `finance.view` (saldo y liquidaciones)            |  ✅   |  ✅   |            |              |        |           |
 
 Reglas además de la matriz:
 

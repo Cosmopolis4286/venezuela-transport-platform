@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { COMMISSION_PATTERN } from '@vtp/shared-types';
 
 const booleanString = z
   .enum(['true', 'false', '1', '0', ''])
@@ -80,6 +81,14 @@ export const envSchema = z
      * until a real provider adapter is configured.
      */
     PAYMENT_PROVIDER: z.enum(['simulated', 'disabled']).optional(),
+    /**
+     * Platform commission on bus fares, as a percentage with up to two decimals, for operators
+     * without their own rate (set by platform staff). Applies to bookings paid from then on.
+     */
+    PLATFORM_COMMISSION_PERCENT: z
+      .string()
+      .regex(COMMISSION_PATTERN, 'Use a percentage between 0 and 100 with up to two decimals')
+      .default('0'),
 
     REDIS_URL: z
       .union([z.url({ protocol: /^rediss?$/ }), z.literal('')])

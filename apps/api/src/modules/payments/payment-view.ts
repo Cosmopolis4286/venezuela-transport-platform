@@ -28,7 +28,9 @@ export function currentPayment(rows: PaymentRow[], bookingHeld: boolean): Paymen
   return (
     (bookingHeld ? rows.find((p) => p.status === 'pending') : undefined) ??
     rows
-      .filter((p) => p.status === 'confirmed' || p.status === 'refund_due')
+      .filter(
+        (p) => p.status === 'confirmed' || p.status === 'refund_due' || p.status === 'refunded',
+      )
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]
   );
 }

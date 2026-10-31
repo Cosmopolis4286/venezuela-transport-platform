@@ -51,6 +51,10 @@ export const API_ERROR_REASONS = [
   'TAXI_RIDE_WRONG_STEP',
   'TAXI_LINE_INACTIVE',
   'NOT_A_TAXI_LINE',
+  // Settlements and refunds
+  'PAYOUT_EXCEEDS_BALANCE',
+  'PAYOUT_ALREADY_VOIDED',
+  'PAYMENT_NOT_REFUND_DUE',
 ] as const;
 
 export type ApiErrorReason = (typeof API_ERROR_REASONS)[number];

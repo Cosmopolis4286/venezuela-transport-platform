@@ -83,7 +83,8 @@ Módulos, aproximadamente en orden de dependencia:
 | `network` ✅       | Catálogo de paradas (terminales y paradas, PostGIS), rutas, tarifas, horarios recurrentes, búsqueda pública de salidas ([network.md](network.md))      |
 | `fleet` ✅         | Mapas de puestos por tipo de vehículo y vehículos de cada empresa ([fleet.md](fleet.md))                                                               |
 | `bookings` ✅      | Viajes, puestos apartados, listas de pasajeros, validación de boletos al abordar ([bookings.md](bookings.md))                                          |
-| `payments` ✅      | Tasas de cambio, pagos mediante adaptadores de proveedores, confirmación de reservas ([payments.md](payments.md)); las liquidaciones vienen después    |
+| `payments` ✅      | Tasas de cambio, pagos mediante adaptadores de proveedores, confirmación de reservas ([payments.md](payments.md))                                      |
+| `settlements` ✅   | Lo que gana cada empresa por reserva pagada, comisión, pagos a las empresas, cola de reembolsos ([settlements.md](settlements.md))                     |
 | `dispatch` ✅      | Asignación de vehículo y conductor a cada viaje, viajes del conductor ([dispatch.md](dispatch.md))                                                     |
 | `taxi` ✅          | Taxis desde y hacia los terminales: solicitudes, la línea que las toma, ciclo de vida del viaje ([taxis.md](taxis.md))                                 |
 | `notifications`    | Envío de SMS / push / correo, plantillas                                                                                                               |

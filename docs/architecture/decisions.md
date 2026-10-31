@@ -350,3 +350,24 @@ el repositorio vuelva a ser privado. Nunca debe subirse un secreto (el historial
 publicarlo y estaba limpio). Los pull requests de forks corren en máquinas desechables de GitHub,
 con un token de solo lectura y sin secretos; GitHub desaconseja construirlos en runners propios
 de repositorios públicos, por eso el runner propio ya no se activa con pull requests.
+
+## ADR-024: Un libro de ganancias por reserva, en la moneda de la tarifa, con comisión por empresa
+
+**Decisión.** Cada reserva pagada escribe una fila inmutable con lo que gana la empresa (tarifa
+menos comisión), en la misma transacción que la confirma y en la moneda de la tarifa. La comisión
+es un porcentaje por defecto de la plataforma (`PLATFORM_COMMISSION_PERCENT`, 0 hasta que se
+decida el número) que un administrador puede reemplazar para una empresa. Los pagos a las empresas
+se registran a mano, nunca por encima del saldo, y un error se anula en vez de editarse. Ver
+[settlements.md](settlements.md).
+
+**Por qué.** Es la recomendación de la hoja de ruta: un valor por defecto permite empezar y la
+comisión por empresa permite negociar con las grandes sin cambiar código. Guardar la comisión y los
+montos en cada fila hace que el saldo de una empresa no cambie cuando cambia la comisión, y que se
+pueda explicar fila por fila. Contar en la moneda de la tarifa deja el riesgo de cambio con quien
+fija la tasa (la empresa) y evita convertir dos veces.
+
+**Compromisos.** Hasta que se fije la comisión real, la plataforma no gana nada por los boletos.
+Los pagos a las empresas y los reembolsos son transferencias manuales que hay que registrar; un
+proveedor de pagos podría automatizarlos más adelante. El saldo se calcula sumando filas cada vez:
+alcanza para miles de reservas por empresa; con mucho más volumen convendrá guardar saldos
+mensuales.
