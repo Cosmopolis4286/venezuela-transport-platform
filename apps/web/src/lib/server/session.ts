@@ -37,3 +37,10 @@ export async function requirePlatformStaff(): Promise<UserProfile> {
   if (!user.platformRole) redirect('/portal');
   return user;
 }
+
+/** Money pages (settlements, refunds): platform admins only; reviewers go back to /admin. */
+export async function requirePlatformAdmin(): Promise<UserProfile> {
+  const user = await requirePlatformStaff();
+  if (user.platformRole !== 'admin') redirect('/admin');
+  return user;
+}

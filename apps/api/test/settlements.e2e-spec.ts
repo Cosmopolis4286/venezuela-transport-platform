@@ -213,6 +213,17 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
         commissionOverride: null,
         balances: [],
       });
+      // Active bus companies are listed for the admins before their first sale.
+      expect(
+        (
+          (
+            await http()
+              .get('/api/v1/admin/settlements')
+              .set('Authorization', admin.auth)
+              .expect(200)
+          ).body as AdminSettlementSummary[]
+        ).find((s) => s.organization.id === organization.id),
+      ).toMatchObject({ commissionRate: '10.00', balances: [] });
       // Non-members do not see it; platform reviewers cannot touch money.
       await http().get(`${org}/settlement`).set('Authorization', passenger.auth).expect(404);
       await http().get('/api/v1/admin/settlements').set('Authorization', reviewer.auth).expect(403);
@@ -330,6 +341,19 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
         commissionOverride: '8.50',
         balances: [{ currency: 'USD', balance: '0.00' }],
       });
+
+      expect(
+        (
+          await http()
+            .get(`/api/v1/admin/organizations/${organization.id}/settlement`)
+            .set('Authorization', admin.auth)
+            .expect(200)
+        ).body,
+      ).toMatchObject({ organization: { id: organization.id }, commissionRate: '8.50' });
+      await http()
+        .get(`/api/v1/admin/organizations/${randomUUID()}/settlement`)
+        .set('Authorization', admin.auth)
+        .expect(404);
 
       // Back to the default: new bookings pay 10 % again; earned entries keep their rate.
       await commission(null).expect(200);

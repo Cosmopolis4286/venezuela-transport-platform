@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { UserMenu } from '@/components/portal/user-menu';
-import { requirePlatformStaff } from '@/lib/server/session';
+import { getCurrentUser, requirePlatformStaff } from '@/lib/server/session';
 
 export const metadata: Metadata = {
   title: 'Administración',
@@ -21,6 +21,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Link href="/admin/stops" className="text-sm opacity-90 hover:underline">
               Terminales y paradas
             </Link>
+            <Suspense>
+              <MoneyLinks />
+            </Suspense>
           </nav>
           <Suspense>
             <UserMenu />
@@ -40,4 +43,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 async function StaffOnly({ children }: { children: React.ReactNode }) {
   await requirePlatformStaff();
   return children;
+}
+
+/** Settlements and refunds move money: only platform admins see them (the API agrees). */
+async function MoneyLinks() {
+  const user = await getCurrentUser();
+  if (user.platformRole !== 'admin') return null;
+  return (
+    <>
+      <Link href="/admin/settlements" className="text-sm opacity-90 hover:underline">
+        Liquidaciones
+      </Link>
+      <Link href="/admin/refunds" className="text-sm opacity-90 hover:underline">
+        Reembolsos
+      </Link>
+    </>
+  );
 }

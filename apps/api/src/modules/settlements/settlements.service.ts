@@ -12,7 +12,7 @@ import {
   type SettlementBalance,
   type SettlementEntry,
 } from '@vtp/shared-types';
-import { and, desc, eq, gte, inArray, isNull, lt, sql, type AnyColumn } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNull, lt, or, sql, type AnyColumn } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { AppConfigService } from '../../config/app-config.service.js';
 import { DatabaseService } from '../../database/database.service.js';
@@ -40,6 +40,12 @@ const invalid = (message: string) =>
 const total = (column: AnyColumn) =>
   sql<string>`coalesce(sum(${column}), 0)::numeric(14, 2)::text`;
 
+const organizationColumns = {
+  id: organizations.id,
+  type: organizations.type,
+  name: sql<string>`coalesce(${organizations.tradeName}, ${organizations.legalName})`,
+};
+
 interface Totals {
   organizationId: string;
   currency: Currency;
@@ -65,14 +71,7 @@ export class SettlementsService {
 
   async settlement(organizationId: string): Promise<OrganizationSettlement> {
     const [summary] = await this.summaries([organizationId]);
-    return (
-      summary ?? {
-        organizationId,
-        commissionRate: this.defaultRate,
-        commissionOverride: null,
-        balances: [],
-      }
-    );
+    return summary!;
   }
 
   /** Paid bookings of one Venezuelan calendar month (`YYYY-MM`, the current one by default). */
@@ -124,37 +123,34 @@ export class SettlementsService {
 
   // --- Platform staff -------------------------------------------------------------------------
 
-  /** Every operator with earnings, payouts or its own commission, by name. */
+  /** Active bus companies, plus any operator with earnings or payouts, by name. */
   async adminSummaries(): Promise<AdminSettlementSummary[]> {
-    const ids = await this.database.db
+    const withMoney = this.database.db
       .selectDistinct({ id: settlementEntries.organizationId })
       .from(settlementEntries)
-      .union(this.database.db.selectDistinct({ id: payouts.organizationId }).from(payouts))
-      .union(
-        this.database.db
-          .select({ id: organizationCommissions.organizationId })
-          .from(organizationCommissions),
-      );
-    if (!ids.length) return [];
+      .union(this.database.db.selectDistinct({ id: payouts.organizationId }).from(payouts));
     const orgs = await this.database.db
-      .select({
-        id: organizations.id,
-        type: organizations.type,
-        name: sql<string>`coalesce(${organizations.tradeName}, ${organizations.legalName})`,
-      })
+      .select(organizationColumns)
       .from(organizations)
       .where(
-        inArray(
-          organizations.id,
-          ids.map((r) => r.id),
+        or(
+          and(eq(organizations.status, 'active'), eq(organizations.type, 'bus_company')),
+          inArray(organizations.id, withMoney),
         ),
       );
-    const summaries = new Map(
-      (await this.summaries(orgs.map((o) => o.id))).map((s) => [s.organizationId, s]),
-    );
+    const summaries = await this.summaries(orgs.map((o) => o.id));
     return orgs
-      .map((organization) => ({ ...summaries.get(organization.id)!, organization }))
+      .map((organization, i) => ({ ...summaries[i]!, organization }))
       .sort((a, b) => a.organization.name.localeCompare(b.organization.name, 'es'));
+  }
+
+  async adminSummary(organizationId: string): Promise<AdminSettlementSummary> {
+    const [organization] = await this.database.db
+      .select(organizationColumns)
+      .from(organizations)
+      .where(eq(organizations.id, organizationId));
+    if (!organization) throw notFound('Organization not found');
+    return { ...(await this.settlement(organizationId)), organization };
   }
 
   async setCommission(
@@ -297,10 +293,7 @@ export class SettlementsService {
       .select({
         payment: payments,
         bookingCode: bookings.code,
-        organization: {
-          id: organizations.id,
-          name: sql<string>`coalesce(${organizations.tradeName}, ${organizations.legalName})`,
-        },
+        organization: { id: organizations.id, name: organizationColumns.name },
         payer: {
           firstName: users.firstName,
           lastName: users.lastName,
@@ -382,7 +375,7 @@ export class SettlementsService {
     if (!row) throw notFound('Organization not found');
   }
 
-  /** Commission and balances per currency for each organization (only those with data). */
+  /** Commission and balances per currency, one per organization id, in the same order. */
   private async summaries(organizationIds: string[]): Promise<OrganizationSettlement[]> {
     if (!organizationIds.length) return [];
     const earned = await this.database.db
@@ -415,24 +408,18 @@ export class SettlementsService {
       const key = `${row.organizationId}:${row.currency}`;
       totals.set(key, { ...totals.get(key), ...row });
     }
-    const withData = new Set([
-      ...[...totals.values()].map((t) => t.organizationId),
-      ...overrides.map((o) => o.organizationId),
-    ]);
-    return organizationIds
-      .filter((id) => withData.has(id))
-      .map((organizationId) => {
-        const override = overrides.find((o) => o.organizationId === organizationId)?.rate ?? null;
-        return {
-          organizationId,
-          commissionRate: override ?? this.defaultRate,
-          commissionOverride: override,
-          balances: CURRENCIES.flatMap((currency) => {
-            const t = totals.get(`${organizationId}:${currency}`);
-            return t ? [balanceOf(t, currency)] : [];
-          }),
-        };
-      });
+    return organizationIds.map((organizationId) => {
+      const override = overrides.find((o) => o.organizationId === organizationId)?.rate ?? null;
+      return {
+        organizationId,
+        commissionRate: override ?? this.defaultRate,
+        commissionOverride: override,
+        balances: CURRENCIES.flatMap((currency) => {
+          const t = totals.get(`${organizationId}:${currency}`);
+          return t ? [balanceOf(t, currency)] : [];
+        }),
+      };
+    });
   }
 }
 

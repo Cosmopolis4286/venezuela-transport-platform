@@ -78,8 +78,8 @@ export class AdminSettlementsController {
   @Get('organizations/:organizationId/settlement')
   settlement(
     @Param('organizationId', ParseUUIDPipe) organizationId: string,
-  ): Promise<OrganizationSettlement> {
-    return this.settlements.settlement(organizationId);
+  ): Promise<AdminSettlementSummary> {
+    return this.settlements.adminSummary(organizationId);
   }
 
   @Get('organizations/:organizationId/settlement/entries')

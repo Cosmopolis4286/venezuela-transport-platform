@@ -111,6 +111,22 @@ async function Organization({ params }: { params: Promise<{ organizationId: stri
           </div>
         </Card>
       ) : null}
+      {runsRoutes(organization.type) && permissions.includes('finance.view') ? (
+        <Card>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-col gap-1">
+              <CardTitle>Liquidaciones</CardTitle>
+              <CardDescription>
+                Lo que la plataforma le debe a la empresa por los boletos vendidos, y los pagos
+                recibidos.
+              </CardDescription>
+            </div>
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/portal/organizations/${organization.id}/settlement`}>Ver saldo</Link>
+            </Button>
+          </div>
+        </Card>
+      ) : null}
       {runsRoutes(organization.type) && permissions.includes('operations.dispatch') ? (
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-3">
