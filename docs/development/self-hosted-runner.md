@@ -1,5 +1,11 @@
 # Runner de CI propio (Windows + WSL 2)
 
+> **Opcional.** El repositorio ahora es público y la CI corre gratis en las máquinas de GitHub
+> (`.github/workflows/ci.yml`, ADR-023). El runner propio queda solo para lanzarlo a mano desde
+> _Actions → CI (self-hosted, manual) → Run workflow_; ya no se activa con los pull requests,
+> porque en un repositorio público cualquiera puede abrir uno. Esta guía sirve si algún día el
+> repositorio vuelve a ser privado.
+
 `.github/workflows/self-hosted-ci.yml` ejecuta los mismos cuatro trabajos que CircleCI (calidad,
 pruebas e2e de la API con PostGIS, bundles de las apps móviles e imágenes de producción) en un
 **runner de GitHub Actions instalado en tu propia computadora**. GitHub no cobra minutos por los

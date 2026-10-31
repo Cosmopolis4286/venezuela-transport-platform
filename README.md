@@ -9,7 +9,7 @@ terminales, taxistas y operadores de transporte.
 > notificaciones ni cobro de los taxis en la app.** No la despliegues con usuarios ni datos reales. Progreso
 > y pendientes: [hoja de ruta](docs/roadmap.md) · lo que necesita tu decisión:
 > [decisiones pendientes](docs/roadmap.md#decisiones-pendientes) · historial: [CHANGELOG](CHANGELOG.md) · CI:
-> CircleCI y un runner propio ([flujo del repositorio](docs/development/repository-workflow.md)).
+> GitHub Actions ([flujo del repositorio](docs/development/repository-workflow.md)).
 
 ## Qué hace hoy
 

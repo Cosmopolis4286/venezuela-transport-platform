@@ -12,8 +12,7 @@
   necesite.
 
 Ajustes recomendados de GitHub para `main` (_Settings → Branches → Add rule_): exigir un pull
-request, exigir los checks de la CI (los de CircleCI, `ci/circleci: …`, o los del runner propio,
-**CI (self-hosted)**; ver más abajo), exigir que la rama esté al día y bloquear los force push y el
+request, exigir los checks de **CI** (GitHub Actions; ver más abajo), exigir que la rama esté al día y bloquear los force push y el
 borrado.
 
 ## Commits — Conventional Commits
@@ -60,10 +59,11 @@ Quien revisa comprueba, en este orden:
 Si trabajas sola o solo: igual abre PRs (corre la CI y el historial queda legible) y revisa tu
 propio diff en GitHub antes de fusionar.
 
-## Integración continua (CircleCI)
+## Integración continua (GitHub Actions)
 
-`.circleci/config.yml` corre un workflow, `ci`, en cada push a cualquier rama (incluidas las de
-pull requests). Sus cuatro trabajos corren en paralelo:
+`.github/workflows/ci.yml` (**CI**) corre en cada pull request y en cada push a `main`, en las
+máquinas de GitHub, gratis porque el repositorio es público (ADR-023). Sus cuatro trabajos corren
+en paralelo:
 
 | Trabajo         | Qué comprueba                                                                                                                     |
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------- |
@@ -72,7 +72,24 @@ pull requests). Sus cuatro trabajos corren en paralelo:
 | `mobile-bundle` | Las dos apps Expo se empaquetan para Android e iOS (solo JS, sin credenciales de firma)                                           |
 | `docker-images` | El Compose de producción es válido, las imágenes de la API y la web se construyen y la de la web responde por HTTP                |
 
-**Configuración inicial (dueño del repositorio):**
+Los pull requests de forks también se construyen: corren en máquinas desechables, con un token de
+solo lectura y sin secretos. El pipeline no tiene secretos: las credenciales de la base de datos y
+las URLs públicas son valores de prueba desechables.
+
+**Ajustes recomendados en GitHub (dueño del repositorio):**
+
+1. _Settings → Branches_ (o _Rules_): exige los checks de **CI** (`Lint, typecheck, test, build`,
+   `API e2e (PostgreSQL + PostGIS)`, `Mobile bundles (Android + iOS JS)`, `Production images`)
+   antes de fusionar en `main`.
+2. _Settings → Actions → General_: en **Fork pull request workflows**, exige aprobación para todos
+   los colaboradores externos, así nadie usa tu CI sin que lo revises.
+3. _Settings → Code security_: activa **Secret scanning** con **Push protection** (bloquea un push
+   que traiga una clave) y, si quieres, **Code scanning** (CodeQL).
+
+### CircleCI (opcional)
+
+`.circleci/config.yml` corre los mismos cuatro trabajos y sigue funcionando si se configura;
+ya no hace falta.
 
 1. En CircleCI, _Projects → Set Up Project_ para `venezuela-transport-platform`, eligiendo usar el
    `.circleci/config.yml` existente (mejor con la GitHub App de CircleCI, que publica los
@@ -80,19 +97,15 @@ pull requests). Sus cuatro trabajos corren en paralelo:
 2. _Project Settings → Advanced_: activa **Auto-cancel redundant workflows** (un push nuevo
    cancela la corrida anterior de la misma rama) y deja desactivado **Only build pull requests**,
    para que `main` se compile después de cada fusión.
-3. En GitHub, _Settings → Branches_: exige los checks de CircleCI (`ci/circleci: quality`,
-   `api-e2e`, `mobile-bundle`, `docker-images`) antes de fusionar en `main`.
-
-El pipeline no tiene secretos: las credenciales de la base de datos y las URLs públicas son
-valores de prueba desechables. `docker-images` usa una máquina virtual (executor `machine`), que
-cuesta más créditos que los trabajos con Docker.
+   `docker-images` usa una máquina virtual (executor `machine`), que cuesta más créditos que los
+   trabajos con Docker.
 
 ### Runner propio (GitHub Actions)
 
 `.github/workflows/self-hosted-ci.yml` corre los mismos cuatro trabajos en un runner de GitHub
-Actions en la computadora del mantenedor, sin costo de minutos ni créditos (ADR-022). Úsalo cuando
-se acaben los créditos de CircleCI; mientras tanto, exige sus checks en `main` en lugar de los de
-CircleCI. Instalación y problemas frecuentes: [self-hosted-runner.md](self-hosted-runner.md).
+Actions en la computadora del mantenedor (ADR-022). Con el repositorio público solo se lanza a mano
+(_Actions → CI (self-hosted, manual) → Run workflow_). Instalación:
+[self-hosted-runner.md](self-hosted-runner.md).
 
 ## Actualización de dependencias
 

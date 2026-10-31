@@ -316,6 +316,8 @@ pagos simulados nunca deben activarse donde reservan pasajeros reales.
 
 ## ADR-022: Un runner propio de GitHub Actions junto a CircleCI
 
+> Reemplazado en parte por ADR-023: el runner propio queda solo para ejecuciones manuales.
+
 **Decisión.** `.github/workflows/self-hosted-ci.yml` corre los trabajos de CircleCI en un runner de
 GitHub Actions instalado en la computadora Windows del mantenedor, dentro de Ubuntu en WSL 2 con
 Docker Desktop. Los trabajos usan los mismos contenedores que CircleCI (`node:24.22.0-trixie`,
@@ -331,3 +333,20 @@ solo corre contenedores de trabajo y de servicio en runners Linux.
 uno tras otro. El runner ejecuta el código de los pull requests en una computadora personal, así
 que el repositorio debe seguir siendo privado y se saltan los pull requests de forks. Dependabot
 vuelve a vigilar las versiones de las acciones.
+
+## ADR-023: CI en las máquinas de GitHub; el repositorio es público
+
+**Decisión.** El repositorio se hizo público y la CI principal pasó a
+`.github/workflows/ci.yml`, que corre los mismos cuatro trabajos en las máquinas de GitHub
+(`ubuntu-latest`) con los mismos contenedores. El runner propio (ADR-022) queda solo para
+ejecuciones manuales (`workflow_dispatch`). CircleCI sigue configurado pero ya no es necesario.
+
+**Por qué.** GitHub no cobra minutos de Actions en repositorios públicos, así que la CI corre en
+cada pull request sin depender de una computadora encendida ni de créditos. Además se activan
+gratis el escaneo de secretos con bloqueo al hacer push y el análisis de código.
+
+**Compromisos.** El código y la documentación son públicos y quedan archivados por terceros aunque
+el repositorio vuelva a ser privado. Nunca debe subirse un secreto (el historial se revisó antes de
+publicarlo y estaba limpio). Los pull requests de forks corren en máquinas desechables de GitHub,
+con un token de solo lectura y sin secretos; GitHub desaconseja construirlos en runners propios
+de repositorios públicos, por eso el runner propio ya no se activa con pull requests.

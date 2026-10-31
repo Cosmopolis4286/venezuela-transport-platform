@@ -1,0 +1,133 @@
+# CI on GitHub-hosted runners: free and without minute limits while the repository is public.
+# Same jobs and images as .circleci/config.yml. Every job starts on a fresh virtual machine, so
+# pull requests from forks are safe to build (their token is read-only and they get no secrets).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+  TURBO_TELEMETRY_DISABLED: '1'
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+  # Build-time public config. Placeholders only — CI never talks to a real API.
+  NEXT_PUBLIC_API_BASE_URL: https://api.example.invalid/api/v1
+  EXPO_PUBLIC_API_BASE_URL: https://api.example.invalid/api/v1
+
+jobs:
+  quality:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: node:24.22.0-trixie
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install dependencies
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Build web and API
+        run: pnpm build
+
+  api-e2e:
+    name: API e2e (PostgreSQL + PostGIS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: node:24.22.0-trixie
+    services:
+      postgres:
+        image: postgis/postgis:18-3.6
+        env:
+          POSTGRES_DB: vtp_ci
+          POSTGRES_USER: vtp
+          POSTGRES_PASSWORD: ci-only-not-a-secret
+        options: >-
+          --health-cmd "pg_isready -U vtp -d vtp_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      NODE_ENV: test
+      # The service is reached by its name from the job container.
+      DATABASE_HOST: postgres
+      DATABASE_PORT: '5432'
+      DATABASE_NAME: vtp_ci
+      DATABASE_USER: vtp
+      DATABASE_PASSWORD: ci-only-not-a-secret
+      AUTH_SECRET: ci-only-not-a-secret-0123456789abcdef
+      E2E_EXPECT_DATABASE: 'true'
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install dependencies
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+      - name: Check database connectivity and PostGIS
+        run: pnpm db:check
+      - name: Apply migrations (twice, to prove they are idempotent)
+        run: pnpm db:migrate && pnpm db:migrate
+      - name: Fail if the Drizzle schema has changes without a migration
+        run: |
+          git config --global --add safe.directory "$PWD"
+          pnpm db:generate
+          git status --porcelain apps/api/drizzle
+          test -z "$(git status --porcelain apps/api/drizzle)"
+      - run: pnpm test:e2e
+
+  mobile-bundle:
+    name: Mobile bundles (Android + iOS JS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: node:24.22.0-trixie
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install dependencies
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+      - name: Bundle passenger and transport apps (no signing)
+        run: pnpm turbo run export --filter=@vtp/passenger-mobile --filter=@vtp/transport-mobile
+        env:
+          CI: '1'
+
+  docker-images:
+    name: Production images
+    # Runs on the virtual machine itself: building images needs its Docker daemon.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate production Compose file
+        working-directory: infrastructure/docker/production
+        run: |
+          touch "$RUNNER_TEMP/api.env" "$RUNNER_TEMP/pg.env"
+          VTP_WEB_DOMAIN=app.example.invalid VTP_API_DOMAIN=api.example.invalid \
+          VTP_ACME_EMAIL=ci@example.invalid VTP_API_IMAGE=vtp-api:ci VTP_WEB_IMAGE=vtp-web:ci \
+          VTP_API_ENV_FILE="$RUNNER_TEMP/api.env" VTP_POSTGRES_ENV_FILE="$RUNNER_TEMP/pg.env" \
+            docker compose -f compose.yml --profile migrate config --quiet
+      - name: Build API image
+        run: docker build -f infrastructure/docker/production/api.Dockerfile -t vtp-api:ci .
+      - name: Build web image
+        run: >-
+          docker build -f infrastructure/docker/production/web.Dockerfile
+          --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.example.invalid/api/v1 -t vtp-web:ci .
+      - name: Smoke-test web image
+        run: |
+          docker run -d --name vtp-web -p 127.0.0.1:3000:3000 vtp-web:ci
+          for i in $(seq 1 30); do curl -fsS -o /dev/null http://127.0.0.1:3000/es && exit 0; sleep 2; done
+          docker logs vtp-web; exit 1

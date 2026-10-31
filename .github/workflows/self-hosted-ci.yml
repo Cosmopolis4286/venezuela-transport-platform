@@ -1,12 +1,10 @@
-# CI on a self-hosted runner (the maintainer's machine, WSL 2 + Docker): free and without minute
-# limits. Same jobs and images as .circleci/config.yml. Setup: docs/development/self-hosted-runner.md.
-# Jobs wait in the queue while the runner is offline.
-name: CI (self-hosted)
+# CI on a self-hosted runner (the maintainer's machine, WSL 2 + Docker). Manual runs only: the
+# repository is public, and GitHub advises against building pull requests on self-hosted runners
+# of public repositories. Regular CI runs on GitHub-hosted runners (ci.yml).
+# Setup: docs/development/self-hosted-runner.md.
+name: CI (self-hosted, manual)
 
 on:
-  pull_request:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:

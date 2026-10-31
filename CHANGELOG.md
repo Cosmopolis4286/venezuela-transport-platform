@@ -46,6 +46,8 @@ pull request.
 
 ### Cambiado
 
+- **El repositorio es público y la CI corre en GitHub Actions** (`.github/workflows/ci.yml`), en
+  las máquinas de GitHub y sin costo (ADR-023). El runner propio queda solo para lanzarlo a mano.
 - La web pública cambió de dirección: `/es` y `/es/buscar` (las anteriores, `/` y `/buscar`,
   redirigen). Los textos que decían que la compra de boletos "llegará pronto" ya no lo dicen.
 - Los viajes y la lista de pasajeros del portal muestran el vehículo y el conductor asignados.

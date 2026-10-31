@@ -31,7 +31,7 @@ Leyenda: ✅ listo · 🟡 parcial · ⏭️ siguiente · ⬜ pendiente
 
 | Área                             | Estado | Notas                                                                                                                                                                                                            |
 | -------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Base del proyecto                | ✅     | Monorepo, Docker Compose (PostgreSQL + PostGIS, y modos híbrido y completo), OpenAPI, lint, pruebas, imágenes de producción, CircleCI y un runner propio                                                         |
+| Base del proyecto                | ✅     | Monorepo, Docker Compose (PostgreSQL + PostGIS, y modos híbrido y completo), OpenAPI, lint, pruebas, imágenes de producción, CI en GitHub Actions (repositorio público)                                          |
 | Cuentas e inicio de sesión       | 🟡     | Funcionan correo + contraseña y los códigos de un solo uso. **Los códigos solo se imprimen en el log**: todavía no hay proveedor de SMS / WhatsApp / correo ([authentication](architecture/authentication.md))   |
 | Organizaciones y roles           | ✅     | Empresas de autobuses, líneas de taxis, terminales; seis roles y una matriz de permisos; invitaciones; revisión de la plataforma ([organizations](architecture/organizations.md))                                |
 | KYC de conductores y personal    | ✅     | Solicitudes, documentos, revisión de la plataforma, aceptación de la organización ([onboarding](architecture/onboarding.md))                                                                                     |
@@ -121,11 +121,10 @@ Hoy funcionan con estos valores; cambiarlos es sencillo, pero conviene confirmar
 
 ### Técnicas (para el mantenedor)
 
-| Decisión                                                                                                                  | Recomendación                                                                                                                     |
-| ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **PR #33** junta documentación, CI, Docker, vehículos y taxis (unas 15 000 líneas). ¿Fusionarlo entero o dividirlo?       | Fusionarlo entero cuando el runner propio lo pase en verde: todo se verificó junto, y dividirlo ahora cuesta más de lo que aporta |
-| **Actualizaciones mayores de Dependabot**: #30 (`@eslint/js` 10), #31 (`vitest` 5), #32 (`typescript-eslint` 8.72)        | Una por una después de fusionar #33, corriendo `pnpm check` completo en cada una                                                  |
-| **CI**: seguir con el runner en la PC (gratis, pero solo corre con la PC encendida) o volver a pagar créditos de CircleCI | Runner propio mientras no haya despliegue; créditos (o un runner en el VPS) cuando haya producción                                |
+| Decisión                                                                                                                     | Recomendación                                                                                                                            |
+| ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **PR #33** junta documentación, CI, Docker, vehículos, taxis e idiomas (unas 17 000 líneas). ¿Fusionarlo entero o dividirlo? | Fusionarlo entero cuando la CI de GitHub Actions lo pase en verde: todo se verificó junto, y dividirlo ahora cuesta más de lo que aporta |
+| **Actualizaciones mayores de Dependabot**: #30 (`@eslint/js` 10), #31 (`vitest` 5), #32 (`typescript-eslint` 8.72)           | Una por una después de fusionar #33, corriendo `pnpm check` completo en cada una                                                         |
 
 ## Riesgos y deuda técnica
 
@@ -146,10 +145,9 @@ Lo que hoy funciona pero conviene corregir antes de crecer:
   estados viejos.
 - **El selector de terminales del portal** muestra todos los terminales en una lista; con cientos
   de terminales hará falta una búsqueda.
-- **La CI depende de una PC personal**: si está apagada, los checks quedan en cola y nada se puede
-  fusionar con las reglas de protección de `main`.
 
-Ya corregido (2026-10-29): los errores del portal ya no se identifican por su texto en inglés,
+Ya corregido: la CI corre en las máquinas de GitHub desde que el repositorio es público (2026-10-31).
+También (2026-10-29): los errores del portal ya no se identifican por su texto en inglés,
 sino por un `reason` estable que también traduce las apps móviles; la hora de Venezuela se
 calcula en un solo lugar (`toNetworkIso`, `networkClock`); los roles que conducen y la
 normalización de placas se comparten en vez de repetirse.
