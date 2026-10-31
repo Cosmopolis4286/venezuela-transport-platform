@@ -10,3 +10,4 @@ export * from '../modules/network/network.schema.js';
 export * from '../modules/bookings/bookings.schema.js';
 export * from '../modules/payments/payments.schema.js';
 export * from '../modules/taxi/taxi.schema.js';
+export * from '../modules/settlements/settlements.schema.js';

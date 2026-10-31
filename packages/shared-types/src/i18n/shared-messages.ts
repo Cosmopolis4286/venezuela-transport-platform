@@ -55,6 +55,7 @@ const es: SharedMessages = {
     confirmed: 'Pagado',
     cancelled: 'Anulado',
     refund_due: 'Por reembolsar',
+    refunded: 'Reembolsado',
   },
   taxiDirection: { from_terminal: 'Desde el terminal', to_terminal: 'Hacia el terminal' },
   taxiRideStatus: {
@@ -110,6 +111,9 @@ const es: SharedMessages = {
     TAXI_RIDE_WRONG_STEP: 'El viaje cambió de estado. Actualiza la pantalla.',
     TAXI_LINE_INACTIVE: 'La línea de taxi no está activa.',
     NOT_A_TAXI_LINE: 'Solo las líneas de taxi atienden solicitudes de taxi.',
+    PAYOUT_EXCEEDS_BALANCE: 'El pago es mayor que el saldo de la empresa en esa moneda.',
+    PAYOUT_ALREADY_VOIDED: 'Este pago a la empresa ya fue anulado.',
+    PAYMENT_NOT_REFUND_DUE: 'Este pago no está pendiente de reembolso.',
   },
 };
 
@@ -138,6 +142,7 @@ const en: SharedMessages = {
     confirmed: 'Paid',
     cancelled: 'Voided',
     refund_due: 'To be refunded',
+    refunded: 'Refunded',
   },
   taxiDirection: { from_terminal: 'From the terminal', to_terminal: 'To the terminal' },
   taxiRideStatus: {
@@ -193,6 +198,9 @@ const en: SharedMessages = {
     TAXI_RIDE_WRONG_STEP: 'The ride changed. Refresh the screen.',
     TAXI_LINE_INACTIVE: 'The taxi company is not active.',
     NOT_A_TAXI_LINE: 'Only taxi companies take taxi requests.',
+    PAYOUT_EXCEEDS_BALANCE: "The payout is larger than the company's balance in that currency.",
+    PAYOUT_ALREADY_VOIDED: 'This payout was already voided.',
+    PAYMENT_NOT_REFUND_DUE: 'This payment is not awaiting a refund.',
   },
 };
 
@@ -221,6 +229,7 @@ const ptBR: SharedMessages = {
     confirmed: 'Pago',
     cancelled: 'Anulado',
     refund_due: 'A reembolsar',
+    refunded: 'Reembolsado',
   },
   taxiDirection: { from_terminal: 'Saindo do terminal', to_terminal: 'Indo para o terminal' },
   taxiRideStatus: {
@@ -277,6 +286,9 @@ const ptBR: SharedMessages = {
     TAXI_RIDE_WRONG_STEP: 'A viagem mudou de status. Atualize a tela.',
     TAXI_LINE_INACTIVE: 'A cooperativa de táxi não está ativa.',
     NOT_A_TAXI_LINE: 'Só cooperativas de táxi atendem pedidos de táxi.',
+    PAYOUT_EXCEEDS_BALANCE: 'O repasse é maior que o saldo da empresa nessa moeda.',
+    PAYOUT_ALREADY_VOIDED: 'Este repasse já foi anulado.',
+    PAYMENT_NOT_REFUND_DUE: 'Este pagamento não está aguardando reembolso.',
   },
 };
 

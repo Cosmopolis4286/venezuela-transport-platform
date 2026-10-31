@@ -29,8 +29,15 @@ export const PAYMENT_METHOD_CURRENCY: Record<PaymentMethod, PaymentCurrency> = {
  * `pending` → waiting for the money. `confirmed` → received in time, the booking is confirmed.
  * `cancelled` → replaced by another method, or the booking ended unpaid. `refund_due` → money
  * arrived but the booking could no longer be confirmed (or the amount was wrong): it goes back.
+ * `refunded` → platform staff sent a `refund_due` payment back to the payer.
  */
-export const PAYMENT_STATUSES = ['pending', 'confirmed', 'cancelled', 'refund_due'] as const;
+export const PAYMENT_STATUSES = [
+  'pending',
+  'confirmed',
+  'cancelled',
+  'refund_due',
+  'refunded',
+] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> =

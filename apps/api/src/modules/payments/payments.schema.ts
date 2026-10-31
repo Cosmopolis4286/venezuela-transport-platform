@@ -68,6 +68,10 @@ export const payments = pgTable(
     receivedAmount: numeric({ precision: 14, scale: 2 }),
     expiresAt: timestamp({ withTimezone: true }),
     confirmedAt: timestamp({ withTimezone: true }),
+    /** Set when platform staff send a `refund_due` payment back (`refunded`). */
+    refundedAt: timestamp({ withTimezone: true }),
+    refundReference: text(),
+    refundedByUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
     ...timestamps,
   },
   (t) => [

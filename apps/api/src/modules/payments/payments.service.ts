@@ -22,6 +22,7 @@ import { BookingsService } from '../bookings/bookings.service.js';
 import { expireHolds } from '../bookings/occupancy.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import type { OrganizationAccess } from '../organizations/organization-access.js';
+import { recordEarning } from '../settlements/ledger.js';
 import { compareAmounts, convert, toScaled } from './money.js';
 import { PAYMENT_PROVIDERS, type PaymentProvider } from './payment-provider.js';
 import { toPayment } from './payment-view.js';
@@ -245,7 +246,7 @@ export class PaymentsService {
         )
         .for('update');
       if (!payment) throw notFound('No payment with this reference');
-      if (payment.status === 'confirmed' || payment.status === 'refund_due') {
+      if (payment.status !== 'pending' && payment.status !== 'cancelled') {
         return { payment, outcome: 'duplicate' as const };
       }
       const received = {
@@ -257,6 +258,7 @@ export class PaymentsService {
         compareAmounts(incoming.amount, payment.amount) >= 0;
       if (payment.status === 'pending' && enough) {
         if (await this.bookings.confirmHeld(tx, payment.bookingId)) {
+          await recordEarning(tx, payment.bookingId, this.config.get('PLATFORM_COMMISSION_PERCENT'));
           const [row] = await tx
             .update(payments)
             .set({ ...received, status: 'confirmed', confirmedAt: new Date() })
