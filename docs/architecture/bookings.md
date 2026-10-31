@@ -14,7 +14,8 @@ reserva y emite los boletos, se describe en [payments.md](payments.md).
 
 Estados de una reserva: `held` (puestos apartados hasta `expiresAt`, esperando el pago) →
 `confirmed` (pagada, con un boleto por puesto, ver [payments.md](payments.md)), `cancelled`
-(cancelada por el pasajero) o `expired` (se venció el apartado).
+(cancelada por el pasajero; si estaba pagada, con reembolso según la política, ver
+[settlements.md](settlements.md)) o `expired` (se venció el apartado).
 
 ## Reglas
 
@@ -40,6 +41,7 @@ Estados de una reserva: `held` (puestos apartados hasta `expiresAt`, esperando e
 | `GET /trips/availability?scheduleId=&serviceDate=&from=&to=`               | Público — mapa de puestos, puestos ocupados, tarifa, si se puede reservar              |
 | `POST /bookings`                                                           | Con sesión — apartar puestos                                                           |
 | `GET /me/bookings`, `GET /me/bookings/:id`, `POST /me/bookings/:id/cancel` | El dueño de la reserva                                                                 |
+| `GET /me/bookings/:id/cancellation` (reembolso si cancela ahora)           | El dueño de una reserva pagada                                                         |
 | `GET /organizations/:id/trips?date=`                                       | `bookings.view` (dueño, administrador, despachador, taquillero, inspector)             |
 | `GET /organizations/:id/trips/:tripId/manifest`                            | `bookings.view` — lista de pasajeros con nombres, documentos y hora de abordaje        |
 | `POST /organizations/:id/tickets/validate`                                 | `tickets.validate` — validar un boleto al abordar ([payments.md](payments.md#boletos)) |
@@ -55,5 +57,5 @@ devuelven las reservas de otro usuario.
 
 ## Todavía no
 
-Cancelación de reservas pagadas con reembolso, cancelación de un viaje por la empresa y venta de
+Cancelación de un viaje por la empresa y venta de
 puestos por tramo.
