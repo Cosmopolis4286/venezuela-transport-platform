@@ -1,5 +1,8 @@
+import { sql } from 'drizzle-orm';
 import {
+  check,
   index,
+  jsonb,
   integer,
   numeric,
   pgEnum,
@@ -9,21 +12,36 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { PAYOUT_METHODS } from '@vtp/shared-types';
+import { PAYOUT_METHODS, type RefundTier } from '@vtp/shared-types';
 import { bookings } from '../bookings/bookings.schema.js';
 import { timestamps, users } from '../identity/identity.schema.js';
 import { currency } from '../network/network.schema.js';
 import { organizations } from '../organizations/organizations.schema.js';
 
 export const payoutMethod = pgEnum('payout_method', PAYOUT_METHODS);
+export const settlementEntryKind = pgEnum('settlement_entry_kind', ['booking', 'cancellation']);
 
-/** Commission agreed with one operator; operators without a row pay the platform default. */
-export const organizationCommissions = pgTable('organization_commissions', {
+/** The platform's defaults, editable by platform admins. A single row (`id = 1`). */
+export const platformSettings = pgTable(
+  'platform_settings',
+  {
+    id: integer().primaryKey().default(1),
+    /** Percentage, e.g. 8.00. */
+    commissionRate: numeric({ precision: 5, scale: 2 }).notNull(),
+    refundTiers: jsonb().$type<RefundTier[]>().notNull(),
+    updatedByUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (t) => [check('platform_settings_single_row', sql`${t.id} = 1`)],
+);
+
+/** What one operator agreed with the platform; null fields use the platform's defaults. */
+export const organizationPolicies = pgTable('organization_policies', {
   organizationId: uuid()
     .primaryKey()
     .references(() => organizations.id, { onDelete: 'cascade' }),
-  /** Percentage, e.g. 8.50. */
-  rate: numeric({ precision: 5, scale: 2 }).notNull(),
+  commissionRate: numeric({ precision: 5, scale: 2 }),
+  refundTiers: jsonb().$type<RefundTier[]>(),
   updatedByUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
   ...timestamps,
 });
@@ -42,6 +60,8 @@ export const settlementEntries = pgTable(
     bookingId: uuid()
       .notNull()
       .references(() => bookings.id, { onDelete: 'restrict' }),
+    /** `booking` when it was paid; `cancellation` (negative amounts) when the passenger cancelled. */
+    kind: settlementEntryKind().notNull().default('booking'),
     seats: integer().notNull(),
     currency: currency().notNull(),
     gross: numeric({ precision: 12, scale: 2 }).notNull(),
@@ -51,8 +71,8 @@ export const settlementEntries = pgTable(
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    // A booking is earned once, even if a provider reports the money twice.
-    uniqueIndex('settlement_entries_booking_key').on(t.bookingId),
+    // A booking is earned once, even if a provider reports the money twice, and cancelled once.
+    uniqueIndex('settlement_entries_booking_kind_key').on(t.bookingId, t.kind),
     index('settlement_entries_organization_idx').on(t.organizationId, t.createdAt),
   ],
 );

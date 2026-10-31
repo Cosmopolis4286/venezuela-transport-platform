@@ -4,20 +4,24 @@ import type { Currency, PaymentCurrency, RateCurrency } from '@vtp/shared-types'
 const RATE_SCALE = 10_000n;
 const RATE_OUTPUT_PLACES = 6;
 
-/** `"36.5"` → 365000n with `places` = 4. Throws on anything that is not a plain decimal. */
+/** `"36.5"` → 365000n with `places` = 4; `"-1.5"` → -15000n. Throws on anything else. */
 export function toScaled(value: string, places: number): bigint {
-  const match = /^(\d+)(?:\.(\d+))?$/.exec(value.trim());
+  const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(value.trim());
   if (!match) throw new Error(`Not a decimal: ${value}`);
-  const fraction = (match[2] ?? '').padEnd(places, '0');
+  const fraction = (match[3] ?? '').padEnd(places, '0');
   if (fraction.length > places && /[1-9]/.test(fraction.slice(places))) {
     throw new Error(`Too many decimals: ${value}`);
   }
-  return BigInt(match[1]!) * 10n ** BigInt(places) + BigInt(fraction.slice(0, places) || '0');
+  const magnitude =
+    BigInt(match[2]!) * 10n ** BigInt(places) + BigInt(fraction.slice(0, places) || '0');
+  return match[1] ? -magnitude : magnitude;
 }
 
 export function fromScaled(value: bigint, places: number): string {
+  const sign = value < 0n ? '-' : '';
+  const magnitude = value < 0n ? -value : value;
   const unit = 10n ** BigInt(places);
-  return `${value / unit}.${(value % unit).toString().padStart(places, '0')}`;
+  return `${sign}${magnitude / unit}.${(magnitude % unit).toString().padStart(places, '0')}`;
 }
 
 /** Rounds `numerator / denominator` half up (both positive). */

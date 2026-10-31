@@ -13,6 +13,13 @@ pull request.
 
 ### Agregado
 
+- **Cancelar un viaje pagado, con política de reembolso editable** (ADR-025). El pasajero ve en la
+  app cuánto se le devuelve antes de cancelar; al cancelar se libera el puesto y el reembolso entra
+  en la cola de la administración. La política general empieza en 8 % de comisión y reembolso del
+  100 % hasta 48 h antes y del 50 % hasta 2 h antes; los administradores la editan en
+  **Liquidaciones**, en general y por empresa. La plataforma conserva su comisión: el reembolso se
+  descuenta de lo ganado por la empresa. No se puede cancelar después de abordar o de la salida.
+  `PLATFORM_COMMISSION_PERCENT` ya no existe: la comisión se edita en la web.
 - **Liquidaciones y reembolsos** (ADR-024). Cada reserva pagada anota lo que gana la empresa
   (tarifa menos comisión), en la moneda de la tarifa y en la misma transacción que la confirma.
   La comisión tiene un valor por defecto (`PLATFORM_COMMISSION_PERCENT`, 0 % hasta que se decida)

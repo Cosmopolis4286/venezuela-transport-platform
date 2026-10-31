@@ -55,6 +55,7 @@ export const API_ERROR_REASONS = [
   'PAYOUT_EXCEEDS_BALANCE',
   'PAYOUT_ALREADY_VOIDED',
   'PAYMENT_NOT_REFUND_DUE',
+  'BOOKING_NOT_CANCELLABLE',
 ] as const;
 
 export type ApiErrorReason = (typeof API_ERROR_REASONS)[number];

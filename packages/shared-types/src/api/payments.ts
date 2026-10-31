@@ -93,6 +93,8 @@ export interface Payment {
   simulated: boolean;
   expiresAt: string | null;
   confirmedAt: string | null;
+  /** For `refund_due` / `refunded`: what goes (or went) back to the payer. */
+  refundAmount: string | null;
   createdAt: string;
 }
 

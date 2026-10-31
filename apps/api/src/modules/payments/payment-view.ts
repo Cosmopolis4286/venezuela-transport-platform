@@ -15,6 +15,10 @@ export function toPayment(row: PaymentRow): Payment {
     simulated: row.provider === 'simulated',
     expiresAt: row.status === 'pending' && row.expiresAt ? row.expiresAt.toISOString() : null,
     confirmedAt: row.confirmedAt?.toISOString() ?? null,
+    refundAmount:
+      row.status === 'refund_due' || row.status === 'refunded'
+        ? (row.refundAmount ?? row.receivedAmount ?? row.amount)
+        : null,
     createdAt: row.createdAt.toISOString(),
   };
 }

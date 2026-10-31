@@ -36,8 +36,13 @@ export default async function AdminRefundsPage() {
               <li key={r.paymentId} className="flex flex-col gap-2 py-3">
                 <div className="flex flex-col gap-1">
                   <p className="font-medium">
-                    {formatPaymentAmount(r.receivedAmount ?? r.amount, r.currency)} por{' '}
+                    Devolver {formatPaymentAmount(r.refundAmount, r.currency)} por{' '}
                     {PAYMENT_METHOD_LABELS[r.method]} · reserva {r.bookingCode}
+                  </p>
+                  <p className="text-sm">
+                    {r.cancellation
+                      ? 'El pasajero canceló una reserva pagada (reembolso según la política).'
+                      : 'El dinero no pudo confirmar la reserva (tarde, de menos, en otra moneda o de un pago anulado).'}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {r.payer.name ?? 'Sin nombre'}
@@ -46,7 +51,11 @@ export default async function AdminRefundsPage() {
                     {formatDate(r.createdAt)}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Se pedía {formatPaymentAmount(r.amount, r.currency)} · referencia {r.reference}
+                    Pagado {formatPaymentAmount(r.amount, r.currency)}
+                    {r.receivedAmount && r.receivedAmount !== r.amount
+                      ? ` (llegó ${formatPaymentAmount(r.receivedAmount, r.currency)})`
+                      : ''}{' '}
+                    · referencia {r.reference}
                     {r.providerReference ? ` · del proveedor ${r.providerReference}` : ''}
                   </p>
                 </div>

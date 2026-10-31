@@ -2,17 +2,26 @@ import {
   formatPaymentAmount,
   ORGANIZATION_TYPE_LABELS,
   type AdminSettlementSummary,
+  type SettlementPolicy,
 } from '@vtp/shared-types';
 import Link from 'next/link';
+import { ActionForm, SubmitButton } from '@/components/portal/action-form';
+import { describeRefundTiers, RefundTierFields } from '@/components/portal/refund-policy';
+import { Input } from '@/components/ui/input';
+import { Field } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { apiFetch } from '@/lib/server/api';
 import { requirePlatformAdmin } from '@/lib/server/session';
+import { setPlatformPolicy } from './actions';
 
 export default async function AdminSettlementsPage() {
   await requirePlatformAdmin();
-  const summaries = await apiFetch<AdminSettlementSummary[]>('/admin/settlements');
+  const [summaries, policy] = await Promise.all([
+    apiFetch<AdminSettlementSummary[]>('/admin/settlements'),
+    apiFetch<SettlementPolicy>('/admin/settlement-policy'),
+  ]);
   return (
     <>
       <div className="flex flex-col gap-2">
@@ -22,6 +31,32 @@ export default async function AdminSettlementsPage() {
           comisión). Abre una empresa para fijar su comisión o registrar un pago.
         </p>
       </div>
+      <Card>
+        <div className="flex flex-col gap-1">
+          <CardTitle>Política general</CardTitle>
+          <CardDescription>
+            Para las empresas sin política propia. Hoy: comisión{' '}
+            {policy.commissionRate.replace('.', ',')} % · reembolso{' '}
+            {describeRefundTiers(policy.refundTiers)}. Los cambios se aplican desde ahora.
+          </CardDescription>
+        </div>
+        <ActionForm action={setPlatformPolicy}>
+          <Field label="Comisión (%)" htmlFor="commissionRate">
+            <Input
+              id="commissionRate"
+              name="commissionRate"
+              inputMode="decimal"
+              className="w-32"
+              required
+              defaultValue={policy.commissionRate}
+            />
+          </Field>
+          <RefundTierFields tiers={policy.refundTiers} />
+          <div>
+            <SubmitButton variant="outline">Guardar política general</SubmitButton>
+          </div>
+        </ActionForm>
+      </Card>
       <Card>
         <CardTitle>Empresas · {summaries.length}</CardTitle>
         <CardDescription>

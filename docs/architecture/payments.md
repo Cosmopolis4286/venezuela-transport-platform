@@ -45,6 +45,10 @@ ofrece. Con una tarifa en bolívares, el pago móvil y la transferencia no neces
 | `refund_due` | Llegó dinero para una reserva que ya no se puede confirmar, o llegó de menos o en otra moneda |
 | `refunded`   | Un administrador de la plataforma devolvió un pago `refund_due` (con su referencia)           |
 
+Un pago `confirmed` también pasa a `refund_due` cuando el pasajero cancela la reserva con derecho a
+reembolso; entonces `refundAmount` dice cuánto se devuelve (una parte de lo pagado, ver
+[settlements.md](settlements.md)).
+
 Reglas:
 
 - **Unos segundos tarde no importa:** el dinero de un apartado vencido todavía confirma la reserva
@@ -118,5 +122,5 @@ Eventos de auditoría: `payment.created`, `payment.confirmed`, `payment.refund_d
 
 ## Todavía no
 
-Adaptadores de proveedores reales (primero contratos y revisión legal, ver ADR-018), cancelación
-de reservas pagadas con su reembolso, y la validación sin conexión.
+Adaptadores de proveedores reales (primero contratos y revisión legal, ver ADR-018) y la validación
+sin conexión.

@@ -10,6 +10,7 @@ import {
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { ActionForm, SubmitButton } from '@/components/portal/action-form';
+import { RefundTierFields } from '@/components/portal/refund-policy';
 import {
   PayoutLine,
   SettlementBalances,
@@ -22,7 +23,7 @@ import { Field } from '@/components/ui/label';
 import { monthParam } from '@/lib/month';
 import { apiFetch } from '@/lib/server/api';
 import { requirePlatformAdmin } from '@/lib/server/session';
-import { createPayout, setCommission, voidPayout } from '../actions';
+import { createPayout, setOrganizationPolicy, voidPayout } from '../actions';
 
 export default function AdminOrganizationSettlementPage({
   params,
@@ -73,25 +74,34 @@ async function OrganizationSettlementView({
 
       <Card>
         <div className="flex flex-col gap-1">
-          <CardTitle>Comisión de esta empresa</CardTitle>
+          <CardTitle>Política de esta empresa</CardTitle>
           <CardDescription>
-            Porcentaje sobre cada boleto. Déjalo vacío para usar el valor por defecto de la
-            plataforma. Las reservas ya pagadas conservan la comisión con la que se pagaron.
+            Deja la comisión vacía y desmarca los tramos propios para usar la política general. Los
+            cambios se aplican desde ahora: las reservas ya pagadas conservan su comisión.
           </CardDescription>
         </div>
-        <ActionForm action={setCommission} hidden={hidden}>
-          <div className="flex flex-wrap items-end gap-3">
-            <Field label="Comisión (%)" htmlFor="rate">
-              <Input
-                id="rate"
-                name="rate"
-                inputMode="decimal"
-                className="w-32"
-                placeholder="por defecto"
-                defaultValue={settlement.commissionOverride ?? ''}
-              />
-            </Field>
-            <SubmitButton variant="outline">Guardar comisión</SubmitButton>
+        <ActionForm action={setOrganizationPolicy} hidden={hidden}>
+          <Field label="Comisión (%)" htmlFor="commissionRate">
+            <Input
+              id="commissionRate"
+              name="commissionRate"
+              inputMode="decimal"
+              className="w-32"
+              placeholder="por defecto"
+              defaultValue={settlement.commissionOverride ?? ''}
+            />
+          </Field>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="ownTiers"
+              defaultChecked={settlement.refundTiersOverride !== null}
+            />
+            Tramos de reembolso propios (si no, los generales)
+          </label>
+          <RefundTierFields tiers={settlement.refundTiers} />
+          <div>
+            <SubmitButton variant="outline">Guardar política</SubmitButton>
           </div>
         </ActionForm>
       </Card>

@@ -355,8 +355,8 @@ de repositorios públicos, por eso el runner propio ya no se activa con pull req
 
 **Decisión.** Cada reserva pagada escribe una fila inmutable con lo que gana la empresa (tarifa
 menos comisión), en la misma transacción que la confirma y en la moneda de la tarifa. La comisión
-es un porcentaje por defecto de la plataforma (`PLATFORM_COMMISSION_PERCENT`, 0 hasta que se
-decida el número) que un administrador puede reemplazar para una empresa. Los pagos a las empresas
+es un porcentaje por defecto de la plataforma (al principio una variable de entorno; desde el
+ADR-025, editable en la base de datos) que un administrador puede reemplazar para una empresa. Los pagos a las empresas
 se registran a mano, nunca por encima del saldo, y un error se anula en vez de editarse. Ver
 [settlements.md](settlements.md).
 
@@ -371,3 +371,24 @@ Los pagos a las empresas y los reembolsos son transferencias manuales que hay qu
 proveedor de pagos podría automatizarlos más adelante. El saldo se calcula sumando filas cada vez:
 alcanza para miles de reservas por empresa; con mucho más volumen convendrá guardar saldos
 mensuales.
+
+## ADR-025: Política de comisión y reembolsos editable; la plataforma conserva su comisión
+
+**Decisión.** La comisión y los tramos de reembolso viven en la base de datos: una política general
+(`platform_settings`: 8 %; 100 % de reembolso hasta 48 h antes, 50 % hasta 2 h antes, nada después)
+y una política opcional por empresa (`organization_policies`), ambas editables por los
+administradores de la plataforma. Reemplaza a `PLATFORM_COMMISSION_PERCENT`. El pasajero cancela
+una reserva pagada hasta que sale el autobús o alguien de la reserva aborda; el reembolso es el
+porcentaje del tramo sobre lo que pagó, en su moneda. En el libro de la empresa la cancelación es
+una fila negativa: el reembolso sale de lo ganado por la empresa y la plataforma conserva su
+comisión, salvo la parte de un reembolso que supere lo ganado. Ver [settlements.md](settlements.md).
+
+**Por qué.** Lo decidió el dueño del producto: la comisión y los tramos deben poder cambiarse sin
+desplegar, en general y por empresa, y la comisión no se devuelve. Que la diferencia de un
+reembolso casi total salga de la comisión evita que una empresa termine debiendo dinero por un
+puesto que no vendió. Los tramos se leen al cancelar y la comisión se fija al pagar, así una
+reserva se explica con la política vigente en cada momento.
+
+**Compromisos.** El pasajero no ve todavía la política antes de pagar (solo al cancelar). Si la
+empresa ya cobró, una cancelación posterior puede dejar su saldo negativo, que se descuenta de los
+pagos siguientes. Los reembolsos siguen siendo transferencias manuales registradas en la cola.

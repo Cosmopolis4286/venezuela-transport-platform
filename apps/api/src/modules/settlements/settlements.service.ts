@@ -6,15 +6,18 @@ import {
   type AdminSettlementSummary,
   type CreatePayoutRequest,
   type Currency,
+  refundTiersProblem,
   type OrganizationSettlement,
   type Payout,
+  type RefundTier,
+  type SetOrganizationPolicyRequest,
+  type SettlementPolicy,
   type RefundDuePayment,
   type SettlementBalance,
   type SettlementEntry,
 } from '@vtp/shared-types';
 import { and, desc, eq, gte, inArray, isNull, lt, or, sql, type AnyColumn } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
-import { AppConfigService } from '../../config/app-config.service.js';
 import { DatabaseService } from '../../database/database.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { bookings, trips } from '../bookings/bookings.schema.js';
@@ -26,8 +29,9 @@ import { fromScaled, toScaled } from '../payments/money.js';
 import { payments } from '../payments/payments.schema.js';
 import { normalizeRate } from './ledger.js';
 import {
-  organizationCommissions,
+  organizationPolicies,
   payouts,
+  platformSettings,
   settlementEntries,
   type PayoutRow,
 } from './settlements.schema.js';
@@ -59,12 +63,7 @@ export class SettlementsService {
   constructor(
     private readonly database: DatabaseService,
     private readonly audit: AuditService,
-    private readonly config: AppConfigService,
   ) {}
-
-  private get defaultRate(): string {
-    return normalizeRate(this.config.get('PLATFORM_COMMISSION_PERCENT'));
-  }
 
   // --- Operators ------------------------------------------------------------------------------
 
@@ -98,6 +97,7 @@ export class SettlementsService {
     return rows.map(({ entry, ...rest }) => ({
       id: entry.id,
       bookingId: entry.bookingId,
+      kind: entry.kind,
       bookingCode: rest.bookingCode,
       route: rest.route,
       serviceDate: rest.serviceDate,
@@ -152,34 +152,68 @@ export class SettlementsService {
     return { ...(await this.settlement(organizationId)), organization };
   }
 
-  async setCommission(
+  async platformPolicy(): Promise<SettlementPolicy> {
+    const [row] = await this.database.db
+      .select()
+      .from(platformSettings)
+      .where(eq(platformSettings.id, 1));
+    if (!row) throw new Error('platform_settings has no row: run the migrations');
+    return { commissionRate: row.commissionRate, refundTiers: row.refundTiers };
+  }
+
+  /** The defaults for every operator without its own values. Applies from now on. */
+  async setPlatformPolicy(
+    input: SettlementPolicy,
+    auth: Authenticated,
+    meta: RequestMeta,
+  ): Promise<SettlementPolicy> {
+    const refundTiers = checkTiers(input.refundTiers);
+    const commissionRate = normalizeRate(input.commissionRate);
+    await this.database.db
+      .update(platformSettings)
+      .set({ commissionRate, refundTiers, updatedByUserId: auth.user.id, updatedAt: new Date() })
+      .where(eq(platformSettings.id, 1));
+    await this.audit.record({
+      action: 'settlement.platform_policy_set',
+      actorUserId: auth.user.id,
+      ip: meta.ip,
+      metadata: { commissionRate, refundTiers },
+    });
+    return this.platformPolicy();
+  }
+
+  /** An operator's own commission and refund tiers; null fields use the platform's. */
+  async setOrganizationPolicy(
     organizationId: string,
-    rate: string | null,
+    input: SetOrganizationPolicyRequest,
     auth: Authenticated,
     meta: RequestMeta,
   ): Promise<OrganizationSettlement> {
     await this.requireOrganization(organizationId);
-    if (rate === null) {
+    const commissionRate =
+      input.commissionRate === null ? null : normalizeRate(input.commissionRate);
+    const refundTiers = input.refundTiers === null ? null : checkTiers(input.refundTiers);
+    if (commissionRate === null && refundTiers === null) {
       await this.database.db
-        .delete(organizationCommissions)
-        .where(eq(organizationCommissions.organizationId, organizationId));
+        .delete(organizationPolicies)
+        .where(eq(organizationPolicies.organizationId, organizationId));
     } else {
-      const value = normalizeRate(rate);
+      const values = { commissionRate, refundTiers, updatedByUserId: auth.user.id };
       await this.database.db
-        .insert(organizationCommissions)
-        .values({ organizationId, rate: value, updatedByUserId: auth.user.id })
+        .insert(organizationPolicies)
+        .values({ organizationId, ...values })
         .onConflictDoUpdate({
-          target: organizationCommissions.organizationId,
-          set: { rate: value, updatedByUserId: auth.user.id, updatedAt: new Date() },
+          target: organizationPolicies.organizationId,
+          set: { ...values, updatedAt: new Date() },
         });
     }
     await this.audit.record({
-      action: 'settlement.commission_set',
+      action: 'settlement.organization_policy_set',
       actorUserId: auth.user.id,
       targetType: 'organization',
       targetId: organizationId,
       ip: meta.ip,
-      metadata: { rate: rate === null ? null : normalizeRate(rate) },
+      metadata: { commissionRate, refundTiers },
     });
     return this.settlement(organizationId);
   }
@@ -321,6 +355,8 @@ export class SettlementsService {
       currency: payment.currency,
       amount: payment.amount,
       receivedAmount: payment.receivedAmount,
+      refundAmount: payment.refundAmount ?? payment.receivedAmount ?? payment.amount,
+      cancellation: payment.refundAmount !== null,
       reference: payment.reference,
       providerReference: payment.providerReference,
       createdAt: payment.createdAt.toISOString(),
@@ -397,10 +433,11 @@ export class SettlementsService {
       .from(payouts)
       .where(and(inArray(payouts.organizationId, organizationIds), isNull(payouts.voidedAt)))
       .groupBy(payouts.organizationId, payouts.currency);
+    const platform = await this.platformPolicy();
     const overrides = await this.database.db
       .select()
-      .from(organizationCommissions)
-      .where(inArray(organizationCommissions.organizationId, organizationIds));
+      .from(organizationPolicies)
+      .where(inArray(organizationPolicies.organizationId, organizationIds));
 
     const totals = new Map<string, Totals>();
     for (const row of [...earned, ...paid] as Totals[]) {
@@ -408,11 +445,13 @@ export class SettlementsService {
       totals.set(key, { ...totals.get(key), ...row });
     }
     return organizationIds.map((organizationId) => {
-      const override = overrides.find((o) => o.organizationId === organizationId)?.rate ?? null;
+      const own = overrides.find((o) => o.organizationId === organizationId);
       return {
         organizationId,
-        commissionRate: override ?? this.defaultRate,
-        commissionOverride: override,
+        commissionRate: own?.commissionRate ?? platform.commissionRate,
+        commissionOverride: own?.commissionRate ?? null,
+        refundTiers: own?.refundTiers ?? platform.refundTiers,
+        refundTiersOverride: own?.refundTiers ?? null,
         balances: CURRENCIES.flatMap((currency) => {
           const t = totals.get(`${organizationId}:${currency}`);
           return t ? [balanceOf(t, currency)] : [];
@@ -420,6 +459,13 @@ export class SettlementsService {
       };
     });
   }
+}
+
+/** Validated tiers, or a 400 explaining what is wrong. */
+function checkTiers(tiers: RefundTier[]): RefundTier[] {
+  const problem = refundTiersProblem(tiers);
+  if (problem) throw invalid(problem);
+  return tiers.map(({ hoursBefore, percent }) => ({ hoursBefore, percent }));
 }
 
 function balanceOf(t: Totals, currency: Currency): SettlementBalance {
