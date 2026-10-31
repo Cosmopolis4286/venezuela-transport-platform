@@ -202,7 +202,8 @@ const en: SharedMessages = {
     PAYOUT_EXCEEDS_BALANCE: "The payout is larger than the company's balance in that currency.",
     PAYOUT_ALREADY_VOIDED: 'This payout was already voided.',
     PAYMENT_NOT_REFUND_DUE: 'This payment is not awaiting a refund.',
-    BOOKING_NOT_CANCELLABLE: 'This booking can no longer be cancelled: the bus left or you boarded.',
+    BOOKING_NOT_CANCELLABLE:
+      'This booking can no longer be cancelled: the bus left or you boarded.',
   },
 };
 
@@ -291,7 +292,8 @@ const ptBR: SharedMessages = {
     PAYOUT_EXCEEDS_BALANCE: 'O repasse é maior que o saldo da empresa nessa moeda.',
     PAYOUT_ALREADY_VOIDED: 'Este repasse já foi anulado.',
     PAYMENT_NOT_REFUND_DUE: 'Este pagamento não está aguardando reembolso.',
-    BOOKING_NOT_CANCELLABLE: 'Esta reserva não pode mais ser cancelada: o ônibus partiu ou você embarcou.',
+    BOOKING_NOT_CANCELLABLE:
+      'Esta reserva não pode mais ser cancelada: o ônibus partiu ou você embarcou.',
   },
 };
 

@@ -228,7 +228,9 @@ describe.runIf(expectDatabase)('Cancelling paid bookings (e2e)', () => {
           .get(`/api/v1/me/bookings/${booking.id}/cancellation`)
           .set('Authorization', passenger.auth);
       const cancel = (booking: Booking) =>
-        http().post(`/api/v1/me/bookings/${booking.id}/cancel`).set('Authorization', passenger.auth);
+        http()
+          .post(`/api/v1/me/bookings/${booking.id}/cancel`)
+          .set('Authorization', passenger.auth);
       const cancellationEntry = async (bookingId: string) =>
         (
           await db

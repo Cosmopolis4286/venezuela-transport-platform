@@ -6,6 +6,7 @@ import {
   type SettlementEntry,
 } from '@vtp/shared-types';
 import { Badge } from '@/components/ui/badge';
+import { describeRefundTiers } from '@/components/portal/refund-policy';
 import { formatDate } from '@/lib/labels';
 
 const percent = (rate: string) => `${rate.replace('.', ',')} %`;
@@ -18,6 +19,11 @@ export function SettlementBalances({ settlement }: { settlement: OrganizationSet
         Comisión de la plataforma: <strong>{percent(settlement.commissionRate)}</strong>
         {settlement.commissionOverride ? ' (acordada con la empresa)' : ' (por defecto)'}. Se aplica
         a las reservas pagadas desde que se fija.
+      </p>
+      <p className="text-sm text-muted-foreground">
+        Reembolso si el pasajero cancela: {describeRefundTiers(settlement.refundTiers)}
+        {settlement.refundTiersOverride ? ' (acordado con la empresa)' : ' (por defecto)'}. La
+        plataforma conserva su comisión; el reembolso se descuenta de lo ganado por la empresa.
       </p>
       {settlement.balances.length === 0 ? (
         <p className="text-sm text-muted-foreground">Todavía no hay reservas pagadas.</p>
@@ -86,7 +92,12 @@ export function SettlementEntries({ entries }: { entries: SettlementEntry[] }) {
           {entries.map((e) => (
             <tr key={e.id} className="border-t">
               <td className="py-2 pr-4">{formatDate(e.createdAt)}</td>
-              <td className="py-2 pr-4">{e.bookingCode}</td>
+              <td className="py-2 pr-4">
+                {e.bookingCode}
+                {e.kind === 'cancellation' ? (
+                  <span className="text-muted-foreground"> · cancelada</span>
+                ) : null}
+              </td>
               <td className="py-2 pr-4">
                 {e.route.name} · {formatDate(`${e.serviceDate}T12:00:00-04:00`)}
               </td>

@@ -20,6 +20,7 @@ import {
   localTime,
   longDate,
   type Booking,
+  type CancellationQuote,
 } from '@vtp/shared-types';
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -54,8 +55,12 @@ export default function BookingScreen() {
   const data = booking.data;
   // The server releases the seats when the hold runs out; reflect it without waiting for a reload.
   const status = data.status === 'held' && secondsLeft === 0 ? 'expired' : data.status;
-  const refundDue = data.payment?.status === 'refund_due' && status !== 'held';
-  const refunded = data.payment?.status === 'refunded' && status !== 'held';
+  // A cancelled booking whose payment had confirmed it: the passenger cancelled a paid trip.
+  const cancelledPaid = status === 'cancelled' && Boolean(data.payment?.confirmedAt);
+  const refundDue = data.payment?.status === 'refund_due' && status !== 'held' && !cancelledPaid;
+  const refunded = data.payment?.status === 'refunded' && status !== 'held' && !cancelledPaid;
+  const refundText = (payment: NonNullable<Booking['payment']>) =>
+    formatPaymentAmount(payment.refundAmount ?? payment.amount, payment.currency, locale);
   const extraDays = daysBetween(data.trip.departsAt, data.trip.arrivesAt);
 
   const cancel = async () => {
@@ -89,6 +94,15 @@ export default function BookingScreen() {
       {status === 'expired' ? <Banner tone="error">{t.booking.expired}</Banner> : null}
       {refundDue ? <Banner tone="warning">{t.booking.refundDue}</Banner> : null}
       {refunded ? <Banner tone="info">{t.booking.refunded}</Banner> : null}
+      {cancelledPaid && data.payment ? (
+        <Banner tone="info">
+          {data.payment.status === 'refund_due'
+            ? t.booking.cancelledRefund(refundText(data.payment))
+            : data.payment.status === 'refunded'
+              ? t.booking.cancelledRefunded(refundText(data.payment))
+              : t.booking.cancelledNoRefund}
+        </Banner>
+      ) : null}
 
       <Card>
         <Heading>
@@ -160,6 +174,90 @@ export default function BookingScreen() {
           onPress={() => void cancel()}
         />
       ) : null}
+      {status === 'confirmed' ? (
+        <CancelPaid bookingId={data.id} onCancelled={(b) => booking.mutate(b)} />
+      ) : null}
     </Screen>
+  );
+}
+
+/** Cancels a paid trip after showing what would be refunded now, per the operator's policy. */
+function CancelPaid({
+  bookingId,
+  onCancelled,
+}: {
+  bookingId: string;
+  onCancelled: (booking: Booking) => void;
+}) {
+  const { api } = useAuth();
+  const { t, locale } = useT();
+  const [quote, setQuote] = useState<CancellationQuote | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async (action: () => Promise<void>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await action();
+    } catch (e) {
+      setError(userMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const ask = () =>
+    run(async () => {
+      setQuote(await api.request<CancellationQuote>(`/me/bookings/${bookingId}/cancellation`));
+    });
+  const confirm = () =>
+    run(async () => {
+      onCancelled(
+        await api.request<Booking>(`/me/bookings/${bookingId}/cancel`, { method: 'POST' }),
+      );
+      setQuote(null);
+    });
+
+  if (!quote) {
+    return (
+      <View style={{ gap: 12 }}>
+        {error ? <Banner tone="error">{error}</Banner> : null}
+        <Button
+          variant="secondary"
+          title={t.booking.cancelPaid}
+          loading={busy}
+          onPress={() => void ask()}
+        />
+      </View>
+    );
+  }
+  const policy = [
+    ...quote.policy.map((tier) => t.booking.tier(tier.percent, tier.hoursBefore)),
+    t.booking.tierAfter,
+  ].join(' · ');
+  return (
+    <Card>
+      <Subheading>{t.booking.cancelPaid}</Subheading>
+      {!quote.cancellable ? (
+        <Body>{t.booking.notCancellable}</Body>
+      ) : quote.refund ? (
+        <Body>
+          {t.booking.cancelQuote(
+            formatPaymentAmount(quote.refund.amount, quote.refund.currency, locale),
+            quote.refundPercent,
+          )}
+        </Body>
+      ) : (
+        <Body>{t.booking.cancelNoRefund}</Body>
+      )}
+      <Body muted>
+        {t.booking.policy}: {policy}
+      </Body>
+      {error ? <Banner tone="error">{error}</Banner> : null}
+      {quote.cancellable ? (
+        <Button title={t.booking.cancelConfirm} loading={busy} onPress={() => void confirm()} />
+      ) : null}
+      <Button variant="secondary" title={t.booking.cancelKeep} onPress={() => setQuote(null)} />
+    </Card>
   );
 }

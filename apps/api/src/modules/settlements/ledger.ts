@@ -35,7 +35,10 @@ export function splitRefund(
 ): { fromEarned: string; fromCommission: string } {
   const total = toScaled(refund, 2);
   const fromEarned = total < toScaled(earned, 2) ? total : toScaled(earned, 2);
-  return { fromEarned: fromScaled(fromEarned, 2), fromCommission: fromScaled(total - fromEarned, 2) };
+  return {
+    fromEarned: fromScaled(fromEarned, 2),
+    fromCommission: fromScaled(total - fromEarned, 2),
+  };
 }
 
 /** `"8.5"` → `"8.50"`. */
@@ -45,7 +48,9 @@ export const normalizeRate = (rate: string) => fromScaled(toScaled(rate, 2), 2);
 export async function policyFor(
   db: Database | Transaction,
   organizationId: string,
-): Promise<SettlementPolicy & { commissionOverride: string | null; refundTiersOverride: RefundTier[] | null }> {
+): Promise<
+  SettlementPolicy & { commissionOverride: string | null; refundTiersOverride: RefundTier[] | null }
+> {
   const [platform] = await db.select().from(platformSettings).where(eq(platformSettings.id, 1));
   if (!platform) throw new Error('platform_settings has no row: run the migrations');
   const [own] = await db

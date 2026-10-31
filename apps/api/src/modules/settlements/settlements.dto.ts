@@ -75,7 +75,12 @@ export class SettlementPolicyDto implements SettlementPolicy {
 }
 
 export class SetOrganizationPolicyDto implements SetOrganizationPolicyRequest {
-  @ApiProperty({ type: String, nullable: true, example: '7.50', description: 'null: platform default' })
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: '7.50',
+    description: 'null: platform default',
+  })
   @ValidateIf((_, value) => value !== null)
   @IsString()
   @Matches(COMMISSION_PATTERN, commissionMessage)

@@ -230,7 +230,8 @@ export class BookingsService {
         .from(bookings)
         .where(eq(bookings.id, booking.id))
         .for('update');
-      if (locked?.status !== booking.status) throw conflict('The booking changed, reload and retry');
+      if (locked?.status !== booking.status)
+        throw conflict('The booking changed, reload and retry');
       if (locked.status === 'confirmed') {
         const { quote, payment, fareRefund } = await this.quote(tx, locked);
         if (!quote.cancellable) {
@@ -300,7 +301,9 @@ export class BookingsService {
         hoursBeforeDeparture: Math.round(hoursLeft * 10) / 10,
         refundPercent,
         refund:
-          payment && refundPercent > 0 ? { amount: refundAmount, currency: payment.currency } : null,
+          payment && refundPercent > 0
+            ? { amount: refundAmount, currency: payment.currency }
+            : null,
         policy: refundTiers,
       },
       payment,

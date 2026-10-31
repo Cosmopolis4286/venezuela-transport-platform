@@ -1,6 +1,7 @@
 'use server';
 
 import { refresh } from 'next/cache';
+import { MAX_REFUND_TIERS, type RefundTier } from '@vtp/shared-types';
 import type { FormState } from '@/lib/form-state';
 import { apiRequest } from '@/lib/server/api';
 import { failure, text } from '@/lib/server/form-actions';
@@ -9,20 +10,55 @@ import { failure, text } from '@/lib/server/form-actions';
 
 const decimal = (form: FormData, name: string) => text(form, name).replace(',', '.');
 
-export async function setCommission(_: FormState, form: FormData): Promise<FormState> {
-  const rate = decimal(form, 'rate');
+/** Tiers typed in rows `tierHours:N` / `tierPercent:N`; empty rows are skipped. */
+function tiersFrom(form: FormData): RefundTier[] {
+  const tiers: RefundTier[] = [];
+  for (let i = 0; i < MAX_REFUND_TIERS; i++) {
+    const hours = text(form, `tierHours:${i}`);
+    const percent = text(form, `tierPercent:${i}`);
+    if (!hours && !percent) continue;
+    tiers.push({ hoursBefore: Number(hours), percent: Number(percent) });
+  }
+  return tiers.sort((a, b) => b.hoursBefore - a.hoursBefore);
+}
+
+const POLICY_RULES = {
+  VALIDATION_FAILED:
+    'Revisa la política: comisión entre 0 y 100 con hasta dos decimales; de 1 a 4 tramos con horas enteras distintas (0 a 720) y porcentajes enteros de 0 a 100.',
+};
+
+export async function setPlatformPolicy(_: FormState, form: FormData): Promise<FormState> {
   try {
-    await apiRequest(
-      `/admin/organizations/${encodeURIComponent(text(form, 'organizationId'))}/commission`,
-      { method: 'PUT', body: { rate: rate || null } },
-    );
-  } catch (error) {
-    return failure(error, {
-      VALIDATION_FAILED: 'Escribe un porcentaje entre 0 y 100, con hasta dos decimales.',
+    await apiRequest('/admin/settlement-policy', {
+      method: 'PUT',
+      body: { commissionRate: decimal(form, 'commissionRate'), refundTiers: tiersFrom(form) },
     });
+  } catch (error) {
+    return failure(error, POLICY_RULES);
   }
   refresh();
-  return { success: rate ? 'Comisión guardada.' : 'Ahora usa la comisión por defecto.' };
+  return { success: 'Política general guardada. Se aplica desde ahora.' };
+}
+
+export async function setOrganizationPolicy(_: FormState, form: FormData): Promise<FormState> {
+  const commissionRate = decimal(form, 'commissionRate');
+  const ownTiers = form.get('ownTiers') === 'on';
+  try {
+    await apiRequest(
+      `/admin/organizations/${encodeURIComponent(text(form, 'organizationId'))}/policy`,
+      {
+        method: 'PUT',
+        body: {
+          commissionRate: commissionRate || null,
+          refundTiers: ownTiers ? tiersFrom(form) : null,
+        },
+      },
+    );
+  } catch (error) {
+    return failure(error, POLICY_RULES);
+  }
+  refresh();
+  return { success: 'Política de la empresa guardada.' };
 }
 
 export async function createPayout(_: FormState, form: FormData): Promise<FormState> {
