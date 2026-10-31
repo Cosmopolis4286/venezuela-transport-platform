@@ -258,7 +258,11 @@ export class PaymentsService {
         compareAmounts(incoming.amount, payment.amount) >= 0;
       if (payment.status === 'pending' && enough) {
         if (await this.bookings.confirmHeld(tx, payment.bookingId)) {
-          await recordEarning(tx, payment.bookingId, this.config.get('PLATFORM_COMMISSION_PERCENT'));
+          await recordEarning(
+            tx,
+            payment.bookingId,
+            this.config.get('PLATFORM_COMMISSION_PERCENT'),
+          );
           const [row] = await tx
             .update(payments)
             .set({ ...received, status: 'confirmed', confirmedAt: new Date() })

@@ -73,7 +73,8 @@ export async function markRefunded(_: FormState, form: FormData): Promise<FormSt
     });
   } catch (error) {
     return failure(error, {
-      VALIDATION_FAILED: 'Escribe la referencia de la transferencia con la que devolviste el dinero.',
+      VALIDATION_FAILED:
+        'Escribe la referencia de la transferencia con la que devolviste el dinero.',
     });
   }
   refresh();

@@ -100,8 +100,8 @@ async function OrganizationSettlementView({
         <div className="flex flex-col gap-1">
           <CardTitle>Registrar un pago a la empresa</CardTitle>
           <CardDescription>
-            Primero haz la transferencia; luego regístrala aquí con su referencia. No se puede
-            pagar más que el saldo de esa moneda.
+            Primero haz la transferencia; luego regístrala aquí con su referencia. No se puede pagar
+            más que el saldo de esa moneda.
           </CardDescription>
         </div>
         {owed.length === 0 ? (

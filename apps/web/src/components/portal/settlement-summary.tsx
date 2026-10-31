@@ -16,8 +16,8 @@ export function SettlementBalances({ settlement }: { settlement: OrganizationSet
     <div className="flex flex-col gap-3">
       <p className="text-sm text-muted-foreground">
         Comisión de la plataforma: <strong>{percent(settlement.commissionRate)}</strong>
-        {settlement.commissionOverride ? ' (acordada con la empresa)' : ' (por defecto)'}. Se
-        aplica a las reservas pagadas desde que se fija.
+        {settlement.commissionOverride ? ' (acordada con la empresa)' : ' (por defecto)'}. Se aplica
+        a las reservas pagadas desde que se fija.
       </p>
       {settlement.balances.length === 0 ? (
         <p className="text-sm text-muted-foreground">Todavía no hay reservas pagadas.</p>
@@ -38,7 +38,9 @@ export function SettlementBalances({ settlement }: { settlement: OrganizationSet
               {settlement.balances.map((b) => (
                 <tr key={b.currency} className="border-t">
                   <td className="py-2 pr-4">{b.currency}</td>
-                  <td className="py-2 pr-4 text-right">{formatPaymentAmount(b.gross, b.currency)}</td>
+                  <td className="py-2 pr-4 text-right">
+                    {formatPaymentAmount(b.gross, b.currency)}
+                  </td>
                   <td className="py-2 pr-4 text-right">
                     {formatPaymentAmount(b.commission, b.currency)}
                   </td>

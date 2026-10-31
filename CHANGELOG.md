@@ -13,6 +13,16 @@ pull request.
 
 ### Agregado
 
+- **Liquidaciones y reembolsos** (ADR-024). Cada reserva pagada anota lo que gana la empresa
+  (tarifa menos comisión), en la moneda de la tarifa y en la misma transacción que la confirma.
+  La comisión tiene un valor por defecto (`PLATFORM_COMMISSION_PERCENT`, 0 % hasta que se decida)
+  y un administrador puede fijar otra por empresa; las reservas ya pagadas conservan la suya. Las
+  empresas ven su saldo, sus reservas pagadas por mes y los pagos recibidos en el portal
+  (permiso nuevo `finance.view`, dueño y administrador). Los administradores de la plataforma
+  registran los pagos a las empresas (nunca más que el saldo; un error se anula) y atienden la
+  cola de pagos por reembolsar, que pasan al estado nuevo `refunded` y el pasajero ve en la app.
+  Los revisores de la plataforma no tocan el dinero. Ver
+  [docs/architecture/settlements.md](docs/architecture/settlements.md).
 - **Inglés y portugués de Brasil para el pasajero.** La web pública (`/es`, `/en`, `/pt-br`) y toda
   la app de pasajeros, incluidos el inicio de sesión, los estados, los métodos de pago y los
   mensajes de error, ahora también están en inglés y en portugués de Brasil. El idioma se toma del

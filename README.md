@@ -143,6 +143,7 @@ Redis es opcional y está apagado por defecto; nada del flujo normal de `pnpm de
 - [Flota: mapas de puestos](docs/architecture/fleet.md)
 - [Reservas: viajes y puestos apartados](docs/architecture/bookings.md)
 - [Pagos y boletos](docs/architecture/payments.md)
+- [Liquidaciones y reembolsos](docs/architecture/settlements.md)
 - [Despacho: vehículos y conductores de cada viaje](docs/architecture/dispatch.md)
 - [Taxis desde y hacia los terminales](docs/architecture/taxis.md)
 - [Idiomas: español, inglés y portugués de Brasil](docs/architecture/i18n.md)

@@ -37,8 +37,7 @@ const invalid = (message: string) =>
   new ApiException('VALIDATION_FAILED', message, HttpStatus.BAD_REQUEST);
 
 /** Sum of a numeric column as a two-decimal string ("0.00" when there are no rows). */
-const total = (column: AnyColumn) =>
-  sql<string>`coalesce(sum(${column}), 0)::numeric(14, 2)::text`;
+const total = (column: AnyColumn) => sql<string>`coalesce(sum(${column}), 0)::numeric(14, 2)::text`;
 
 const organizationColumns = {
   id: organizations.id,
