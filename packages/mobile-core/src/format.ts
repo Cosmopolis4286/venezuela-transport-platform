@@ -1,6 +1,8 @@
-/** Dates as Venezuelans read them, in Caracas time. */
-export function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat('es-VE', {
+import { DEFAULT_LOCALE, INTL_LOCALES, type Locale } from '@vtp/shared-types';
+
+/** Dates in Caracas time, written the way `locale` reads them. */
+export function formatDate(iso: string, locale: Locale = DEFAULT_LOCALE): string {
+  return new Intl.DateTimeFormat(INTL_LOCALES[locale], {
     dateStyle: 'medium',
     timeZone: 'America/Caracas',
   }).format(new Date(iso));

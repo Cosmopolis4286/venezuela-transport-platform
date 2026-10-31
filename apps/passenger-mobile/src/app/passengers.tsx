@@ -22,15 +22,20 @@ import {
 } from '@vtp/shared-types';
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
+import { useT } from '@/i18n/use-t';
 import { useBookingDraft } from '@/lib/booking-draft';
-
-const DOCUMENT_LABELS: Record<IdentityDocumentType, string> = { V: 'V', E: 'E', P: 'Pasaporte' };
 
 /** Name and ID of each traveller, then the seats are held. */
 export default function PassengersScreen() {
   const user = useCurrentUser();
   const { api } = useAuth();
   const { trip, seats, clear } = useBookingDraft();
+  const { t, locale } = useT();
+  const documentLabels: Record<IdentityDocumentType, string> = {
+    V: 'V',
+    E: 'E',
+    P: t.passengers.passport,
+  };
   const [passengers, setPassengers] = useState<PassengerInput[]>(() =>
     seats.map((seatNumber, index) => ({
       seatNumber,
@@ -69,16 +74,10 @@ export default function PassengersScreen() {
       router.push({ pathname: '/booking/[id]', params: { id: booking.id } });
     } catch (e) {
       setBusy(false);
-      if (e instanceof ApiError && e.code === 'CONFLICT') {
-        setError(
-          /taken/.test(e.apiMessage)
-            ? 'Alguien acaba de apartar uno de esos puestos. Vuelve atrás y elige otro.'
-            : /pending/.test(e.apiMessage)
-              ? 'Tienes reservas sin pagar. Págalas o cancélalas antes de apartar más puestos.'
-              : 'Esta salida ya no se puede reservar.',
-        );
+      if (e instanceof ApiError && e.code === 'CONFLICT' && !e.reason) {
+        setError(t.passengers.notBookable);
       } else if (e instanceof ApiError && e.code === 'VALIDATION_FAILED') {
-        setError('Revisa los nombres y números de documento.');
+        setError(t.passengers.checkNames);
       } else {
         setError(userMessage(e));
       }
@@ -87,32 +86,32 @@ export default function PassengersScreen() {
 
   return (
     <Screen>
-      <Heading>Pasajeros</Heading>
-      <Body muted>Como aparecen en el documento que mostrarán al abordar.</Body>
+      <Heading>{t.passengers.heading}</Heading>
+      <Body muted>{t.passengers.intro}</Body>
       {passengers.map((passenger, index) => (
         <Card key={passenger.seatNumber}>
-          <Subheading>Puesto {passenger.seatNumber}</Subheading>
+          <Subheading>{t.seat(passenger.seatNumber)}</Subheading>
           <Field
-            label="Nombres"
+            label={t.passengers.firstNames}
             value={passenger.firstName}
             onChangeText={(firstName) => update(index, { firstName })}
           />
           <Field
-            label="Apellidos"
+            label={t.passengers.lastNames}
             value={passenger.lastName}
             onChangeText={(lastName) => update(index, { lastName })}
           />
           <Segmented
-            label="Documento"
+            label={t.passengers.document}
             options={IDENTITY_DOCUMENT_TYPES.map((value) => ({
               value,
-              label: DOCUMENT_LABELS[value],
+              label: documentLabels[value],
             }))}
             value={passenger.documentType}
             onChange={(documentType) => update(index, { documentType })}
           />
           <Field
-            label={`Número de documento del puesto ${passenger.seatNumber}`}
+            label={t.passengers.documentNumberFor(passenger.seatNumber)}
             value={passenger.documentNumber}
             onChangeText={(documentNumber) => update(index, { documentNumber })}
             keyboardType={passenger.documentType === 'P' ? 'default' : 'number-pad'}
@@ -122,15 +121,16 @@ export default function PassengersScreen() {
         </Card>
       ))}
       <Body>
-        Total:{' '}
+        {t.passengers.total}:{' '}
         {formatMoney(
           (Number(trip.fare!.amount) * passengers.length).toFixed(2),
           trip.fare!.currency,
+          locale,
         )}
       </Body>
       {error ? <Banner tone="error">{error}</Banner> : null}
       <Button
-        title="Apartar puestos"
+        title={t.passengers.hold}
         loading={busy}
         disabled={!complete}
         onPress={() => void hold()}

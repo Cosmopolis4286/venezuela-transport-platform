@@ -15,13 +15,13 @@ import {
   localTime,
   longDate,
   MAX_SEATS_PER_BOOKING,
-  SERVICE_CLASS_LABELS,
   type TripAvailability,
 } from '@vtp/shared-types';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator } from 'react-native';
 import { SeatMap } from '@/components/seat-map';
+import { useT } from '@/i18n/use-t';
 import { useBookingDraft } from '@/lib/booking-draft';
 import { useSearch } from '@/lib/search-context';
 import { useRefreshOnFocus } from '@/lib/use-refresh-on-focus';
@@ -36,6 +36,7 @@ export default function TripScreen() {
   const { state } = useAuth();
   const draft = useBookingDraft();
   const colors = useColors();
+  const { t, shared, locale } = useT();
   const [selected, setSelected] = useState<string[]>([]);
   const query =
     from && to && scheduleId && serviceDate
@@ -79,39 +80,35 @@ export default function TripScreen() {
     <Screen>
       <Heading>
         {localTime(data.departsAt)} → {localTime(data.arrivesAt)}
-        {extraDays ? ` (+${extraDays} d)` : ''}
+        {extraDays ? t.dayOffset(extraDays) : ''}
       </Heading>
       <Body muted>
         {data.operator.tradeName ?? data.operator.legalName} ·{' '}
-        {SERVICE_CLASS_LABELS[data.serviceClass]} · {longDate(data.departsAt)}
+        {shared.serviceClass[data.serviceClass]} · {longDate(data.departsAt, locale)}
       </Body>
       <Body muted>
         {data.from.name} → {data.to.name}
       </Body>
       {!data.bookable ? (
-        <Banner tone="info">
-          {data.fare ? 'Esta salida ya partió.' : 'Este tramo se vende solo en la taquilla.'}
-        </Banner>
+        <Banner tone="info">{data.fare ? t.trip.departed : t.trip.counterOnly}</Banner>
       ) : (
         <>
-          <Subheading>Elige tus puestos</Subheading>
-          <Body muted>
-            {free} libres · hasta {MAX_SEATS_PER_BOOKING} por reserva · el frente del vehículo está
-            arriba
-          </Body>
+          <Subheading>{t.trip.chooseSeats}</Subheading>
+          <Body muted>{t.trip.seatsHelp(free, MAX_SEATS_PER_BOOKING)}</Body>
           <SeatMap trip={data} selected={selected} onToggle={toggle} />
           {selected.length ? (
             <Body>
-              {selected.length} {selected.length === 1 ? 'puesto' : 'puestos'} ·{' '}
+              {t.seats(selected.length)} ·{' '}
               {formatMoney(
                 (Number(data.fare!.amount) * selected.length).toFixed(2),
                 data.fare!.currency,
+                locale,
               )}
             </Body>
           ) : null}
           {state.status === 'signedIn' ? (
             <Button
-              title="Continuar"
+              title={t.trip.continue}
               disabled={!selected.length}
               onPress={() => {
                 draft.start(data, selected);
@@ -120,9 +117,9 @@ export default function TripScreen() {
             />
           ) : (
             <>
-              <Banner tone="info">Inicia sesión para apartar tus puestos.</Banner>
+              <Banner tone="info">{t.trip.signInToHold}</Banner>
               <Button
-                title="Iniciar sesión"
+                title={t.trip.signIn}
                 variant="secondary"
                 onPress={() => router.push('/sign-in')}
               />

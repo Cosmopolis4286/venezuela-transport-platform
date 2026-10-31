@@ -1,8 +1,7 @@
 import { useColors } from '@vtp/mobile-core';
 import type { TripAvailability } from '@vtp/shared-types';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-
-const DECK_LABELS = ['Planta baja', 'Planta alta'];
+import { useT } from '@/i18n/use-t';
 
 /**
  * Seat map of a trip: taken seats are disabled, selected ones highlighted. Schedules without a
@@ -18,6 +17,7 @@ export function SeatMap({
   onToggle: (seat: string) => void;
 }) {
   const colors = useColors();
+  const { t } = useT();
   const layout =
     trip.layout ??
     (() => {
@@ -41,7 +41,7 @@ export function SeatMap({
       {Array.from({ length: layout.decks }, (_, deck) => (
         <View key={deck} style={styles.deck}>
           {layout.decks > 1 ? (
-            <Text style={[styles.deckLabel, { color: colors.text }]}>{DECK_LABELS[deck]}</Text>
+            <Text style={[styles.deckLabel, { color: colors.text }]}>{t.seatMap.decks[deck]}</Text>
           ) : null}
           <View
             style={[styles.body, { borderColor: colors.border, backgroundColor: colors.surface }]}
@@ -59,7 +59,10 @@ export function SeatMap({
                     <Pressable
                       key={column}
                       accessibilityRole="button"
-                      accessibilityLabel={`Puesto ${seat.number}${isTaken ? ', ocupado' : isSelected ? ', elegido' : ''}`}
+                      accessibilityLabel={t.seatMap.seatA11y(
+                        seat.number,
+                        isTaken ? 'taken' : isSelected ? 'selected' : 'free',
+                      )}
                       accessibilityState={{ disabled: isTaken, selected: isSelected }}
                       disabled={isTaken}
                       onPress={() => onToggle(seat.number)}

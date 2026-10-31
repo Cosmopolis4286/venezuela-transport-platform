@@ -1,0 +1,111 @@
+import type { Locale } from '@vtp/shared-types';
+
+/** Texts of the screens `@vtp/mobile-core` provides (sign-in, registration, splash). */
+const es = {
+  signIn: {
+    withCode: 'Con un código',
+    withPassword: 'Con contraseña',
+    noAccount: '¿No tienes cuenta? Regístrate con tu correo',
+    receiveCodeBy: 'Recibir el código por',
+    email: 'Correo',
+    emailAddress: 'Correo electrónico',
+    phoneNumber: 'Número de teléfono',
+    phoneHint: 'Por ejemplo 0414-1234567',
+    sendCode: 'Enviar código',
+    codeSentTo: (destination: string) => `Enviamos un código de 6 dígitos a ${destination}.`,
+    code: 'Código',
+    enter: 'Entrar',
+    resendIn: (seconds: number) => `Reenviar código (${seconds} s)`,
+    resend: 'Reenviar código',
+    useAnother: 'Usar otro número o correo',
+    password: 'Contraseña',
+  },
+  register: {
+    title: 'Crear cuenta',
+    intro: 'También puedes entrar sin contraseña con un código por SMS, WhatsApp o correo.',
+    firstName: 'Nombre',
+    lastName: 'Apellido',
+    emailAddress: 'Correo electrónico',
+    password: 'Contraseña',
+    atLeast: (min: number) => `Al menos ${min} caracteres.`,
+    submit: 'Crear cuenta',
+    haveAccount: 'Ya tengo cuenta',
+    emailTaken: 'Ya existe una cuenta con ese correo. Inicia sesión.',
+  },
+  splash: { retry: 'Reintentar', signOut: 'Cerrar sesión' },
+  language: { label: 'Idioma', automatic: 'Automático' },
+};
+
+export type CoreMessages = typeof es;
+
+const en: CoreMessages = {
+  signIn: {
+    withCode: 'With a code',
+    withPassword: 'With a password',
+    noAccount: 'No account? Sign up with your e-mail',
+    receiveCodeBy: 'Get the code by',
+    email: 'E-mail',
+    emailAddress: 'E-mail address',
+    phoneNumber: 'Phone number',
+    phoneHint: 'Venezuelan number, e.g. 0414-1234567',
+    sendCode: 'Send code',
+    codeSentTo: (destination) => `We sent a 6-digit code to ${destination}.`,
+    code: 'Code',
+    enter: 'Sign in',
+    resendIn: (seconds) => `Resend code (${seconds} s)`,
+    resend: 'Resend code',
+    useAnother: 'Use another number or e-mail',
+    password: 'Password',
+  },
+  register: {
+    title: 'Create account',
+    intro: 'You can also sign in without a password using a code by SMS, WhatsApp or e-mail.',
+    firstName: 'First name',
+    lastName: 'Last name',
+    emailAddress: 'E-mail address',
+    password: 'Password',
+    atLeast: (min) => `At least ${min} characters.`,
+    submit: 'Create account',
+    haveAccount: 'I already have an account',
+    emailTaken: 'There is already an account with that e-mail. Sign in.',
+  },
+  splash: { retry: 'Try again', signOut: 'Sign out' },
+  language: { label: 'Language', automatic: 'Automatic' },
+};
+
+const ptBR: CoreMessages = {
+  signIn: {
+    withCode: 'Com um código',
+    withPassword: 'Com senha',
+    noAccount: 'Não tem conta? Cadastre-se com seu e-mail',
+    receiveCodeBy: 'Receber o código por',
+    email: 'E-mail',
+    emailAddress: 'E-mail',
+    phoneNumber: 'Número de telefone',
+    phoneHint: 'Número venezuelano, por exemplo 0414-1234567',
+    sendCode: 'Enviar código',
+    codeSentTo: (destination) => `Enviamos um código de 6 dígitos para ${destination}.`,
+    code: 'Código',
+    enter: 'Entrar',
+    resendIn: (seconds) => `Reenviar código (${seconds} s)`,
+    resend: 'Reenviar código',
+    useAnother: 'Usar outro número ou e-mail',
+    password: 'Senha',
+  },
+  register: {
+    title: 'Criar conta',
+    intro: 'Você também pode entrar sem senha com um código por SMS, WhatsApp ou e-mail.',
+    firstName: 'Nome',
+    lastName: 'Sobrenome',
+    emailAddress: 'E-mail',
+    password: 'Senha',
+    atLeast: (min) => `Pelo menos ${min} caracteres.`,
+    submit: 'Criar conta',
+    haveAccount: 'Já tenho conta',
+    emailTaken: 'Já existe uma conta com esse e-mail. Entre.',
+  },
+  splash: { retry: 'Tentar novamente', signOut: 'Sair' },
+  language: { label: 'Idioma', automatic: 'Automático' },
+};
+
+export const CORE_MESSAGES: Record<Locale, CoreMessages> = { es, en, 'pt-BR': ptBR };

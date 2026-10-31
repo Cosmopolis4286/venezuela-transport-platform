@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { ApiError, userMessage } from '../api/errors';
 import { useAuth } from '../auth/auth-context';
+import { useI18n } from '../i18n/i18n-context';
 import { Banner, Body, Button, Field, Heading, Screen } from '../ui/components';
 
 const PASSWORD_MIN = 10;
 
 export function RegisterScreen({ onSignIn }: { onSignIn: () => void }) {
   const { register } = useAuth();
+  const t = useI18n().core.register;
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,35 +32,29 @@ export function RegisterScreen({ onSignIn }: { onSignIn: () => void }) {
         password: form.password,
       });
     } catch (e) {
-      setError(
-        e instanceof ApiError && e.code === 'CONFLICT'
-          ? 'Ya existe una cuenta con ese correo. Inicia sesión.'
-          : userMessage(e),
-      );
+      setError(e instanceof ApiError && e.code === 'CONFLICT' ? t.emailTaken : userMessage(e));
       setBusy(false);
     }
   };
 
   return (
     <Screen safeTop>
-      <Heading>Crear cuenta</Heading>
-      <Body muted>
-        También puedes entrar sin contraseña con un código por SMS, WhatsApp o correo.
-      </Body>
+      <Heading>{t.title}</Heading>
+      <Body muted>{t.intro}</Body>
       <Field
-        label="Nombre"
+        label={t.firstName}
         value={form.firstName}
         onChangeText={set('firstName')}
         autoComplete="given-name"
       />
       <Field
-        label="Apellido"
+        label={t.lastName}
         value={form.lastName}
         onChangeText={set('lastName')}
         autoComplete="family-name"
       />
       <Field
-        label="Correo electrónico"
+        label={t.emailAddress}
         value={form.email}
         onChangeText={set('email')}
         keyboardType="email-address"
@@ -67,18 +63,18 @@ export function RegisterScreen({ onSignIn }: { onSignIn: () => void }) {
         textContentType="username"
       />
       <Field
-        label="Contraseña"
+        label={t.password}
         value={form.password}
         onChangeText={set('password')}
         secureTextEntry
         autoComplete="new-password"
         textContentType="newPassword"
-        hint={`Al menos ${PASSWORD_MIN} caracteres.`}
-        error={tooShort ? `Al menos ${PASSWORD_MIN} caracteres.` : undefined}
+        hint={t.atLeast(PASSWORD_MIN)}
+        error={tooShort ? t.atLeast(PASSWORD_MIN) : undefined}
       />
       {error ? <Banner tone="error">{error}</Banner> : null}
-      <Button title="Crear cuenta" onPress={submit} loading={busy} disabled={!complete} />
-      <Button variant="link" title="Ya tengo cuenta" onPress={onSignIn} />
+      <Button title={t.submit} onPress={submit} loading={busy} disabled={!complete} />
+      <Button variant="link" title={t.haveAccount} onPress={onSignIn} />
     </Screen>
   );
 }

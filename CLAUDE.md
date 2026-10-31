@@ -14,7 +14,10 @@ that app.
   from `src/database/schema.ts`; then `pnpm db:generate --name=<change>` and commit
   `apps/api/drizzle/`. Never edit an applied migration.
 - API routes are **private by default** (global `AuthGuard`); mark public ones with `@Public()`
-  and get the caller with `@CurrentAuth()`. Use `ApiException` for errors with a stable code.
+  and get the caller with `@CurrentAuth()`. Use `ApiException` for errors with a stable code; when
+  the code is too coarse (a 409), add a `reason` from `API_ERROR_REASONS` with its Spanish text in
+  `API_ERROR_REASON_MESSAGES` (`ApiException.conflict(message, reason)`). Clients never match on
+  `message`. Venezuelan time: `toNetworkIso`/`networkClock` from `@vtp/shared-types`.
 - Organization routes use `@RequireOrganizationAccess(permission)`; roles and the permission
   matrix live in `packages/shared-types/src/api/organizations.ts`.
 - Web (`apps/web`): pages that read the session render inside `<Suspense>` (Cache Components);
@@ -24,9 +27,14 @@ that app.
   source, no build); feature screens stay in each app. Never store tokens outside `secureTokenStore`.
 - Files go through `FileStorage` (`src/storage`), never `fs` directly; validate type by content.
 - Implemented so far: identity (auth), audit, organizations, onboarding (KYC), network (stops, routes,
-  fares, schedules, departure search), fleet (seat maps), bookings (trips, seat holds, manifests, ticket
-  validation), payments (exchange rates, `PaymentProvider` adapters, simulated provider until real ones
-  exist; ADR-018/021). No settlements or dispatch yet.
+  fares, schedules, departure search), fleet (seat maps, vehicles), bookings (trips, seat holds, manifests,
+  ticket validation), payments (exchange rates, `PaymentProvider` adapters, simulated provider until real
+  ones exist; ADR-018/021), dispatch (vehicle and driver per trip, driver's trips), taxi (rides to and from terminals,
+  first line to accept wins, paid to the driver for now). No settlements yet.
+- Passenger texts are translated (es source, en, pt-BR; see `docs/architecture/i18n.md`): add new
+  strings to the dictionaries (`shared-types/src/i18n`, `mobile-core/src/i18n`,
+  `apps/passenger-mobile/src/i18n`, `apps/web/src/i18n`), never inline. Public web pages live in
+  `app/[lang]`; portal, admin and login in `app/(site)` (Spanish).
 - Web forms: use `ActionForm` (pass `resetOnSuccess` only for "add" forms) and map API errors to
   Spanish with `failure(error, messages)` from `src/lib/server/form-actions.ts`.
 - Docs live in `docs/`; update `.env.example` files and `docs/development/environment-variables.md`

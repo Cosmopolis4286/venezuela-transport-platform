@@ -1,10 +1,21 @@
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { createRequire } from 'node:module';
 import type { Params } from 'nestjs-pino';
 import type { Env } from './env.schema.js';
 
 const REQUEST_ID_HEADER = 'x-request-id';
 const SAFE_REQUEST_ID = /^[A-Za-z0-9._-]{1,64}$/;
+
+/** pino-pretty is a dev dependency: absent from the production image, even when run locally. */
+function prettyAvailable(): boolean {
+  try {
+    createRequire(import.meta.url).resolve('pino-pretty');
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Structured JSON logs (pretty-printed in development). Credentials and cookies are
@@ -15,7 +26,7 @@ export function buildLoggerParams(env: Pick<Env, 'LOG_LEVEL' | 'NODE_ENV'>): Par
     pinoHttp: {
       level: env.LOG_LEVEL,
       transport:
-        env.NODE_ENV === 'development'
+        env.NODE_ENV === 'development' && prettyAvailable()
           ? { target: 'pino-pretty', options: { singleLine: true, translateTime: 'SYS:standard' } }
           : undefined,
       genReqId: (req: IncomingMessage, res: ServerResponse) => {

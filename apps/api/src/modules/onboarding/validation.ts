@@ -1,4 +1,8 @@
-import type { IdentityDocumentType } from '@vtp/shared-types';
+import {
+  normalizePlate as plateWithoutSeparators,
+  plateProblem,
+  type IdentityDocumentType,
+} from '@vtp/shared-types';
 
 /** Strips separators: `V-12.345.678` → `12345678`; passports are upper-cased. */
 export function normalizeDocumentNumber(type: IdentityDocumentType, input: string): string | null {
@@ -8,10 +12,9 @@ export function normalizeDocumentNumber(type: IdentityDocumentType, input: strin
   return /^\d{6,9}$/.test(digits) ? digits : null;
 }
 
-/** Venezuelan plates (`AB123CD`, `ABC12D`, …) without spaces or dashes. */
+/** Venezuelan plates (`AB123CD`, `ABC12D`, …), normalized like fleet vehicles; null if invalid. */
 export function normalizePlate(input: string): string | null {
-  const value = input.toUpperCase().replace(/[\s-]/g, '');
-  return /^[A-Z0-9]{5,8}$/.test(value) ? value : null;
+  return plateProblem(input) ? null : plateWithoutSeparators(input);
 }
 
 /** Whole years between an ISO date (YYYY-MM-DD) and `today`. */

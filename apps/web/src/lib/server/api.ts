@@ -1,5 +1,10 @@
 import 'server-only';
-import { isApiErrorResponse, type ApiErrorCode, type ApiFieldError } from '@vtp/shared-types';
+import {
+  isApiErrorResponse,
+  type ApiErrorCode,
+  type ApiErrorReason,
+  type ApiFieldError,
+} from '@vtp/shared-types';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { errorMessage } from '../errors';
@@ -12,13 +17,14 @@ export class ApiError extends Error {
     readonly code: ApiErrorCode | undefined,
     message: string,
     readonly details: ApiFieldError[] = [],
+    readonly reason?: ApiErrorReason,
   ) {
     super(message);
   }
 
   /** Spanish, user-facing. */
   get userMessage(): string {
-    return errorMessage(this.code, this.message);
+    return errorMessage(this.code, this.message, this.reason);
   }
 }
 
@@ -53,7 +59,13 @@ export async function apiRequest<T>(path: string, options: ApiRequest = {}): Pro
   const body: unknown = await response.json().catch(() => undefined);
   if (!response.ok) {
     if (isApiErrorResponse(body)) {
-      throw new ApiError(response.status, body.error.code, body.error.message, body.error.details);
+      throw new ApiError(
+        response.status,
+        body.error.code,
+        body.error.message,
+        body.error.details,
+        body.error.reason,
+      );
     }
     throw new ApiError(response.status, undefined, `API error ${response.status}`);
   }

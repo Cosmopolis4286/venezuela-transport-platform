@@ -1,3 +1,5 @@
+import { DEFAULT_LOCALE, INTL_LOCALES, type Locale } from '../i18n/locales.js';
+import { SHARED_MESSAGES } from '../i18n/shared-messages.js';
 import type { Currency, StopSummary } from './network.js';
 import type { BookingStatus } from './bookings.js';
 
@@ -9,12 +11,8 @@ import type { BookingStatus } from './bookings.js';
 export const PAYMENT_METHODS = ['pago_movil', 'bank_transfer', 'pix', 'usdt'] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
-export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
-  pago_movil: 'Pago móvil',
-  bank_transfer: 'Transferencia bancaria',
-  pix: 'PIX',
-  usdt: 'USDT',
-};
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> =
+  SHARED_MESSAGES.es.paymentMethod;
 
 /** Currencies money is received in. USDT is valued 1:1 against the US dollar. */
 export const PAYMENT_CURRENCIES = ['VES', 'BRL', 'USDT'] as const;
@@ -35,12 +33,8 @@ export const PAYMENT_METHOD_CURRENCY: Record<PaymentMethod, PaymentCurrency> = {
 export const PAYMENT_STATUSES = ['pending', 'confirmed', 'cancelled', 'refund_due'] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
-export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
-  pending: 'Esperando el pago',
-  confirmed: 'Pagado',
-  cancelled: 'Anulado',
-  refund_due: 'Por reembolsar',
-};
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> =
+  SHARED_MESSAGES.es.paymentStatus;
 
 // --- Exchange rates ----------------------------------------------------------------------------
 
@@ -136,8 +130,12 @@ export interface TicketValidation {
 }
 
 /** "US$ 35,00", "Bs. 1.277,50", "R$ 175,00", "35,00 USDT" */
-export function formatPaymentAmount(amount: string, currency: PaymentCurrency | Currency): string {
-  const value = new Intl.NumberFormat('es-VE', {
+export function formatPaymentAmount(
+  amount: string,
+  currency: PaymentCurrency | Currency,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  const value = new Intl.NumberFormat(INTL_LOCALES[locale], {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(Number(amount));

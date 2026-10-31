@@ -11,4 +11,10 @@ describe('errorMessage', () => {
     ).toContain('RIF');
     expect(errorMessage(undefined)).toContain('error inesperado');
   });
+
+  it('prefers the Spanish message of a reason over the English text', () => {
+    expect(errorMessage('CONFLICT', 'This driver is already on a ride', 'DRIVER_BUSY')).toBe(
+      'Ese conductor ya está en otro viaje a esa hora.',
+    );
+  });
 });

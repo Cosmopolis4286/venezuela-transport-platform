@@ -29,7 +29,7 @@ import { exchangeRates, payments, type PaymentRow } from './payments.schema.js';
 
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
-const conflict = (message: string) => new ApiException('CONFLICT', message, HttpStatus.CONFLICT);
+const conflict = ApiException.conflict;
 const notFound = (message: string) => new ApiException('NOT_FOUND', message, HttpStatus.NOT_FOUND);
 
 const uniqueViolation = (error: unknown): string | undefined => {
@@ -139,7 +139,11 @@ export class PaymentsService {
     const option = (await this.optionsFor(booking, organizationId)).find(
       (o) => o.method === method,
     );
-    if (!option) throw conflict('This payment method is not available for this booking');
+    if (!option)
+      throw conflict(
+        'This payment method is not available for this booking',
+        'PAYMENT_METHOD_UNAVAILABLE',
+      );
     const provider = this.providerFor(method)!;
 
     let payment: PaymentRow | undefined;
@@ -154,7 +158,10 @@ export class PaymentsService {
             .where(eq(bookings.id, booking.id))
             .for('update');
           if (locked?.status !== 'held')
-            throw conflict('This booking is no longer waiting for payment');
+            throw conflict(
+              'This booking is no longer waiting for payment',
+              'BOOKING_NOT_AWAITING_PAYMENT',
+            );
           await tx
             .update(payments)
             .set({ status: 'cancelled' })
@@ -335,7 +342,10 @@ export class PaymentsService {
       .where(and(eq(bookings.id, bookingId), eq(bookings.userId, userId)));
     if (!row) throw notFound('Booking not found');
     if (row.booking.status !== 'held' || !row.booking.expiresAt) {
-      throw conflict('This booking is no longer waiting for payment');
+      throw conflict(
+        'This booking is no longer waiting for payment',
+        'BOOKING_NOT_AWAITING_PAYMENT',
+      );
     }
     return row;
   }

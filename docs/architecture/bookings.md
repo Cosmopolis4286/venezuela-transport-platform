@@ -1,54 +1,59 @@
-# Bookings: trips and seat holds
+# Reservas: viajes y puestos apartados
 
-Module `apps/api/src/modules/bookings`, contracts in `packages/shared-types/src/api/bookings.ts`.
-This is step 2 of ADR-018: passengers choose seats and hold them. Payment, which confirms a
-booking and issues tickets, is described in [payments.md](payments.md).
+Módulo `apps/api/src/modules/bookings`, contratos en `packages/shared-types/src/api/bookings.ts`.
+Es el paso 2 del ADR-018: los pasajeros eligen puestos y los apartan. El pago, que confirma la
+reserva y emite los boletos, se describe en [payments.md](payments.md).
 
-## Concepts
+## Conceptos
 
-| Concept       | Notes                                                                                                                                                                                                            |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Trip**      | One schedule on one service date (the day the vehicle leaves the route's origin). Created on the first booking, with a **snapshot of the seat map** and the capacity, so later map edits never move a sold seat. |
-| **Booking**   | One person's seats on one trip between two stops. Has a code like `VTP-7K3QXA`, the fare per passenger and the total frozen at booking time, and the boarding/arrival times of its segment.                      |
-| **Passenger** | One row per seat: name, ID type and number.                                                                                                                                                                      |
+| Concepto     | Notas                                                                                                                                                                                                                                                                                                                                                            |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Viaje**    | Un horario en una fecha de servicio (el día en que el vehículo sale del origen de la ruta). Se crea con la primera reserva (o al asignarle un vehículo, ver [despacho](dispatch.md)), con una **copia del mapa de puestos** y la capacidad, así que editar el mapa después nunca mueve un puesto vendido. Tiene un vehículo y un conductor asignados, o ninguno. |
+| **Reserva**  | Los puestos de una persona en un viaje entre dos paradas. Tiene un código como `VTP-7K3QXA`, la tarifa por pasajero y el total congelados al reservar, y las horas de abordaje y llegada de su tramo.                                                                                                                                                            |
+| **Pasajero** | Una fila por puesto: nombre, tipo y número de documento.                                                                                                                                                                                                                                                                                                         |
 
-Booking statuses: `held` (seats reserved until `expiresAt`, waiting for payment) → `confirmed`
-(paid, with one ticket per seat, see [payments.md](payments.md)) or `cancelled` (by the passenger) or `expired` (the hold ran out).
+Estados de una reserva: `held` (puestos apartados hasta `expiresAt`, esperando el pago) →
+`confirmed` (pagada, con un boleto por puesto, ver [payments.md](payments.md)), `cancelled`
+(cancelada por el pasajero) o `expired` (se venció el apartado).
 
-## Rules
+## Reglas
 
-- A seat is **taken for the whole trip**, whatever segment the passenger rides. Simple and safe;
-  reselling a seat freed at an intermediate stop is a later improvement.
-- Holds last `BOOKING_HOLD_MINUTES` (default 15). Up to 6 seats per booking and 3 unpaid holds
-  per person at a time, so seats cannot be hoarded.
-- Only published departures can be booked: active schedule, route and organization, a fare for
-  the pair of stops, and a boarding time still in the future.
-- **No double booking:** a partial unique index on `(trip, seat)` over active passengers rejects
-  a second hold of the same seat, even when two requests arrive at the same moment (tested).
-  The loser gets `409` and a message to choose another seat.
-- Expired holds are released lazily: reads count only confirmed bookings and unexpired holds,
-  and the seats of expired holds are freed before new seats are taken.
-- A schedule with trips cannot be deleted (pause it instead).
-- The departure search returns `seatsAvailable` per departure.
+- Un puesto queda **ocupado durante todo el viaje**, sea cual sea el tramo del pasajero. Es
+  simple y seguro; revender un puesto liberado en una parada intermedia es una mejora futura.
+- Los apartados duran `BOOKING_HOLD_MINUTES` (15 por defecto). Hasta 6 puestos por reserva y 3
+  apartados sin pagar por persona a la vez, para que no se acaparen puestos.
+- Solo se pueden reservar salidas publicadas: horario, ruta y organización activos, una tarifa
+  para el par de paradas y una hora de abordaje todavía futura.
+- **Sin doble venta:** un índice único parcial sobre `(viaje, puesto)` de los pasajeros activos
+  rechaza un segundo apartado del mismo puesto, incluso cuando dos solicitudes llegan al mismo
+  tiempo (probado). La que pierde recibe `409` y un mensaje para elegir otro puesto.
+- Los apartados vencidos se liberan al vuelo: las lecturas solo cuentan reservas confirmadas y
+  apartados vigentes, y los puestos de los apartados vencidos se liberan antes de tomar puestos
+  nuevos.
+- Un horario con viajes no se puede borrar (se pausa).
+- La búsqueda de salidas devuelve `seatsAvailable` por salida.
 
 ## Endpoints (`/api/v1`)
 
-| Method & path                                                              | Who                                                                 |
-| -------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `GET /trips/availability?scheduleId=&serviceDate=&from=&to=`               | Public — seat map, taken seats, fare, bookable                      |
-| `POST /bookings`                                                           | Signed in — hold seats                                              |
-| `GET /me/bookings`, `GET /me/bookings/:id`, `POST /me/bookings/:id/cancel` | The booking's owner                                                 |
-| `GET /organizations/:id/trips?date=`                                       | `bookings.view` (owner, admin, dispatcher, ticket agent, inspector) |
-| `GET /organizations/:id/trips/:tripId/manifest`                            | `bookings.view` — passenger list with names, IDs and boarding time  |
+| Método y ruta                                                              | Quién                                                                                  |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `GET /trips/availability?scheduleId=&serviceDate=&from=&to=`               | Público — mapa de puestos, puestos ocupados, tarifa, si se puede reservar              |
+| `POST /bookings`                                                           | Con sesión — apartar puestos                                                           |
+| `GET /me/bookings`, `GET /me/bookings/:id`, `POST /me/bookings/:id/cancel` | El dueño de la reserva                                                                 |
+| `GET /organizations/:id/trips?date=`                                       | `bookings.view` (dueño, administrador, despachador, taquillero, inspector)             |
+| `GET /organizations/:id/trips/:tripId/manifest`                            | `bookings.view` — lista de pasajeros con nombres, documentos y hora de abordaje        |
+| `POST /organizations/:id/tickets/validate`                                 | `tickets.validate` — validar un boleto al abordar ([payments.md](payments.md#boletos)) |
 
-Audit events: `booking.held`, `booking.cancelled`.
+Eventos de auditoría: `booking.held`, `booking.cancelled`.
 
-## Privacy
+## Privacidad
 
-The manifest contains names and ID numbers. Only roles that need it for boarding see it
-(`bookings.view`); drivers do not. Booking endpoints never return another user's bookings.
+La lista de pasajeros contiene nombres y números de documento. Solo la ven los roles que la
+necesitan para el abordaje (`bookings.view`). El conductor asignado ve la lista de su viaje sin
+los documentos ([despacho](dispatch.md#los-conductores)). Los endpoints de reservas nunca
+devuelven las reservas de otro usuario.
 
-## Not yet
+## Todavía no
 
-Cancellation of paid bookings with refunds, operator cancellation of a trip, and selling seats
-per segment.
+Cancelación de reservas pagadas con reembolso, cancelación de un viaje por la empresa y venta de
+puestos por tramo.

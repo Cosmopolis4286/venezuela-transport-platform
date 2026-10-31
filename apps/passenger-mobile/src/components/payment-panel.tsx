@@ -12,7 +12,7 @@ import {
 } from '@vtp/mobile-core';
 import {
   formatPaymentAmount,
-  PAYMENT_METHOD_LABELS,
+  INTL_LOCALES,
   type Booking,
   type Payment,
   type PaymentMethod,
@@ -20,6 +20,7 @@ import {
 } from '@vtp/shared-types';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { useT } from '@/i18n/use-t';
 
 const CURRENCY_NAMES: Record<Payment['currency'], string> = {
   VES: 'Bs.',
@@ -44,6 +45,7 @@ export function PaymentPanel({
   reload: () => Promise<void>;
 }) {
   const { api } = useAuth();
+  const { t } = useT();
   const pending = booking.payment?.status === 'pending' ? booking.payment : null;
   const [choosing, setChoosing] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -91,10 +93,7 @@ export function PaymentPanel({
   return (
     <View style={{ gap: 12 }}>
       {booking.payment?.status === 'refund_due' ? (
-        <Banner tone="warning">
-          Recibimos un pago que no coincide con el monto o la moneda indicados. Te lo devolveremos;
-          puedes pagar de nuevo.
-        </Banner>
+        <Banner tone="warning">{t.payment.mismatch}</Banner>
       ) : null}
       {pending && !choosing ? (
         <PaymentInstructions payment={pending} fareCurrency={booking.total.currency} />
@@ -103,19 +102,19 @@ export function PaymentPanel({
       {pending && !choosing ? (
         <>
           <Button
-            title="Ya pagué, comprobar"
+            title={t.payment.check}
             variant="secondary"
             loading={busy === 'check'}
             onPress={() => void run('check', reload)}
           />
           {pending.simulated ? (
             <Button
-              title="Simular pago (solo pruebas)"
+              title={t.payment.simulate}
               loading={busy === 'simulate'}
               onPress={() => void simulate(pending)}
             />
           ) : null}
-          <Button title="Pagar con otro método" variant="link" onPress={() => setChoosing(true)} />
+          <Button title={t.payment.otherMethod} variant="link" onPress={() => setChoosing(true)} />
         </>
       ) : (
         <PaymentOptions
@@ -144,21 +143,18 @@ function PaymentOptions({
   onCancel?: () => void;
 }) {
   const colors = useColors();
+  const { t, shared, locale } = useT();
   if (loadingError) return <Banner tone="error">{loadingError}</Banner>;
   if (!options) return <ActivityIndicator color={colors.text} />;
   return (
     <>
-      <Subheading>¿Cómo quieres pagar?</Subheading>
-      {options.length ? null : (
-        <Banner tone="info">
-          Esta empresa todavía no acepta pagos en línea. Cancela la reserva o intenta más tarde.
-        </Banner>
-      )}
+      <Subheading>{t.payment.howToPay}</Subheading>
+      {options.length ? null : <Banner tone="info">{t.payment.noOnline}</Banner>}
       {options.map((option) => (
         <Pressable
           key={option.method}
           accessibilityRole="button"
-          accessibilityLabel={`Pagar con ${PAYMENT_METHOD_LABELS[option.method]}`}
+          accessibilityLabel={t.payment.payWith(shared.paymentMethod[option.method])}
           disabled={busy !== null}
           onPress={() => onChoose(option.method)}
           style={({ pressed }) => ({
@@ -174,18 +170,18 @@ function PaymentOptions({
           })}
         >
           <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>
-            {PAYMENT_METHOD_LABELS[option.method]}
+            {shared.paymentMethod[option.method]}
           </Text>
           {busy === option.method ? (
             <ActivityIndicator color={colors.text} />
           ) : (
             <Text style={{ color: colors.text, fontSize: 16 }}>
-              {formatPaymentAmount(option.amount, option.currency)}
+              {formatPaymentAmount(option.amount, option.currency, locale)}
             </Text>
           )}
         </Pressable>
       ))}
-      {onCancel ? <Button title="Volver" variant="link" onPress={onCancel} /> : null}
+      {onCancel ? <Button title={t.payment.back} variant="link" onPress={onCancel} /> : null}
     </>
   );
 }
@@ -198,15 +194,20 @@ function PaymentInstructions({
   fareCurrency: Booking['total']['currency'];
 }) {
   const colors = useColors();
+  const { t, shared, locale } = useT();
   return (
     <Card>
-      <Body muted>{PAYMENT_METHOD_LABELS[payment.method]}</Body>
-      <Heading>{formatPaymentAmount(payment.amount, payment.currency)}</Heading>
+      <Body muted>{shared.paymentMethod[payment.method]}</Body>
+      <Heading>{formatPaymentAmount(payment.amount, payment.currency, locale)}</Heading>
       {payment.rate ? (
         <Body muted>
-          Tasa de la empresa: 1 {fareCurrency === 'USD' ? 'US$' : 'Bs.'} ={' '}
-          {Number(payment.rate).toLocaleString('es-VE', { maximumFractionDigits: 6 })}{' '}
-          {CURRENCY_NAMES[payment.currency]}
+          {t.payment.rate(
+            fareCurrency === 'USD' ? 'US$' : 'Bs.',
+            Number(payment.rate).toLocaleString(INTL_LOCALES[locale], {
+              maximumFractionDigits: 6,
+            }),
+            CURRENCY_NAMES[payment.currency],
+          )}
         </Body>
       ) : null}
       {payment.instructions.map((line) => (
@@ -223,10 +224,7 @@ function PaymentInstructions({
           </Text>
         </View>
       ))}
-      <Body muted>
-        Paga el monto exacto y escribe la referencia {payment.reference}. La confirmación es
-        automática.
-      </Body>
+      <Body muted>{t.payment.exact(payment.reference)}</Body>
     </Card>
   );
 }

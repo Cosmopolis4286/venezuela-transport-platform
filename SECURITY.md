@@ -1,36 +1,39 @@
-# Security policy
+# Política de seguridad
 
-## Reporting a vulnerability
+## Reportar una vulnerabilidad
 
-Please **do not open a public issue**. Report privately through GitHub:
-**Security → Report a vulnerability** on this repository (private vulnerability reporting),
-or contact the maintainers directly. Include steps to reproduce and the affected commit.
-We aim to acknowledge reports within 3 business days.
+Por favor **no abras un issue público**. Repórtala en privado a través de GitHub:
+**Security → Report a vulnerability** en este repositorio (reporte privado de vulnerabilidades),
+o contacta directamente a los mantenedores. Incluye los pasos para reproducirla y el commit
+afectado. Intentamos acusar recibo de los reportes en un máximo de 3 días hábiles.
 
-## Current security status (be explicit)
+## Estado actual de la seguridad (de forma explícita)
 
-This repository is an engineering foundation. As of now:
+La plataforma está en desarrollo y no se ha desplegado. A la fecha:
 
-| Control            | Status                                                                                                                                                                                                                                                                                                     |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Authentication     | E-mail + password (scrypt) and phone/e-mail one-time codes; opaque, hashed, rotating session tokens with replay detection; deny-by-default guard. See `docs/architecture/authentication.md`                                                                                                                |
-| Authorization      | Per-organization roles and permissions enforced by the API (`docs/architecture/organizations.md`); platform staff roles granted only from the server CLI. The web portal (`/portal`, `/admin`) uses httpOnly session cookies and mirrors — never replaces — API checks (`docs/architecture/web-portal.md`) |
-| Input validation   | Global `ValidationPipe` (whitelist + reject unknown fields) ready for DTOs                                                                                                                                                                                                                                 |
-| Config validation  | API refuses to start with invalid config; production rejects `*` CORS and weak DB passwords                                                                                                                                                                                                                |
-| CORS               | Explicit allowlist                                                                                                                                                                                                                                                                                         |
-| Logging hygiene    | Authorization/cookie/API-key headers redacted; bodies and query strings not logged                                                                                                                                                                                                                         |
-| Security headers   | `helmet` defaults on every API response                                                                                                                                                                                                                                                                    |
-| Rate limiting      | Global per-IP limit (`RATE_LIMIT_*`), in-memory (single instance). Stricter per-route limits needed for login/OTP endpoints when they exist                                                                                                                                                                |
-| KYC documents      | Private files, type checked by content, random storage keys, served only to the owner and platform reviewers (every reviewer access audited). See `docs/architecture/onboarding.md`                                                                                                                        |
-| Audit log          | **Not implemented**                                                                                                                                                                                                                                                                                        |
-| Dependency updates | Dependabot weekly; pnpm blocks dependency install scripts by default                                                                                                                                                                                                                                       |
+| Control                         | Estado                                                                                                                                                                                                                                                                                                                                             |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Autenticación                   | Correo + contraseña (scrypt) y códigos de un solo uso por teléfono o correo; tokens de sesión opacos, guardados como hash y rotativos, con detección de reutilización; guardia que niega por defecto. Ver `docs/architecture/authentication.md`                                                                                                    |
+| Autorización                    | Roles y permisos por organización aplicados por la API (`docs/architecture/organizations.md`); los roles de personal de la plataforma solo se otorgan desde la CLI del servidor. El portal web (`/portal`, `/admin`) usa cookies de sesión httpOnly y refleja — nunca reemplaza — las verificaciones de la API (`docs/architecture/web-portal.md`) |
+| Validación de entradas          | `ValidationPipe` global (lista blanca y rechazo de campos desconocidos) en todos los DTO                                                                                                                                                                                                                                                           |
+| Validación de configuración     | La API no arranca con configuración inválida; en producción rechaza CORS `*`, secretos de ejemplo, contraseñas débiles de la base de datos, códigos impresos en el log y el proveedor de pagos simulado                                                                                                                                            |
+| CORS                            | Lista explícita de orígenes permitidos                                                                                                                                                                                                                                                                                                             |
+| Higiene de logs                 | Se ocultan las cabeceras de autorización, cookies y claves de API; no se registran cuerpos ni query strings                                                                                                                                                                                                                                        |
+| Cabeceras de seguridad          | Valores por defecto de `helmet` en cada respuesta de la API                                                                                                                                                                                                                                                                                        |
+| Límite de solicitudes           | Límite global por IP (`RATE_LIMIT_*`) y uno más estricto para inicio de sesión, registro y códigos (`AUTH_RATE_LIMIT_MAX`). En memoria (una sola instancia)                                                                                                                                                                                        |
+| Documentos KYC                  | Archivos privados, tipo verificado por contenido, nombres de almacenamiento aleatorios, servidos solo al dueño y a los revisores de la plataforma (cada acceso de un revisor queda auditado). Ver `docs/architecture/onboarding.md`                                                                                                                |
+| Registro de auditoría           | Las acciones sensibles (sesiones, organizaciones, KYC, reservas, pagos, abordaje) se registran en la tabla `audit_events`, sin datos personales en los metadatos                                                                                                                                                                                   |
+| Pagos                           | Solo con el proveedor simulado; producción lo rechaza. Los datos de cuentas de pago reales irán en la configuración del servidor, nunca en el código (ADR-018)                                                                                                                                                                                     |
+| Actualizaciones de dependencias | Dependabot semanal; pnpm bloquea por defecto los scripts de instalación de las dependencias                                                                                                                                                                                                                                                        |
 
-## Rules for contributors
+## Reglas para quienes contribuyen
 
-- No secrets in Git, issues, PRs, logs, screenshots or chat. If one leaks, **rotate it** — deleting
-  the commit is not enough.
-- `NEXT_PUBLIC_*` / `EXPO_PUBLIC_*` variables are public; mobile apps cannot keep secrets.
-- Personal data (names, cédula/ID numbers, phone numbers, locations, payment data) must never be
-  logged or placed in URLs. Mask it in error messages.
-- Every future endpoint must state its authorization rule in code review.
-- Payment card data must never touch our servers; use a provider's hosted fields/redirect.
+- Ningún secreto en Git, issues, PRs, logs, capturas de pantalla ni chat. Si uno se filtra,
+  **rótalo** — borrar el commit no basta.
+- Las variables `NEXT_PUBLIC_*` / `EXPO_PUBLIC_*` son públicas; las apps móviles no pueden guardar
+  secretos.
+- Los datos personales (nombres, números de cédula, teléfonos, ubicaciones, datos de pago) nunca se
+  registran en logs ni se ponen en URLs. Enmascáralos en los mensajes de error.
+- Todo endpoint nuevo debe indicar su regla de autorización en la revisión de código.
+- Los datos de tarjetas de pago nunca deben pasar por nuestros servidores; usa los campos o la
+  redirección alojados por el proveedor.

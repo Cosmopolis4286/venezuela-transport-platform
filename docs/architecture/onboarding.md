@@ -1,95 +1,98 @@
-# Driver and staff applications (KYC)
+# Solicitudes de conductores y personal (KYC)
 
-Implemented in `apps/api/src/modules/onboarding` with file storage in `apps/api/src/storage`.
-Contracts in `packages/shared-types/src/api/onboarding.ts`.
+Implementado en `apps/api/src/modules/onboarding`, con el almacenamiento de archivos en
+`apps/api/src/storage`. Contratos en `packages/shared-types/src/api/onboarding.ts`.
 
-People can join an organization in two ways:
+Una persona puede unirse a una organización de dos formas:
 
-1. **Invitation** by the organization ([organizations.md](organizations.md)).
-2. **Application** (this module): the person fills in a form, uploads documents, a **platform
-   reviewer** verifies them (KYC), and — if they named an organization — that organization decides
-   whether to take them on. Nobody is added to an organization without its consent.
+1. **Invitación** de la organización ([organizations.md](organizations.md)).
+2. **Solicitud** (este módulo): la persona llena un formulario, sube documentos, un **revisor de
+   la plataforma** los verifica (KYC) y — si indicó una organización — esa organización decide si
+   la incorpora. Nadie entra a una organización sin su consentimiento.
 
-## Flow
+## Flujo
 
 ```
-applicant: create (draft) → upload documents → submit ──▶ submitted
-reviewer:                          request_changes ◀──┤ (notes + per-document verdicts)
-applicant: fix / replace documents → submit again ────┤
-reviewer:                     reject (final) ◀────────┤
-                              approve ────────────────┘──▶ approved  → user.identityVerified = true
-organization (if one was named): accept → membership with the requested role | decline
+solicitante: crear (borrador) → subir documentos → enviar ──▶ submitted
+revisor:                          request_changes ◀──┤ (notas + veredicto por documento)
+solicitante: corregir / reemplazar documentos → enviar de nuevo ─┤
+revisor:                     reject (definitivo) ◀────┤
+                             approve ─────────────────┘──▶ approved  → user.identityVerified = true
+organización (si se indicó una): accept → membresía con el rol pedido | decline
 ```
 
-- One **open** application per person (`draft`, `submitted`, `changes_requested`). After a
-  rejection the person may start a new one.
-- The applicant can edit only in `draft` or `changes_requested`.
-- Approval requires every required document to be marked `accepted` by the reviewer.
-- Applicants must be 18+. Organizations named in an application must be `active` and offer the
-  requested role (e.g. no ticket agents in a taxi line).
+- Una sola solicitud **abierta** por persona (`draft`, `submitted`, `changes_requested`). Después
+  de un rechazo la persona puede empezar otra.
+- El solicitante solo puede editar en `draft` o `changes_requested`.
+- Para aprobar, el revisor debe marcar como `accepted` todos los documentos requeridos.
+- Los solicitantes deben ser mayores de 18 años. Las organizaciones indicadas en una solicitud
+  deben estar `active` y ofrecer el rol pedido (por ejemplo, una línea de taxis no tiene
+  taquilleros).
 
-## Required documents
+## Documentos requeridos
 
-| Document (`kind`)                              | Driver | Driver with own vehicle | Dispatcher / ticket agent / inspector |
-| ---------------------------------------------- | :----: | :---------------------: | :-----------------------------------: |
-| `identity_document` — cédula (V/E) or passport |   ✅   |           ✅            |                  ✅                   |
-| `driver_license` — licencia de conducir        |   ✅   |           ✅            |                   —                   |
-| `medical_certificate` — certificado médico     |   ✅   |           ✅            |                   —                   |
-| `vehicle_registration` — carnet de circulación |   —    |           ✅            |                   —                   |
-| `liability_insurance` — póliza RCV             |   —    |           ✅            |                   —                   |
+| Documento (`kind`)                             | Conductor | Conductor con vehículo propio | Despachador / taquillero / inspector |
+| ---------------------------------------------- | :-------: | :---------------------------: | :----------------------------------: |
+| `identity_document` — cédula (V/E) o pasaporte |    ✅     |              ✅               |                  ✅                  |
+| `driver_license` — licencia de conducir        |    ✅     |              ✅               |                  —                   |
+| `medical_certificate` — certificado médico     |    ✅     |              ✅               |                  —                   |
+| `vehicle_registration` — carnet de circulación |     —     |              ✅               |                  —                   |
+| `liability_insurance` — póliza RCV             |     —     |              ✅               |                  —                   |
 
-Only required kinds can be uploaded (no unnecessary personal data is collected). Uploading a kind
-again replaces the previous file. Documents with an expiry (`expiresOn`) must not be expired at
-upload or submission.
+Solo se pueden subir los tipos requeridos (no se recogen datos personales innecesarios). Subir de
+nuevo un tipo reemplaza el archivo anterior. Los documentos con vencimiento (`expiresOn`) no pueden
+estar vencidos al subirlos ni al enviar la solicitud.
 
-## File handling and privacy
+## Manejo de archivos y privacidad
 
-- Formats: **JPG, PNG, PDF**, detected from the file's bytes — the name and declared type are
-  ignored. Max size `FILE_UPLOAD_MAX_BYTES` (10 MiB). Files are buffered in memory only until
-  validated.
-- Stored under random keys (`kyc/<applicationId>/<uuid>.<ext>`); the original name is kept only
-  for display, sanitized. Files are **never public**: they are streamed by authenticated routes as
-  downloads (`Content-Disposition: attachment`, `Cache-Control: no-store`, `nosniff`).
-- Who can read what:
+- Formatos: **JPG, PNG, PDF**, detectados por los bytes del archivo — se ignoran el nombre y el
+  tipo declarado. Tamaño máximo `FILE_UPLOAD_MAX_BYTES` (10 MiB). Los archivos quedan en memoria
+  solo hasta validarlos.
+- Se guardan con nombres aleatorios (`kyc/<applicationId>/<uuid>.<ext>`); el nombre original solo
+  se conserva, saneado, para mostrarlo. Los archivos **nunca son públicos**: se entregan por rutas
+  autenticadas como descargas (`Content-Disposition: attachment`, `Cache-Control: no-store`,
+  `nosniff`).
+- Quién puede ver qué:
 
-  | Data                                       | Applicant |    Platform reviewer     | Target organization |
-  | ------------------------------------------ | :-------: | :----------------------: | :-----------------: |
-  | Application incl. ID number                |    own    |            ✅            |          —          |
-  | Document files                             |    own    | ✅ (each access audited) |          —          |
-  | Name, role, city, vehicle (after approval) |    own    |            ✅            |         ✅          |
+  | Dato                                               | Solicitante | Revisor de la plataforma  | Organización indicada |
+  | -------------------------------------------------- | :---------: | :-----------------------: | :-------------------: |
+  | Solicitud, incluido el número de documento         |   la suya   |            ✅             |           —           |
+  | Archivos de los documentos                         |  los suyos  | ✅ (cada acceso auditado) |           —           |
+  | Nombre, rol, ciudad, vehículo (tras la aprobación) |  los suyos  |            ✅             |          ✅           |
 
-- Audit events: `application.created`, `.updated`, `.document_uploaded`, `.submitted`,
+- Eventos de auditoría: `application.created`, `.updated`, `.document_uploaded`, `.submitted`,
   `.document_viewed`, `.approved`, `.rejected`, `.changes_requested`, `.organization_accepted`,
   `.organization_declined`.
 
-## Storage backends
+## Almacenamiento
 
-`FileStorage` (`src/storage/file-storage.ts`) is the only way to read or write files.
+`FileStorage` (`src/storage/file-storage.ts`) es la única forma de leer o escribir archivos.
 
-| Driver                                          | Status         | Use                                                                                         |
-| ----------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------- |
-| `local`                                         | ✅ implemented | Development, and a single VPS with the `api-uploads` volume **backed up with the database** |
-| S3-compatible (AWS S3, Cloudflare R2, MinIO, …) | planned        | When moving to the cloud or running more than one API instance                              |
+| Driver                                              | Estado          | Uso                                                                                              |
+| --------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------ |
+| `local`                                             | ✅ implementado | Desarrollo, y un solo VPS con el volumen `api-uploads` **respaldado junto con la base de datos** |
+| Compatible con S3 (AWS S3, Cloudflare R2, MinIO, …) | planificado     | Al pasar a la nube o correr más de una instancia de la API                                       |
 
-To add the cloud driver: implement `FileStorage` with `@aws-sdk/client-s3` (private bucket,
-server-side encryption, no public ACLs), add `s3` to `FILE_STORAGE_DRIVER` and its credentials to the
-env schema, select it in `storage.module.ts`, and copy existing files across with their keys.
+Para agregar el driver en la nube: implementa `FileStorage` con `@aws-sdk/client-s3` (bucket
+privado, cifrado del lado del servidor, sin ACL públicas), agrega `s3` a `FILE_STORAGE_DRIVER` y sus
+credenciales al esquema de configuración, selecciónalo en `storage.module.ts` y copia los archivos
+existentes con sus mismos nombres.
 
 ## Endpoints (`/api/v1`)
 
-| Method & path                                                                               | Who                         |
-| ------------------------------------------------------------------------------------------- | --------------------------- |
-| `GET/POST/PATCH /me/application`                                                            | Applicant                   |
-| `PUT /me/application/documents/:kind` (multipart `file`, optional `expiresOn`)              | Applicant                   |
-| `GET /me/application/documents/:documentId/file`                                            | Applicant                   |
-| `POST /me/application/submit`                                                               | Applicant                   |
-| `GET /admin/applications?status=submitted`, `GET /admin/applications/:id`                   | Platform reviewer           |
-| `GET /admin/applications/:id/documents/:documentId/file`                                    | Platform reviewer (audited) |
-| `POST /admin/applications/:id/review` — `approve \| reject \| request_changes`              | Platform reviewer           |
-| `GET /organizations/:id/applicants`, `POST …/applicants/:applicationId/accept` · `/decline` | `members.manage`            |
+| Método y ruta                                                                               | Quién                               |
+| ------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `GET/POST/PATCH /me/application`                                                            | Solicitante                         |
+| `PUT /me/application/documents/:kind` (multipart `file`, `expiresOn` opcional)              | Solicitante                         |
+| `GET /me/application/documents/:documentId/file`                                            | Solicitante                         |
+| `POST /me/application/submit`                                                               | Solicitante                         |
+| `GET /admin/applications?status=submitted`, `GET /admin/applications/:id`                   | Revisor de la plataforma            |
+| `GET /admin/applications/:id/documents/:documentId/file`                                    | Revisor de la plataforma (auditado) |
+| `POST /admin/applications/:id/review` — `approve \| reject \| request_changes`              | Revisor de la plataforma            |
+| `GET /organizations/:id/applicants`, `POST …/applicants/:applicationId/accept` · `/decline` | `members.manage`                    |
 
-## Not implemented yet
+## Todavía no implementado
 
-Notifications to applicants (needs an SMS/e-mail provider), automatic expiry reminders for
-licences and insurance, identity-verification providers (liveness/selfie), and the cloud storage
-driver.
+Notificaciones a los solicitantes (necesita un proveedor de SMS o correo), recordatorios
+automáticos de vencimiento de licencias y pólizas, proveedores de verificación de identidad
+(prueba de vida / selfie) y el driver de almacenamiento en la nube.
