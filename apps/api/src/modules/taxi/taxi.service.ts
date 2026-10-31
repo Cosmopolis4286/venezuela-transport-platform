@@ -1,5 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
+  formatMoney,
   rolesWith,
   TAXI_REQUEST_MINUTES,
   type AcceptTaxiRideRequest,
@@ -23,6 +24,7 @@ import { users } from '../identity/identity.schema.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import { stops } from '../network/network.schema.js';
 import { StopsService } from '../network/stops.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import type { OrganizationAccess } from '../organizations/organization-access.js';
 import {
   memberships,
@@ -67,6 +69,7 @@ export class TaxiService {
     private readonly audit: AuditService,
     private readonly stops: StopsService,
     private readonly vehicles: VehiclesService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   // --- Passengers -------------------------------------------------------------------------
@@ -129,6 +132,31 @@ export class TaxiService {
       throw error;
     }
     await this.record('taxi_ride.requested', row, auth, meta);
+    const ride = row;
+    this.notifications.later(async () => {
+      // Drivers of the active taxi lines that serve this terminal (not the passenger).
+      const drivers = await this.database.db
+        .selectDistinct({ userId: memberships.userId })
+        .from(memberships)
+        .innerJoin(organizations, eq(organizations.id, memberships.organizationId))
+        .innerJoin(taxiServiceAreas, eq(taxiServiceAreas.organizationId, organizations.id))
+        .where(
+          and(
+            eq(taxiServiceAreas.stopId, ride.terminalStopId),
+            eq(organizations.type, 'taxi_line'),
+            eq(organizations.status, 'active'),
+            inArray(memberships.role, rolesWith('trips.drive')),
+            ne(memberships.userId, ride.passengerUserId),
+          ),
+        );
+      return {
+        kind: 'taxi_requested',
+        userIds: drivers.map((d) => d.userId),
+        app: 'transport',
+        reference: { key: 'rideId', id: ride.id },
+        text: (m) => m.taxiRequested(terminal.name, ride.passengers),
+      };
+    });
     return (await this.toRides([row]))[0]!;
   }
 
@@ -418,6 +446,18 @@ export class TaxiService {
         : notFound();
     }
     await this.record('taxi_ride.accepted', row, actor, meta);
+    const accepted = row;
+    this.notifications.send({
+      kind: 'taxi_accepted',
+      userIds: [accepted.passengerUserId],
+      app: 'passenger',
+      reference: { key: 'rideId', id: accepted.id },
+      text: (m, locale) =>
+        m.taxiAccepted(
+          vehicle.plate,
+          formatMoney(accepted.fareAmount!, accepted.fareCurrency!, locale),
+        ),
+    });
     return (await this.toOperatorRides([row]))[0]!;
   }
 

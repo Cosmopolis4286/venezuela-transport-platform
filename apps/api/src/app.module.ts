@@ -12,11 +12,13 @@ import { FleetModule } from './modules/fleet/fleet.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { IdentityModule } from './modules/identity/identity.module.js';
 import { NetworkModule } from './modules/network/network.module.js';
+import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { OnboardingModule } from './modules/onboarding/onboarding.module.js';
 import { OrganizationsModule } from './modules/organizations/organizations.module.js';
 import { PaymentsModule } from './modules/payments/payments.module.js';
 import { SettlementsModule } from './modules/settlements/settlements.module.js';
 import { TaxiModule } from './modules/taxi/taxi.module.js';
+import { MailModule } from './mail/mail.module.js';
 import { StorageModule } from './storage/storage.module.js';
 
 @Module({
@@ -37,6 +39,8 @@ import { StorageModule } from './storage/storage.module.js';
     }),
     DatabaseModule,
     StorageModule,
+    MailModule,
+    NotificationsModule,
     // Feature modules (see docs/architecture/overview.md) are registered below.
     HealthModule,
     IdentityModule,

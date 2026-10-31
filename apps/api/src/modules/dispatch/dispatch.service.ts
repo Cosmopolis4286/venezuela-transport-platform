@@ -14,6 +14,8 @@ import { and, asc, eq, gt, inArray, lt, ne, sql } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService, type Transaction } from '../../database/database.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import { departureText } from '../notifications/format.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { trips, type TripRow } from '../bookings/bookings.schema.js';
 import { BookingsService, summary } from '../bookings/bookings.service.js';
 import { TripsService } from '../bookings/trips.service.js';
@@ -64,6 +66,7 @@ export class DispatchService {
     private readonly trips: TripsService,
     private readonly vehicles: VehiclesService,
     private readonly stops: StopsService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /** Every departure of the organization on `date`, booked or not, with its assignment. */
@@ -220,6 +223,27 @@ export class DispatchService {
         driverUserId: input.driverUserId,
       },
     });
+    if (input.driverUserId && input.driverUserId !== trip.driverUserId) {
+      const driverUserId = input.driverUserId;
+      this.notifications.later(async () => {
+        const [route] = await this.database.db
+          .select({ name: routes.name })
+          .from(routes)
+          .where(eq(routes.id, trip.routeId));
+        return {
+          kind: 'trip_assigned',
+          userIds: [driverUserId],
+          app: 'transport',
+          reference: { key: 'tripId', id: trip.id },
+          text: (m, locale) =>
+            m.tripAssigned(
+              route?.name ?? '',
+              departureText(trip.departsAt, locale),
+              vehicle?.plate ?? null,
+            ),
+        };
+      });
+    }
     const board = await this.board(organizationId, trip.serviceDate);
     return board.departures.find((d) => d.tripId === trip.id)!;
   }

@@ -17,6 +17,8 @@ import type {
 import { eq } from 'drizzle-orm';
 import request from 'supertest';
 import { DatabaseService } from '../src/database/database.service.js';
+import { notifications } from '../src/modules/notifications/notifications.schema.js';
+import { NotificationsService } from '../src/modules/notifications/notifications.service.js';
 import { users } from '../src/modules/identity/identity.schema.js';
 import type { OtpMessage, OtpSender } from '../src/modules/identity/otp/otp-sender.js';
 import { taxiRides } from '../src/modules/taxi/taxi.schema.js';
@@ -195,6 +197,21 @@ describe.runIf(expectDatabase)('Taxi dispatch (e2e)', () => {
             ...body,
           });
       const ana = await signIn();
+      // Both apps registered for push (console delivery in tests).
+      const registerPush = (auth: string, app: string, name: string) =>
+        http()
+          .post('/api/v1/me/push-devices')
+          .set('Authorization', auth)
+          .send({
+            token: `ExponentPushToken[${name}${randomUUID().slice(0, 8)}]`,
+            app,
+            platform: 'android',
+            locale: 'es',
+          })
+          .expect(204);
+      await registerPush(ana.auth, 'passenger', 'ana');
+      await registerPush(a1.auth, 'transport', 'a1');
+      await registerPush(b1.auth, 'transport', 'b1');
       await requestTaxi(ana.auth, { terminalStopId: oriente.id }).expect(409);
       await requestTaxi(ana.auth, { contactPhone: '12' }).expect(400);
       await requestTaxi(ana.auth, { passengers: 9 }).expect(400);
@@ -248,6 +265,24 @@ describe.runIf(expectDatabase)('Taxi dispatch (e2e)', () => {
       expect((await board(a1.auth)).current?.id).toBe(ride1.id);
       expect((await board(b1.auth)).requests.some((r) => r.id === ride1.id)).toBe(false);
       await accept(b1.auth, ride1.id, lineB.id, carB.id).expect(409);
+      // Drivers of both lines heard about the request; Ana heard her taxi is coming.
+      await app.get(NotificationsService).settled();
+      const noticesAbout = async (userId: string) =>
+        (
+          await db
+            .select({ kind: notifications.kind, reference: notifications.reference })
+            .from(notifications)
+            .where(eq(notifications.userId, userId))
+        ).filter((n) => n.reference === ride1.id);
+      expect(await noticesAbout(a1.user.id)).toEqual([
+        { kind: 'taxi_requested', reference: ride1.id },
+      ]);
+      expect(await noticesAbout(b1.user.id)).toEqual([
+        { kind: 'taxi_requested', reference: ride1.id },
+      ]);
+      expect(await noticesAbout(ana.user.id)).toEqual([
+        { kind: 'taxi_accepted', reference: ride1.id },
+      ]);
       const anaView = (
         await http()
           .get(`/api/v1/me/taxi-rides/${ride1.id}`)

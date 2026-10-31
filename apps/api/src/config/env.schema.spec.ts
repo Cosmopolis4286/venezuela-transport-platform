@@ -106,6 +106,32 @@ describe('validateEnv', () => {
     expect(() => validateEnv(productionValid)).not.toThrow();
   });
 
+  it('sends mail and push to the console in development and nowhere by default in production', () => {
+    expect(validateEnv(valid)).toMatchObject({
+      MAIL_DELIVERY: 'console',
+      PUSH_DELIVERY: 'console',
+    });
+    expect(validateEnv(productionValid)).toMatchObject({
+      MAIL_DELIVERY: 'disabled',
+      PUSH_DELIVERY: 'disabled',
+    });
+    expect(() => validateEnv({ ...productionValid, MAIL_DELIVERY: 'console' })).toThrow(
+      /MAIL_DELIVERY/,
+    );
+    expect(() => validateEnv({ ...valid, MAIL_DELIVERY: 'smtp' })).toThrow(/SMTP_HOST/);
+    expect(() => validateEnv({ ...productionValid, OTP_DELIVERY: 'email' })).toThrow(
+      /OTP_DELIVERY/,
+    );
+    expect(
+      validateEnv({
+        ...productionValid,
+        OTP_DELIVERY: 'email',
+        MAIL_DELIVERY: 'smtp',
+        SMTP_HOST: 'smtp.example.ve',
+      }),
+    ).toMatchObject({ OTP_DELIVERY: 'email', SMTP_PORT: 587, SMTP_SECURE: false });
+  });
+
   it('validates database settings alone for migration tooling', () => {
     const { AUTH_SECRET: _omitted, ...databaseOnly } = valid;
     expect(validateDatabaseEnv(databaseOnly)).toMatchObject({

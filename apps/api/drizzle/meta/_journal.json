@@ -92,6 +92,13 @@
       "when": 1793466687607,
       "tag": "0012_drop_organization_commissions",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793483210684,
+      "tag": "0013_notifications",
+      "breakpoints": true
     }
   ]
 }

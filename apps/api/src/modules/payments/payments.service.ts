@@ -22,6 +22,8 @@ import { BookingsService } from '../bookings/bookings.service.js';
 import { expireHolds } from '../bookings/occupancy.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import type { OrganizationAccess } from '../organizations/organization-access.js';
+import { departureText } from '../notifications/format.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { recordEarning } from '../settlements/ledger.js';
 import { compareAmounts, convert, toScaled } from './money.js';
 import { PAYMENT_PROVIDERS, type PaymentProvider } from './payment-provider.js';
@@ -55,6 +57,7 @@ export class PaymentsService {
     private readonly bookings: BookingsService,
     private readonly audit: AuditService,
     private readonly config: AppConfigService,
+    private readonly notifications: NotificationsService,
     @Inject(PAYMENT_PROVIDERS) private readonly providers: PaymentProvider[],
   ) {}
 
@@ -296,6 +299,25 @@ export class PaymentsService {
           amount: incoming.amount,
           currency: incoming.currency,
         },
+      });
+    }
+    if (result.outcome === 'confirmed') {
+      const bookingId = result.payment.bookingId;
+      this.notifications.later(async () => {
+        const booking = await this.notifications.booking(bookingId);
+        return {
+          kind: 'payment_confirmed',
+          userIds: [booking.userId],
+          app: 'passenger',
+          email: true,
+          reference: { key: 'bookingId', id: bookingId },
+          text: (m, locale) =>
+            m.paymentConfirmed(
+              booking.code,
+              booking.route,
+              departureText(booking.departsAt, locale),
+            ),
+        };
       });
     }
     return result.payment;

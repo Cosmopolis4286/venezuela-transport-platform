@@ -59,8 +59,36 @@ export const envSchema = z
     AUTH_REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(30),
     /** Per-IP limit for login, registration and OTP endpoints, per minute. */
     AUTH_RATE_LIMIT_MAX: z.coerce.number().int().min(1).max(10_000).default(10),
-    /** How one-time codes are delivered. `console` prints them to the log (development only). */
-    OTP_DELIVERY: z.enum(['console', 'disabled']).default('console'),
+    /**
+     * How one-time codes are delivered. `console` prints them to the log (development only);
+     * `email` sends e-mail codes through the mailer (SMS / WhatsApp codes are unavailable).
+     */
+    OTP_DELIVERY: z.enum(['console', 'email', 'disabled']).default('console'),
+
+    /**
+     * How e-mail is sent. `console` logs it (development only), `smtp` uses the SMTP_* server
+     * (Mailpit in development), `disabled` sends nothing. Default: console outside production,
+     * disabled in production.
+     */
+    MAIL_DELIVERY: z.enum(['console', 'smtp', 'disabled']).optional(),
+    SMTP_HOST: z.string().default(''),
+    SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
+    /** true for implicit TLS (port 465); false upgrades with STARTTLS when the server offers it. */
+    SMTP_SECURE: optionalBoolean(false),
+    SMTP_USER: z.string().default(''),
+    /** Secret. Server-side only. */
+    SMTP_PASSWORD: z.string().default(''),
+    MAIL_FROM: z.string().default('VTP <no-reply@localhost>'),
+
+    /**
+     * How push notifications are sent. `console` logs them (development), `expo` uses the Expo
+     * push service, `disabled` sends nothing. Default: console outside production, else disabled.
+     */
+    PUSH_DELIVERY: z.enum(['console', 'expo', 'disabled']).optional(),
+    /** Optional. Expo access token when "enhanced push security" is on. Secret. */
+    EXPO_ACCESS_TOKEN: z.string().default(''),
+    /** Hours before boarding when passengers get a trip reminder (0 turns reminders off). */
+    TRIP_REMINDER_HOURS: z.coerce.number().int().min(0).max(48).default(3),
     OTP_TTL_MINUTES: z.coerce.number().int().min(1).max(30).default(5),
     OTP_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(10).default(5),
     OTP_RESEND_SECONDS: z.coerce.number().int().min(0).max(600).default(60),
@@ -87,7 +115,31 @@ export const envSchema = z
       .transform((value) => value || undefined),
   })
   .superRefine((env, ctx) => {
+    if (env.MAIL_DELIVERY === 'smtp' && !env.SMTP_HOST) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['SMTP_HOST'],
+        message: 'Required with MAIL_DELIVERY=smtp',
+      });
+    }
+    const mail = env.MAIL_DELIVERY ?? (env.NODE_ENV === 'production' ? 'disabled' : 'console');
+    if (env.OTP_DELIVERY === 'email' && mail === 'disabled') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['OTP_DELIVERY'],
+        message: 'E-mail codes need MAIL_DELIVERY=smtp (or console in development)',
+      });
+    }
     if (env.NODE_ENV !== 'production') return;
+    for (const key of ['MAIL_DELIVERY', 'PUSH_DELIVERY'] as const) {
+      if (env[key] === 'console') {
+        ctx.addIssue({
+          code: 'custom',
+          path: [key],
+          message: 'console delivery writes messages to the logs; use a real provider or disabled',
+        });
+      }
+    }
     if (env.CORS_ORIGINS.includes('*')) {
       ctx.addIssue({
         code: 'custom',
@@ -131,6 +183,8 @@ export const envSchema = z
     SWAGGER_ENABLED: env.SWAGGER_ENABLED ?? env.NODE_ENV !== 'production',
     PAYMENT_PROVIDER:
       env.PAYMENT_PROVIDER ?? (env.NODE_ENV === 'production' ? 'disabled' : 'simulated'),
+    MAIL_DELIVERY: env.MAIL_DELIVERY ?? (env.NODE_ENV === 'production' ? 'disabled' : 'console'),
+    PUSH_DELIVERY: env.PUSH_DELIVERY ?? (env.NODE_ENV === 'production' ? 'disabled' : 'console'),
   }));
 
 export type Env = z.output<typeof envSchema>;

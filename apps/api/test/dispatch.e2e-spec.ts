@@ -20,6 +20,8 @@ import {
 import { eq } from 'drizzle-orm';
 import request from 'supertest';
 import { DatabaseService } from '../src/database/database.service.js';
+import { notifications } from '../src/modules/notifications/notifications.schema.js';
+import { NotificationsService } from '../src/modules/notifications/notifications.service.js';
 import { users } from '../src/modules/identity/identity.schema.js';
 import type { OtpMessage, OtpSender } from '../src/modules/identity/otp/otp-sender.js';
 import { addDays, todayInVenezuela } from '../src/modules/network/departures.js';
@@ -281,8 +283,26 @@ describe.runIf(expectDatabase)('Dispatch (e2e)', () => {
           vehicleId,
           driverUserId,
         });
+      // The driver's transport app is registered for push (console delivery in tests).
+      await http()
+        .post('/api/v1/me/push-devices')
+        .set('Authorization', driver.auth)
+        .send({
+          token: `ExponentPushToken[driver${randomUUID().slice(0, 8)}]`,
+          app: 'transport',
+          platform: 'android',
+          locale: 'es',
+        })
+        .expect(204);
       const assigned = (await assign(morning, bus.id, driver.user.id).expect(200))
         .body as DispatchDeparture;
+      await app.get(NotificationsService).settled();
+      expect(
+        await db
+          .select({ kind: notifications.kind, reference: notifications.reference })
+          .from(notifications)
+          .where(eq(notifications.userId, driver.user.id)),
+      ).toEqual([{ kind: 'trip_assigned', reference: assigned.tripId }]);
       expect(assigned).toMatchObject({
         tripId: expect.any(String),
         vehicle: { id: bus.id, plate: 'AB123CD', label: 'Unidad 12' },
