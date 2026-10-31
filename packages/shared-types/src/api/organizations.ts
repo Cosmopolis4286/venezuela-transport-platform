@@ -1,3 +1,5 @@
+import { SHARED_MESSAGES } from '../i18n/shared-messages.js';
+
 /** Kinds of organization on the platform. Each one only allows the roles in ROLES_BY_ORGANIZATION_TYPE. */
 export const ORGANIZATION_TYPES = ['bus_company', 'taxi_line', 'terminal'] as const;
 export type OrganizationType = (typeof ORGANIZATION_TYPES)[number];
@@ -29,11 +31,8 @@ export const ORGANIZATION_ROLE_LABELS: Record<OrganizationRole, string> = {
   inspector: 'Inspector de boletos',
 };
 
-export const ORGANIZATION_TYPE_LABELS: Record<OrganizationType, string> = {
-  bus_company: 'Empresa de autobuses',
-  taxi_line: 'Línea de taxis',
-  terminal: 'Terminal',
-};
+export const ORGANIZATION_TYPE_LABELS: Record<OrganizationType, string> =
+  SHARED_MESSAGES.es.organizationType;
 
 export const ORGANIZATION_STATUS_LABELS: Record<OrganizationStatus, string> = {
   pending_review: 'En revisión',
@@ -84,6 +83,11 @@ export const ROLE_PERMISSIONS: Record<OrganizationRole, readonly OrganizationPer
 
 export function roleAllowedFor(type: OrganizationType, role: OrganizationRole): boolean {
   return ROLES_BY_ORGANIZATION_TYPE[type].includes(role);
+}
+
+/** Roles whose permissions include `permission`, e.g. who can drive (`trips.drive`). */
+export function rolesWith(permission: OrganizationPermission): OrganizationRole[] {
+  return ORGANIZATION_ROLES.filter((role) => roleHasPermission(role, permission));
 }
 
 export function roleHasPermission(

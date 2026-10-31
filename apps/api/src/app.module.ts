@@ -7,6 +7,7 @@ import { AppConfigService } from './config/app-config.service.js';
 import { buildLoggerParams } from './config/logger.config.js';
 import { DatabaseModule } from './database/database.module.js';
 import { BookingsModule } from './modules/bookings/bookings.module.js';
+import { DispatchModule } from './modules/dispatch/dispatch.module.js';
 import { FleetModule } from './modules/fleet/fleet.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { IdentityModule } from './modules/identity/identity.module.js';
@@ -14,6 +15,7 @@ import { NetworkModule } from './modules/network/network.module.js';
 import { OnboardingModule } from './modules/onboarding/onboarding.module.js';
 import { OrganizationsModule } from './modules/organizations/organizations.module.js';
 import { PaymentsModule } from './modules/payments/payments.module.js';
+import { TaxiModule } from './modules/taxi/taxi.module.js';
 import { StorageModule } from './storage/storage.module.js';
 
 @Module({
@@ -43,6 +45,8 @@ import { StorageModule } from './storage/storage.module.js';
     NetworkModule,
     BookingsModule,
     PaymentsModule,
+    DispatchModule,
+    TaxiModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

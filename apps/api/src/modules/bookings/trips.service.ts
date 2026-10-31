@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import type { StopSummary, TripAvailability } from '@vtp/shared-types';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService, type Transaction } from '../../database/database.service.js';
 import { seatLayouts } from '../fleet/fleet.schema.js';
@@ -175,6 +175,39 @@ export class TripsService {
       fare: context.fare,
       bookable: isBookable(context),
     };
+  }
+
+  /**
+   * The trip of one of the organization's published departures, created if nobody has booked it
+   * yet (dispatchers assign vehicles ahead of sales). 404 for anything else.
+   */
+  async ensure(organizationId: string, scheduleId: string, serviceDate: string): Promise<TripRow> {
+    const [existing] = await this.database.db
+      .select()
+      .from(trips)
+      .where(and(eq(trips.scheduleId, scheduleId), eq(trips.serviceDate, serviceDate)));
+    if (existing) {
+      if (existing.organizationId !== organizationId) throw unavailable();
+      return existing;
+    }
+    const ends = await this.database.db
+      .select({ stopId: routeStops.stopId })
+      .from(routeSchedules)
+      .innerJoin(
+        routes,
+        and(eq(routes.id, routeSchedules.routeId), eq(routes.organizationId, organizationId)),
+      )
+      .innerJoin(routeStops, eq(routeStops.routeId, routes.id))
+      .where(eq(routeSchedules.id, scheduleId))
+      .orderBy(asc(routeStops.sequence));
+    if (ends.length < 2) throw unavailable();
+    const context = await this.resolve(
+      scheduleId,
+      serviceDate,
+      ends[0]!.stopId,
+      ends[ends.length - 1]!.stopId,
+    );
+    return this.database.db.transaction((tx) => this.getOrCreate(tx, context));
   }
 
   /** The trip row for this departure, created (with a seat map snapshot) on first use. */

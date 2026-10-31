@@ -1,41 +1,47 @@
-# Organizations, roles and invitations
+# Organizaciones, roles e invitaciones
 
-Implemented in `apps/api/src/modules/organizations`. Contracts (types, roles, permission matrix)
-in `packages/shared-types/src/api/organizations.ts`, shared so the apps can hide actions a role
-cannot perform. **The API is the only place permissions are enforced.**
+Implementado en `apps/api/src/modules/organizations`. Los contratos (tipos, roles, matriz de
+permisos) están en `packages/shared-types/src/api/organizations.ts`, compartidos para que las apps
+puedan ocultar las acciones que un rol no puede hacer. **La API es el único lugar donde se aplican
+los permisos.**
 
-## Organization types and roles
+## Tipos de organización y roles
 
-| Role           | Label                |  Bus company  |    Taxi line     |   Terminal   |
-| -------------- | -------------------- | :-----------: | :--------------: | :----------: |
-| `owner`        | Dueño                |      ✅       |        ✅        |      ✅      |
-| `admin`        | Administrador        |      ✅       |        ✅        |      ✅      |
-| `dispatcher`   | Despachador          | ✅ departures | ✅ assigns trips | ✅ platforms |
-| `ticket_agent` | Taquillero           |      ✅       |        —         |      —       |
-| `driver`       | Conductor            |      ✅       |        ✅        |      —       |
-| `inspector`    | Inspector de boletos |      ✅       |        —         |      ✅      |
+| Rol            | Etiqueta             | Empresa de autobuses |  Línea de taxis  |  Terminal  |
+| -------------- | -------------------- | :------------------: | :--------------: | :--------: |
+| `owner`        | Dueño                |          ✅          |        ✅        |     ✅     |
+| `admin`        | Administrador        |          ✅          |        ✅        |     ✅     |
+| `dispatcher`   | Despachador          |      ✅ salidas      | ✅ asigna viajes | ✅ andenes |
+| `ticket_agent` | Taquillero           |          ✅          |        —         |     —      |
+| `driver`       | Conductor            |          ✅          |        ✅        |     —      |
+| `inspector`    | Inspector de boletos |          ✅          |        —         |     ✅     |
 
-One role per person per organization. A person may belong to several organizations.
+Un rol por persona en cada organización. Una persona puede pertenecer a varias organizaciones.
 
-## Permissions
+## Permisos
 
-| Permission                                      | owner | admin | dispatcher | ticket_agent | driver | inspector |
-| ----------------------------------------------- | :---: | :---: | :--------: | :----------: | :----: | :-------: |
-| `organization.manage`                           |  ✅   |  ✅   |            |              |        |           |
-| `members.view`                                  |  ✅   |  ✅   |     ✅     |              |        |           |
-| `members.manage` (invite, change roles, remove) |  ✅   |  ✅   |            |              |        |           |
-| `operations.dispatch`                           |  ✅   |  ✅   |     ✅     |              |        |           |
-| `tickets.sell`                                  |  ✅   |  ✅   |            |      ✅      |        |           |
-| `tickets.validate`                              |  ✅   |  ✅   |            |              |        |    ✅     |
-| `trips.drive`                                   |  ✅   |       |            |              |   ✅   |           |
+| Permiso                                           | owner | admin | dispatcher | ticket_agent | driver | inspector |
+| ------------------------------------------------- | :---: | :---: | :--------: | :----------: | :----: | :-------: |
+| `organization.manage`                             |  ✅   |  ✅   |            |              |        |           |
+| `members.view`                                    |  ✅   |  ✅   |     ✅     |              |        |           |
+| `members.manage` (invitar, cambiar roles, quitar) |  ✅   |  ✅   |            |              |        |           |
+| `operations.dispatch`                             |  ✅   |  ✅   |     ✅     |              |        |           |
+| `routes.manage` (rutas, tarifas, horarios, tasas) |  ✅   |  ✅   |            |              |        |           |
+| `fleet.manage` (mapas de puestos)                 |  ✅   |  ✅   |            |              |        |           |
+| `bookings.view` (viajes y lista de pasajeros)     |  ✅   |  ✅   |     ✅     |      ✅      |        |    ✅     |
+| `tickets.sell`                                    |  ✅   |  ✅   |            |      ✅      |        |           |
+| `tickets.validate` (escanear boletos)             |  ✅   |  ✅   |            |              |        |    ✅     |
+| `trips.drive`                                     |  ✅   |       |            |              |   ✅   |           |
 
-Rules on top of the matrix:
+Reglas además de la matriz:
 
-- Only an **owner** can invite, promote, demote or remove an owner.
-- An organization always keeps **at least one owner** (checked inside the same transaction).
-- Roles must exist for the organization type (no `ticket_agent` in a taxi line).
+- Solo un **dueño** puede invitar, ascender, degradar o quitar a un dueño.
+- Una organización siempre conserva **al menos un dueño** (se verifica dentro de la misma
+  transacción).
+- Los roles deben existir para el tipo de organización (no hay `ticket_agent` en una línea de
+  taxis).
 
-### Protecting a route in a new module
+### Proteger una ruta en un módulo nuevo
 
 ```ts
 @Post(':organizationId/departures')
@@ -43,66 +49,70 @@ Rules on top of the matrix:
 create(@CurrentOrganization() access: OrganizationAccess) { … }
 ```
 
-Non-members get **404** (the organization's existence is not revealed); members without the
-permission get **403**. Operational modules must additionally require
+Quien no es miembro recibe **404** (no se revela que la organización existe); los miembros sin el
+permiso reciben **403**. Los módulos operativos además deben exigir
 `access.organization.status === 'active'`.
 
-## Lifecycle
+## Ciclo de vida
 
 ```
-register (any signed-in user, becomes owner)
+registrar (cualquier usuario con sesión, queda como dueño)
    └─▶ pending_review ──approve──▶ active ──suspend──▶ suspended ──approve──▶ active
              └──reject──▶ rejected ──approve──▶ active
 ```
 
-While `pending_review` the owner can complete the profile and invite staff, but operations
-(selling tickets, dispatching) will be blocked by the operational modules until a platform
-reviewer approves. Rejecting or suspending requires notes, which the owner can see.
-One person can have at most 5 organizations awaiting review at a time.
+Mientras está en `pending_review`, el dueño puede completar el perfil e invitar al personal, pero
+las operaciones (vender boletos, despachar, publicar rutas) quedan bloqueadas hasta que un revisor
+de la plataforma la apruebe. Rechazar o suspender exige notas, que el dueño puede ver. Una persona
+puede tener como máximo 5 organizaciones esperando revisión a la vez.
 
-## Invitations
+## Invitaciones
 
-1. An owner/admin invites by **e-mail or phone** with a role (`POST /organizations/:id/invitations`).
-2. No message is sent yet (no SMS/e-mail provider). The invitee signs in with that e-mail or phone
-   — signing in by code verifies it — and sees the invitation in `GET /me/invitations`.
-3. `POST /me/invitations/:id/accept` creates the membership; `/decline` refuses it.
+1. Un dueño o administrador invita por **correo o teléfono** con un rol
+   (`POST /organizations/:id/invitations`).
+2. Todavía no se envía ningún mensaje (no hay proveedor de SMS ni correo). La persona invitada
+   inicia sesión con ese correo o teléfono — iniciar sesión con código lo verifica — y ve la
+   invitación en `GET /me/invitations`.
+3. `POST /me/invitations/:id/accept` crea la membresía; `/decline` la rechaza.
 
-Invitations are matched against the invitee's **verified** contacts only, so a forwarded message
-or an unverified address is useless to anyone else. They expire after 7 days; at most one pending
-invitation exists per person per organization; admins can revoke pending ones.
+Las invitaciones solo se emparejan con los contactos **verificados** de la persona invitada, así
+que un mensaje reenviado o una dirección sin verificar no le sirven a nadie más. Vencen a los 7
+días; existe como máximo una invitación pendiente por persona en cada organización; los
+administradores pueden revocar las pendientes.
 
-The self-service path for drivers and operators who are not invited (application form, documents,
-KYC review) is the next module.
+Los conductores y operadores que no fueron invitados pueden enviar una solicitud con sus
+documentos para la revisión KYC ([onboarding.md](onboarding.md)).
 
-## Platform staff
+## Personal de la plataforma
 
-Users may carry a platform role: `reviewer` (reviews organizations; later KYC) or `admin`
-(everything a reviewer can do). There is no HTTP endpoint to grant it; someone with database
-access runs:
+Los usuarios pueden tener un rol de plataforma: `reviewer` (revisa organizaciones y solicitudes
+KYC, y administra el catálogo de paradas) o `admin` (todo lo que puede un revisor). No hay un endpoint HTTP
+para otorgarlo; alguien con acceso a la base de datos ejecuta:
 
 ```bash
-pnpm platform:grant --email persona@example.com --role admin      # or reviewer | none
+pnpm platform:grant --email persona@example.com --role admin      # o reviewer | none
 pnpm platform:grant --phone 0414-1234567 --role reviewer
 ```
 
-The person must have signed up first. Review queue: `GET /admin/organizations?status=pending_review`,
-decision: `POST /admin/organizations/:id/review` with `approve | reject | suspend` (+ `notes`).
+La persona debe haberse registrado antes. Cola de revisión:
+`GET /admin/organizations?status=pending_review`; decisión: `POST /admin/organizations/:id/review`
+con `approve | reject | suspend` (+ `notes`).
 
 ## Endpoints (`/api/v1`)
 
-| Method & path                                                                   | Who                                                                      |
-| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `POST /organizations`                                                           | Any signed-in user                                                       |
-| `GET /me/organizations`                                                         | Signed-in user: memberships with role and permissions                    |
-| `GET /organizations/directory?type=&q=`                                         | Signed-in user: active organizations to apply to (name, type, city only) |
-| `GET /organizations/:id`                                                        | Any member                                                               |
-| `PATCH /organizations/:id`                                                      | `organization.manage`                                                    |
-| `GET /organizations/:id/members`                                                | `members.view`                                                           |
-| `PATCH/DELETE /organizations/:id/members/:userId`                               | `members.manage`                                                         |
-| `POST/GET /organizations/:id/invitations`, `DELETE …/invitations/:invitationId` | `members.manage`                                                         |
-| `GET /me/invitations`, `POST /me/invitations/:id/accept` · `/decline`           | Invitee                                                                  |
-| `GET /admin/organizations`, `POST /admin/organizations/:id/review`              | Platform reviewer/admin                                                  |
+| Método y ruta                                                                   | Quién                                                                                        |
+| ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `POST /organizations`                                                           | Cualquier usuario con sesión                                                                 |
+| `GET /me/organizations`                                                         | Usuario con sesión: sus membresías con rol y permisos                                        |
+| `GET /organizations/directory?type=&q=`                                         | Usuario con sesión: organizaciones activas a las que postularse (solo nombre, tipo y ciudad) |
+| `GET /organizations/:id`                                                        | Cualquier miembro                                                                            |
+| `PATCH /organizations/:id`                                                      | `organization.manage`                                                                        |
+| `GET /organizations/:id/members`                                                | `members.view`                                                                               |
+| `PATCH/DELETE /organizations/:id/members/:userId`                               | `members.manage`                                                                             |
+| `POST/GET /organizations/:id/invitations`, `DELETE …/invitations/:invitationId` | `members.manage`                                                                             |
+| `GET /me/invitations`, `POST /me/invitations/:id/accept` · `/decline`           | La persona invitada                                                                          |
+| `GET /admin/organizations`, `POST /admin/organizations/:id/review`              | Revisor o administrador de la plataforma                                                     |
 
-Audit events: `organization.created`, `.updated`, `.approved`, `.rejected`, `.suspended`,
+Eventos de auditoría: `organization.created`, `.updated`, `.approved`, `.rejected`, `.suspended`,
 `.member_role_changed`, `.member_removed`, `.invitation_created`, `.invitation_revoked`,
 `.invitation_accepted`, `.invitation_declined`.

@@ -242,6 +242,7 @@ describe.runIf(expectDatabase)('Bookings (e2e)', () => {
       const luis = await signIn();
       const taken = await book(luis.auth, ['2', '3']).expect(409);
       expect(taken.body.error.message).toMatch(/just taken/);
+      expect(taken.body.error.reason).toBe('SEAT_TAKEN');
 
       // Two people racing for the same seat: exactly one wins.
       const [maria, pedro] = [await signIn(), await signIn()];

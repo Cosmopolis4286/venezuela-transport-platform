@@ -1,0 +1,161 @@
+# CI on a self-hosted runner (the maintainer's machine, WSL 2 + Docker). Manual runs only: the
+# repository is public, and GitHub advises against building pull requests on self-hosted runners
+# of public repositories. Regular CI runs on GitHub-hosted runners (ci.yml).
+# Setup: docs/development/self-hosted-runner.md.
+name: CI (self-hosted, manual)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: self-hosted-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+  TURBO_TELEMETRY_DISABLED: '1'
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+  # Build-time public config. Placeholders only — CI never talks to a real API.
+  NEXT_PUBLIC_API_BASE_URL: https://api.example.invalid/api/v1
+  EXPO_PUBLIC_API_BASE_URL: https://api.example.invalid/api/v1
+
+# The runner executes the code of every pull request it builds: never run fork pull requests on it.
+jobs:
+  quality:
+    name: Lint, typecheck, test, build
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, linux, vtp]
+    timeout-minutes: 30
+    container:
+      image: node:24.22.0-trixie
+      # The pnpm store survives between runs in a Docker volume on the runner machine.
+      volumes: [vtp-ci-pnpm-store:/pnpm-store]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install dependencies
+        run: |
+          corepack enable
+          pnpm config set store-dir /pnpm-store
+          pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Build web and API
+        run: pnpm build
+      - name: Give the workspace back to the runner user
+        if: always()
+        run: chown -R "$(stat -c %u:%g ..)" .
+
+  api-e2e:
+    name: API e2e (PostgreSQL + PostGIS)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, linux, vtp]
+    timeout-minutes: 30
+    container:
+      image: node:24.22.0-trixie
+      volumes: [vtp-ci-pnpm-store:/pnpm-store]
+    services:
+      postgres:
+        image: postgis/postgis:18-3.6
+        env:
+          POSTGRES_DB: vtp_ci
+          POSTGRES_USER: vtp
+          POSTGRES_PASSWORD: ci-only-not-a-secret
+        options: >-
+          --health-cmd "pg_isready -U vtp -d vtp_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      NODE_ENV: test
+      # The service is reached by its name from the job container; no port is opened on the host.
+      DATABASE_HOST: postgres
+      DATABASE_PORT: '5432'
+      DATABASE_NAME: vtp_ci
+      DATABASE_USER: vtp
+      DATABASE_PASSWORD: ci-only-not-a-secret
+      AUTH_SECRET: ci-only-not-a-secret-0123456789abcdef
+      E2E_EXPECT_DATABASE: 'true'
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install dependencies
+        run: |
+          corepack enable
+          pnpm config set store-dir /pnpm-store
+          pnpm install --frozen-lockfile
+      - name: Check database connectivity and PostGIS
+        run: pnpm db:check
+      - name: Apply migrations (twice, to prove they are idempotent)
+        run: pnpm db:migrate && pnpm db:migrate
+      - name: Fail if the Drizzle schema has changes without a migration
+        run: |
+          git config --global --add safe.directory "$PWD"
+          pnpm db:generate
+          git status --porcelain apps/api/drizzle
+          test -z "$(git status --porcelain apps/api/drizzle)"
+      - run: pnpm test:e2e
+      - name: Give the workspace back to the runner user
+        if: always()
+        run: chown -R "$(stat -c %u:%g ..)" .
+
+  mobile-bundle:
+    name: Mobile bundles (Android + iOS JS)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, linux, vtp]
+    timeout-minutes: 30
+    container:
+      image: node:24.22.0-trixie
+      volumes: [vtp-ci-pnpm-store:/pnpm-store]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install dependencies
+        run: |
+          corepack enable
+          pnpm config set store-dir /pnpm-store
+          pnpm install --frozen-lockfile
+      - name: Bundle passenger and transport apps (no signing)
+        run: pnpm turbo run export --filter=@vtp/passenger-mobile --filter=@vtp/transport-mobile
+        env:
+          CI: '1'
+      - name: Give the workspace back to the runner user
+        if: always()
+        run: chown -R "$(stat -c %u:%g ..)" .
+
+  docker-images:
+    name: Production images
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # Runs directly on the runner machine: building images needs its Docker daemon.
+    runs-on: [self-hosted, linux, vtp]
+    timeout-minutes: 30
+    env:
+      TAG: ci-${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate production Compose file
+        working-directory: infrastructure/docker/production
+        run: |
+          touch "$RUNNER_TEMP/api.env" "$RUNNER_TEMP/pg.env"
+          VTP_WEB_DOMAIN=app.example.invalid VTP_API_DOMAIN=api.example.invalid \
+          VTP_ACME_EMAIL=ci@example.invalid VTP_API_IMAGE=vtp-api:$TAG VTP_WEB_IMAGE=vtp-web:$TAG \
+          VTP_API_ENV_FILE="$RUNNER_TEMP/api.env" VTP_POSTGRES_ENV_FILE="$RUNNER_TEMP/pg.env" \
+            docker compose -f compose.yml --profile migrate config --quiet
+      - name: Build API image
+        run: docker build -f infrastructure/docker/production/api.Dockerfile -t "vtp-api:$TAG" .
+      - name: Build web image
+        run: >-
+          docker build -f infrastructure/docker/production/web.Dockerfile
+          --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.example.invalid/api/v1 -t "vtp-web:$TAG" .
+      - name: Smoke-test web image
+        # A random host port, so it never collides with a dev server on the same machine.
+        run: |
+          docker run -d --name "vtp-web-$TAG" -p 127.0.0.1::3000 "vtp-web:$TAG"
+          url="http://$(docker port "vtp-web-$TAG" 3000/tcp | head -n 1)/"
+          for i in $(seq 1 30); do curl -fsS -o /dev/null "$url" && exit 0; sleep 2; done
+          docker logs "vtp-web-$TAG"; exit 1
+      - name: Remove the test container and images
+        if: always()
+        run: |
+          docker rm -f "vtp-web-$TAG" 2>/dev/null || true
+          docker image rm "vtp-api:$TAG" "vtp-web:$TAG" 2>/dev/null || true

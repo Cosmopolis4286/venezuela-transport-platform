@@ -164,3 +164,45 @@ export function renumberSeats(seats: LayoutSeat[]): LayoutSeat[] {
     .sort((a, b) => a.deck - b.deck || a.row - b.row || a.column - b.column)
     .map((seat, index) => ({ ...seat, number: String(index + 1) }));
 }
+
+/**
+ * Vehicles: the buses and cars an operator runs, assigned to trips by dispatchers. A vehicle can
+ * name the seat layout it has, so it is only assigned to departures sold on that map.
+ */
+export interface FleetVehicle {
+  id: string;
+  organizationId: string;
+  /** Normalized: upper case, letters and digits only, e.g. `A12BC3D`. */
+  plate: string;
+  /** Free text for staff, e.g. "Unidad 12 · Encava 610". */
+  label: string | null;
+  seatLayout: { id: string; name: string; capacity: number } | null;
+  /** Inactive vehicles keep their past trips but cannot be assigned again. */
+  active: boolean;
+  createdAt: string;
+}
+
+/** `POST /organizations/:id/vehicles` and `PATCH …/:vehicleId` (all optional on PATCH). */
+export interface VehicleInput {
+  plate: string;
+  label?: string | null;
+  seatLayoutId?: string | null;
+  active?: boolean;
+}
+
+/** Upper case without spaces, dashes or dots: `ab-123 cd` → `AB123CD`. */
+export function normalizePlate(plate: string): string {
+  return plate.toUpperCase().replace(/[\s.-]/g, '');
+}
+
+/** Venezuelan plates have 5 to 8 letters and digits; returns a Spanish explanation or null. */
+export function plateProblem(plate: string): string | null {
+  return /^[A-Z0-9]{5,8}$/.test(normalizePlate(plate))
+    ? null
+    : 'La placa debe tener de 5 a 8 letras o cifras.';
+}
+
+/** How a vehicle is shown in lists: plate, then the label. */
+export function vehicleName(vehicle: Pick<FleetVehicle, 'plate' | 'label'>): string {
+  return vehicle.label ? `${vehicle.plate} · ${vehicle.label}` : vehicle.plate;
+}

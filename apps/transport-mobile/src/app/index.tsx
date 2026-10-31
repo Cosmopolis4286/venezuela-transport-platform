@@ -3,6 +3,7 @@ import {
   ORGANIZATION_ROLE_LABELS,
   ORGANIZATION_STATUS_LABELS,
   ORGANIZATION_TYPE_LABELS,
+  type DriverTrip,
   type OrganizationMembershipSummary,
   type ProviderApplication,
   type ReceivedInvitation,
@@ -27,6 +28,7 @@ import {
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { RefreshControl } from 'react-native';
+import { tripLoad, tripWhen } from '@/lib/driver-trip';
 import { useRefreshOnFocus } from '@/lib/use-refresh-on-focus';
 
 export default function Home() {
@@ -35,15 +37,23 @@ export default function Home() {
   const organizations = useApi<OrganizationMembershipSummary[]>('/me/organizations');
   const invitations = useApi<ReceivedInvitation[]>('/me/invitations');
   const application = useApi<ProviderApplication>('/me/application');
+  const drives = organizations.data?.some((m) => m.permissions.includes('trips.drive')) ?? false;
+  const driving = useApi<DriverTrip[]>(drives ? '/me/driving' : null);
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const { reload: reloadOrganizations } = organizations;
   const { reload: reloadInvitations } = invitations;
   const { reload: reloadApplication } = application;
+  const { reload: reloadDriving } = driving;
   const reloadAll = useCallback(async () => {
-    await Promise.all([reloadOrganizations(), reloadInvitations(), reloadApplication()]);
-  }, [reloadOrganizations, reloadInvitations, reloadApplication]);
+    await Promise.all([
+      reloadOrganizations(),
+      reloadInvitations(),
+      reloadApplication(),
+      reloadDriving(),
+    ]);
+  }, [reloadOrganizations, reloadInvitations, reloadApplication, reloadDriving]);
   useRefreshOnFocus(reloadAll);
 
   const respond = async (invitation: ReceivedInvitation, answer: 'accept' | 'decline') => {
@@ -68,7 +78,8 @@ export default function Home() {
   };
 
   const noApplication = application.error?.code === 'NOT_FOUND';
-  const refreshing = organizations.loading || invitations.loading || application.loading;
+  const refreshing =
+    organizations.loading || invitations.loading || application.loading || driving.loading;
 
   return (
     <Screen
@@ -109,11 +120,39 @@ export default function Home() {
         </>
       ) : null}
 
+      {drives ? (
+        <>
+          <Subheading>Mis viajes</Subheading>
+          {driving.error ? (
+            <Banner tone="error">{driving.error.userMessage}</Banner>
+          ) : driving.data?.length ? (
+            driving.data.map((trip) => (
+              <Card key={trip.id}>
+                <Body>{trip.route.name}</Body>
+                <Body muted>{tripWhen(trip)}</Body>
+                <Body muted>{tripLoad(trip)}</Body>
+                <Button
+                  variant="secondary"
+                  title="Ver pasajeros"
+                  onPress={() =>
+                    router.push({ pathname: '/trip/[tripId]', params: { tripId: trip.id } })
+                  }
+                />
+              </Card>
+            ))
+          ) : driving.data ? (
+            <Body muted>
+              No tienes viajes asignados. Tu despachador te los asigna en el portal.
+            </Body>
+          ) : null}
+        </>
+      ) : null}
+
       <Subheading>Mis organizaciones</Subheading>
       {organizations.error ? (
         <Banner tone="error">{organizations.error.userMessage}</Banner>
       ) : organizations.data?.length ? (
-        organizations.data.map(({ organization, role }) => (
+        organizations.data.map(({ organization, role, permissions }) => (
           <Card key={organization.id}>
             <Body>{organization.tradeName ?? organization.legalName}</Body>
             <Body muted>{ORGANIZATION_TYPE_LABELS[organization.type]}</Body>
@@ -124,6 +163,25 @@ export default function Home() {
                 tone={statusTone(organization.status)}
               />
             </Row>
+            {organization.status === 'active' &&
+            organization.type === 'taxi_line' &&
+            permissions.includes('trips.drive') ? (
+              <Button title="Solicitudes de taxi" onPress={() => router.push('/taxi')} />
+            ) : null}
+            {organization.status === 'active' && permissions.includes('tickets.validate') ? (
+              <Button
+                title="Validar boletos"
+                onPress={() =>
+                  router.push({
+                    pathname: '/scan',
+                    params: {
+                      organizationId: organization.id,
+                      name: organization.tradeName ?? organization.legalName,
+                    },
+                  })
+                }
+              />
+            ) : null}
           </Card>
         ))
       ) : organizations.data ? (

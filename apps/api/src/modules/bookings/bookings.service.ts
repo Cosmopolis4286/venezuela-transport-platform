@@ -2,22 +2,24 @@ import { randomInt } from 'node:crypto';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   MAX_SEATS_PER_BOOKING,
-  NETWORK_UTC_OFFSET,
   TICKET_QR_PREFIX,
+  toNetworkIso,
   type Booking,
   type CreateBookingRequest,
   type TripManifest,
   type TripSummary,
 } from '@vtp/shared-types';
 import { and, asc, count, desc, eq, gt, inArray, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService, type Transaction } from '../../database/database.service.js';
 import { AppConfigService } from '../../config/app-config.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import { vehicles } from '../fleet/fleet.schema.js';
+import { users } from '../identity/identity.schema.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import { routes, routeSchedules } from '../network/network.schema.js';
 import { StopsService } from '../network/stops.service.js';
-import type { OrganizationAccess } from '../organizations/organization-access.js';
 import { organizations } from '../organizations/organizations.schema.js';
 import { currentPayment, toPayment } from '../payments/payment-view.js';
 import { payments } from '../payments/payments.schema.js';
@@ -36,7 +38,7 @@ import { compareSeats, isBookable, seatNumbersOf, TripsService } from './trips.s
 const MAX_ACTIVE_HOLDS_PER_USER = 3;
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
-const conflict = (message: string) => new ApiException('CONFLICT', message, HttpStatus.CONFLICT);
+const conflict = ApiException.conflict;
 const invalid = (message: string) =>
   new ApiException('VALIDATION_FAILED', message, HttpStatus.BAD_REQUEST);
 const notFound = (message = 'Booking not found') =>
@@ -48,10 +50,13 @@ const uniqueViolation = (error: unknown): string | undefined => {
   return pg.code === '23505' ? (pg.constraint ?? 'unique') : undefined;
 };
 
-/** `2026-10-20T21:30:00-04:00` for an instant. */
-export function toLocalIso(instant: Date): string {
-  return `${new Date(instant.getTime() - 4 * 3600_000).toISOString().slice(0, 19)}${NETWORK_UTC_OFFSET}`;
-}
+export const drivers = alias(users, 'driver');
+
+/** The trip's vehicle and driver; left-join `vehicles` and `drivers` on the trip. */
+export const assignmentColumns = {
+  vehicle: { id: vehicles.id, plate: vehicles.plate, label: vehicles.label },
+  driver: { userId: drivers.id, firstName: drivers.firstName, lastName: drivers.lastName },
+};
 
 function bookingCode(): string {
   let code = '';
@@ -90,8 +95,10 @@ export class BookingsService {
       input.fromStopId,
       input.toStopId,
     );
-    if (!context.fare) throw conflict('This trip cannot be booked online yet');
-    if (!isBookable(context)) throw conflict('This departure has already left');
+    if (!context.fare)
+      throw conflict('This trip cannot be booked online yet', 'DEPARTURE_NOT_BOOKABLE');
+    if (!isBookable(context))
+      throw conflict('This departure has already left', 'DEPARTURE_NOT_BOOKABLE');
     const fare = context.fare;
 
     const [{ active }] = (await this.database.db
@@ -105,7 +112,10 @@ export class BookingsService {
         ),
       )) as [{ active: number }];
     if (active >= MAX_ACTIVE_HOLDS_PER_USER) {
-      throw conflict('Pay or cancel your pending bookings before holding more seats');
+      throw conflict(
+        'Pay or cancel your pending bookings before holding more seats',
+        'TOO_MANY_HOLDS',
+      );
     }
 
     const holdMinutes = this.config.get('BOOKING_HOLD_MINUTES');
@@ -115,7 +125,8 @@ export class BookingsService {
       try {
         booking = await this.database.db.transaction(async (tx) => {
           const trip = await this.trips.getOrCreate(tx, context);
-          if (trip.status !== 'scheduled') throw conflict('This departure was cancelled');
+          if (trip.status !== 'scheduled')
+            throw conflict('This departure was cancelled', 'DEPARTURE_NOT_BOOKABLE');
           const valid = seatNumbersOf(trip);
           const unknown = seats.find((seat) => !valid.has(seat));
           if (unknown) throw invalid(`Seat ${unknown} does not exist on this vehicle`);
@@ -154,7 +165,7 @@ export class BookingsService {
       } catch (error) {
         const constraint = uniqueViolation(error);
         if (constraint === 'booking_passengers_active_seat_key') {
-          throw conflict('One of the seats was just taken, choose another');
+          throw conflict('One of the seats was just taken, choose another', 'SEAT_TAKEN');
         }
         if (constraint !== 'bookings_code_key') throw error;
         // Code collision: retry with a new code.
@@ -236,42 +247,44 @@ export class BookingsService {
         trip: trips,
         route: { id: routes.id, name: routes.name },
         serviceClass: routeSchedules.serviceClass,
+        ...assignmentColumns,
       })
       .from(trips)
       .innerJoin(routes, eq(routes.id, trips.routeId))
       .innerJoin(routeSchedules, eq(routeSchedules.id, trips.scheduleId))
+      .leftJoin(vehicles, eq(vehicles.id, trips.vehicleId))
+      .leftJoin(drivers, eq(drivers.id, trips.driverUserId))
       .where(and(eq(trips.organizationId, organizationId), eq(trips.serviceDate, serviceDate)))
       .orderBy(asc(trips.departsAt));
-    const counts = rows.length
-      ? await this.database.db
-          .select({ tripId: bookingPassengers.tripId, status: bookings.status, seats: count() })
-          .from(bookingPassengers)
-          .innerJoin(bookings, and(eq(bookings.id, bookingPassengers.bookingId), occupiesSeat()))
-          .where(
-            and(
-              inArray(
-                bookingPassengers.tripId,
-                rows.map((r) => r.trip.id),
-              ),
-              eq(bookingPassengers.active, true),
-            ),
-          )
-          .groupBy(bookingPassengers.tripId, bookings.status)
-      : [];
-    return rows.map(({ trip, route, serviceClass }) => summary(trip, route, serviceClass, counts));
+    const counts = await this.seatCounts(rows.map((r) => r.trip.id));
+    return rows.map((row) => summary(row, counts));
   }
 
-  async manifest(access: OrganizationAccess, tripId: string): Promise<TripManifest> {
+  /** Occupied seats per trip and booking status, for `summary()`. */
+  async seatCounts(tripIds: string[]): Promise<SeatCount[]> {
+    if (!tripIds.length) return [];
+    return this.database.db
+      .select({ tripId: bookingPassengers.tripId, status: bookings.status, seats: count() })
+      .from(bookingPassengers)
+      .innerJoin(bookings, and(eq(bookings.id, bookingPassengers.bookingId), occupiesSeat()))
+      .where(and(inArray(bookingPassengers.tripId, tripIds), eq(bookingPassengers.active, true)))
+      .groupBy(bookingPassengers.tripId, bookings.status);
+  }
+
+  async manifest(organizationId: string, tripId: string): Promise<TripManifest> {
     const [row] = await this.database.db
       .select({
         trip: trips,
         route: { id: routes.id, name: routes.name },
         serviceClass: routeSchedules.serviceClass,
+        ...assignmentColumns,
       })
       .from(trips)
       .innerJoin(routes, eq(routes.id, trips.routeId))
       .innerJoin(routeSchedules, eq(routeSchedules.id, trips.scheduleId))
-      .where(and(eq(trips.id, tripId), eq(trips.organizationId, access.organization.id)));
+      .leftJoin(vehicles, eq(vehicles.id, trips.vehicleId))
+      .leftJoin(drivers, eq(drivers.id, trips.driverUserId))
+      .where(and(eq(trips.id, tripId), eq(trips.organizationId, organizationId)));
     if (!row) throw notFound('Trip not found');
     const passengers = await this.database.db
       .select({ passenger: bookingPassengers, booking: bookings })
@@ -288,7 +301,7 @@ export class BookingsService {
       }, {}),
     ).map(([status, seats]) => ({ tripId, status: status as BookingRow['status'], seats }));
     return {
-      ...summary(row.trip, row.route, row.serviceClass, counts),
+      ...summary(row, counts),
       passengers: passengers
         .map(({ passenger, booking }) => ({
           seatNumber: passenger.seatNumber,
@@ -370,8 +383,8 @@ export class BookingsService {
           id: trip.trip.id,
           scheduleId: trip.trip.scheduleId,
           serviceDate: trip.trip.serviceDate,
-          departsAt: toLocalIso(booking.departsAt),
-          arrivesAt: toLocalIso(booking.arrivesAt),
+          departsAt: toNetworkIso(booking.departsAt),
+          arrivesAt: toNetworkIso(booking.arrivesAt),
           serviceClass: trip.serviceClass,
         },
         operator: trip.operator,
@@ -406,12 +419,19 @@ export class BookingsService {
   }
 }
 
-function summary(
-  trip: TripRow,
-  route: { id: string; name: string },
-  serviceClass: TripSummary['serviceClass'],
-  counts: { tripId: string; status: BookingRow['status']; seats: number }[],
+export type SeatCount = { tripId: string; status: BookingRow['status']; seats: number };
+
+export function summary(
+  row: {
+    trip: TripRow;
+    route: { id: string; name: string };
+    serviceClass: TripSummary['serviceClass'];
+    vehicle: TripSummary['vehicle'];
+    driver: TripSummary['driver'];
+  },
+  counts: SeatCount[],
 ): TripSummary {
+  const { trip } = row;
   const seatsWith = (status: BookingRow['status']) =>
     counts
       .filter((c) => c.tripId === trip.id && c.status === status)
@@ -420,11 +440,13 @@ function summary(
     id: trip.id,
     scheduleId: trip.scheduleId,
     serviceDate: trip.serviceDate,
-    route,
-    departureTime: toLocalIso(trip.departsAt).slice(11, 16),
-    serviceClass,
+    route: row.route,
+    departureTime: toNetworkIso(trip.departsAt).slice(11, 16),
+    serviceClass: row.serviceClass,
     capacity: trip.capacity,
     soldSeats: seatsWith('confirmed'),
     heldSeats: seatsWith('held'),
+    vehicle: row.vehicle,
+    driver: row.driver,
   };
 }

@@ -1,7 +1,8 @@
 import 'server-only';
-import type { Departure, Stop } from '@vtp/shared-types';
+import { apiErrorText, type Departure, type Locale, type Stop } from '@vtp/shared-types';
 import { cacheLife } from 'next/cache';
 import { connection } from 'next/server';
+import { MESSAGES } from '@/i18n/messages';
 import { ApiError, apiRequest } from './api';
 
 /**
@@ -27,7 +28,9 @@ export async function searchDepartures(
   from: string,
   to: string,
   date: string,
+  locale: Locale,
 ): Promise<DepartureSearch> {
+  const t = MESSAGES[locale].results;
   const query = new URLSearchParams({ from, to, date });
   try {
     return {
@@ -36,13 +39,12 @@ export async function searchDepartures(
   } catch (error) {
     if (error instanceof ApiError && error.code === 'VALIDATION_FAILED') {
       return {
-        error:
-          from === to
-            ? 'Elige un destino distinto del origen.'
-            : 'Elige una fecha entre hoy y los próximos 180 días.',
+        error: from === to ? t.sameStop : t.dateRange,
       };
     }
-    if (error instanceof ApiError) return { error: error.userMessage };
-    return { error: 'No pudimos conectar con el servidor. Inténtalo de nuevo.' };
+    if (error instanceof ApiError) {
+      return { error: apiErrorText(locale, { code: error.code, message: error.message }) };
+    }
+    return { error: apiErrorText(locale, { code: 'NETWORK' }) };
   }
 }

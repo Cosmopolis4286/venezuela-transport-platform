@@ -1,8 +1,9 @@
 import { Banner, Body, Card, Field, Screen, useApi, useColors } from '@vtp/mobile-core';
-import { STOP_KIND_LABELS, type Stop } from '@vtp/shared-types';
+import type { Stop } from '@vtp/shared-types';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, Text } from 'react-native';
+import { useT } from '@/i18n/use-t';
 import { useSearch } from '@/lib/search-context';
 
 /** Searches active terminals and stops; choosing one fills the origin or destination. */
@@ -10,6 +11,7 @@ export default function StopPicker() {
   const { field } = useLocalSearchParams<{ field: 'from' | 'to' }>();
   const { setStop } = useSearch();
   const colors = useColors();
+  const { t, shared } = useT();
   const [query, setQuery] = useState('');
   const [debounced, setDebounced] = useState('');
   useEffect(() => {
@@ -23,8 +25,8 @@ export default function StopPicker() {
   return (
     <Screen>
       <Field
-        label={field === 'to' ? 'Destino' : 'Origen'}
-        placeholder="Ciudad o terminal"
+        label={field === 'to' ? t.home.destination : t.home.origin}
+        placeholder={t.stopPicker.placeholder}
         value={query}
         onChangeText={setQuery}
         autoFocus
@@ -45,14 +47,12 @@ export default function StopPicker() {
           <Card>
             <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>{stop.city}</Text>
             <Body muted>
-              {stop.name} · {STOP_KIND_LABELS[stop.kind]} · {stop.state}
+              {stop.name} · {shared.stopKind[stop.kind]} · {stop.state}
             </Body>
           </Card>
         </Pressable>
       ))}
-      {stops.data && stops.data.length === 0 ? (
-        <Body muted>No encontramos terminales ni paradas con ese nombre.</Body>
-      ) : null}
+      {stops.data && stops.data.length === 0 ? <Body muted>{t.stopPicker.none}</Body> : null}
     </Screen>
   );
 }

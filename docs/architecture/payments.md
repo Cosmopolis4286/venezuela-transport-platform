@@ -1,102 +1,119 @@
-# Payments and tickets
+# Pagos y boletos
 
-Module `apps/api/src/modules/payments`, contracts in `packages/shared-types/src/api/payments.ts`.
-This is step 3 of ADR-018: the passenger pays a held booking, the platform confirms the payment
-automatically, and every seat gets a ticket with a QR code that inspectors scan at boarding.
-Settlements to operators (fares minus commission) are the next step.
+Módulo `apps/api/src/modules/payments`, contratos en `packages/shared-types/src/api/payments.ts`.
+Es el paso 3 del ADR-018: el pasajero paga una reserva apartada, la plataforma confirma el pago
+automáticamente y cada puesto recibe un boleto con un código QR que los inspectores escanean al
+abordar. Las liquidaciones a las empresas (tarifas menos comisión) son el paso siguiente.
 
-## Flow
+## Flujo
 
-1. The passenger holds seats (`bookings.md`) and opens the booking.
-2. `GET /me/bookings/:id/payment-options` lists the methods available, each with the amount
-   already converted: pago móvil and bank transfer in bolívares, PIX in reais, USDT.
-3. The passenger picks one: `POST /me/bookings/:id/payments`. The amount and rate are **frozen**
-   on the payment and the provider returns the instructions (account, phone, PIX key, wallet) and
-   a **reference** like `VTP-7K3QXA-4M` to write in the transfer concept. Choosing another method
-   voids the previous pending payment; a booking has at most one pending payment.
-4. The provider adapter reports the money (`PaymentsService.receive`). The app polls every 5 s.
-5. If the booking is still held, it becomes `confirmed` and each passenger gets a ticket.
+1. El pasajero aparta puestos ([bookings.md](bookings.md)) y abre la reserva.
+2. `GET /me/bookings/:id/payment-options` lista los métodos disponibles, cada uno con el monto ya
+   convertido: pago móvil y transferencia bancaria en bolívares, PIX en reales, USDT.
+3. El pasajero elige uno: `POST /me/bookings/:id/payments`. El monto y la tasa quedan
+   **congelados** en el pago, y el proveedor devuelve las instrucciones (cuenta, teléfono, clave
+   PIX, billetera) y una **referencia** como `VTP-7K3QXA-4M` para escribir en el concepto de la
+   transferencia. Elegir otro método anula el pago pendiente anterior; una reserva tiene como
+   máximo un pago pendiente.
+4. El adaptador del proveedor informa que llegó el dinero (`PaymentsService.receive`). La app
+   consulta cada 5 s.
+5. Si la reserva sigue apartada, pasa a `confirmed` y cada pasajero recibe un boleto.
 
-## Exchange rates
+## Tasas de cambio
 
-Each operator sets its own rates in the portal (`PUT /organizations/:id/exchange-rates`,
-`routes.manage`): bolívares and reais per US dollar, up to four decimals. USDT is 1:1 with the
-dollar. Conversion goes through the dollar and rounds half up to cents, in integer arithmetic
-(`money.ts`). A method that needs a missing rate is not offered. With a fare in bolívares, pago
-móvil and transfers need no rate.
+Cada empresa fija sus propias tasas en el portal (`PUT /organizations/:id/exchange-rates`,
+`routes.manage`): bolívares y reales por dólar estadounidense, con hasta cuatro decimales. USDT va
+1:1 con el dólar. La conversión pasa por el dólar y redondea hacia arriba en la mitad, a
+céntimos, con aritmética entera (`money.ts`). Un método que necesita una tasa que falta no se
+ofrece. Con una tarifa en bolívares, el pago móvil y la transferencia no necesitan tasa.
 
-| Method        | Receives | Rate needed for a USD fare | For a VES fare |
-| ------------- | -------- | -------------------------- | -------------- |
-| Pago móvil    | VES      | VES                        | none           |
-| Transferencia | VES      | VES                        | none           |
-| PIX           | BRL      | BRL                        | VES and BRL    |
-| USDT          | USDT     | none                       | VES            |
+| Método        | Recibe | Tasa necesaria para una tarifa en USD | Para una tarifa en VES |
+| ------------- | ------ | ------------------------------------- | ---------------------- |
+| Pago móvil    | VES    | VES                                   | ninguna                |
+| Transferencia | VES    | VES                                   | ninguna                |
+| PIX           | BRL    | BRL                                   | VES y BRL              |
+| USDT          | USDT   | ninguna                               | VES                    |
 
-## Payment statuses
+## Estados de un pago
 
-| Status       | Meaning                                                                                       |
+| Estado       | Significado                                                                                   |
 | ------------ | --------------------------------------------------------------------------------------------- |
-| `pending`    | Waiting for the money; expires with the booking's hold                                        |
-| `confirmed`  | Received in time; the booking is confirmed                                                    |
-| `cancelled`  | Replaced by another method, or the booking was cancelled or expired before the money arrived  |
-| `refund_due` | Money arrived for a booking that can no longer be confirmed, or less money / another currency |
+| `pending`    | Esperando el dinero; vence con el apartado de la reserva                                      |
+| `confirmed`  | Llegó a tiempo; la reserva queda confirmada                                                   |
+| `cancelled`  | Reemplazado por otro método, o la reserva se canceló o venció antes de que llegara el dinero  |
+| `refund_due` | Llegó dinero para una reserva que ya no se puede confirmar, o llegó de menos o en otra moneda |
 
-Rules:
+Reglas:
 
-- **Late by seconds is fine:** money for a hold that ran out still confirms the booking while its
-  seats were not released yet (nobody else can hold them before that). Row locks serialize the
-  confirmation with the release of expired holds.
-- Money for a voided payment, or too little, is marked `refund_due` and never confirms the
-  booking. More than due confirms it. Refunds are handled by hand until the settlements step.
-- `receive` is idempotent: a repeated notification changes nothing.
-- Pending payments of cancelled or expired bookings are voided lazily, like expired holds.
-- Paid bookings cannot be cancelled by the passenger yet (refund policy comes later).
+- **Unos segundos tarde no importa:** el dinero de un apartado vencido todavía confirma la reserva
+  mientras sus puestos no se hayan liberado (nadie más puede apartarlos antes de eso). Los bloqueos
+  de fila ordenan la confirmación y la liberación de apartados vencidos.
+- El dinero de un pago anulado, o de menos, queda como `refund_due` y nunca confirma la reserva.
+  Pagar de más la confirma. Los reembolsos se hacen a mano hasta el paso de liquidaciones.
+- `receive` es idempotente: una notificación repetida no cambia nada.
+- Los pagos pendientes de reservas canceladas o vencidas se anulan al vuelo, igual que los
+  apartados vencidos.
+- El pasajero todavía no puede cancelar una reserva pagada (la política de reembolsos viene
+  después).
 
-## Providers
+## Proveedores
 
-`PaymentProvider` (`payment-provider.ts`) is the adapter interface: which methods it supports and
-the instructions for a payment. Real adapters (a Venezuelan bank or gateway, a PIX institution, a
-USDT wallet watcher) will receive webhooks or poll, then call `PaymentsService.receive` with the
-reference, amount and their own transaction id. Their credentials go in environment variables.
+`PaymentProvider` (`payment-provider.ts`) es la interfaz de los adaptadores: qué métodos admite y
+las instrucciones para un pago. Los adaptadores reales (un banco o pasarela venezolana, una
+institución PIX, un vigilante de billetera USDT) recibirán webhooks o consultarán, y luego
+llamarán a `PaymentsService.receive` con la referencia, el monto y su propio id de transacción.
+Sus credenciales van en variables de entorno.
 
-`PAYMENT_PROVIDER` selects what runs today:
+`PAYMENT_PROVIDER` elige qué corre hoy:
 
-| Value       | Default            | Behaviour                                                                                                         |
-| ----------- | ------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| `simulated` | outside production | Fake accounts (`Banco Simulado`, `…SIMULADO…`); `POST /me/payments/:id/simulate` reports the money (tests, demos) |
-| `disabled`  | production         | No method is offered; holds simply expire                                                                         |
+| Valor       | Por defecto         | Comportamiento                                                                                                                   |
+| ----------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `simulated` | fuera de producción | Cuentas ficticias (`Banco Simulado`, `…SIMULADO…`); `POST /me/payments/:id/simulate` informa el dinero (pruebas, demostraciones) |
+| `disabled`  | en producción       | No se ofrece ningún método; los apartados simplemente vencen                                                                     |
 
-The configuration **refuses `simulated` in production**, and the simulate endpoint answers 404
-whenever the simulator is off.
+La configuración **rechaza `simulated` en producción**, y el endpoint de simulación responde 404
+siempre que el simulador está apagado.
 
-## Tickets
+## Boletos
 
-A confirmed booking returns `ticket: { qr, boardedAt }` for each passenger. The QR payload is
-`VTP1.<ticket id>`: an unguessable random id, so the code carries no personal data and needs no
-secret. The passenger app draws it with plain views (`qrcode-generator`, no native module).
+Una reserva confirmada devuelve `ticket: { qr, boardedAt }` por cada pasajero. El contenido del QR
+es `VTP1.<id del boleto>`: un id aleatorio imposible de adivinar, así que el código no lleva datos
+personales ni necesita un secreto. La app de pasajeros lo dibuja con vistas simples
+(`qrcode-generator`, sin módulo nativo).
 
-Inspectors scan it: `POST /organizations/:id/tickets/validate { qr }` with `tickets.validate`
-(owner, admin, inspector). The ticket must belong to the organization (else 404), its booking must
-be confirmed, and the passenger's boarding time must be within **12 hours** of now (else 409). The
-first scan marks the passenger as boarded (`boarded`); later scans return `already_boarded` with
-the first time, so a copied QR is caught. The manifest shows the boarding time.
+Los inspectores lo escanean con la app de transportistas (**Validar boletos**), que llama a
+`POST /organizations/:id/tickets/validate` con `tickets.validate` (dueño, administrador,
+inspector). El cuerpo es `{ qr }`, o `{ bookingCode, seatNumber }` escritos a mano cuando no se
+puede leer la pantalla del pasajero (el código se acepta con o sin `VTP-`, en mayúsculas o
+minúsculas). Un boleto de otra organización, o uno que no existe, da 404. En los demás casos la
+respuesta dice qué hacer, con el nombre, el documento, el puesto y el tramo del pasajero:
+
+| `result`          | Significado                                                      |
+| ----------------- | ---------------------------------------------------------------- |
+| `boarded`         | Válido: el pasajero puede abordar; queda marcado como abordado   |
+| `already_boarded` | Ya se usó (`boardedAt` dice cuándo): un QR copiado o reutilizado |
+| `not_paid`        | La reserva está apartada, cancelada o vencida                    |
+| `other_departure` | El pasajero aborda a más de **12 horas** de ahora                |
+
+Solo la primera validación válida marca el abordaje. La lista de pasajeros muestra la hora de
+abordaje.
 
 ## Endpoints (`/api/v1`)
 
-| Method & path                              | Who                                                   |
-| ------------------------------------------ | ----------------------------------------------------- |
-| `GET /me/bookings/:id/payment-options`     | The booking's owner, while held                       |
-| `POST /me/bookings/:id/payments`           | The booking's owner, while held                       |
-| `POST /me/payments/:id/simulate`           | The payment's owner; only with the simulated provider |
-| `GET /organizations/:id/exchange-rates`    | Members                                               |
-| `PUT /organizations/:id/exchange-rates`    | `routes.manage`                                       |
-| `POST /organizations/:id/tickets/validate` | `tickets.validate`                                    |
+| Método y ruta                              | Quién                                             |
+| ------------------------------------------ | ------------------------------------------------- |
+| `GET /me/bookings/:id/payment-options`     | El dueño de la reserva, mientras está apartada    |
+| `POST /me/bookings/:id/payments`           | El dueño de la reserva, mientras está apartada    |
+| `POST /me/payments/:id/simulate`           | El dueño del pago; solo con el proveedor simulado |
+| `GET /organizations/:id/exchange-rates`    | Miembros                                          |
+| `PUT /organizations/:id/exchange-rates`    | `routes.manage`                                   |
+| `POST /organizations/:id/tickets/validate` | `tickets.validate`                                |
 
-Audit events: `payment.created`, `payment.confirmed`, `payment.refund_due`,
+Eventos de auditoría: `payment.created`, `payment.confirmed`, `payment.refund_due`,
 `exchange_rates.replaced`, `ticket.boarded`.
 
-## Not yet
+## Todavía no
 
-Real provider adapters (contracts and legal review first, see ADR-018), refunds and cancellation
-of paid bookings, the platform commission and settlements to operators, the ticket scanner in the
-transport app (the API is ready), and offline validation.
+Adaptadores de proveedores reales (primero contratos y revisión legal, ver ADR-018), reembolsos y
+cancelación de reservas pagadas, la comisión de la plataforma y las liquidaciones a las empresas,
+y la validación sin conexión.

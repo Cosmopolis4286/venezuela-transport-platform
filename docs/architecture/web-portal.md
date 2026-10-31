@@ -1,73 +1,84 @@
-# Web portal (Next.js)
+# Portal web (Next.js)
 
-`apps/web`: public site, the **organization portal** (`/portal`) and the **platform admin panel**
-(`/admin`). Spanish UI. All data comes from the API; the web server never touches the database.
+`apps/web`: el sitio público, el **portal de las organizaciones** (`/portal`) y el **panel de
+administración de la plataforma** (`/admin`). Interfaz en español. Todos los datos vienen de la
+API; el servidor web nunca toca la base de datos.
 
-## Screens
+## Pantallas
 
-| Route                                              | Who             | What                                                                                                         |
-| -------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------ |
-| `/`, `/buscar`                                     | Anyone          | Trip search: origin, destination and date; departures with times, operator, class and fare                   |
-| `/login`                                           | Anyone          | Sign in with a code (SMS / WhatsApp / e-mail) or with e-mail + password                                      |
-| `/register`                                        | Anyone          | Create an account with e-mail + password                                                                     |
-| `/portal`                                          | Signed in       | My organizations, pending invitations (accept / decline)                                                     |
-| `/portal/organizations/new`                        | Signed in       | Register a bus company, taxi line or terminal (starts `pending_review`)                                      |
-| `/portal/organizations/:id`                        | Members         | Details; team, roles (`members.*`), invitations, verified applicants; exchange rates (`routes.manage` edits) |
-| `/admin`                                           | Platform staff  | Review queues: organizations and KYC applications                                                            |
-| `/admin/applications/:id`                          | Platform staff  | Applicant data, document downloads, per-document verdicts, approve / request changes / reject                |
-| `/admin/stops`                                     | Platform staff  | Stop catalog: add terminals and stops, search, activate / deactivate                                         |
-| `/portal/organizations/:id/routes/new`             | `routes.manage` | Create a route: name and ordered stops with travel time from the origin                                      |
-| `/portal/organizations/:id/seat-layouts/new`       | `fleet.manage`  | Seat map editor: start from a preset, click cells to add or remove seats                                     |
-| `/portal/organizations/:id/trips?date=`            | `bookings.view` | Trips with bookings on a date: sold, held and free seats                                                     |
-| `/portal/organizations/:id/trips/:tripId`          | `bookings.view` | Passenger list for boarding: seat, name, ID, segment, booking code, status and boarding time                 |
-| `/portal/organizations/:id/seat-layouts/:layoutId` | Members         | View or edit a seat map (`fleet.manage`); delete when no schedule uses it                                    |
-| `/portal/organizations/:id/routes/:routeId`        | Members         | Stops, fares per pair of stops, schedules; publish / deactivate (`routes.manage` to edit)                    |
+| Ruta                                               | Quién                     | Qué                                                                                                                                                                        |
+| -------------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/es`, `/es/buscar` (y `/en`, `/pt-br`)            | Cualquiera                | Búsqueda de viajes en español, inglés o portugués ([idiomas](i18n.md)): origen, destino y fecha; salidas con horas, empresa, clase, tarifa y puestos libres                |
+| `/login`                                           | Cualquiera                | Iniciar sesión con un código (SMS / WhatsApp / correo) o con correo + contraseña                                                                                           |
+| `/register`                                        | Cualquiera                | Crear una cuenta con correo + contraseña                                                                                                                                   |
+| `/portal`                                          | Con sesión                | Mis organizaciones, invitaciones pendientes (aceptar / rechazar)                                                                                                           |
+| `/portal/organizations/new`                        | Con sesión                | Registrar una empresa de autobuses, línea de taxis o terminal (empieza en `pending_review`)                                                                                |
+| `/portal/organizations/:id`                        | Miembros                  | Datos; equipo, roles (`members.*`), invitaciones, solicitantes verificados; tasas de cambio (`routes.manage` edita)                                                        |
+| `/admin`                                           | Personal de la plataforma | Colas de revisión: organizaciones y solicitudes KYC                                                                                                                        |
+| `/admin/applications/:id`                          | Personal de la plataforma | Datos del solicitante, descarga de documentos, veredicto por documento, aprobar / pedir cambios / rechazar                                                                 |
+| `/admin/stops`                                     | Personal de la plataforma | Catálogo de paradas: agregar terminales y paradas, buscar, activar / desactivar                                                                                            |
+| `/portal/organizations/:id/routes/new`             | `routes.manage`           | Crear una ruta: nombre y paradas ordenadas con el tiempo de viaje desde el origen                                                                                          |
+| `/portal/organizations/:id/seat-layouts/new`       | `fleet.manage`            | Editor de mapas de puestos: partir de una plantilla, hacer clic en las celdas para agregar o quitar puestos                                                                |
+| `/portal/organizations/:id/trips?date=`            | `bookings.view`           | Viajes con reservas en una fecha: puestos vendidos, apartados y libres                                                                                                     |
+| `/portal/organizations/:id/trips/:tripId`          | `bookings.view`           | Lista de pasajeros para el abordaje: puesto, nombre, documento, tramo, código de reserva, estado y hora de abordaje                                                        |
+| `/portal/organizations/:id/vehicles`               | Miembros                  | Placas, nombre interno y mapa de puestos de cada vehículo; agregar, editar y desactivar (`fleet.manage`)                                                                   |
+| `/portal/organizations/:id/taxi`                   | Líneas de taxi            | Terminales donde opera (`routes.manage`); solicitudes abiertas y viajes de la línea, asignar y liberar (`operations.dispatch`); se actualiza cada 10 s ([taxis](taxis.md)) |
+| `/portal/organizations/:id/dispatch?date=`         | `operations.dispatch`     | Todas las salidas del día con su vehículo y su conductor; asignar o quitar ([despacho](dispatch.md))                                                                       |
+| `/portal/organizations/:id/seat-layouts/:layoutId` | Miembros                  | Ver o editar un mapa de puestos (`fleet.manage`); borrarlo si ningún horario lo usa                                                                                        |
+| `/portal/organizations/:id/routes/:routeId`        | Miembros                  | Paradas, tarifas por par de paradas, horarios; publicar / desactivar (`routes.manage` para editar)                                                                         |
 
-Sections a role cannot use are not rendered, but **the API enforces every permission**; the UI
-only mirrors it (`permissions` returned with each membership).
+Las secciones que un rol no puede usar no se muestran, pero **la API aplica cada permiso**; la
+interfaz solo lo refleja (`permissions` viene con cada membresía).
 
-## Session handling
+El portal y el panel de administración están solo en español; la web pública también en inglés y
+portugués de Brasil ([idiomas](i18n.md)).
 
-- Sign-in happens in **Server Actions** that call the API with `client: 'web'` and store the
-  tokens in **httpOnly** cookies (`__Host-` prefix and `Secure` in production, `SameSite=Lax`).
-  Tokens never reach browser JavaScript.
-- `src/proxy.ts` (Next.js 16's renamed middleware) guards `/portal` and `/admin`: no session →
-  `/login?next=…`; access token expiring within a minute → refresh via the API and rotate the
-  cookies before the page renders.
-- The API revokes a session when a refresh token is replayed, and browsers send parallel requests
-  (prefetching). Refreshes are therefore **de-duplicated per refresh token**
-  (`src/lib/server/refresh.ts`): concurrent and slightly late requests share one API call.
-  In-process only — use a shared store before running more than one web instance.
-- `getCurrentUser()` (`src/lib/server/session.ts`) is the data-access entry point; with Cache
-  Components it must render inside `<Suspense>` and uses `'use cache: private'`.
-- Every Server Action calls the API with the caller's session, so a forged form only produces an
-  API error. Next.js checks the Origin of Server Action requests (CSRF).
-- `?next=` redirects only accept same-site paths (`safeNextPath`).
-- KYC documents are streamed through `/admin/applications/:id/documents/:documentId`, which forwards
-  the reviewer's token; the API checks the role and audits the access.
+## Manejo de la sesión
 
-## Forms
+- El inicio de sesión ocurre en **Server Actions** que llaman a la API con `client: 'web'` y
+  guardan los tokens en cookies **httpOnly** (prefijo `__Host-` y `Secure` en producción,
+  `SameSite=Lax`). Los tokens nunca llegan al JavaScript del navegador.
+- `src/proxy.ts` (el middleware de Next.js 16, que cambió de nombre) protege `/portal` y `/admin`:
+  sin sesión → `/login?next=…`; si el token de acceso vence en menos de un minuto → lo renueva con
+  la API y rota las cookies antes de mostrar la página.
+- La API revoca una sesión cuando se reutiliza un token de renovación, y los navegadores envían
+  solicitudes en paralelo (precarga). Por eso las renovaciones se **unifican por token de
+  renovación** (`src/lib/server/refresh.ts`): las solicitudes simultáneas o un poco tardías
+  comparten una sola llamada a la API. Solo dentro del proceso — usa un almacén compartido antes
+  de correr más de una instancia de la web.
+- `getCurrentUser()` (`src/lib/server/session.ts`) es el punto de entrada para leer la sesión; con
+  Cache Components debe mostrarse dentro de `<Suspense>` y usa `'use cache: private'`.
+- Cada Server Action llama a la API con la sesión de quien la ejecuta, así que un formulario
+  falsificado solo produce un error de la API. Next.js verifica el Origin de las solicitudes de
+  Server Actions (CSRF).
+- Las redirecciones con `?next=` solo aceptan rutas del mismo sitio (`safeNextPath`).
+- Los documentos KYC se entregan por `/admin/applications/:id/documents/:documentId`, que reenvía
+  el token del revisor; la API verifica el rol y audita el acceso.
 
-`ActionForm` (`src/components/portal/action-form.tsx`) binds a form to a Server Action and shows
-its message. React resets a form after its action runs, even on failure, and a reset `<select>`
-shows its first-render value rather than the saved one. So `ActionForm` submits manually and keeps
-the fields; only forms that add something new (`resetOnSuccess`: invite, add stop, add schedule)
-are cleared after a success. Actions replace the API's English validation messages with Spanish
-ones where they know the rule (`failure(error, messages)` in `src/lib/server/form-actions.ts`).
+## Formularios
 
-## Configuration
+`ActionForm` (`src/components/portal/action-form.tsx`) une un formulario a una Server Action y
+muestra su mensaje. React reinicia un formulario después de ejecutar su acción, incluso si falla,
+y un `<select>` reiniciado muestra el valor del primer renderizado en vez del guardado. Por eso
+`ActionForm` envía de forma manual y conserva los campos; solo los formularios que agregan algo
+nuevo (`resetOnSuccess`: invitar, agregar parada, agregar horario) se vacían tras un éxito. Las
+acciones reemplazan los mensajes de validación de la API, que están en inglés, por mensajes en
+español cuando conocen la regla (`failure(error, messages)` en `src/lib/server/form-actions.ts`).
 
-| Variable                   | Where                | Purpose                                                                  |
-| -------------------------- | -------------------- | ------------------------------------------------------------------------ |
-| `NEXT_PUBLIC_API_BASE_URL` | build time, public   | API URL (also used server-side if the next one is unset)                 |
-| `API_INTERNAL_BASE_URL`    | runtime, server-only | API URL from the web server, e.g. `http://api:4000/api/v1` inside Docker |
+## Configuración
 
-## Testing
+| Variable                   | Dónde                            | Para qué                                                                            |
+| -------------------------- | -------------------------------- | ----------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_API_BASE_URL` | al compilar, pública             | URL de la API (también se usa en el servidor si la siguiente no está definida)      |
+| `API_INTERNAL_BASE_URL`    | al ejecutar, solo en el servidor | URL de la API desde el servidor web, por ejemplo `http://api:4000/api/v1` en Docker |
 
-Unit tests cover cookie options, refresh timing and de-duplication, error messages and
-`safeNextPath`. The full flow (register → create organization → invite by phone → code sign-in →
-accept → admin approval → KYC review with document download → incorporate applicant → logout, plus
-forced token refresh under parallel requests) was verified in Chromium against a production build,
-and so was the network flow (stop catalog → route with 4 stops → fares → schedules → publish →
-public search → deactivate);
-an automated browser test suite in CI is a follow-up.
+## Pruebas
+
+Las pruebas unitarias cubren las opciones de las cookies, el momento de la renovación y su
+unificación, los mensajes de error y `safeNextPath`. El flujo completo (registrarse → crear una
+organización → invitar por teléfono → iniciar sesión con código → aceptar → aprobación de la
+administración → revisión KYC con descarga de documentos → incorporar al solicitante → cerrar
+sesión, más la renovación forzada del token con solicitudes en paralelo) se verificó en Chromium
+contra una compilación de producción, igual que el flujo de la red (catálogo de paradas → ruta con
+4 paradas → tarifas → horarios → publicar → búsqueda pública → desactivar). Una batería
+automatizada de pruebas en el navegador dentro de la CI queda pendiente.

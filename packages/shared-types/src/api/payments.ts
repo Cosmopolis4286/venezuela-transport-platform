@@ -1,3 +1,5 @@
+import { DEFAULT_LOCALE, INTL_LOCALES, type Locale } from '../i18n/locales.js';
+import { SHARED_MESSAGES } from '../i18n/shared-messages.js';
 import type { Currency, StopSummary } from './network.js';
 import type { BookingStatus } from './bookings.js';
 
@@ -9,12 +11,8 @@ import type { BookingStatus } from './bookings.js';
 export const PAYMENT_METHODS = ['pago_movil', 'bank_transfer', 'pix', 'usdt'] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
-export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
-  pago_movil: 'Pago móvil',
-  bank_transfer: 'Transferencia bancaria',
-  pix: 'PIX',
-  usdt: 'USDT',
-};
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> =
+  SHARED_MESSAGES.es.paymentMethod;
 
 /** Currencies money is received in. USDT is valued 1:1 against the US dollar. */
 export const PAYMENT_CURRENCIES = ['VES', 'BRL', 'USDT'] as const;
@@ -35,12 +33,8 @@ export const PAYMENT_METHOD_CURRENCY: Record<PaymentMethod, PaymentCurrency> = {
 export const PAYMENT_STATUSES = ['pending', 'confirmed', 'cancelled', 'refund_due'] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
-export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
-  pending: 'Esperando el pago',
-  confirmed: 'Pagado',
-  cancelled: 'Anulado',
-  refund_due: 'Por reembolsar',
-};
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> =
+  SHARED_MESSAGES.es.paymentStatus;
 
 // --- Exchange rates ----------------------------------------------------------------------------
 
@@ -100,15 +94,29 @@ export interface Payment {
 /** Prefix of the QR payload of a ticket: `VTP1.<ticket id>`. */
 export const TICKET_QR_PREFIX = 'VTP1.';
 
-/** `POST /organizations/:id/tickets/validate` — the scanned QR payload. */
-export interface ValidateTicketRequest {
-  qr: string;
-}
+/**
+ * `POST /organizations/:id/tickets/validate` — the scanned QR payload, or the booking code and
+ * seat typed by hand when the passenger's screen cannot be read.
+ */
+export type ValidateTicketRequest = { qr: string } | { bookingCode: string; seatNumber: string };
 
-/** `boarded` on the first scan; `already_boarded` when the ticket was used before. */
+/**
+ * `boarded` → valid, marked as boarded now. `already_boarded` → used before (see `boardedAt`).
+ * `not_paid` → the booking is not confirmed (held, cancelled, expired). `other_departure` → the
+ * passenger boards more than 12 hours away from now. Only `boarded` lets the passenger on.
+ */
+export const TICKET_RESULTS = [
+  'boarded',
+  'already_boarded',
+  'not_paid',
+  'other_departure',
+] as const;
+export type TicketResult = (typeof TICKET_RESULTS)[number];
+
 export interface TicketValidation {
-  result: 'boarded' | 'already_boarded';
-  boardedAt: string;
+  result: TicketResult;
+  /** When the passenger boarded; null when they have not. */
+  boardedAt: string | null;
   bookingCode: string;
   bookingStatus: BookingStatus;
   seatNumber: string;
@@ -122,8 +130,12 @@ export interface TicketValidation {
 }
 
 /** "US$ 35,00", "Bs. 1.277,50", "R$ 175,00", "35,00 USDT" */
-export function formatPaymentAmount(amount: string, currency: PaymentCurrency | Currency): string {
-  const value = new Intl.NumberFormat('es-VE', {
+export function formatPaymentAmount(
+  amount: string,
+  currency: PaymentCurrency | Currency,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  const value = new Intl.NumberFormat(INTL_LOCALES[locale], {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(Number(amount));

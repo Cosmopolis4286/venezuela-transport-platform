@@ -34,6 +34,11 @@ updates:
       # Node types follow the runtime (Node 24, see .nvmrc); bump the major with the runtime.
       - dependency-name: '@types/node'
         update-types: [version-update:semver-major]
+  # Action versions used by the self-hosted workflow.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
   - package-ecosystem: docker-compose
     directories: ['/', '/infrastructure/docker/production']
     schedule:

@@ -1,11 +1,10 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IDENTITY_DOCUMENT_TYPES,
   MAX_SEATS_PER_BOOKING,
   type CreateBookingRequest,
   type IdentityDocumentType,
   type PassengerInput,
-  type ValidateTicketRequest,
 } from '@vtp/shared-types';
 import { Type } from 'class-transformer';
 import {
@@ -17,6 +16,7 @@ import {
   IsUUID,
   Length,
   Matches,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 
@@ -98,9 +98,22 @@ export class TripsDateQueryDto {
   date!: string;
 }
 
-export class ValidateTicketDto implements ValidateTicketRequest {
-  @ApiProperty({ example: 'VTP1.6f1c…', description: 'Payload read from the ticket QR' })
+/** Either `qr`, or `bookingCode` with `seatNumber` (typed by hand). */
+export class ValidateTicketDto {
+  @ApiPropertyOptional({ example: 'VTP1.6f1c…', description: 'Payload read from the ticket QR' })
+  @ValidateIf((o: ValidateTicketDto) => o.bookingCode === undefined)
   @IsString()
   @Length(1, 100)
-  qr!: string;
+  qr?: string;
+
+  @ApiPropertyOptional({ example: 'VTP-7K3QXA' })
+  @ValidateIf((o: ValidateTicketDto) => o.qr === undefined)
+  @Matches(/^(VTP-?)?[A-Za-z0-9]{6}$/i, { message: 'bookingCode is not valid' })
+  bookingCode?: string;
+
+  @ApiPropertyOptional({ example: '12' })
+  @ValidateIf((o: ValidateTicketDto) => o.qr === undefined)
+  @IsString()
+  @Length(1, 4)
+  seatNumber?: string;
 }
