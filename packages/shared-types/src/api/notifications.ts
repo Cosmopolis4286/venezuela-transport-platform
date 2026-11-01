@@ -37,5 +37,9 @@ export const NOTIFICATION_KINDS = [
   'trip_assigned',
   'taxi_accepted',
   'taxi_requested',
+  'organization_reviewed',
+  'application_reviewed',
+  'application_decided',
+  'invitation_received',
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];

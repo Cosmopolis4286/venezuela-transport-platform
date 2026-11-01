@@ -6,16 +6,20 @@ Módulo `apps/api/src/modules/notifications`, el mailer en `apps/api/src/mail`, 
 
 ## Qué se avisa
 
-| Aviso                    | A quién                                                          | Push (app)     | Correo |
-| ------------------------ | ---------------------------------------------------------------- | -------------- | ------ |
-| Código de acceso         | Quien inicia sesión con su correo (`OTP_DELIVERY=email`)         | —              | ✅     |
-| Pago confirmado          | El pasajero                                                      | Pasajeros      | ✅     |
-| Reserva pagada cancelada | El pasajero (con el monto a devolver, si corresponde)            | Pasajeros      | ✅     |
-| Reembolso enviado        | El pasajero (con la referencia de la devolución)                 | Pasajeros      | ✅     |
-| Recordatorio del viaje   | El pasajero, `TRIP_REMINDER_HOURS` (3) horas antes de abordar    | Pasajeros      | —      |
-| Viaje asignado           | El conductor, cuando un despachador lo asigna a una salida       | Transportistas | —      |
-| Solicitud de taxi        | Los conductores de las líneas activas que operan en ese terminal | Transportistas | —      |
-| Taxi aceptado            | El pasajero (placa y tarifa)                                     | Pasajeros      | —      |
+| Aviso                    | A quién                                                                                                                                                                                                            | Push (app)     | Correo |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------- | ------ |
+| Código de acceso         | Quien inicia sesión con su correo (`OTP_DELIVERY=email`)                                                                                                                                                           | —              | ✅     |
+| Pago confirmado          | El pasajero                                                                                                                                                                                                        | Pasajeros      | ✅     |
+| Reserva pagada cancelada | El pasajero (con el monto a devolver, si corresponde)                                                                                                                                                              | Pasajeros      | ✅     |
+| Reembolso enviado        | El pasajero (con la referencia de la devolución)                                                                                                                                                                   | Pasajeros      | ✅     |
+| Recordatorio del viaje   | El pasajero, `TRIP_REMINDER_HOURS` (3) horas antes de abordar                                                                                                                                                      | Pasajeros      | —      |
+| Viaje asignado           | El conductor, cuando un despachador lo asigna a una salida                                                                                                                                                         | Transportistas | —      |
+| Solicitud de taxi        | Los conductores de las líneas activas que operan en ese terminal                                                                                                                                                   | Transportistas | —      |
+| Taxi aceptado            | El pasajero (placa y tarifa)                                                                                                                                                                                       | Pasajeros      | —      |
+| Empresa revisada         | Los dueños, cuando la plataforma aprueba, rechaza o suspende su organización (con las notas)                                                                                                                       | Transportistas | ✅     |
+| Solicitud KYC revisada   | La persona que la envió: aprobada, rechazada o con cambios pedidos (con las notas)                                                                                                                                 | Transportistas | ✅     |
+| Decisión de la empresa   | El solicitante aprobado, cuando la empresa que eligió lo suma o no                                                                                                                                                 | Transportistas | ✅     |
+| Invitación               | La persona invitada: si ya tiene ese correo o teléfono verificado, push y correo; si no tiene cuenta y la invitaron por correo, un correo a esa dirección (en español); por teléfono sin cuenta, nada (no hay SMS) | Transportistas | ✅     |
 
 Los textos están en español, inglés y portugués de Brasil. Se usa el idioma del dispositivo con el
 que la persona usó la app por última vez; sin dispositivo, español. Los códigos de acceso van en

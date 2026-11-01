@@ -13,6 +13,9 @@ pull request.
 
 ### Agregado
 
+- **Avisos de revisiones e invitaciones.** Push y correo cuando la plataforma revisa una empresa o
+  una solicitud KYC, cuando la empresa suma (o no) a un solicitante, y cuando alguien recibe una
+  invitación (por correo aunque todavía no tenga cuenta). Migración `0015`.
 - **Política de cancelación antes de pagar.** La reserva muestra en la app de pasajeros los
   tramos de reembolso de la empresa mientras está apartada y después de pagada (`refundPolicy` en
   la reserva).

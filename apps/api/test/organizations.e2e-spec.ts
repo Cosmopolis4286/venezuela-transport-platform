@@ -13,6 +13,8 @@ import { eq } from 'drizzle-orm';
 import request from 'supertest';
 import { DatabaseService } from '../src/database/database.service.js';
 import { users } from '../src/modules/identity/identity.schema.js';
+import { notifications } from '../src/modules/notifications/notifications.schema.js';
+import { NotificationsService } from '../src/modules/notifications/notifications.service.js';
 import type { OtpMessage, OtpSender } from '../src/modules/identity/otp/otp-sender.js';
 
 const expectDatabase = process.env.E2E_EXPECT_DATABASE === 'true';
@@ -29,6 +31,14 @@ class CapturingOtpSender implements OtpSender {
   }
 }
 
+class CapturingMailer {
+  readonly enabled = true;
+  readonly sent: { to: string; subject: string; text: string }[] = [];
+  async send(message: CapturingMailer['sent'][number]) {
+    this.sent.push(message);
+  }
+}
+
 /** Unique, format-valid RIF for each test run. */
 const uniqueRif = () => `J-${randomInt(10_000_000, 99_999_999)}-${randomInt(0, 9)}`;
 const uniquePhone = () => {
@@ -39,6 +49,7 @@ const uniquePhone = () => {
 describe.runIf(expectDatabase)('Organizations (e2e)', () => {
   let app: NestExpressApplication;
   const otp = new CapturingOtpSender();
+  const mailer = new CapturingMailer();
   const http = () => request(app.getHttpServer());
 
   beforeAll(async () => {
@@ -48,9 +59,12 @@ describe.runIf(expectDatabase)('Organizations (e2e)', () => {
     const { AppModule } = await import('../src/app.module.js');
     const { configureApp } = await import('../src/app.setup.js');
     const { OTP_SENDER } = await import('../src/modules/identity/otp/otp-sender.js');
+    const { MAILER } = await import('../src/mail/mailer.js');
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(OTP_SENDER)
       .useValue(otp)
+      .overrideProvider(MAILER)
+      .useValue(mailer)
       .compile();
     app = moduleRef.createNestApplication<NestExpressApplication>();
     configureApp(app);
@@ -334,6 +348,11 @@ describe.runIf(expectDatabase)('Organizations (e2e)', () => {
           role: 'ticket_agent',
         }).expect(201)
       ).body as OrganizationInvitation;
+      // No account has this e-mail yet: the invitation goes to the address itself.
+      await app.get(NotificationsService).settled();
+      expect(mailer.sent.filter((m) => m.to === email)).toEqual([
+        expect.objectContaining({ subject: expect.stringContaining('te invitó a VTP') }),
+      ]);
       await http()
         .delete(`/api/v1/organizations/${organization.id}/invitations/${invitation.id}`)
         .set('Authorization', owner.auth)
@@ -351,6 +370,15 @@ describe.runIf(expectDatabase)('Organizations (e2e)', () => {
           role: 'ticket_agent',
         }).expect(201)
       ).body as OrganizationInvitation;
+      // Now it does: the notice goes to that person (and is logged).
+      await app.get(NotificationsService).settled();
+      expect(
+        await app
+          .get(DatabaseService)
+          .db.select({ kind: notifications.kind, reference: notifications.reference })
+          .from(notifications)
+          .where(eq(notifications.userId, invitee.user.id)),
+      ).toEqual([{ kind: 'invitation_received', reference: second.id }]);
       await http()
         .post(`/api/v1/me/invitations/${second.id}/decline`)
         .set('Authorization', invitee.auth)
@@ -442,6 +470,17 @@ describe.runIf(expectDatabase)('Organizations (e2e)', () => {
         200,
       );
       expect(suspended.body.status).toBe('suspended');
+      // The owner heard about both decisions.
+      await app.get(NotificationsService).settled();
+      const ownerNotices = await app
+        .get(DatabaseService)
+        .db.select({ kind: notifications.kind, channel: notifications.channel })
+        .from(notifications)
+        .where(eq(notifications.userId, owner.user.id));
+      expect(ownerNotices).toEqual([
+        { kind: 'organization_reviewed', channel: 'email' },
+        { kind: 'organization_reviewed', channel: 'email' },
+      ]);
 
       const [membership] = (
         await http().get('/api/v1/me/organizations').set('Authorization', owner.auth).expect(200)

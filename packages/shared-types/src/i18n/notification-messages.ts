@@ -20,6 +20,21 @@ export interface NotificationMessages {
   tripAssigned: (route: string, departs: string, plate: string | null) => NotificationText;
   taxiAccepted: (plate: string, fare: string) => NotificationText;
   taxiRequested: (terminal: string, passengers: number) => NotificationText;
+  /** To the owners of an organization the platform approved, rejected or suspended. */
+  organizationReviewed: (
+    organization: string,
+    decision: 'approve' | 'reject' | 'suspend',
+    notes: string | null,
+  ) => NotificationText;
+  /** To the applicant, about their verification (KYC). */
+  applicationReviewed: (
+    status: 'approved' | 'rejected' | 'changes_requested',
+    notes: string | null,
+  ) => NotificationText;
+  /** To an approved applicant, when the organization they chose takes them or not. */
+  applicationDecided: (organization: string, accepted: boolean) => NotificationText;
+  /** To the invited e-mail (or the person who already has it verified). */
+  invitationReceived: (organization: string) => NotificationText;
   /** Appended to every e-mail. */
   footer: string;
 }
@@ -59,6 +74,45 @@ const es: NotificationMessages = {
     title: 'Nueva solicitud de taxi',
     body: `${terminal}: ${passengers} ${passengers === 1 ? 'pasajero' : 'pasajeros'}. La primera línea que la tome se la lleva.`,
   }),
+  organizationReviewed: (organization, decision, notes) =>
+    decision === 'approve'
+      ? {
+          title: 'Tu empresa fue aprobada',
+          body: `${organization} ya está activa en VTP. Entra en el portal para cargar sus rutas, horarios y equipo.`,
+        }
+      : {
+          title: decision === 'reject' ? 'Tu empresa no fue aprobada' : 'Tu empresa fue suspendida',
+          body: `${organization}: ${notes ?? ''} Si tienes dudas, responde a soporte de VTP.`.trim(),
+        },
+  applicationReviewed: (status, notes) =>
+    status === 'approved'
+      ? {
+          title: 'Verificamos tu identidad',
+          body: 'Tu solicitud fue aprobada. Ahora la empresa que elegiste decide si te suma a su equipo.',
+        }
+      : status === 'changes_requested'
+        ? {
+            title: 'Tu solicitud necesita cambios',
+            body: `${notes ?? ''} Corrígela en la app VTP Transporte y envíala de nuevo.`.trim(),
+          }
+        : {
+            title: 'Tu solicitud no fue aprobada',
+            body: notes ?? 'Revisa el detalle en la app VTP Transporte.',
+          },
+  applicationDecided: (organization, accepted) =>
+    accepted
+      ? {
+          title: 'Ya eres parte del equipo',
+          body: `${organization} te sumó a su equipo. Entra en la app VTP Transporte para ver tus viajes.`,
+        }
+      : {
+          title: 'La empresa no te sumó',
+          body: `${organization} no aceptó tu solicitud esta vez.`,
+        },
+  invitationReceived: (organization) => ({
+    title: `${organization} te invitó a VTP`,
+    body: `${organization} te invitó a su equipo. Entra en VTP con este correo o teléfono para aceptar la invitación; vence en 7 días.`,
+  }),
   footer: 'VTP · Transporte terrestre en Venezuela. Este es un mensaje automático.',
 };
 
@@ -97,6 +151,46 @@ const en: NotificationMessages = {
     title: 'New taxi request',
     body: `${terminal}: ${passengers} ${passengers === 1 ? 'passenger' : 'passengers'}. The first company to take it gets it.`,
   }),
+  organizationReviewed: (organization, decision, notes) =>
+    decision === 'approve'
+      ? {
+          title: 'Your company was approved',
+          body: `${organization} is now active on VTP. Open the portal to add its routes, schedules and team.`,
+        }
+      : {
+          title:
+            decision === 'reject' ? 'Your company was not approved' : 'Your company was suspended',
+          body: `${organization}: ${notes ?? ''} If you have questions, reply to VTP support.`.trim(),
+        },
+  applicationReviewed: (status, notes) =>
+    status === 'approved'
+      ? {
+          title: 'We verified your identity',
+          body: 'Your application was approved. Now the company you chose decides whether to add you to its team.',
+        }
+      : status === 'changes_requested'
+        ? {
+            title: 'Your application needs changes',
+            body: `${notes ?? ''} Fix it in the VTP Transport app and send it again.`.trim(),
+          }
+        : {
+            title: 'Your application was not approved',
+            body: notes ?? 'See the details in the VTP Transport app.',
+          },
+  applicationDecided: (organization, accepted) =>
+    accepted
+      ? {
+          title: 'You are on the team',
+          body: `${organization} added you to its team. Open the VTP Transport app to see your trips.`,
+        }
+      : {
+          title: 'The company did not add you',
+          body: `${organization} did not accept your application this time.`,
+        },
+  invitationReceived: (organization) => ({
+    title: `${organization} invited you to VTP`,
+    body: `${organization} invited you to its team. Sign in to VTP with this e-mail or phone to accept; the invitation expires in 7 days.`,
+  }),
   footer: 'VTP · Ground transport in Venezuela. This is an automatic message.',
 };
 
@@ -134,6 +228,46 @@ const ptBR: NotificationMessages = {
   taxiRequested: (terminal, passengers) => ({
     title: 'Novo pedido de táxi',
     body: `${terminal}: ${passengers} ${passengers === 1 ? 'passageiro' : 'passageiros'}. A primeira cooperativa que aceitar leva.`,
+  }),
+  organizationReviewed: (organization, decision, notes) =>
+    decision === 'approve'
+      ? {
+          title: 'Sua empresa foi aprovada',
+          body: `${organization} já está ativa no VTP. Entre no portal para cadastrar rotas, horários e equipe.`,
+        }
+      : {
+          title:
+            decision === 'reject' ? 'Sua empresa não foi aprovada' : 'Sua empresa foi suspensa',
+          body: `${organization}: ${notes ?? ''} Em caso de dúvidas, responda ao suporte do VTP.`.trim(),
+        },
+  applicationReviewed: (status, notes) =>
+    status === 'approved'
+      ? {
+          title: 'Verificamos sua identidade',
+          body: 'Sua solicitação foi aprovada. Agora a empresa que você escolheu decide se você entra na equipe.',
+        }
+      : status === 'changes_requested'
+        ? {
+            title: 'Sua solicitação precisa de ajustes',
+            body: `${notes ?? ''} Corrija no app VTP Transporte e envie de novo.`.trim(),
+          }
+        : {
+            title: 'Sua solicitação não foi aprovada',
+            body: notes ?? 'Veja os detalhes no app VTP Transporte.',
+          },
+  applicationDecided: (organization, accepted) =>
+    accepted
+      ? {
+          title: 'Você entrou na equipe',
+          body: `${organization} adicionou você à equipe. Abra o app VTP Transporte para ver suas viagens.`,
+        }
+      : {
+          title: 'A empresa não adicionou você',
+          body: `${organization} não aceitou sua solicitação desta vez.`,
+        },
+  invitationReceived: (organization) => ({
+    title: `${organization} convidou você para o VTP`,
+    body: `${organization} convidou você para a equipe. Entre no VTP com este e-mail ou telefone para aceitar; o convite vence em 7 dias.`,
   }),
   footer: 'VTP · Transporte rodoviário na Venezuela. Esta é uma mensagem automática.',
 };

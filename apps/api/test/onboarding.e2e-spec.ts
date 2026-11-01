@@ -15,6 +15,8 @@ import { eq } from 'drizzle-orm';
 import request from 'supertest';
 import { DatabaseService } from '../src/database/database.service.js';
 import { users } from '../src/modules/identity/identity.schema.js';
+import { notifications } from '../src/modules/notifications/notifications.schema.js';
+import { NotificationsService } from '../src/modules/notifications/notifications.service.js';
 import type { OtpMessage, OtpSender } from '../src/modules/identity/otp/otp-sender.js';
 
 const expectDatabase = process.env.E2E_EXPECT_DATABASE === 'true';
@@ -313,6 +315,19 @@ describe.runIf(expectDatabase)('Driver applications / KYC (e2e)', () => {
         role: 'driver',
         organization: expect.objectContaining({ id: organization.id }),
       }),
+    ]);
+
+    // The applicant heard about each review and about the line's decision.
+    await app.get(NotificationsService).settled();
+    const notices = await app
+      .get(DatabaseService)
+      .db.select({ kind: notifications.kind, reference: notifications.reference })
+      .from(notifications)
+      .where(eq(notifications.userId, driver.user.id));
+    expect(notices).toEqual([
+      { kind: 'application_reviewed', reference: created.id },
+      { kind: 'application_reviewed', reference: created.id },
+      { kind: 'application_decided', reference: organization.id },
     ]);
   });
 

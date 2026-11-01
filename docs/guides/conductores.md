@@ -6,7 +6,8 @@ documentos, ver tus viajes, validar boletos y tomar taxis.
 ## 1. Entrar y unirte a una empresa
 
 1. Entra con un código (te llega por correo) o con correo y contraseña.
-2. Si una empresa te invitó con ese correo o teléfono, verás la invitación en el inicio:
+2. Si una empresa te invitó con ese correo o teléfono, te llega un aviso y verás la invitación en
+   el inicio:
    **Aceptar** o **Rechazar**.
 3. Si nadie te invitó, envía una **solicitud** (abajo): VTP revisa tus documentos y la empresa que
    elegiste te acepta.
@@ -17,7 +18,8 @@ documentos, ver tus viajes, validar boletos y tomar taxis.
    si eres taxista con vehículo propio, el vehículo.
 2. Sube los documentos que pide la app (cédula, licencia, certificado médico, póliza…), en JPG,
    PNG o PDF de hasta 10 MB, con su fecha de vencimiento si la tienen.
-3. **Enviar a revisión**. Si VTP pide cambios o rechaza un documento, lo verás con el motivo.
+3. **Enviar a revisión**. Te avisamos (push y correo) cuando VTP la revisa y cuando la empresa
+   decide; si VTP pide cambios o rechaza un documento, lo verás con el motivo.
 
 ## 3. Mis viajes (conductores de autobús)
 

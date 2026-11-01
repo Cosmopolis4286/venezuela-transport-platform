@@ -12,6 +12,7 @@ import { normalizeContact } from '../identity/contact.js';
 import type { User } from '../identity/identity.schema.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import { UsersService } from '../identity/users.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import type { OrganizationAccess } from './organization-access.js';
 import {
   invitations,
@@ -38,11 +39,13 @@ export class InvitationsService {
     private readonly organizations: OrganizationsService,
     private readonly users: UsersService,
     private readonly audit: AuditService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /**
-   * No message is sent yet (no SMS/e-mail provider): the invitee sees the invitation in the app
-   * after signing in with that e-mail or phone.
+   * The invitee sees the invitation after signing in with that e-mail or phone. They also get a
+   * notice: by e-mail when the contact is an e-mail address, and by push and e-mail when someone
+   * already has that contact verified. A phone with no account gets nothing (no SMS provider yet).
    */
   async create(
     access: OrganizationAccess,
@@ -107,6 +110,16 @@ export class InvitationsService {
         role: input.role,
         contactKind: input.contactKind,
       },
+    });
+    const name = organization.tradeName ?? organization.legalName;
+    this.notifications.send({
+      kind: 'invitation_received',
+      userIds: existing ? [existing.id] : [],
+      address: !existing && input.contactKind === 'email' ? destination : undefined,
+      app: 'transport',
+      email: true,
+      text: (m) => m.invitationReceived(name),
+      reference: { key: 'invitationId', id: invitation.id },
     });
     return this.toDto(invitation);
   }

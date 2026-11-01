@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
+  DEFAULT_LOCALE,
   notificationMessages,
   type Locale,
   type NotificationKind,
@@ -26,8 +27,16 @@ export interface Notice {
   /** Push goes to this app's devices only. */
   app: PushApp;
   email?: boolean;
-  /** The booking, trip or ride it is about; also passed to the app to open it. */
-  reference?: { key: 'bookingId' | 'tripId' | 'rideId'; id: string };
+  /**
+   * An e-mail address with no account behind it yet (an invitation). Gets the Spanish text; it is
+   * not logged, since the log is per user.
+   */
+  address?: string;
+  /** What it is about; also passed to the app to open it. */
+  reference?: {
+    key: 'bookingId' | 'tripId' | 'rideId' | 'organizationId' | 'applicationId' | 'invitationId';
+    id: string;
+  };
 }
 
 /**
@@ -95,7 +104,9 @@ export class NotificationsService {
   /** Like `send`, but the notice (and the queries it needs) is built in the background too. */
   later(build: () => Promise<Notice | null>): void {
     const task = build()
-      .then((notice) => (notice?.userIds.length ? this.deliver(notice) : undefined))
+      .then((notice) =>
+        notice && (notice.userIds.length || notice.address) ? this.deliver(notice) : undefined,
+      )
       .catch((error: unknown) =>
         this.logger.error(`Could not send a notification: ${(error as Error).message}`),
       )
@@ -109,7 +120,17 @@ export class NotificationsService {
   }
 
   private async deliver(notice: Notice): Promise<void> {
+    if (notice.address && this.mailer.enabled) {
+      const messages = notificationMessages(DEFAULT_LOCALE);
+      const { title, body } = notice.text(messages, DEFAULT_LOCALE);
+      await this.mailer
+        .send({ to: notice.address, subject: title, text: `${body}\n\n${messages.footer}` })
+        .catch((error: unknown) =>
+          this.logger.error(`Could not e-mail ${notice.kind}: ${(error as Error).message}`),
+        );
+    }
     const userIds = [...new Set(notice.userIds)];
+    if (!userIds.length) return;
     const devices = this.push.enabled
       ? await this.database.db
           .select()
