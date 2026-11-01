@@ -111,6 +111,22 @@ async function Organization({ params }: { params: Promise<{ organizationId: stri
           </div>
         </Card>
       ) : null}
+      {organization.type === 'bus_company' &&
+      (permissions.includes('finance.view') || permissions.includes('bookings.view')) ? (
+        <Card>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-col gap-1">
+              <CardTitle>Reportes</CardTitle>
+              <CardDescription>
+                Ventas por ruta y por día, y ocupación de cada salida; se descargan en CSV.
+              </CardDescription>
+            </div>
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/portal/organizations/${organization.id}/reports`}>Ver reportes</Link>
+            </Button>
+          </div>
+        </Card>
+      ) : null}
       {runsRoutes(organization.type) && permissions.includes('finance.view') ? (
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-3">
