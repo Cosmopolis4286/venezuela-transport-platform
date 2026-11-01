@@ -13,6 +13,9 @@ pull request.
 
 ### Agregado
 
+- **Política de cancelación antes de pagar.** La reserva muestra en la app de pasajeros los
+  tramos de reembolso de la empresa mientras está apartada y después de pagada (`refundPolicy` en
+  la reserva).
 - **Salida y llegada de cada viaje.** El conductor marca en su app la salida (desde 2 horas
   antes) y la llegada; la empresa lo ve en el despacho y en la lista de viajes, y desde la salida
   los pasajeros ya no pueden cancelar.

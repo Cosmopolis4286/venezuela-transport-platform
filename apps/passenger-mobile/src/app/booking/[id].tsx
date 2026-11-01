@@ -21,6 +21,7 @@ import {
   longDate,
   type Booking,
   type CancellationQuote,
+  type RefundTier,
 } from '@vtp/shared-types';
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -122,6 +123,12 @@ export default function BookingScreen() {
         </Body>
       </Card>
 
+      {status === 'held' || status === 'confirmed' ? (
+        <Body muted>
+          {t.booking.policy}: {policyText(t, data.refundPolicy)}
+        </Body>
+      ) : null}
+
       {status === 'held' ? (
         <PaymentPanel booking={data} onBooking={booking.mutate} reload={booking.reload} />
       ) : null}
@@ -181,6 +188,14 @@ export default function BookingScreen() {
   );
 }
 
+/** "100 % up to 48 h before · 50 % up to 2 h before · after that, no refund". */
+function policyText(t: ReturnType<typeof useT>['t'], tiers: readonly RefundTier[]): string {
+  return [
+    ...tiers.map((tier) => t.booking.tier(tier.percent, tier.hoursBefore)),
+    t.booking.tierAfter,
+  ].join(' · ');
+}
+
 /** Cancels a paid trip after showing what would be refunded now, per the operator's policy. */
 function CancelPaid({
   bookingId,
@@ -231,10 +246,6 @@ function CancelPaid({
       </View>
     );
   }
-  const policy = [
-    ...quote.policy.map((tier) => t.booking.tier(tier.percent, tier.hoursBefore)),
-    t.booking.tierAfter,
-  ].join(' · ');
   return (
     <Card>
       <Subheading>{t.booking.cancelPaid}</Subheading>
@@ -251,7 +262,7 @@ function CancelPaid({
         <Body>{t.booking.cancelNoRefund}</Body>
       )}
       <Body muted>
-        {t.booking.policy}: {policy}
+        {t.booking.policy}: {policyText(t, quote.policy)}
       </Body>
       {error ? <Banner tone="error">{error}</Banner> : null}
       {quote.cancellable ? (

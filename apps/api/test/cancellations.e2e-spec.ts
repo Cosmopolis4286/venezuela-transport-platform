@@ -246,6 +246,11 @@ describe.runIf(expectDatabase)('Cancelling paid bookings (e2e)', () => {
 
       // --- Three days ahead: everything back. US$ 25 paid as Bs. 912,50 by pago móvil.
       const early = await book(['1']);
+      // The passenger sees the operator's tiers before paying.
+      expect(early.refundPolicy).toEqual([
+        { hoursBefore: 48, percent: 100 },
+        { hoursBefore: 2, percent: 50 },
+      ]);
       await quote(early).expect(409); // held: no refund quote, it is simply cancelled
       const earlyPayment = await payWith(early, 'pago_movil');
       expect((await quote(early).expect(200)).body).toMatchObject({

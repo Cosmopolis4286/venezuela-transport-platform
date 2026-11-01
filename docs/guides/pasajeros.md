@@ -31,6 +31,9 @@ Cuando llega el dinero, la reserva pasa a **Confirmada**, ves un **código QR po
 llega un aviso al teléfono y un correo. Si pagaste de menos, en otra moneda o tarde, la app te
 avisa y el dinero se te devuelve.
 
+Antes de pagar, la reserva muestra la **política de cancelación** de la empresa (cuánto se
+devuelve según cuántas horas antes canceles), para que la conozcas antes de comprar.
+
 > Hoy los pagos son de prueba (proveedor simulado): la app ofrece "Simular pago".
 
 ## 4. Viajar
