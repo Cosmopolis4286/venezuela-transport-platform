@@ -1,12 +1,29 @@
-import { AuthProvider, I18nProvider, SplashScreen, useAuth } from '@vtp/mobile-core';
-import { Stack } from 'expo-router';
+import {
+  AuthProvider,
+  I18nProvider,
+  SplashScreen,
+  useAuth,
+  usePushNotifications,
+} from '@vtp/mobile-core';
+import { Stack, useRouter } from 'expo-router';
+import { useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { api } from '@/lib/api';
 
 function RootNavigator() {
   const { state } = useAuth();
-  if (state.status === 'loading' || state.status === 'unavailable') return <SplashScreen />;
+  const router = useRouter();
   const signedIn = state.status === 'signedIn';
+  // A tapped notification opens the assigned trip or the taxi board.
+  const openNotice = useCallback(
+    (data: Record<string, unknown>) => {
+      if (typeof data.tripId === 'string') router.push(`/trip/${data.tripId}`);
+      else if (typeof data.rideId === 'string') router.push('/taxi');
+    },
+    [router],
+  );
+  usePushNotifications(api, 'transport', signedIn, openNotice);
+  if (state.status === 'loading' || state.status === 'unavailable') return <SplashScreen />;
   return (
     <Stack>
       <Stack.Protected guard={signedIn}>
