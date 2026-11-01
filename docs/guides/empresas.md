@@ -16,8 +16,8 @@ despachar y cobrar. El portal está en español. Lo que cada persona puede hacer
 
 En la página de la organización:
 
-- **Invitar** por correo o teléfono con un rol. La persona entra con ese contacto y acepta la
-  invitación.
+- **Invitar** por correo o teléfono con un rol. A la persona le llega un correo (o un push, si ya
+  tiene cuenta) y entra con ese contacto para aceptar la invitación.
 - **Solicitantes verificados**: conductores y personal que enviaron sus documentos (KYC) y fueron
   aprobados por VTP; acéptalos para sumarlos.
 - Cambiar roles o quitar miembros (dueño y administrador).

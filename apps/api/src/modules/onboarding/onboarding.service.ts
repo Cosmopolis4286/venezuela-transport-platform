@@ -20,6 +20,7 @@ import { FILE_STORAGE, type FileStorage } from '../../storage/file-storage.js';
 import { AuditService } from '../audit/audit.service.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import { UsersService } from '../identity/users.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import type { OrganizationAccess } from '../organizations/organization-access.js';
 import type { OrganizationRow } from '../organizations/organizations.schema.js';
 import { OrganizationsService } from '../organizations/organizations.service.js';
@@ -62,6 +63,7 @@ export class OnboardingService {
     private readonly audit: AuditService,
     private readonly config: AppConfigService,
     @Inject(FILE_STORAGE) private readonly storage: FileStorage,
+    private readonly notifications: NotificationsService,
   ) {}
 
   // ── Applicant ───────────────────────────────────────────────────────────
@@ -382,6 +384,15 @@ export class OnboardingService {
       targetId: applicationId,
       ip: meta.ip,
     });
+    this.notifications.send({
+      kind: 'application_reviewed',
+      userIds: [row.userId],
+      app: 'transport',
+      email: true,
+      text: (m) =>
+        m.applicationReviewed(row.status as 'approved' | 'rejected' | 'changes_requested', notes),
+      reference: { key: 'applicationId', id: applicationId },
+    });
     return this.toDto(row);
   }
 
@@ -420,7 +431,7 @@ export class OnboardingService {
     meta: RequestMeta,
   ): Promise<void> {
     const { organization } = access;
-    await this.database.db.transaction(async (tx) => {
+    const applicantId = await this.database.db.transaction(async (tx) => {
       const [application] = await tx
         .select()
         .from(applications)
@@ -448,6 +459,7 @@ export class OnboardingService {
         .update(applications)
         .set({ organizationDecision: decision === 'accept' ? 'accepted' : 'declined' })
         .where(eq(applications.id, applicationId));
+      return application.userId;
     });
     await this.audit.record({
       action:
@@ -459,6 +471,18 @@ export class OnboardingService {
       targetId: applicationId,
       ip: meta.ip,
       metadata: { organizationId: organization.id },
+    });
+    this.notifications.send({
+      kind: 'application_decided',
+      userIds: [applicantId],
+      app: 'transport',
+      email: true,
+      text: (m) =>
+        m.applicationDecided(
+          organization.tradeName ?? organization.legalName,
+          decision === 'accept',
+        ),
+      reference: { key: 'organizationId', id: organization.id },
     });
   }
 

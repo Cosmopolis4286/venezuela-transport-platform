@@ -20,6 +20,7 @@ import { AuditService } from '../audit/audit.service.js';
 import { normalizeEmail, normalizePhone } from '../identity/contact.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import { UsersService } from '../identity/users.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import type { OrganizationAccess } from './organization-access.js';
 import { memberships, organizations, type OrganizationRow } from './organizations.schema.js';
 import { normalizeRif } from './rif.js';
@@ -43,6 +44,7 @@ export class OrganizationsService {
     private readonly database: DatabaseService,
     private readonly users: UsersService,
     private readonly audit: AuditService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /** Anyone signed in may register an organization; it stays `pending_review` until approved. */
@@ -338,6 +340,20 @@ export class OrganizationsService {
       ip: meta.ip,
       metadata: { from: current.status, to: transition.to },
     });
+    const name = updated.tradeName ?? updated.legalName;
+    this.notifications.later(async () => ({
+      kind: 'organization_reviewed',
+      userIds: (
+        await this.database.db
+          .select({ userId: memberships.userId })
+          .from(memberships)
+          .where(and(eq(memberships.organizationId, organizationId), eq(memberships.role, 'owner')))
+      ).map((m) => m.userId),
+      app: 'transport',
+      email: true,
+      text: (m) => m.organizationReviewed(name, input.decision, notes),
+      reference: { key: 'organizationId', id: organizationId },
+    }));
     return this.toDto(updated);
   }
 
