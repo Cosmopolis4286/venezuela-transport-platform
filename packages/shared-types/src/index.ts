@@ -15,3 +15,4 @@ export * from './i18n/locales.js';
 export * from './i18n/shared-messages.js';
 export * from './i18n/notification-messages.js';
 export * from './api/notifications.js';
+export * from './api/reports.js';
