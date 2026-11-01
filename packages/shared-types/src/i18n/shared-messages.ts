@@ -115,6 +115,10 @@ const es: SharedMessages = {
     PAYOUT_ALREADY_VOIDED: 'Este pago a la empresa ya fue anulado.',
     PAYMENT_NOT_REFUND_DUE: 'Este pago no está pendiente de reembolso.',
     BOOKING_NOT_CANCELLABLE: 'Esta reserva ya no se puede cancelar: el viaje salió o ya abordaste.',
+    TRIP_TOO_EARLY:
+      'Todavía es temprano: la salida se marca desde 2 horas antes de la hora programada.',
+    TRIP_WRONG_STEP:
+      'Ese paso no corresponde: primero se marca la salida y luego la llegada, una sola vez.',
   },
 };
 
@@ -204,6 +208,10 @@ const en: SharedMessages = {
     PAYMENT_NOT_REFUND_DUE: 'This payment is not awaiting a refund.',
     BOOKING_NOT_CANCELLABLE:
       'This booking can no longer be cancelled: the bus left or you boarded.',
+    TRIP_TOO_EARLY:
+      'Too early: the departure can be marked from 2 hours before the scheduled time.',
+    TRIP_WRONG_STEP:
+      'That step does not apply: mark the departure first, then the arrival, once each.',
   },
 };
 
@@ -294,6 +302,10 @@ const ptBR: SharedMessages = {
     PAYMENT_NOT_REFUND_DUE: 'Este pagamento não está aguardando reembolso.',
     BOOKING_NOT_CANCELLABLE:
       'Esta reserva não pode mais ser cancelada: o ônibus partiu ou você embarcou.',
+    TRIP_TOO_EARLY:
+      'Ainda é cedo: a partida pode ser marcada a partir de 2 horas antes do horário.',
+    TRIP_WRONG_STEP:
+      'Essa etapa não se aplica: marque primeiro a partida e depois a chegada, uma vez cada.',
   },
 };
 

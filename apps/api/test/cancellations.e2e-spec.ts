@@ -17,7 +17,7 @@ import {
 import { and, eq, sql } from 'drizzle-orm';
 import request from 'supertest';
 import { DatabaseService } from '../src/database/database.service.js';
-import { bookings } from '../src/modules/bookings/bookings.schema.js';
+import { bookings, trips } from '../src/modules/bookings/bookings.schema.js';
 import { users } from '../src/modules/identity/identity.schema.js';
 import { settlementEntries } from '../src/modules/settlements/settlements.schema.js';
 import type { OtpMessage, OtpSender } from '../src/modules/identity/otp/otp-sender.js';
@@ -358,6 +358,19 @@ describe.runIf(expectDatabase)('Cancelling paid bookings (e2e)', () => {
         },
       ]);
       void again;
+
+      // Once the driver marked the departure, it cannot be cancelled even before boarding time.
+      const leftEarly = await book(['6']);
+      await payWith(leftEarly, 'usdt');
+      await db
+        .update(trips)
+        .set({ departedAt: sql`now()` })
+        .where(eq(trips.id, leftEarly.trip.id));
+      expect(((await quote(leftEarly).expect(200)).body as CancellationQuote).cancellable).toBe(
+        false,
+      );
+      await cancel(leftEarly).expect(409);
+      await db.update(trips).set({ departedAt: null }).where(eq(trips.id, leftEarly.trip.id));
 
       // --- The admins' refund queue shows what goes back after a cancellation.
       const queue = (

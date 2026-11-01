@@ -1,5 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
+  DEPART_EARLY_HOURS,
   NETWORK_UTC_OFFSET,
   rolesWith,
   toNetworkIso,
@@ -10,7 +11,7 @@ import {
   type DriverTrip,
   type TripDriver,
 } from '@vtp/shared-types';
-import { and, asc, eq, gt, inArray, lt, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNotNull, isNull, lt, ne, sql } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService, type Transaction } from '../../database/database.service.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -104,6 +105,8 @@ export class DispatchService {
         heldSeats: trip.heldSeats,
         vehicle: trip.vehicle,
         driver: trip.driver,
+        departedAt: trip.departedAt,
+        arrivedAt: trip.arrivedAt,
       };
     });
     const withTrip = new Set(booked.map((t) => t.scheduleId));
@@ -128,6 +131,8 @@ export class DispatchService {
         heldSeats: 0,
         vehicle: null,
         driver: null,
+        departedAt: null,
+        arrivedAt: null,
       });
     }
     return {
@@ -143,6 +148,7 @@ export class DispatchService {
           plate: v.plate,
           label: v.label,
           seatLayoutId: v.seatLayout?.id ?? null,
+          documentAlert: v.documentAlert,
         })),
       drivers,
     };
@@ -246,6 +252,56 @@ export class DispatchService {
     }
     const board = await this.board(organizationId, trip.serviceDate);
     return board.departures.find((d) => d.tripId === trip.id)!;
+  }
+
+  /**
+   * The assigned driver marks that the bus left (from `DEPART_EARLY_HOURS` before the scheduled
+   * departure) and later that it arrived. Each step happens once and in order.
+   */
+  async markTrip(
+    actor: Authenticated,
+    tripId: string,
+    step: 'depart' | 'arrive',
+    meta: RequestMeta,
+  ): Promise<DriverTrip> {
+    const [row] = await this.drivenTrips(actor.user.id, null, tripId);
+    if (!row) throw tripNotFound();
+    const now = new Date();
+    if (step === 'depart') {
+      if (+row.trip.departsAt - DEPART_EARLY_HOURS * 3_600_000 > +now) {
+        throw conflict('Too early to mark the departure', 'TRIP_TOO_EARLY');
+      }
+    }
+    const [updated] = await this.database.db
+      .update(trips)
+      .set(step === 'depart' ? { departedAt: now } : { arrivedAt: now })
+      .where(
+        and(
+          eq(trips.id, tripId),
+          step === 'depart'
+            ? isNull(trips.departedAt)
+            : and(isNotNull(trips.departedAt), isNull(trips.arrivedAt)),
+        ),
+      )
+      .returning({ id: trips.id });
+    if (!updated) {
+      throw conflict(
+        step === 'depart' ? 'The departure was already marked' : 'Mark the departure first, once',
+        'TRIP_WRONG_STEP',
+      );
+    }
+    await this.audit.record({
+      action: step === 'depart' ? 'trip.departed' : 'trip.arrived',
+      actorUserId: actor.user.id,
+      targetType: 'trip',
+      targetId: tripId,
+      ip: meta.ip,
+    });
+    const [trip] = await this.toDriverTrips(
+      await this.drivenTrips(actor.user.id, null, tripId),
+      null,
+    );
+    return trip!;
   }
 
   /** Trips assigned to the user, while they are still a driving member of the organization. */

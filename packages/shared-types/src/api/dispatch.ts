@@ -1,5 +1,5 @@
 import type { BookingStatus, TripSummary } from './bookings.js';
-import type { FleetVehicle } from './fleet.js';
+import type { FleetVehicle, VehicleDocumentStatus } from './fleet.js';
 import type { ServiceClass, StopSummary } from './network.js';
 import type { Organization } from './organizations.js';
 
@@ -19,8 +19,11 @@ export interface TripDriver {
 export interface DispatchBoard {
   date: string;
   departures: DispatchDeparture[];
-  /** Active vehicles that can be assigned. */
-  vehicles: (TripVehicle & { seatLayoutId: string | null })[];
+  /** Active vehicles that can be assigned, with a warning when their documents need attention. */
+  vehicles: (TripVehicle & {
+    seatLayoutId: string | null;
+    documentAlert: VehicleDocumentStatus | null;
+  })[];
   /** Members whose role drives (`trips.drive`). */
   drivers: TripDriver[];
 }
@@ -42,6 +45,9 @@ export interface DispatchDeparture {
   heldSeats: number;
   vehicle: TripVehicle | null;
   driver: TripDriver | null;
+  /** When the driver marked the departure and the arrival (UTC ISO); null until then. */
+  departedAt: string | null;
+  arrivedAt: string | null;
 }
 
 /**
@@ -77,3 +83,9 @@ export interface DriverManifest extends DriverTrip {
     boardedAt: string | null;
   }[];
 }
+
+/**
+ * A driver marks the trip: `POST /me/driving/:tripId/depart` (from 2 hours before the scheduled
+ * departure) and then `…/arrive`. Once departed, passengers can no longer cancel.
+ */
+export const DEPART_EARLY_HOURS = 2;

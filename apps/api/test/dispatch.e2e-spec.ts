@@ -17,9 +17,10 @@ import {
   type Stop,
   type TripSummary,
 } from '@vtp/shared-types';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import request from 'supertest';
 import { DatabaseService } from '../src/database/database.service.js';
+import { trips as tripsTable } from '../src/modules/bookings/bookings.schema.js';
 import { notifications } from '../src/modules/notifications/notifications.schema.js';
 import { NotificationsService } from '../src/modules/notifications/notifications.service.js';
 import { users } from '../src/modules/identity/identity.schema.js';
@@ -410,6 +411,87 @@ describe.runIf(expectDatabase)('Dispatch (e2e)', () => {
             .body as DriverTrip[]
         ).map((t) => t.departsAt),
       ).toEqual([`${date}T14:00:00-04:00`]);
+
+      // --- The driver marks the departure (from 2 hours before) and then the arrival.
+      const [afternoonTrip] = (
+        await http().get('/api/v1/me/driving').set('Authorization', driver.auth).expect(200)
+      ).body as DriverTrip[];
+      const mark = (step: 'depart' | 'arrive', auth = driver.auth) =>
+        http().post(`/api/v1/me/driving/${afternoonTrip!.id}/${step}`).set('Authorization', auth);
+      expect((await mark('depart').expect(409)).body.error.reason).toBe('TRIP_TOO_EARLY');
+      await db
+        .update(tripsTable)
+        .set({ departsAt: sql`now() + interval '1 hour'` })
+        .where(eq(tripsTable.id, afternoonTrip!.id));
+      expect((await mark('arrive').expect(409)).body.error.reason).toBe('TRIP_WRONG_STEP');
+      await mark('depart', ana.auth).expect(404);
+      const departed = (await mark('depart').expect(200)).body as DriverTrip;
+      expect(departed.departedAt).not.toBeNull();
+      expect(departed.arrivedAt).toBeNull();
+      expect((await mark('depart').expect(409)).body.error.reason).toBe('TRIP_WRONG_STEP');
+      expect(((await mark('arrive').expect(200)).body as DriverTrip).arrivedAt).not.toBeNull();
+      await mark('arrive').expect(409);
+      const progress = (
+        (
+          await http()
+            .get(`${org}/trips`)
+            .query({ date })
+            .set('Authorization', owner.auth)
+            .expect(200)
+        ).body as TripSummary[]
+      ).find((t) => t.id === afternoonTrip!.id);
+      expect(progress).toMatchObject({
+        departedAt: expect.any(String),
+        arrivedAt: expect.any(String),
+      });
+
+      // --- Vehicle documents with their expiry; the board warns about the vehicle.
+      const doc = (kind: string, body: object, auth = owner.auth) =>
+        http()
+          .put(`${org}/vehicles/${bus.id}/documents/${kind}`)
+          .set('Authorization', auth)
+          .send(body);
+      await doc('passport', { number: 'X', expiresOn: '2030-01-01' }).expect(400);
+      await doc('insurance', { number: 'RCV-1', expiresOn: '31/12/2030' }).expect(400);
+      await doc('insurance', { number: 'RCV-1', expiresOn: '2030-01-01' }, dispatcher.auth).expect(
+        403,
+      );
+      await doc('registration', { number: 'CC-77', expiresOn: '2030-01-01' }).expect(200);
+      const expired = (
+        await doc('insurance', { number: 'RCV-1', expiresOn: addDays(today, -1) }).expect(200)
+      ).body as FleetVehicle;
+      expect(expired).toMatchObject({
+        documentAlert: 'expired',
+        documents: [
+          { kind: 'registration', number: 'CC-77', status: 'valid' },
+          { kind: 'insurance', number: 'RCV-1', status: 'expired' },
+        ],
+      });
+      const warned = (
+        await http()
+          .get(`${org}/dispatch`)
+          .query({ date })
+          .set('Authorization', dispatcher.auth)
+          .expect(200)
+      ).body as DispatchBoard;
+      expect(warned.vehicles.find((v) => v.id === bus.id)?.documentAlert).toBe('expired');
+      await doc('insurance', { number: 'RCV-2', expiresOn: addDays(today, 10) }).expect(200);
+      expect(
+        (
+          (await http().get(`${org}/vehicles`).set('Authorization', owner.auth).expect(200))
+            .body as FleetVehicle[]
+        ).find((v) => v.id === bus.id)?.documentAlert,
+      ).toBe('expiring');
+      expect(
+        (
+          (
+            await http()
+              .delete(`${org}/vehicles/${bus.id}/documents/insurance`)
+              .set('Authorization', owner.auth)
+              .expect(200)
+          ).body as FleetVehicle
+        ).documentAlert,
+      ).toBeNull();
 
       // A member who no longer drives stops seeing the trip.
       await http()

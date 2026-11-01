@@ -179,7 +179,55 @@ export interface FleetVehicle {
   seatLayout: { id: string; name: string; capacity: number } | null;
   /** Inactive vehicles keep their past trips but cannot be assigned again. */
   active: boolean;
+  /** Registration, insurance and transport permit, each with its expiry. */
+  documents: VehicleDocument[];
+  /** The worst state among its documents (`expired` beats `expiring`); null when all are valid. */
+  documentAlert: VehicleDocumentStatus | null;
   createdAt: string;
+}
+
+/** Papers a vehicle must carry. */
+export const VEHICLE_DOCUMENT_KINDS = ['registration', 'insurance', 'transport_permit'] as const;
+export type VehicleDocumentKind = (typeof VEHICLE_DOCUMENT_KINDS)[number];
+
+export const VEHICLE_DOCUMENT_LABELS: Record<VehicleDocumentKind, string> = {
+  registration: 'Certificado de circulación',
+  insurance: 'Póliza de seguro (RCV)',
+  transport_permit: 'Permiso de transporte',
+};
+
+/** `expiring`: within `VEHICLE_DOCUMENT_WARNING_DAYS` days. */
+export type VehicleDocumentStatus = 'valid' | 'expiring' | 'expired';
+export const VEHICLE_DOCUMENT_WARNING_DAYS = 30;
+
+export interface VehicleDocument {
+  kind: VehicleDocumentKind;
+  number: string;
+  /** Last valid day, `YYYY-MM-DD`. */
+  expiresOn: string;
+  status: VehicleDocumentStatus;
+}
+
+/** `PUT /organizations/:id/vehicles/:vehicleId/documents/:kind` */
+export interface VehicleDocumentInput {
+  number: string;
+  expiresOn: string;
+}
+
+/** Status of a document that expires on `expiresOn` (last valid day) as of `today`. */
+export function vehicleDocumentStatus(expiresOn: string, today: string): VehicleDocumentStatus {
+  if (expiresOn < today) return 'expired';
+  const days =
+    (Date.parse(`${expiresOn}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000;
+  return days <= VEHICLE_DOCUMENT_WARNING_DAYS ? 'expiring' : 'valid';
+}
+
+/** The worst status of a list, or null when every document is valid (or there are none). */
+export function worstDocumentStatus(
+  statuses: readonly VehicleDocumentStatus[],
+): VehicleDocumentStatus | null {
+  if (statuses.includes('expired')) return 'expired';
+  return statuses.includes('expiring') ? 'expiring' : null;
 }
 
 /** `POST /organizations/:id/vehicles` and `PATCH …/:vehicleId` (all optional on PATCH). */

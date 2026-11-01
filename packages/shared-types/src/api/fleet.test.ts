@@ -6,7 +6,9 @@ import {
   plateProblem,
   presetLayout,
   renumberSeats,
+  vehicleDocumentStatus,
   vehicleName,
+  worstDocumentStatus,
 } from './fleet.js';
 import { roleHasPermission } from './organizations.js';
 
@@ -74,5 +76,21 @@ describe('vehicle plates', () => {
     expect(plateProblem('AB_123')).toMatch(/placa/);
     expect(vehicleName({ plate: 'AB123CD', label: 'Unidad 12' })).toBe('AB123CD · Unidad 12');
     expect(vehicleName({ plate: 'AB123CD', label: null })).toBe('AB123CD');
+  });
+});
+
+describe('vehicle documents', () => {
+  it('is valid, expiring within 30 days, or expired after its last day', () => {
+    expect(vehicleDocumentStatus('2026-12-31', '2026-11-01')).toBe('valid');
+    expect(vehicleDocumentStatus('2026-12-01', '2026-11-01')).toBe('expiring');
+    expect(vehicleDocumentStatus('2026-11-01', '2026-11-01')).toBe('expiring');
+    expect(vehicleDocumentStatus('2026-10-31', '2026-11-01')).toBe('expired');
+  });
+
+  it('reports the worst status, or null when all are fine', () => {
+    expect(worstDocumentStatus([])).toBeNull();
+    expect(worstDocumentStatus(['valid', 'valid'])).toBeNull();
+    expect(worstDocumentStatus(['valid', 'expiring'])).toBe('expiring');
+    expect(worstDocumentStatus(['expiring', 'expired'])).toBe('expired');
   });
 });

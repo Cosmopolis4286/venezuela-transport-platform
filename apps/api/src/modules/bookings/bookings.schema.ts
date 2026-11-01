@@ -51,6 +51,9 @@ export const trips = pgTable(
     /** Assigned by a dispatcher (`operations.dispatch`). */
     vehicleId: uuid().references(() => vehicles.id, { onDelete: 'restrict' }),
     driverUserId: uuid().references(() => users.id, { onDelete: 'restrict' }),
+    /** Marked by the assigned driver (dispatch). */
+    departedAt: timestamp({ withTimezone: true }),
+    arrivedAt: timestamp({ withTimezone: true }),
     ...timestamps,
   },
   (t) => [

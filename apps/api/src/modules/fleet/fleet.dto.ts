@@ -3,6 +3,7 @@ import {
   SEAT_LAYOUT_LIMITS,
   type LayoutSeat,
   type SeatLayoutInput,
+  type VehicleDocumentInput,
   type VehicleInput,
 } from '@vtp/shared-types';
 import { Type } from 'class-transformer';
@@ -16,6 +17,7 @@ import {
   IsString,
   IsUUID,
   Length,
+  Matches,
   Max,
   Min,
   ValidateNested,
@@ -107,3 +109,14 @@ export class VehicleDto implements VehicleInput {
 }
 
 export class UpdateVehicleDto extends PartialType(VehicleDto) {}
+
+export class VehicleDocumentDto implements VehicleDocumentInput {
+  @ApiProperty({ example: 'RCV-2026-004512' })
+  @IsString()
+  @Length(1, 60)
+  number!: string;
+
+  @ApiProperty({ example: '2027-03-31', description: 'Last valid day' })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'expiresOn must look like 2027-03-31' })
+  expiresOn!: string;
+}
