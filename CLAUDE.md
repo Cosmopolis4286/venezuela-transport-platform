@@ -40,5 +40,6 @@ that app.
   `app/[lang]`; portal, admin and login in `app/(site)` (Spanish).
 - Web forms: use `ActionForm` (pass `resetOnSuccess` only for "add" forms) and map API errors to
   Spanish with `failure(error, messages)` from `src/lib/server/form-actions.ts`.
-- Docs live in `docs/`; update `.env.example` files and `docs/development/environment-variables.md`
-  whenever configuration changes.
+- Docs live in `docs/` (index: `docs/README.md`); update `.env.example` files and
+  `docs/development/environment-variables.md` whenever configuration changes, the user guides in
+  `docs/guides/` when screens change, and `docs/architecture/data-model.md` when tables change.

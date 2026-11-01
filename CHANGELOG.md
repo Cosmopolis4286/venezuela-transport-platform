@@ -76,6 +76,9 @@ pull request.
   arquitectura, autenticación (códigos por correo), apps móviles (push), portal, organizaciones,
   idiomas, Docker y Mailpit (`VTP_MAIL_DELIVERY`), instalación local, Android (proyecto de EAS),
   preparación del VPS (SMTP y push), seguridad y hoja de ruta.
+- **Documentos nuevos**: índice de la documentación (`docs/README.md`), guías de uso para
+  pasajeros, empresas, conductores e inspectores y administración (`docs/guides/`), modelo de
+  datos, guía de pruebas y glosario.
 - **El repositorio es público y la CI corre en GitHub Actions** (`.github/workflows/ci.yml`), en
   las máquinas de GitHub y sin costo (ADR-023). El runner propio queda solo para lanzarlo a mano.
 - La web pública cambió de dirección: `/es` y `/es/buscar` (las anteriores, `/` y `/buscar`,

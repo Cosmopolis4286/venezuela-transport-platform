@@ -137,9 +137,15 @@ escriben en el log de la API.
 
 ## Documentación
 
+Índice completo: [docs/README.md](docs/README.md). Guías de uso:
+[pasajeros](docs/guides/pasajeros.md) · [empresas](docs/guides/empresas.md) ·
+[conductores e inspectores](docs/guides/conductores.md) ·
+[administración](docs/guides/administracion.md) · [glosario](docs/glossary.md).
+
 - [Progreso y hoja de ruta](docs/roadmap.md) · [Registro de cambios](CHANGELOG.md)
 - [Visión general de la arquitectura](docs/architecture/overview.md)
-- [Decisiones de arquitectura](docs/architecture/decisions.md)
+- [Decisiones de arquitectura](docs/architecture/decisions.md) ·
+  [Modelo de datos](docs/architecture/data-model.md)
 - [Autenticación](docs/architecture/authentication.md)
 - [Organizaciones, roles e invitaciones](docs/architecture/organizations.md)
 - [Solicitudes de conductores y personal (KYC)](docs/architecture/onboarding.md)
@@ -157,7 +163,8 @@ escriben en el log de la API.
 - [Instalación local (Windows, macOS, Linux)](docs/development/local-setup.md)
 - [Correr con Docker: local, híbrido, completo](docs/development/docker.md)
 - [Probar en Android: Expo Go, emulador, APK](docs/development/android-testing.md)
-- [Variables de entorno](docs/development/environment-variables.md)
+- [Variables de entorno](docs/development/environment-variables.md) ·
+  [Pruebas](docs/development/testing.md)
 - [Flujo del repositorio](docs/development/repository-workflow.md) ·
   [Runner de CI propio](docs/development/self-hosted-runner.md)
 - [Preparación del despliegue en un VPS](docs/deployment/vps-preparation.md)
