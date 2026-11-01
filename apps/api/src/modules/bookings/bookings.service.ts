@@ -1,6 +1,7 @@
 import { randomInt } from 'node:crypto';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
+  formatPaymentAmount,
   MAX_SEATS_PER_BOOKING,
   TICKET_QR_PREFIX,
   toNetworkIso,
@@ -28,6 +29,7 @@ import { routes, routeSchedules } from '../network/network.schema.js';
 import { StopsService } from '../network/stops.service.js';
 import { organizations } from '../organizations/organizations.schema.js';
 import { currentPayment, toPayment } from '../payments/payment-view.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { payments, type PaymentRow } from '../payments/payments.schema.js';
 import { percentOf, policyFor, recordCancellation } from '../settlements/ledger.js';
 import {
@@ -82,6 +84,7 @@ export class BookingsService {
     private readonly stops: StopsService,
     private readonly audit: AuditService,
     private readonly config: AppConfigService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /** Holds the seats for `BOOKING_HOLD_MINUTES`; payment confirms the booking. */
@@ -265,6 +268,28 @@ export class BookingsService {
       ip: meta.ip,
       metadata: refundPercent === null ? undefined : { paid: true, refundPercent },
     });
+    if (refundPercent !== null) {
+      this.notifications.later(async () => {
+        const [payment] = await this.database.db
+          .select()
+          .from(payments)
+          .where(and(eq(payments.bookingId, booking.id), eq(payments.status, 'refund_due')));
+        return {
+          kind: 'booking_cancelled',
+          userIds: [booking.userId],
+          app: 'passenger',
+          email: true,
+          reference: { key: 'bookingId', id: booking.id },
+          text: (m, locale) =>
+            m.bookingCancelled(
+              booking.code,
+              payment?.refundAmount
+                ? formatPaymentAmount(payment.refundAmount, payment.currency, locale)
+                : null,
+            ),
+        };
+      });
+    }
     return (await this.toBookings([cancelled]))[0]!;
   }
 

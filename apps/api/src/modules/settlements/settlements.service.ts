@@ -1,6 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   CURRENCIES,
+  formatPaymentAmount,
   NETWORK_UTC_OFFSET,
   todayInVenezuela,
   type AdminSettlementSummary,
@@ -24,6 +25,7 @@ import { bookings, trips } from '../bookings/bookings.schema.js';
 import { users } from '../identity/identity.schema.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import { routes } from '../network/network.schema.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { organizations } from '../organizations/organizations.schema.js';
 import { fromScaled, toScaled } from '../payments/money.js';
 import { payments } from '../payments/payments.schema.js';
@@ -63,6 +65,7 @@ export class SettlementsService {
   constructor(
     private readonly database: DatabaseService,
     private readonly audit: AuditService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   // --- Operators ------------------------------------------------------------------------------
@@ -397,6 +400,30 @@ export class SettlementsService {
       targetId: row.id,
       ip: meta.ip,
       metadata: { bookingId: row.bookingId, reference: reference.trim() },
+    });
+    this.notifications.later(async () => {
+      const [payment] = await this.database.db
+        .select()
+        .from(payments)
+        .where(eq(payments.id, row.id));
+      const booking = await this.notifications.booking(row.bookingId);
+      return {
+        kind: 'refund_sent',
+        userIds: [payment!.userId],
+        app: 'passenger',
+        email: true,
+        reference: { key: 'bookingId', id: row.bookingId },
+        text: (m, locale) =>
+          m.refundSent(
+            booking.code,
+            formatPaymentAmount(
+              payment!.refundAmount ?? payment!.receivedAmount ?? payment!.amount,
+              payment!.currency,
+              locale,
+            ),
+            reference.trim(),
+          ),
+      };
     });
   }
 

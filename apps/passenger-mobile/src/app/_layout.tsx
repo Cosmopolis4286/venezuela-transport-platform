@@ -1,5 +1,12 @@
-import { AuthProvider, I18nProvider, SplashScreen, useAuth } from '@vtp/mobile-core';
-import { Stack } from 'expo-router';
+import {
+  AuthProvider,
+  I18nProvider,
+  SplashScreen,
+  useAuth,
+  usePushNotifications,
+} from '@vtp/mobile-core';
+import { Stack, useRouter } from 'expo-router';
+import { useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { useT } from '@/i18n/use-t';
 import { api } from '@/lib/api';
@@ -9,8 +16,18 @@ import { SearchProvider } from '@/lib/search-context';
 function RootNavigator() {
   const { state } = useAuth();
   const { t } = useT();
-  if (state.status === 'loading' || state.status === 'unavailable') return <SplashScreen />;
+  const router = useRouter();
   const signedIn = state.status === 'signedIn';
+  // A tapped notification opens the booking or taxi ride it is about.
+  const openNotice = useCallback(
+    (data: Record<string, unknown>) => {
+      if (typeof data.bookingId === 'string') router.push(`/booking/${data.bookingId}`);
+      else if (typeof data.rideId === 'string') router.push(`/taxi/${data.rideId}`);
+    },
+    [router],
+  );
+  usePushNotifications(api, 'passenger', signedIn, openNotice);
+  if (state.status === 'loading' || state.status === 'unavailable') return <SplashScreen />;
   return (
     <Stack>
       {/* Searching is public: no account needed to look up departures. */}

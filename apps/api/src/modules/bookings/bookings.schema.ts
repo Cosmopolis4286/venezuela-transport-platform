@@ -89,6 +89,8 @@ export const bookings = pgTable(
     expiresAt: timestamp({ withTimezone: true }),
     confirmedAt: timestamp({ withTimezone: true }),
     cancelledAt: timestamp({ withTimezone: true }),
+    /** Set when the passenger got the trip reminder (notifications), so it is sent once. */
+    reminderSentAt: timestamp({ withTimezone: true }),
     ...timestamps,
   },
   (t) => [

@@ -23,7 +23,7 @@ Leyenda: ✅ listo · 🟡 parcial · ⏭️ siguiente · ⬜ pendiente
 
 | Quién                                                   | Puede hacer hoy                                                                                                                                                                                                                                                                                                                    | Le falta                                                            |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| **Pasajero** (app, web)                                 | Buscar salidas (sin cuenta), elegir puestos en el mapa del bus, apartarlos 15 min, pagar (simulado) por pago móvil, transferencia, PIX o USDT, mostrar un boleto QR por puesto, "Mis viajes", pedir un taxi desde o hacia un terminal                                                                                              | Pagos reales, notificaciones, pagar el taxi en la app               |
+| **Pasajero** (app, web)                                 | Buscar salidas (sin cuenta), elegir puestos en el mapa del bus, apartarlos 15 min, pagar (simulado) por pago móvil, transferencia, PIX o USDT, mostrar un boleto QR por puesto, "Mis viajes", pedir un taxi desde o hacia un terminal                                                                                              | Pagos reales, pagar el taxi en la app                               |
 | **Empresa de autobuses / línea de taxis** (portal)      | Registrarse y ser aprobada, invitar personal con roles, aceptar solicitantes verificados, publicar rutas, tarifas, horarios y mapas de puestos, fijar tasas de cambio, ver viajes y listas de pasajeros, registrar vehículos, asignar vehículo y conductor a cada salida, elegir los terminales de sus taxis y asignar solicitudes | Reportes                                                            |
 | **Inspector** (app de transportistas)                   | Escanear boletos al abordar (cámara o código + puesto), ver quién abordó en la lista de pasajeros                                                                                                                                                                                                                                  | Escaneo sin conexión                                                |
 | **Conductor / personal** (app de transportistas)        | Iniciar sesión, aceptar invitaciones, enviar la solicitud con documentos KYC, ver sus viajes asignados y quién viaja, tomar solicitudes de taxi y llevarlas hasta el final                                                                                                                                                         | Avisos de viajes nuevos, marcar salida y llegada, ubicación en vivo |
@@ -46,7 +46,7 @@ Leyenda: ✅ listo · 🟡 parcial · ⏭️ siguiente · ⬜ pendiente
 | Reembolsos                       | ✅     | El pasajero cancela un viaje pagado y ve antes cuánto se le devuelve; política editable en general y por empresa (8 %; 100 % hasta 48 h, 50 % hasta 2 h); cola de reembolsos para la administración ([settlements](architecture/settlements.md)) |
 | Despacho de taxis                | ✅     | Solicitudes en los terminales; la primera línea que la toma fija la tarifa; ciclo de vida completo; un viaje a la vez por conductor y vehículo ([taxis](architecture/taxis.md)). El pago es directo al conductor                                 |
 | Vehículos y asignación de viajes | ✅     | Placas y mapa de puestos por vehículo, tablero de despacho del día, sin cruces de horario, viajes del conductor en la app ([dispatch](architecture/dispatch.md)); faltan los documentos de los vehículos                                         |
-| Notificaciones                   | ⬜     | SMS / WhatsApp / correo / push (códigos, confirmación de pago, recordatorios de viaje)                                                                                                                                                           |
+| Notificaciones                   | 🟡     | Push (Expo) y correo (SMTP) sobre pagos, cancelaciones, reembolsos, recordatorios, viajes asignados y taxis; códigos por correo ([notifications](architecture/notifications.md)). Falta: proyecto de EAS para el push, proveedor de SMS/WhatsApp |
 | Reportes                         | ⬜     | Ventas y ocupación para las empresas; métricas para la plataforma                                                                                                                                                                                |
 | Idiomas                          | ✅     | Web pública y app de pasajeros en español, inglés y portugués de Brasil ([i18n](architecture/i18n.md)); portal y app de transportistas solo en español                                                                                           |
 | Despliegue                       | ⬜     | Preparación documentada ([VPS](deployment/vps-preparation.md)); nada desplegado                                                                                                                                                                  |
@@ -55,10 +55,8 @@ Leyenda: ✅ listo · 🟡 parcial · ⏭️ siguiente · ⬜ pendiente
 
 En orden; cada uno es un pull request.
 
-1. ⏭️ **Notificaciones** (decidido: push en las apps + correo por SMTP): los códigos de acceso por
-   correo (bloquea producción), y avisos de pago confirmado, reembolso, recordatorio de viaje,
-   viaje asignado al conductor y solicitud de taxi. En desarrollo, Mailpit para ver los correos.
-2. **Reportes** para las empresas y métricas de la plataforma.
+1. ⏭️ **Reportes** para las empresas (ventas y ocupación por ruta y salida, exportar) y métricas
+   de la plataforma.
 
 ## Pendientes menores
 
@@ -153,8 +151,9 @@ Nada de esto está hecho todavía:
       Brasil (ADR-018).
 - [ ] Adaptadores de proveedores de pago reales, con sus claves en la configuración del servidor
       (`PAYMENT_PROVIDER=disabled` mientras tanto).
-- [ ] Un proveedor real para enviar los códigos de acceso (hoy `OTP_DELIVERY` es `console` o
-      `disabled`).
+- [x] Códigos de acceso y avisos por correo (ADR-026): falta contratar la cuenta SMTP con dominio
+      propio y configurar `OTP_DELIVERY=email` y `MAIL_DELIVERY=smtp`.
+- [ ] Proyecto de EAS (con los nombres de los paquetes) para activar el push (`PUSH_DELIVERY=expo`).
 - [x] Liquidaciones y cola de reembolsos (ADR-024).
 - [x] Comisión de la plataforma y política de reembolsos (ADR-025), editables en la web.
 - [ ] Servidor, HTTPS, copias de seguridad con restauración probada, monitoreo

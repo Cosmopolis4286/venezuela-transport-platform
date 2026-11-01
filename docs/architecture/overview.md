@@ -87,7 +87,7 @@ Módulos, aproximadamente en orden de dependencia:
 | `settlements` ✅   | Lo que gana cada empresa por reserva pagada, comisión, pagos a las empresas, cola de reembolsos ([settlements.md](settlements.md))                     |
 | `dispatch` ✅      | Asignación de vehículo y conductor a cada viaje, viajes del conductor ([dispatch.md](dispatch.md))                                                     |
 | `taxi` ✅          | Taxis desde y hacia los terminales: solicitudes, la línea que las toma, ciclo de vida del viaje ([taxis.md](taxis.md))                                 |
-| `notifications`    | Envío de SMS / push / correo, plantillas                                                                                                               |
+| `notifications` ✅ | Push (Expo) y correo (SMTP) sobre pagos, cancelaciones, reembolsos, recordatorios, viajes y taxis ([notifications.md](notifications.md))               |
 | `reporting`        | Modelos de lectura y exportaciones para las empresas                                                                                                   |
 
 Convenciones para cada módulo nuevo (`apps/api/src/modules/<nombre>/`):

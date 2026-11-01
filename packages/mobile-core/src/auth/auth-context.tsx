@@ -18,6 +18,7 @@ import {
 import type { ApiClient } from '../api/client';
 import { ApiError, userMessage } from '../api/errors';
 import { currentLocale } from '../i18n/active-locale';
+import { unregisterFromPush } from '../push/push-registration';
 
 export type AuthState =
   | { status: 'loading' }
@@ -112,6 +113,7 @@ export function AuthProvider({ api, children }: { api: ApiClient; children: Reac
           }),
         ),
       signOut: async () => {
+        await unregisterFromPush(api);
         await api.endSession();
         setState({ status: 'signedOut' });
       },

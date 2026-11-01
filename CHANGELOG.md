@@ -13,6 +13,15 @@ pull request.
 
 ### Agregado
 
+- **Notificaciones por push y correo** (ADR-026). El pasajero recibe un push y un correo cuando se
+  confirma su pago, cuando cancela un viaje pagado y cuando se le devuelve el dinero, y un
+  recordatorio 3 horas antes de abordar. El conductor recibe un push cuando le asignan un viaje y
+  cuando hay una solicitud de taxi en su terminal; el pasajero, cuando un taxi la acepta. Textos
+  en español, inglés y portugués. Los códigos de acceso se pueden enviar por correo
+  (`OTP_DELIVERY=email`). Correo por cualquier SMTP (`MAIL_DELIVERY`, `SMTP_*`; Mailpit en
+  desarrollo con `pnpm infra:up:mail`) y push por el servicio de Expo (`PUSH_DELIVERY`). Las apps
+  registran el teléfono al iniciar sesión; hace falta el proyecto de EAS para el push. Ver
+  [docs/architecture/notifications.md](docs/architecture/notifications.md).
 - **Cancelar un viaje pagado, con política de reembolso editable** (ADR-025). El pasajero ve en la
   app cuánto se le devuelve antes de cancelar; al cancelar se libera el puesto y el reembolso entra
   en la cola de la administración. La política general empieza en 8 % de comisión y reembolso del

@@ -392,3 +392,22 @@ reserva se explica con la política vigente en cada momento.
 **Compromisos.** El pasajero no ve todavía la política antes de pagar (solo al cancelar). Si la
 empresa ya cobró, una cancelación posterior puede dejar su saldo negativo, que se descuenta de los
 pagos siguientes. Los reembolsos siguen siendo transferencias manuales registradas en la cola.
+
+## ADR-026: Notificaciones por push (Expo) y correo (SMTP); los códigos de acceso, por correo
+
+**Decisión.** Las notificaciones salen por dos canales: push en las apps mediante el servicio de
+push de Expo, y correo por cualquier servidor SMTP. Los códigos de acceso se envían por correo
+(`OTP_DELIVERY=email`); los de SMS y WhatsApp quedan sin proveedor. Cada aviso se envía después de
+la acción que lo causa, en segundo plano, y queda registrado; un fallo nunca deshace la acción. En
+desarrollo, los correos van a Mailpit o al log. Ver [notifications.md](notifications.md).
+
+**Por qué.** Lo decidió el dueño del producto. Push es gratis y es lo que más se ve en el teléfono;
+el correo es barato, no depende de las operadoras venezolanas y sirve para los códigos y para los
+comprobantes (pago, reembolso). SMTP genérico evita atarse a un proveedor: se cambia con variables
+de entorno. El servicio de Expo no necesita SDK ni claves para empezar.
+
+**Compromisos.** El push necesita un proyecto de EAS (pendiente, junto con los nombres de los
+paquetes de Android); sin él, solo llega el correo. Quien entra solo con un teléfono no puede
+recibir códigos hasta que haya un proveedor de SMS o WhatsApp. Los envíos en segundo plano se
+pierden si la API se reinicia justo en ese momento (queda la acción hecha, pero no el aviso); con
+más volumen convendrá una cola persistente.
