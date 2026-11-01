@@ -65,6 +65,12 @@ Procedimiento: devuelve el monto indicado **por el mismo medio** con el que pag�
 (usa su contacto si hace falta), y luego **Marcar como reembolsado** con la referencia de la
 devolución. El pasajero recibe un aviso por push y correo.
 
+## Métricas (`/admin/metrics`, solo administradores)
+
+Para un rango de días: ventas y comisión de la plataforma por moneda, reembolsos enviados y los
+que esperan en la cola, usuarios nuevos, organizaciones activas por tipo y taxis pedidos,
+terminados y cancelados o vencidos.
+
 ## Tareas periódicas sugeridas
 
 | Cada…  | Tarea                                                                         |

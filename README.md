@@ -8,7 +8,7 @@ terminales, taxistas y operadores de transporte.
 > abordar), la cancelación de viajes pagados con reembolso según una política editable, las
 > liquidaciones a las empresas, la asignación de vehículo y conductor, los taxis desde y hacia los
 > terminales, y las notificaciones por push y correo. **Todavía no: proveedores de pago reales,
-> cuenta SMTP y proyecto de Expo de producción, reportes ni cobro de los taxis en la app.** No la
+> cuenta SMTP y proyecto de Expo de producción ni cobro de los taxis en la app.** No la
 > despliegues con usuarios ni datos reales. Progreso
 > y pendientes: [hoja de ruta](docs/roadmap.md) · lo que necesita tu decisión:
 > [decisiones pendientes](docs/roadmap.md#decisiones-pendientes) · historial: [CHANGELOG](CHANGELOG.md) · CI:
@@ -16,13 +16,13 @@ terminales, taxistas y operadores de transporte.
 
 ## Qué hace hoy
 
-| App                                             | Para                                             | Funciones                                                                                                                                                                                           |
-| ----------------------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Web (`apps/web`)                                | Pasajeros                                        | Búsqueda de viajes (`/es/buscar`, también en inglés y portugués) con puestos libres                                                                                                                 |
-| Portal (`apps/web`, `/portal`)                  | Empresas de autobuses, líneas de taxis, personal | Equipo e invitaciones, solicitantes, rutas, tarifas, horarios, mapas de puestos, vehículos, despacho, taxis, tasas de cambio, viajes y listas de pasajeros, liquidaciones (saldo y pagos recibidos) |
-| Panel de administración (`apps/web`, `/admin`)  | Personal de la plataforma                        | Aprobar organizaciones y solicitudes KYC, catálogo de paradas; los administradores: política de comisión y reembolsos, pagos a las empresas, cola de reembolsos                                     |
-| App de pasajeros (`apps/passenger-mobile`)      | Pasajeros                                        | Búsqueda, puestos en el mapa del bus, apartar y pagar, boletos QR, "Mis viajes", cancelar un viaje pagado con reembolso, pedir un taxi, notificaciones push; en español, inglés y portugués         |
-| App de transportistas (`apps/transport-mobile`) | Conductores, inspectores, personal               | Invitaciones, solicitud KYC, escáner de boletos al abordar, viajes asignados al conductor, solicitudes de taxi, notificaciones push                                                                 |
+| App                                             | Para                                             | Funciones                                                                                                                                                                                                                                   |
+| ----------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Web (`apps/web`)                                | Pasajeros                                        | Búsqueda de viajes (`/es/buscar`, también en inglés y portugués) con puestos libres                                                                                                                                                         |
+| Portal (`apps/web`, `/portal`)                  | Empresas de autobuses, líneas de taxis, personal | Equipo e invitaciones, solicitantes, rutas, tarifas, horarios, mapas de puestos, vehículos, despacho, taxis, tasas de cambio, viajes y listas de pasajeros, liquidaciones (saldo y pagos recibidos), reportes de ventas y ocupación con CSV |
+| Panel de administración (`apps/web`, `/admin`)  | Personal de la plataforma                        | Aprobar organizaciones y solicitudes KYC, catálogo de paradas; los administradores: política de comisión y reembolsos, pagos a las empresas, cola de reembolsos, métricas                                                                   |
+| App de pasajeros (`apps/passenger-mobile`)      | Pasajeros                                        | Búsqueda, puestos en el mapa del bus, apartar y pagar, boletos QR, "Mis viajes", cancelar un viaje pagado con reembolso, pedir un taxi, notificaciones push; en español, inglés y portugués                                                 |
+| App de transportistas (`apps/transport-mobile`) | Conductores, inspectores, personal               | Invitaciones, solicitud KYC, escáner de boletos al abordar, viajes asignados al conductor, solicitudes de taxi, notificaciones push                                                                                                         |
 
 ## La arquitectura de un vistazo
 
@@ -157,6 +157,7 @@ escriben en el log de la API.
 - [Pagos y boletos](docs/architecture/payments.md)
 - [Liquidaciones y reembolsos](docs/architecture/settlements.md)
 - [Notificaciones: push y correo](docs/architecture/notifications.md)
+- [Reportes y métricas](docs/architecture/reports.md)
 - [Despacho: vehículos y conductores de cada viaje](docs/architecture/dispatch.md)
 - [Taxis desde y hacia los terminales](docs/architecture/taxis.md)
 - [Idiomas: español, inglés y portugués de Brasil](docs/architecture/i18n.md)

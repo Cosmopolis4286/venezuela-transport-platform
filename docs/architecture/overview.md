@@ -69,7 +69,8 @@ apps/api/src/
 ├── mail/                 # Mailer: console, SMTP (nodemailer) o apagado
 ├── storage/              # FileStorage (documentos KYC)
 └── modules/              # audit, health, identity, organizations, onboarding, network, fleet,
-                          # bookings, payments, settlements, dispatch, taxi, notifications
+                          # bookings, payments, settlements, dispatch, taxi, notifications,
+                          # reports
 ```
 
 ### Agregar un módulo de funcionalidad
@@ -89,7 +90,7 @@ Módulos, aproximadamente en orden de dependencia:
 | `dispatch` ✅      | Asignación de vehículo y conductor a cada viaje, viajes del conductor ([dispatch.md](dispatch.md))                                                     |
 | `taxi` ✅          | Taxis desde y hacia los terminales: solicitudes, la línea que las toma, ciclo de vida del viaje ([taxis.md](taxis.md))                                 |
 | `notifications` ✅ | Push (Expo) y correo (SMTP) sobre pagos, cancelaciones, reembolsos, recordatorios, viajes y taxis ([notifications.md](notifications.md))               |
-| `reporting`        | Modelos de lectura y exportaciones para las empresas                                                                                                   |
+| `reports` ✅       | Ventas y ocupación para las empresas, métricas de la plataforma; solo lee, no tiene tablas ([reports.md](reports.md))                                  |
 
 Convenciones para cada módulo nuevo (`apps/api/src/modules/<nombre>/`):
 
@@ -129,8 +130,7 @@ Convenciones para cada módulo nuevo (`apps/api/src/modules/<nombre>/`):
 
 **Todavía no existen (no asumas que están):** proveedores de pago reales, SMS o WhatsApp,
 almacenamiento de archivos en la nube, una cola persistente de trabajos (los avisos se envían en
-segundo plano dentro del proceso y el recordatorio de viajes es un barrido cada 5 minutos),
-reportes.
+segundo plano dentro del proceso y el recordatorio de viajes es un barrido cada 5 minutos).
 
 ## Datos
 
