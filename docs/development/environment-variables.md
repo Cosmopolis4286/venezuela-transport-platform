@@ -22,13 +22,15 @@ Plantilla: `.env.example`
 
 Solo para la API y la web en Docker (`pnpm stack:api`, `pnpm stack:app`, ver [docker.md](docker.md)):
 
-| Variable                      | Obligatoria | Secreta | Por defecto                    | Para qué                                                                                   |
-| ----------------------------- | ----------- | ------- | ------------------------------ | ------------------------------------------------------------------------------------------ |
-| `VTP_API_PORT`                | no          | no      | `4000`                         | Puerto del host para el contenedor de la API                                               |
-| `VTP_API_PUBLISH_ADDRESS`     | no          | no      | `127.0.0.1`                    | `0.0.0.0` permite que los teléfonos de tu Wi-Fi lleguen a la API (solo redes de confianza) |
-| `VTP_WEB_PORT`                | no          | no      | `3000`                         | Puerto del host para el contenedor de la web                                               |
-| `VTP_WEB_PUBLIC_API_BASE_URL` | no          | no      | `http://localhost:4000/api/v1` | URL de la API que usa el navegador; queda dentro de la imagen de la web al compilarla      |
-| `VTP_AUTH_SECRET`             | no          | **sí**  | valor de ejemplo local         | Secreto de sesión de la API dentro de Docker; producción rechaza el valor de ejemplo       |
+| Variable                                | Obligatoria | Secreta | Por defecto                    | Para qué                                                                                   |
+| --------------------------------------- | ----------- | ------- | ------------------------------ | ------------------------------------------------------------------------------------------ |
+| `VTP_API_PORT`                          | no          | no      | `4000`                         | Puerto del host para el contenedor de la API                                               |
+| `VTP_API_PUBLISH_ADDRESS`               | no          | no      | `127.0.0.1`                    | `0.0.0.0` permite que los teléfonos de tu Wi-Fi lleguen a la API (solo redes de confianza) |
+| `VTP_WEB_PORT`                          | no          | no      | `3000`                         | Puerto del host para el contenedor de la web                                               |
+| `VTP_WEB_PUBLIC_API_BASE_URL`           | no          | no      | `http://localhost:4000/api/v1` | URL de la API que usa el navegador; queda dentro de la imagen de la web al compilarla      |
+| `VTP_AUTH_SECRET`                       | no          | **sí**  | valor de ejemplo local         | Secreto de sesión de la API dentro de Docker; producción rechaza el valor de ejemplo       |
+| `VTP_MAIL_DELIVERY`                     | no          | no      | `console`                      | `smtp` envía los correos de la API en Docker a Mailpit (`pnpm infra:up:mail`)              |
+| `MAILPIT_SMTP_PORT`, `MAILPIT_WEB_PORT` | no          | no      | `1025`, `8025`                 | Puertos del host para Mailpit                                                              |
 
 ## `apps/api/.env` — API
 

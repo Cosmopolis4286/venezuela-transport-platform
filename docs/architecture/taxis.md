@@ -48,6 +48,13 @@ hacer este viaje"): vuelve a `requested` con 20 minutos nuevos, para que lo tome
   pasajero le paga directamente al conductor**; cobrar los taxis dentro de la plataforma es una
   decisión pendiente.
 
+## Avisos
+
+Al pedir un taxi, los conductores de las líneas activas que operan en ese terminal reciben un push
+en la app de transportistas; cuando una línea la toma, el pasajero recibe un push con la placa y la
+tarifa ([notifications.md](notifications.md)). Las pantallas siguen consultando cada pocos
+segundos para mostrar el estado.
+
 ## Privacidad
 
 Antes de tomar una solicitud, los conductores y despachadores solo ven el terminal, la dirección,
@@ -74,5 +81,6 @@ Eventos de auditoría: `taxi_ride.requested`, `.accepted`, `.picked_up`, `.compl
 ## Todavía no
 
 Cobro del taxi dentro de la plataforma, tarifas fijas por zona, ubicación en vivo del taxi y del
-pasajero en un mapa, avisos push en lugar de consultar cada 5 segundos, calificaciones y viajes
+pasajero en un mapa, avisos push de cada cambio de estado (hoy: solicitud nueva y aceptada),
+calificaciones y viajes
 que no pasan por un terminal.

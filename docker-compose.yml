@@ -74,6 +74,11 @@ services:
       # Placeholder for local use only; production refuses it.
       AUTH_SECRET: ${VTP_AUTH_SECRET:-change-me-local-only-dev-secret-0123456789}
       OTP_DELIVERY: console
+      # E-mail goes to the log; set VTP_MAIL_DELIVERY=smtp (and run pnpm infra:up:mail) to read
+      # it in Mailpit at http://localhost:8025.
+      MAIL_DELIVERY: ${VTP_MAIL_DELIVERY:-console}
+      SMTP_HOST: mailpit
+      SMTP_PORT: '1025'
       PAYMENT_PROVIDER: simulated
       FILE_STORAGE_LOCAL_DIR: /app/var/uploads
     ports:

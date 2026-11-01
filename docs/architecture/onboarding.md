@@ -93,6 +93,7 @@ existentes con sus mismos nombres.
 
 ## Todavía no implementado
 
-Notificaciones a los solicitantes (necesita un proveedor de SMS o correo), recordatorios
+Avisos a los solicitantes cuando cambia su solicitud (el módulo de notificaciones ya existe; falta
+conectarlo a la revisión, ver [notifications.md](notifications.md)), recordatorios
 automáticos de vencimiento de licencias y pólizas, proveedores de verificación de identidad
 (prueba de vida / selfie) y el driver de almacenamiento en la nube.

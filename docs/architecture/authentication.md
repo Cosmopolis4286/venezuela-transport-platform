@@ -59,25 +59,28 @@ una organización por sí solo.
   (`0412-1234567` → `+584121234567`).
 - El envío es intercambiable (`OtpSender` en `otp/otp-sender.ts`):
   - `OTP_DELIVERY=console` — desarrollo: imprime el código en el log de la API.
-  - `OTP_DELIVERY=disabled` — las solicitudes fallan con 503. Úsalo en producción hasta integrar
-    un proveedor. Producción se niega a arrancar con `console`.
-  - **Para agregar un proveedor** (por ejemplo una pasarela de SMS, WhatsApp Business o un
-    servicio de correo): implementa `OtpSender`, agrega sus credenciales al esquema de
-    configuración y selecciónalo en `identity.module.ts`.
+  - `OTP_DELIVERY=email` — envía los códigos de correo con el mailer (`MAIL_DELIVERY=smtp`, ver
+    [notifications.md](notifications.md)); pedir un código por SMS o WhatsApp responde 503
+    (ADR-026). En desarrollo se leen en Mailpit (`pnpm infra:up:mail`).
+  - `OTP_DELIVERY=disabled` — las solicitudes fallan con 503. Producción se niega a arrancar con
+    `console`.
+  - **Para agregar SMS o WhatsApp**: implementa `OtpSender` (o amplía `EmailOtpSender` para que
+    delegue los otros canales), agrega sus credenciales al esquema de configuración y
+    selecciónalo en `identity.module.ts`.
 
 ## Códigos de error que los clientes deben manejar
 
-| Código                | Estado | Significado / qué hacer en el cliente                             |
-| --------------------- | ------ | ----------------------------------------------------------------- |
-| `UNAUTHORIZED`        | 401    | No se envió token → iniciar sesión                                |
-| `SESSION_EXPIRED`     | 401    | Token inválido o vencido → renovar una vez; si no, iniciar sesión |
-| `INVALID_CREDENTIALS` | 401    | Correo o contraseña incorrectos                                   |
-| `OTP_INVALID`         | 400    | Código incorrecto o ya usado                                      |
-| `OTP_EXPIRED`         | 400    | Código vencido o demasiados intentos → pedir uno nuevo            |
-| `RATE_LIMITED`        | 429    | Esperar (`resendAvailableAt` indica cuándo, para los códigos)     |
-| `CONFLICT`            | 409    | El correo o teléfono ya pertenece a otra cuenta                   |
-| `FORBIDDEN`           | 403    | Cuenta suspendida                                                 |
-| `SERVICE_UNAVAILABLE` | 503    | El envío de códigos no está configurado                           |
+| Código                | Estado | Significado / qué hacer en el cliente                                                            |
+| --------------------- | ------ | ------------------------------------------------------------------------------------------------ |
+| `UNAUTHORIZED`        | 401    | No se envió token → iniciar sesión                                                               |
+| `SESSION_EXPIRED`     | 401    | Token inválido o vencido → renovar una vez; si no, iniciar sesión                                |
+| `INVALID_CREDENTIALS` | 401    | Correo o contraseña incorrectos                                                                  |
+| `OTP_INVALID`         | 400    | Código incorrecto o ya usado                                                                     |
+| `OTP_EXPIRED`         | 400    | Código vencido o demasiados intentos → pedir uno nuevo                                           |
+| `RATE_LIMITED`        | 429    | Esperar (`resendAvailableAt` indica cuándo, para los códigos)                                    |
+| `CONFLICT`            | 409    | El correo o teléfono ya pertenece a otra cuenta                                                  |
+| `FORBIDDEN`           | 403    | Cuenta suspendida                                                                                |
+| `SERVICE_UNAVAILABLE` | 503    | El envío de códigos no está configurado para ese canal (hoy, SMS y WhatsApp) → ofrecer el correo |
 
 ## Eventos de auditoría
 
@@ -88,5 +91,6 @@ sensibles.
 
 ## Todavía no implementado
 
-Restablecer la contraseña (reutilizará los códigos de un solo uso), ver y revocar las otras
-sesiones, inicio de sesión con redes sociales y doble factor para las cuentas del personal.
+Códigos por SMS o WhatsApp (sin proveedor contratado), restablecer la contraseña (reutilizará los
+códigos de un solo uso), ver y revocar las otras sesiones, inicio de sesión con redes sociales y
+doble factor para las cuentas del personal.

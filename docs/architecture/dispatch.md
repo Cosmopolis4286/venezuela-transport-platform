@@ -63,5 +63,6 @@ Un viaje de otro conductor, o de una organización de la que ya no conduce, da 4
 
 ## Todavía no
 
-Documentos de los vehículos (registro, póliza) con vencimiento, avisos al conductor cuando le
-asignan un viaje, que el conductor marque la salida y la llegada, y ubicación en tiempo real.
+Documentos de los vehículos (registro, póliza) con vencimiento, que el conductor marque la salida
+y la llegada, y ubicación en tiempo real. Cuando un despachador asigna a un conductor, este
+recibe un push en la app de transportistas ([notifications.md](notifications.md)).

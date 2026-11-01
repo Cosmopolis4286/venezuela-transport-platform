@@ -61,8 +61,9 @@ Reglas:
 - `receive` es idempotente: una notificación repetida no cambia nada.
 - Los pagos pendientes de reservas canceladas o vencidas se anulan al vuelo, igual que los
   apartados vencidos.
-- El pasajero todavía no puede cancelar una reserva pagada (la política de reembolsos viene
-  después).
+- El pasajero puede cancelar una reserva pagada hasta abordar; el reembolso sigue la política de
+  la empresa ([settlements.md](settlements.md#cancelar-una-reserva-pagada)).
+- Confirmar un pago avisa al pasajero por push y correo ([notifications.md](notifications.md)).
 
 ## Proveedores
 

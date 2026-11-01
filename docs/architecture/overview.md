@@ -25,26 +25,26 @@ cada funcionalidad.
                      │  configuración · logs · validación │
                      │  modules/* (identidad, reservas…)  │
                      └───────────┬──────────────┬───────┘
-                                 ▼              ▼ (opcional, más adelante)
-                     PostgreSQL 18 + PostGIS    Redis 8 / BullMQ
+                       ▼             ▼             ▼                  ▼ (opcional)
+           PostgreSQL 18 + PostGIS   SMTP (correo)   Expo push service   Redis 8 / BullMQ
 ```
 
 ## Aplicaciones
 
-| App                     | Público                                                      | Responsabilidad                                                                                                                                                                                                                                                                                                  | Habla con                    |
-| ----------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| `apps/web`              | Visitantes; personal de empresas de autobuses y terminales   | Sitio público y búsqueda de autobuses en tres idiomas (`app/[lang]`, [idiomas](i18n.md)), portal de empresas en `/portal` con su propio layout en español (`app/(site)`). Las áreas con sesión `/portal` y `/admin` las protegen `src/proxy.ts` y las verificaciones de la API ([web-portal.md](web-portal.md)). | La API por HTTPS             |
-| `apps/passenger-mobile` | Pasajeros                                                    | Búsqueda de viajes, reserva de puestos, pago, boletos QR, taxis desde y hacia los terminales y cuenta ([mobile-apps.md](mobile-apps.md))                                                                                                                                                                         | La API por HTTPS             |
-| `apps/transport-mobile` | Taxistas, tripulaciones de autobuses, operadores de terminal | Inicio de sesión, invitaciones, solicitud KYC con documentos, validación de boletos QR, viajes asignados al conductor y solicitudes de taxi                                                                                                                                                                      | La API por HTTPS             |
-| `apps/api`              | Todos los clientes                                           | Única fuente de verdad de las reglas de negocio, la autorización y los datos                                                                                                                                                                                                                                     | PostgreSQL, Redis (opcional) |
+| App                     | Público                                                      | Responsabilidad                                                                                                                                                                                                                                                                                                  | Habla con                                     |
+| ----------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| `apps/web`              | Visitantes; personal de empresas de autobuses y terminales   | Sitio público y búsqueda de autobuses en tres idiomas (`app/[lang]`, [idiomas](i18n.md)), portal de empresas en `/portal` con su propio layout en español (`app/(site)`). Las áreas con sesión `/portal` y `/admin` las protegen `src/proxy.ts` y las verificaciones de la API ([web-portal.md](web-portal.md)). | La API por HTTPS                              |
+| `apps/passenger-mobile` | Pasajeros                                                    | Búsqueda de viajes, reserva de puestos, pago, boletos QR, cancelación con reembolso, taxis desde y hacia los terminales, notificaciones push y cuenta ([mobile-apps.md](mobile-apps.md))                                                                                                                         | La API por HTTPS                              |
+| `apps/transport-mobile` | Taxistas, tripulaciones de autobuses, operadores de terminal | Inicio de sesión, invitaciones, solicitud KYC con documentos, validación de boletos QR, viajes asignados al conductor y solicitudes de taxi                                                                                                                                                                      | La API por HTTPS                              |
+| `apps/api`              | Todos los clientes                                           | Única fuente de verdad de las reglas de negocio, la autorización y los datos; envía correos y notificaciones push                                                                                                                                                                                                | PostgreSQL, SMTP, Expo push, Redis (opcional) |
 
 Reglas:
 
 - **Los clientes nunca hablan con la base de datos ni entre sí.** Todo pasa por la API.
 - **Las dos apps móviles se mantienen separadas.** Distintos usuarios, permisos, ritmo de
   publicación y fichas en las tiendas. Además de los _contratos_ (`@vtp/shared-types`), solo
-  comparten el manejo de la sesión, el cliente de la API y las pantallas de inicio de sesión
-  (`@vtp/mobile-core`, [ADR-016](decisions.md)); cada pantalla de funcionalidad vive en su propia
+  comparten el manejo de la sesión, el cliente de la API, las pantallas de inicio de sesión, el
+  idioma y el registro para push (`@vtp/mobile-core`, [ADR-016](decisions.md)); cada pantalla de funcionalidad vive en su propia
   app ([mobile-apps.md](mobile-apps.md)).
 - **La web y el móvil no comparten componentes de interfaz.** Los componentes de React DOM y React
   Native son distintos; compartirlos ataría sus ciclos de publicación a cambio de poco.
@@ -66,9 +66,10 @@ apps/api/src/
 ├── config/               # esquema de entorno (zod), AppConfigService tipado, configuración de logs
 ├── database/             # Drizzle ORM sobre un pool de pg, migraciones, schema.ts que reúne las tablas
 ├── docs/                 # configuración de OpenAPI/Swagger
+├── mail/                 # Mailer: console, SMTP (nodemailer) o apagado
 ├── storage/              # FileStorage (documentos KYC)
-└── modules/              # audit, health, identity, organizations, onboarding, network,
-                          # fleet, bookings, payments
+└── modules/              # audit, health, identity, organizations, onboarding, network, fleet,
+                          # bookings, payments, settlements, dispatch, taxi, notifications
 ```
 
 ### Agregar un módulo de funcionalidad
@@ -126,8 +127,10 @@ Convenciones para cada módulo nuevo (`apps/api/src/modules/<nombre>/`):
 | Autorización            | `@RequireOrganizationAccess(permiso)` resuelve `:organizationId` a la membresía de quien llama (404 si no es miembro, 403 sin el permiso); `@RequirePlatformRole()` para el personal de la plataforma. Ver [organizations.md](organizations.md) |
 | Registro de auditoría   | `AuditService.record()` → `audit_events` (solo identificadores, nunca secretos ni datos personales en bruto)                                                                                                                                    |
 
-**Todavía no existen (no asumas que están):** notificaciones (no hay proveedor de SMS ni correo),
-almacenamiento de archivos en la nube, trabajos en segundo plano.
+**Todavía no existen (no asumas que están):** proveedores de pago reales, SMS o WhatsApp,
+almacenamiento de archivos en la nube, una cola persistente de trabajos (los avisos se envían en
+segundo plano dentro del proceso y el recordatorio de viajes es un barrido cada 5 minutos),
+reportes.
 
 ## Datos
 
@@ -196,5 +199,7 @@ Agregar un `reason` es compatible hacia atrás; quitarlo o renombrarlo, no.
 - REST/JSON por HTTPS, versionado bajo `/api/v1`.
 - WebSockets solo cuando una funcionalidad necesite que el servidor empuje datos (por ejemplo, la
   posición de un taxi en vivo). Consultar periódicamente es aceptable en las primeras versiones.
-- Trabajo en segundo plano (notificaciones, liquidaciones) → BullMQ sobre Redis cuando exista un
-  trabajo real; el perfil `redis` de Compose está listo para eso.
+- Trabajo en segundo plano: hoy las notificaciones se envían después de cada acción dentro del
+  mismo proceso y los recordatorios salen de un barrido periódico (ver
+  [notifications.md](notifications.md)). Con más volumen, o si un aviso perdido en un reinicio
+  importa, conviene BullMQ sobre Redis; el perfil `redis` de Compose está listo para eso.

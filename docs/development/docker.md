@@ -26,6 +26,7 @@ el navegador ([android-testing.md](android-testing.md)).
 | Solo la base de datos                                | `pnpm infra:up`                        |
 | Base de datos + API (construye la imagen de la API)  | `pnpm stack:api`                       |
 | Base de datos + API + web (construye ambas imágenes) | `pnpm stack:app`                       |
+| Mailpit, para leer los correos de desarrollo         | `pnpm infra:up:mail`                   |
 | Estado                                               | `pnpm infra:ps`                        |
 | Logs de la API y la web                              | `pnpm stack:logs`                      |
 | Detener todo (los datos se conservan)                | `pnpm stack:down`                      |
@@ -34,11 +35,12 @@ el navegador ([android-testing.md](android-testing.md)).
 `pnpm stack:*` reconstruye las imágenes cuando el código cambió; la primera vez tarda unos
 minutos. Las migraciones se aplican solas (servicio `migrate`) antes de que arranque la API.
 
-| URL                            | Qué          |
-| ------------------------------ | ------------ |
-| http://localhost:3000          | Web y portal |
-| http://localhost:4000/api/v1   | API          |
-| http://localhost:4000/api/docs | Swagger UI   |
+| URL                            | Qué                         |
+| ------------------------------ | --------------------------- |
+| http://localhost:3000          | Web y portal                |
+| http://localhost:4000/api/v1   | API                         |
+| http://localhost:4000/api/docs | Swagger UI                  |
+| http://localhost:8025          | Mailpit (si está corriendo) |
 
 ## Ajustes de desarrollo dentro de Docker
 
@@ -47,6 +49,9 @@ El contenedor de la API usa la imagen de producción con `NODE_ENV=development`,
 - **Los códigos de acceso** se imprimen en su log: `docker compose logs api | grep "login code"`
   (o entra con correo + contraseña).
 - **Los pagos** usan el proveedor simulado (las apps ofrecen "Simular pago").
+- **Los correos y las notificaciones push** se escriben en el log de la API (`[DEV ONLY]`). Para
+  ver los correos en Mailpit: `pnpm infra:up:mail`, pon `VTP_MAIL_DELIVERY=smtp` en `.env`, vuelve
+  a correr `pnpm stack:api` y ábrelos en http://localhost:8025.
 - Los documentos KYC subidos se guardan en el volumen `api-uploads`.
 - Los logs salen en JSON (el formateador bonito es una dependencia de desarrollo y no está en la
   imagen).

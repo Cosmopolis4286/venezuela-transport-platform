@@ -1,45 +1,54 @@
 # Apps móviles (Expo)
 
-Dos apps separadas con interfaz en español, ambas con Expo SDK 58 + Expo Router (rutas en
-`src/app/`):
+Dos apps separadas, ambas con Expo SDK 58 + Expo Router (rutas en `src/app/`):
 
-- `apps/passenger-mobile` (_VTP Pasajeros_): búsqueda de viajes (sin cuenta), reserva de puestos,
-  pago y boletos QR, inicio de sesión y cuenta.
-- `apps/transport-mobile` (_VTP Transportistas_): conductores y personal de empresas de autobuses,
-  líneas de taxis y terminales. Inicio de sesión, invitaciones, la solicitud KYC y el escáner de
-  boletos.
+- `apps/passenger-mobile` (_VTP Pasajeros_, en español, inglés y portugués): búsqueda de viajes
+  (sin cuenta), reserva de puestos, pago y boletos QR, cancelación de un viaje pagado con
+  reembolso, taxis desde y hacia los terminales, notificaciones push, inicio de sesión y cuenta.
+- `apps/transport-mobile` (_VTP Transportistas_, en español): conductores y personal de empresas
+  de autobuses, líneas de taxis y terminales. Inicio de sesión, invitaciones, la solicitud KYC,
+  el escáner de boletos, los viajes del conductor, las solicitudes de taxi y notificaciones
+  push.
 
 El código que necesitan las dos apps está en `packages/mobile-core` (`@vtp/mobile-core`, ver
 ADR-016). Los contratos vienen de `@vtp/shared-types`.
 
 ## Pantallas
 
-| App            | Ruta                | Qué                                                                                                                       |
-| -------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Ambas          | `/sign-in`          | Código por SMS, WhatsApp o correo (crea la cuenta en el primer uso), o correo + contraseña                                |
-| Ambas          | `/register`         | Crear una cuenta con correo + contraseña                                                                                  |
-| Pasajeros      | `/`                 | Búsqueda de viajes: origen, destino (selector de paradas), fechas de los próximos 7 días; funciona sin sesión             |
-| Pasajeros      | `/stop-picker`      | Búsqueda en ventana modal entre los terminales y paradas activos (`GET /stops?q=`)                                        |
-| Pasajeros      | `/results`          | Salidas con horas (`+1 d` si llegan al día siguiente), duración, empresa, clase, puestos y tarifa                         |
-| Pasajeros      | `/trip`             | Mapa de puestos de una salida: puestos ocupados deshabilitados, hasta 6 puestos, precio; público hasta apartar            |
-| Pasajeros      | `/passengers`       | Con sesión: nombre y documento por puesto (el primero se llena con la cuenta), luego apartar los puestos                  |
-| Pasajeros      | `/booking/:id`      | Código de reserva, estado, cuenta regresiva del apartado; pagar (método, instrucciones, referencia); boleto QR por puesto |
-| Pasajeros      | `/bookings`         | "Mis viajes": las reservas del usuario, de la más reciente a la más antigua                                               |
-| Pasajeros      | `/taxi`             | Pedir un taxi desde o hacia un terminal: terminal, sentido, dirección, pasajeros, notas, teléfono; taxis anteriores       |
-| Pasajeros      | `/taxi/:id`         | El taxi pedido: estado (se actualiza cada 5 s), placa, conductor, tarifa; cancelar antes de subir                         |
-| Pasajeros      | `/account`          | Solo con sesión: cuenta y contactos verificados, "Mis viajes", cerrar sesión                                              |
-| Transportistas | `/`                 | "Mis viajes" (conductores), invitaciones pendientes (aceptar / rechazar), mis organizaciones y roles, mi solicitud        |
-| Transportistas | `/taxi`             | Taxistas: solicitudes de sus terminales, tomar una con vehículo y tarifa, pasajero a bordo, terminar o liberar el viaje   |
-| Transportistas | `/trip/:tripId`     | Viaje del conductor: horas, vehículo, puestos ocupados y pasajeros con su tramo, pago y abordaje (sin documentos)         |
-| Transportistas | `/application`      | Datos de la solicitud, documentos requeridos con carga y veredictos de la revisión, enviar a revisión                     |
-| Transportistas | `/application/edit` | Rol, organización (buscada en el directorio), datos personales, vehículo para taxistas                                    |
-| Transportistas | `/scan`             | "Validar boletos" (`tickets.validate`): escaneo del QR con la cámara o código de reserva + puesto; veredicto al instante  |
+| App            | Ruta                | Qué                                                                                                                                                                                             |
+| -------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ambas          | `/sign-in`          | Código por SMS, WhatsApp o correo (crea la cuenta en el primer uso), o correo + contraseña                                                                                                      |
+| Ambas          | `/register`         | Crear una cuenta con correo + contraseña                                                                                                                                                        |
+| Pasajeros      | `/`                 | Búsqueda de viajes: origen, destino (selector de paradas), fechas de los próximos 7 días; funciona sin sesión                                                                                   |
+| Pasajeros      | `/stop-picker`      | Búsqueda en ventana modal entre los terminales y paradas activos (`GET /stops?q=`)                                                                                                              |
+| Pasajeros      | `/results`          | Salidas con horas (`+1 d` si llegan al día siguiente), duración, empresa, clase, puestos y tarifa                                                                                               |
+| Pasajeros      | `/trip`             | Mapa de puestos de una salida: puestos ocupados deshabilitados, hasta 6 puestos, precio; público hasta apartar                                                                                  |
+| Pasajeros      | `/passengers`       | Con sesión: nombre y documento por puesto (el primero se llena con la cuenta), luego apartar los puestos                                                                                        |
+| Pasajeros      | `/booking/:id`      | Código de reserva, estado, cuenta regresiva del apartado; pagar (método, instrucciones, referencia); boleto QR por puesto; **Cancelar viaje** con el reembolso y la política antes de confirmar |
+| Pasajeros      | `/bookings`         | "Mis viajes": las reservas del usuario, de la más reciente a la más antigua                                                                                                                     |
+| Pasajeros      | `/taxi`             | Pedir un taxi desde o hacia un terminal: terminal, sentido, dirección, pasajeros, notas, teléfono; taxis anteriores                                                                             |
+| Pasajeros      | `/taxi/:id`         | El taxi pedido: estado (se actualiza cada 5 s), placa, conductor, tarifa; cancelar antes de subir                                                                                               |
+| Pasajeros      | `/account`          | Solo con sesión: cuenta y contactos verificados, "Mis viajes", cerrar sesión                                                                                                                    |
+| Transportistas | `/`                 | "Mis viajes" (conductores), invitaciones pendientes (aceptar / rechazar), mis organizaciones y roles, mi solicitud                                                                              |
+| Transportistas | `/taxi`             | Taxistas: solicitudes de sus terminales, tomar una con vehículo y tarifa, pasajero a bordo, terminar o liberar el viaje                                                                         |
+| Transportistas | `/trip/:tripId`     | Viaje del conductor: horas, vehículo, puestos ocupados y pasajeros con su tramo, pago y abordaje (sin documentos)                                                                               |
+| Transportistas | `/application`      | Datos de la solicitud, documentos requeridos con carga y veredictos de la revisión, enviar a revisión                                                                                           |
+| Transportistas | `/application/edit` | Rol, organización (buscada en el directorio), datos personales, vehículo para taxistas                                                                                                          |
+| Transportistas | `/scan`             | "Validar boletos" (`tickets.validate`): escaneo del QR con la cámara o código de reserva + puesto; veredicto al instante                                                                        |
 
 La navegación sigue el estado de la sesión: `Stack.Protected` en cada layout raíz muestra las
 pantallas con sesión solo cuando hay sesión, y las de inicio de sesión solo cuando no la hay, así
 que ninguna pantalla decide a dónde ir después de iniciar o cerrar sesión. Las pantallas de
 búsqueda de pasajeros quedan fuera de ambas protecciones: la búsqueda es pública, y
 `useApi(path, { auth: false })` la llama sin sesión.
+
+## Notificaciones push
+
+Al iniciar sesión, `usePushNotifications` (en `@vtp/mobile-core`) pide permiso, obtiene el token
+de Expo y lo registra en la API con la app y el idioma (`POST /me/push-devices`); al cerrar
+sesión lo quita. Los avisos se muestran también con la app abierta, y tocar uno abre la reserva,
+el taxi (pasajeros) o el viaje asignado y el tablero de taxis (transportistas). En la web no hay
+push. Qué se avisa y cuándo: [notifications.md](notifications.md).
 
 ## Idiomas
 
@@ -121,5 +130,6 @@ y revisar pantallas sin emulador. Es una ayuda de desarrollo, no un producto:
   queda pendiente.
 - Las fechas se escriben como `AAAA-MM-DD`; un selector de fecha nativo puede reemplazarlo más
   adelante.
-- Todavía no hay notificaciones push: el usuario desliza hacia abajo para ver los resultados de la
-  revisión.
+- El push necesita un proyecto de EAS (`extra.eas.projectId` en `app.json`); hasta crearlo, las
+  apps no se registran y solo llegan los correos. La revisión KYC todavía no avisa por push: el
+  usuario desliza hacia abajo para ver el resultado.

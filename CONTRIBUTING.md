@@ -1,7 +1,9 @@
 # Cómo contribuir
 
 1. Lee el [README](README.md) y prepara tu computadora con
-   [docs/development/local-setup.md](docs/development/local-setup.md).
+   [docs/development/local-setup.md](docs/development/local-setup.md). El
+   [índice de la documentación](docs/README.md) reúne la arquitectura, las guías y las
+   [pruebas](docs/development/testing.md).
 2. Crea una rama desde `main` (`feat/...`, `fix/...`, `chore/...`) — ver
    [flujo del repositorio](docs/development/repository-workflow.md).
 3. Haz cambios enfocados. Sigue las reglas de módulos y contratos de la
@@ -27,3 +29,5 @@
 - Agrega dependencias móviles con `npx expo install <paquete>` dentro de la carpeta de la app, para
   que las versiones coincidan con el SDK de Expo.
 - Las dependencias nuevas necesitan una justificación en la descripción del PR.
+- Si cambias lo que ve un usuario, actualiza su guía en `docs/guides/`; si agregas o cambias una
+  tabla, el [modelo de datos](docs/architecture/data-model.md).
