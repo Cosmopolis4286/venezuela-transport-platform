@@ -93,6 +93,12 @@ otras máquinas.
 
 Redis opcional: `pnpm infra:up:redis` (agrega `redis:8.10-alpine` en `127.0.0.1:6379`).
 
+Correo opcional: `pnpm infra:up:mail` arranca [Mailpit](https://mailpit.axllent.org/), que recibe
+los correos sin enviarlos a nadie. Ponlo en `apps/api/.env` con `MAIL_DELIVERY=smtp`,
+`SMTP_HOST=localhost`, `SMTP_PORT=1025` (y `OTP_DELIVERY=email` para recibir los códigos por
+correo) y lee los mensajes en http://localhost:8025. Sin Mailpit, los correos y las
+notificaciones push se escriben en el log de la API.
+
 ## 4. Correr las apps
 
 ```bash

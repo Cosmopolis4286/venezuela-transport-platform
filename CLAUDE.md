@@ -31,7 +31,9 @@ that app.
   ticket validation), payments (exchange rates, `PaymentProvider` adapters, simulated provider until real
   ones exist; ADR-018/021), dispatch (vehicle and driver per trip, driver's trips), taxi (rides to and from terminals,
   first line to accept wins, paid to the driver for now), settlements (earnings per paid booking in the
-  fare currency, commission, payouts, refund queue; ADR-024). Money admin routes are `admin` role only.
+  fare currency, commission, payouts, refund queue; ADR-024/025), notifications (Expo push + SMTP
+  e-mail, ADR-026: call `NotificationsService.send/later` after the action, never inside its
+  transaction). Money admin routes are `admin` role only.
 - Passenger texts are translated (es source, en, pt-BR; see `docs/architecture/i18n.md`): add new
   strings to the dictionaries (`shared-types/src/i18n`, `mobile-core/src/i18n`,
   `apps/passenger-mobile/src/i18n`, `apps/web/src/i18n`), never inline. Public web pages live in
