@@ -5,6 +5,7 @@ import type { LayoutSeat } from './fleet.js';
 import type { Currency, ServiceClass, StopSummary } from './network.js';
 import type { Organization } from './organizations.js';
 import type { Payment } from './payments.js';
+import type { RefundTier } from './settlements.js';
 
 /**
  * Trips and bookings. A trip is one schedule on one service date; it is created the first time
@@ -94,6 +95,11 @@ export interface Booking {
   expiresAt: string | null;
   /** The payment in progress, or the one that confirmed (or must be refunded for) the booking. */
   payment: Payment | null;
+  /**
+   * The operator's refund tiers in force now, so the passenger sees them before paying. The
+   * exact amount is quoted at cancellation time (`GET /me/bookings/:id/cancellation`).
+   */
+  refundPolicy: RefundTier[];
   createdAt: string;
 }
 

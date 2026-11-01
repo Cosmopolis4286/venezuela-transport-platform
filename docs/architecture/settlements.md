@@ -70,6 +70,10 @@ mismo medio y lo marca con la referencia de la devolución: el pago pasa a `refu
 
 ## Cancelar una reserva pagada
 
+Cada `Booking` trae `refundPolicy`, los tramos vigentes de su empresa, para que el pasajero los
+vea antes de pagar (la app los muestra en la reserva apartada y en la confirmada). El monto exacto
+se calcula al cancelar, con los tramos de ese momento.
+
 El pasajero ve en la app cuánto se le devolvería **antes** de confirmar
 (`GET /me/bookings/:id/cancellation`) y cancela con `POST /me/bookings/:id/cancel`, el mismo
 endpoint que libera un apartado. En una sola transacción, con la reserva bloqueada:

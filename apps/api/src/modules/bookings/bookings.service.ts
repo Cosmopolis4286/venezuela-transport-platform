@@ -9,6 +9,7 @@ import {
   type Booking,
   type CancellationQuote,
   type CreateBookingRequest,
+  type RefundTier,
   type TripManifest,
   type TripSummary,
 } from '@vtp/shared-types';
@@ -479,6 +480,10 @@ export class BookingsService {
     const stops = await this.stops.summaries([
       ...new Set(rows.flatMap((b) => [b.fromStopId, b.toStopId])),
     ]);
+    const refundPolicies = new Map<string, RefundTier[]>();
+    for (const operatorId of new Set(tripRows.map((t) => t.operator.id))) {
+      refundPolicies.set(operatorId, (await policyFor(this.database.db, operatorId)).refundTiers);
+    }
     return rows.map((booking) => {
       const payment = currentPayment(
         paymentRows.filter((p) => p.bookingId === booking.id),
@@ -523,6 +528,7 @@ export class BookingsService {
         expiresAt:
           booking.status === 'held' && booking.expiresAt ? booking.expiresAt.toISOString() : null,
         payment: payment ? toPayment(payment) : null,
+        refundPolicy: refundPolicies.get(trip.operator.id) ?? [],
         createdAt: booking.createdAt.toISOString(),
       };
     });

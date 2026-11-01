@@ -9,7 +9,8 @@ proveedor de pagos simulado:
 - la venta de boletos: búsqueda, puestos en el mapa, pago, QR y abordaje;
 - la operación de las empresas: vehículos, y vehículo y conductor por salida;
 - el dinero: lo que gana cada empresa por reserva pagada, los pagos que le hace la plataforma, la
-  cancelación de viajes pagados con una política de reembolso editable y los reembolsos;
+  cancelación de viajes pagados con una política de reembolso editable (que el pasajero ve antes
+  de pagar) y los reembolsos;
 - las notificaciones por push (pendiente del proyecto de EAS) y correo;
 - los taxis desde y hacia los terminales;
 - para el pasajero, en español, inglés y portugués de Brasil.
