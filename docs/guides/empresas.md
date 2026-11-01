@@ -58,6 +58,19 @@ de la plataforma, en la moneda de la tarifa. En **Liquidaciones** (dueño y admi
 - las **reservas pagadas** de cada mes, incluidas las canceladas (con monto negativo);
 - los **pagos recibidos** de VTP, con su referencia.
 
+## 7. Reportes
+
+En **Reportes** (empresas de autobuses) eliges un rango de días y ves:
+
+- **Ventas** (dueño y administrador): lo vendido, la comisión y lo que gana la empresa, por ruta y
+  por día, con las cancelaciones y lo devuelto. Cuadra con las liquidaciones.
+- **Ocupación** (quien puede ver los viajes): por cada salida con reservas, la capacidad, los
+  puestos vendidos, cuántos abordaron y el porcentaje de ocupación, y los totales por ruta.
+
+**Descargar CSV** baja cada reporte para abrirlo en Excel, Google Sheets o LibreOffice.
+
+## Liquidaciones: cancelaciones
+
 Si un pasajero cancela, el reembolso se descuenta de lo que ganaste por esa reserva; la plataforma
 conserva su comisión. Si ya cobraste y luego hay una cancelación, el saldo puede quedar negativo y
 se descuenta del próximo pago. Para negociar otra comisión u otros tramos de reembolso, habla con

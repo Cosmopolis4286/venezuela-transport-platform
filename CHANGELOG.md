@@ -13,6 +13,12 @@ pull request.
 
 ### Agregado
 
+- **Reportes y métricas.** Las empresas de autobuses ven en **Reportes** sus ventas (vendido,
+  comisión, lo que ganan, cancelaciones y devoluciones) por ruta y por día, y la ocupación de cada
+  salida (capacidad, vendidos, abordaron), para un rango de días, y los descargan en CSV. Los
+  administradores de la plataforma tienen **Métricas**: ventas y comisión, reembolsos, usuarios
+  nuevos, organizaciones activas y taxis. Ver
+  [docs/architecture/reports.md](docs/architecture/reports.md).
 - **Notificaciones por push y correo** (ADR-026). El pasajero recibe un push y un correo cuando se
   confirma su pago, cuando cancela un viaje pagado y cuando se le devuelve el dinero, y un
   recordatorio 3 horas antes de abordar. El conductor recibe un push cuando le asignan un viaje y

@@ -28,7 +28,7 @@ Por dónde empezar según lo que necesites.
 - [Reservas](architecture/bookings.md) · [Pagos y boletos](architecture/payments.md) ·
   [Liquidaciones y reembolsos](architecture/settlements.md)
 - [Despacho](architecture/dispatch.md) · [Taxis](architecture/taxis.md) ·
-  [Notificaciones](architecture/notifications.md)
+  [Notificaciones](architecture/notifications.md) · [Reportes](architecture/reports.md)
 - [Portal web](architecture/web-portal.md) · [Apps móviles](architecture/mobile-apps.md) ·
   [Idiomas](architecture/i18n.md)
 
