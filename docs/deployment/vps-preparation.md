@@ -56,8 +56,17 @@ es una alternativa válida si incluye copias de seguridad y PostGIS.
 - [ ] `DATABASE_PASSWORD` única y fuerte (la API rechaza en producción las débiles o de ejemplo).
       Usa un rol de la aplicación con los mínimos privilegios, separado del rol dueño que corre las
       migraciones.
-- [ ] `OTP_DELIVERY=disabled` y `PAYMENT_PROVIDER=disabled` hasta integrar proveedores reales (la
-      API rechaza `console` y `simulated` en producción).
+- [ ] `PAYMENT_PROVIDER=disabled` hasta integrar proveedores de pago reales (la API rechaza
+      `simulated` en producción).
+- [ ] Correo: una cuenta SMTP con dominio propio verificado (SPF, DKIM y DMARC en el DNS),
+      `MAIL_DELIVERY=smtp`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` (secreto) y
+      `MAIL_FROM` con ese dominio; luego `OTP_DELIVERY=email` para los códigos de acceso. Sin
+      cuenta: `OTP_DELIVERY=disabled` (la API rechaza `console` para códigos, correo y push en
+      producción).
+- [ ] Push: `PUSH_DELIVERY=expo` cuando las apps de producción tengan su proyecto de EAS
+      (`EXPO_ACCESS_TOKEN` solo si se activa la seguridad de push mejorada).
+- [ ] Una sola instancia de la API mientras el límite de solicitudes viva en memoria; los
+      recordatorios de viaje sí soportan varias instancias.
 - [ ] `NEXT_PUBLIC_API_BASE_URL` se define al **compilar** la imagen de la web.
 - [ ] Rota cualquier secreto que alguna vez se haya pegado en un chat, un ticket o un log.
 

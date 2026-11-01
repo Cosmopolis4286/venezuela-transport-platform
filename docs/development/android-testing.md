@@ -87,6 +87,12 @@ definir `EXPO_PUBLIC_API_BASE_URL` en su `env`, porque EAS no sube el `.env` (es
 git). Cuando termina, EAS muestra un enlace y un código QR: ábrelo en el teléfono, descarga el APK
 y permite instalar desde ese origen.
 
+`eas init` también escribe el id del proyecto en `app.json` (`extra.eas.projectId`). Con él, la
+app se registra para las **notificaciones push** al iniciar sesión (con Expo Go en un teléfono
+también). Para que lleguen, la API debe usar `PUSH_DELIVERY=expo`
+([notifications.md](../architecture/notifications.md)); en Android, las compilaciones propias
+necesitan además las credenciales de Firebase (FCM) cargadas en EAS.
+
 ### En tu computadora (sin cuenta, más preparación)
 
 Necesita Android Studio (Android SDK) y JDK 17 en la computadora.

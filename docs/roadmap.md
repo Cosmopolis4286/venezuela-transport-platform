@@ -3,13 +3,14 @@
 Qué hace hoy la plataforma, qué viene después y qué falta. Se actualiza con cada pull request que
 lo cambia; el historial de cambios está en el [CHANGELOG](../CHANGELOG.md).
 
-**Estado (2026-10-31): en desarrollo, sin desplegar.** Funcionan de punta a punta, con un
+**Estado (2026-11-01): en desarrollo, sin desplegar.** Funcionan de punta a punta, con un
 proveedor de pagos simulado:
 
 - la venta de boletos: búsqueda, puestos en el mapa, pago, QR y abordaje;
 - la operación de las empresas: vehículos, y vehículo y conductor por salida;
-- el dinero: lo que gana cada empresa por reserva pagada, los pagos que le hace la plataforma y
-  los reembolsos a los pasajeros;
+- el dinero: lo que gana cada empresa por reserva pagada, los pagos que le hace la plataforma, la
+  cancelación de viajes pagados con una política de reembolso editable y los reembolsos;
+- las notificaciones por push (pendiente del proyecto de EAS) y correo;
 - los taxis desde y hacia los terminales;
 - para el pasajero, en español, inglés y portugués de Brasil.
 
@@ -21,13 +22,13 @@ Leyenda: ✅ listo · 🟡 parcial · ⏭️ siguiente · ⬜ pendiente
 
 ## Por usuario
 
-| Quién                                                   | Puede hacer hoy                                                                                                                                                                                                                                                                                                                    | Le falta                                                            |
-| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| **Pasajero** (app, web)                                 | Buscar salidas (sin cuenta), elegir puestos en el mapa del bus, apartarlos 15 min, pagar (simulado) por pago móvil, transferencia, PIX o USDT, mostrar un boleto QR por puesto, "Mis viajes", pedir un taxi desde o hacia un terminal                                                                                              | Pagos reales, pagar el taxi en la app                               |
-| **Empresa de autobuses / línea de taxis** (portal)      | Registrarse y ser aprobada, invitar personal con roles, aceptar solicitantes verificados, publicar rutas, tarifas, horarios y mapas de puestos, fijar tasas de cambio, ver viajes y listas de pasajeros, registrar vehículos, asignar vehículo y conductor a cada salida, elegir los terminales de sus taxis y asignar solicitudes | Reportes                                                            |
-| **Inspector** (app de transportistas)                   | Escanear boletos al abordar (cámara o código + puesto), ver quién abordó en la lista de pasajeros                                                                                                                                                                                                                                  | Escaneo sin conexión                                                |
-| **Conductor / personal** (app de transportistas)        | Iniciar sesión, aceptar invitaciones, enviar la solicitud con documentos KYC, ver sus viajes asignados y quién viaja, tomar solicitudes de taxi y llevarlas hasta el final                                                                                                                                                         | Avisos de viajes nuevos, marcar salida y llegada, ubicación en vivo |
-| **Personal de la plataforma** (panel de administración) | Aprobar organizaciones y solicitudes KYC, administrar el catálogo de paradas                                                                                                                                                                                                                                                       | Métricas                                                            |
+| Quién                                                   | Puede hacer hoy                                                                                                                                                                                                                                                                                                                                                                                                | Le falta                                   |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| **Pasajero** (app, web)                                 | Buscar salidas (sin cuenta), elegir puestos en el mapa del bus, apartarlos 15 min, pagar (simulado) por pago móvil, transferencia, PIX o USDT, mostrar un boleto QR por puesto, "Mis viajes", cancelar un viaje pagado y ver cuánto se le devuelve, pedir un taxi desde o hacia un terminal, recibir avisos por push y correo                                                                                  | Pagos reales, pagar el taxi en la app      |
+| **Empresa de autobuses / línea de taxis** (portal)      | Registrarse y ser aprobada, invitar personal con roles, aceptar solicitantes verificados, publicar rutas, tarifas, horarios y mapas de puestos, fijar tasas de cambio, ver viajes y listas de pasajeros, registrar vehículos, asignar vehículo y conductor a cada salida, elegir los terminales de sus taxis y asignar solicitudes, ver su saldo con la plataforma, sus reservas pagadas y los pagos recibidos | Reportes                                   |
+| **Inspector** (app de transportistas)                   | Escanear boletos al abordar (cámara o código + puesto), ver quién abordó en la lista de pasajeros                                                                                                                                                                                                                                                                                                              | Escaneo sin conexión                       |
+| **Conductor / personal** (app de transportistas)        | Iniciar sesión, aceptar invitaciones, enviar la solicitud con documentos KYC, ver sus viajes asignados y quién viaja, tomar solicitudes de taxi y llevarlas hasta el final; recibe un push cuando le asignan un viaje o hay una solicitud de taxi en su terminal                                                                                                                                               | Marcar salida y llegada, ubicación en vivo |
+| **Personal de la plataforma** (panel de administración) | Aprobar organizaciones y solicitudes KYC, administrar el catálogo de paradas; los administradores: política de comisión y reembolsos (general y por empresa), pagos a las empresas, cola de reembolsos                                                                                                                                                                                                         | Métricas                                   |
 
 ## Por área
 
@@ -66,14 +67,16 @@ En orden; cada uno es un pull request.
   terminales, estado en tiempo real.
 - Boletos: validación sin conexión (QR firmados y sincronización de abordajes).
 - Móvil: selector de fecha nativo; texto en español para todos los mensajes de validación de la
-  API; notificaciones push en vez de deslizar para actualizar.
+  API; avisos push de la revisión KYC y de las invitaciones.
 - Pagos: limpieza periódica de los apartados vencidos (hoy se liberan al vuelo).
 - Idiomas: traducir el portal y la app de transportistas si llegan empresas o conductores que no
   hablen español; mensajes de validación de la API en el idioma del usuario.
-- Taxis: cobro dentro de la plataforma, tarifas fijas por zona, ubicación en vivo, avisos push,
-  calificaciones.
-- Despacho: documentos de los vehículos con vencimiento; aviso al conductor cuando le asignan un
-  viaje; que el conductor marque la salida y la llegada.
+- Taxis: cobro dentro de la plataforma, tarifas fijas por zona, ubicación en vivo, avisos push de
+  cada cambio de estado, calificaciones.
+- Despacho: documentos de los vehículos con vencimiento; que el conductor marque la salida y la
+  llegada.
+- Notificaciones: cola persistente (BullMQ) para no perder avisos en un reinicio; preferencias
+  para apagar tipos de aviso; SMS o WhatsApp para los códigos.
 
 ## Decisiones pendientes
 
@@ -130,7 +133,11 @@ Lo que hoy funciona pero conviene corregir antes de crecer:
   Chromium con guiones manuales; la CI solo corre pruebas unitarias, e2e de la API y
   compilaciones. Una batería mínima con Playwright evitaría regresiones en las pantallas.
 - **Consultas periódicas.** Las apps consultan cada 5 segundos (pagos y taxis) y el tablero de
-  taxis cada 10. Sirve para empezar; con muchos usuarios conviene notificaciones push o WebSockets.
+  taxis cada 10; los push avisan de los cambios importantes, pero las pantallas abiertas siguen
+  consultando. Con muchos usuarios conviene WebSockets.
+- **Avisos en memoria.** Las notificaciones se envían en segundo plano dentro del proceso de la
+  API: si se reinicia justo en ese momento, el aviso se pierde (la acción no). Una cola
+  persistente lo resolvería cuando el volumen lo justifique.
 - **Vencimientos al leer.** Los apartados y las solicitudes de taxi vencidos se marcan cuando
   alguien lee o escribe, no con una tarea programada. Es correcto, pero los reportes podrían ver
   estados viejos.
@@ -145,7 +152,7 @@ normalización de placas se comparten en vez de repetirse.
 
 ## Antes de producción
 
-Nada de esto está hecho todavía:
+Lo que falta (y lo ya resuelto):
 
 - [ ] Revisión legal: cobrar dinero por cuenta de terceros y aceptar criptomonedas en Venezuela y
       Brasil (ADR-018).

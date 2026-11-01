@@ -3,38 +3,41 @@
 Plataforma venezolana de transporte terrestre que conecta a pasajeros, empresas de autobuses,
 terminales, taxistas y operadores de transporte.
 
-> **Estado: en desarrollo, sin desplegar.** El flujo de venta de boletos funciona de punta a
-> punta: búsqueda de viajes, puestos en el mapa del bus, pago (proveedor simulado), boletos QR,
-> escaneo al abordar, asignación de vehículo y conductor, y taxis desde y hacia los terminales. **Todavía no: proveedores de pago reales, liquidaciones, reembolsos,
-> notificaciones ni cobro de los taxis en la app.** No la despliegues con usuarios ni datos reales. Progreso
+> **Estado: en desarrollo, sin desplegar.** Funcionan de punta a punta: la venta de boletos
+> (búsqueda, puestos en el mapa del bus, pago con un proveedor simulado, boletos QR, escaneo al
+> abordar), la cancelación de viajes pagados con reembolso según una política editable, las
+> liquidaciones a las empresas, la asignación de vehículo y conductor, los taxis desde y hacia los
+> terminales, y las notificaciones por push y correo. **Todavía no: proveedores de pago reales,
+> cuenta SMTP y proyecto de Expo de producción, reportes ni cobro de los taxis en la app.** No la
+> despliegues con usuarios ni datos reales. Progreso
 > y pendientes: [hoja de ruta](docs/roadmap.md) · lo que necesita tu decisión:
 > [decisiones pendientes](docs/roadmap.md#decisiones-pendientes) · historial: [CHANGELOG](CHANGELOG.md) · CI:
 > GitHub Actions ([flujo del repositorio](docs/development/repository-workflow.md)).
 
 ## Qué hace hoy
 
-| App                                             | Para                                             | Funciones                                                                                                                                                  |
-| ----------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Web (`apps/web`)                                | Pasajeros                                        | Búsqueda de viajes (`/es/buscar`, también en inglés y portugués) con puestos libres                                                                        |
-| Portal (`apps/web`, `/portal`)                  | Empresas de autobuses, líneas de taxis, personal | Equipo e invitaciones, solicitantes, rutas, tarifas, horarios, mapas de puestos, vehículos, despacho, taxis, tasas de cambio, viajes y listas de pasajeros |
-| Panel de administración (`apps/web`, `/admin`)  | Personal de la plataforma                        | Aprobar organizaciones y solicitudes KYC, catálogo de paradas                                                                                              |
-| App de pasajeros (`apps/passenger-mobile`)      | Pasajeros                                        | Búsqueda, puestos en el mapa del bus, apartar y pagar, boletos QR, "Mis viajes", pedir un taxi; en español, inglés y portugués                             |
-| App de transportistas (`apps/transport-mobile`) | Conductores, inspectores, personal               | Invitaciones, solicitud KYC, escáner de boletos al abordar, viajes asignados al conductor                                                                  |
+| App                                             | Para                                             | Funciones                                                                                                                                                                                           |
+| ----------------------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Web (`apps/web`)                                | Pasajeros                                        | Búsqueda de viajes (`/es/buscar`, también en inglés y portugués) con puestos libres                                                                                                                 |
+| Portal (`apps/web`, `/portal`)                  | Empresas de autobuses, líneas de taxis, personal | Equipo e invitaciones, solicitantes, rutas, tarifas, horarios, mapas de puestos, vehículos, despacho, taxis, tasas de cambio, viajes y listas de pasajeros, liquidaciones (saldo y pagos recibidos) |
+| Panel de administración (`apps/web`, `/admin`)  | Personal de la plataforma                        | Aprobar organizaciones y solicitudes KYC, catálogo de paradas; los administradores: política de comisión y reembolsos, pagos a las empresas, cola de reembolsos                                     |
+| App de pasajeros (`apps/passenger-mobile`)      | Pasajeros                                        | Búsqueda, puestos en el mapa del bus, apartar y pagar, boletos QR, "Mis viajes", cancelar un viaje pagado con reembolso, pedir un taxi, notificaciones push; en español, inglés y portugués         |
+| App de transportistas (`apps/transport-mobile`) | Conductores, inspectores, personal               | Invitaciones, solicitud KYC, escáner de boletos al abordar, viajes asignados al conductor, solicitudes de taxi, notificaciones push                                                                 |
 
 ## La arquitectura de un vistazo
 
 Un repositorio Git (pnpm workspace + Turborepo) con **aplicaciones separadas** dentro:
 
-| Ruta                                                   | Qué                                                                       | Tecnología                                     | URL / puerto de desarrollo      |
-| ------------------------------------------------------ | ------------------------------------------------------------------------- | ---------------------------------------------- | ------------------------------- |
-| `apps/web`                                             | Web pública, búsqueda de autobuses, portal de empresas (`/portal`)        | Next.js 16 (App Router), Tailwind 4, shadcn/ui | http://localhost:3000           |
-| `apps/passenger-mobile`                                | App de pasajeros                                                          | Expo SDK 58, Expo Router                       | Metro en :8081                  |
-| `apps/transport-mobile`                                | Conductores, empresas de transporte, operadores de terminal               | Expo SDK 58, Expo Router                       | Metro en :8082                  |
-| `apps/api`                                             | API REST compartida — monolito modular                                    | NestJS 12, OpenAPI/Swagger                     | http://localhost:4000/api/v1    |
-| `packages/shared-types`                                | Contratos de la API, independientes de cualquier framework                | TypeScript                                     | —                               |
-| `packages/mobile-core`                                 | Sesión, cliente de la API y pantallas de inicio de sesión de las dos apps | React Native (código fuente TypeScript)        | —                               |
-| `packages/eslint-config`, `packages/typescript-config` | Configuraciones compartidas de lint y compilador                          | —                                              | —                               |
-| `docker-compose.yml`                                   | PostgreSQL 18 + PostGIS 3.6, Redis 8.10 opcional; API y web opcionales    | Docker Compose                                 | 127.0.0.1:5432 / 127.0.0.1:6379 |
+| Ruta                                                   | Qué                                                                        | Tecnología                                     | URL / puerto de desarrollo    |
+| ------------------------------------------------------ | -------------------------------------------------------------------------- | ---------------------------------------------- | ----------------------------- |
+| `apps/web`                                             | Web pública, búsqueda de autobuses, portal de empresas (`/portal`)         | Next.js 16 (App Router), Tailwind 4, shadcn/ui | http://localhost:3000         |
+| `apps/passenger-mobile`                                | App de pasajeros                                                           | Expo SDK 58, Expo Router                       | Metro en :8081                |
+| `apps/transport-mobile`                                | Conductores, empresas de transporte, operadores de terminal                | Expo SDK 58, Expo Router                       | Metro en :8082                |
+| `apps/api`                                             | API REST compartida — monolito modular                                     | NestJS 12, OpenAPI/Swagger                     | http://localhost:4000/api/v1  |
+| `packages/shared-types`                                | Contratos de la API, independientes de cualquier framework                 | TypeScript                                     | —                             |
+| `packages/mobile-core`                                 | Sesión, cliente de la API, inicio de sesión, idioma y push de las dos apps | React Native (código fuente TypeScript)        | —                             |
+| `packages/eslint-config`, `packages/typescript-config` | Configuraciones compartidas de lint y compilador                           | —                                              | —                             |
+| `docker-compose.yml`                                   | PostgreSQL 18 + PostGIS 3.6; Redis 8.10, Mailpit, API y web opcionales     | Docker Compose                                 | :5432 / :6379 / Mailpit :8025 |
 
 Swagger UI: http://localhost:4000/api/docs · OpenAPI JSON: http://localhost:4000/api/docs-json
 
@@ -93,6 +96,7 @@ Todos los comandos se ejecutan desde la raíz del repositorio.
 | Híbrido: base de datos + API en Docker                   | `pnpm stack:api` y luego `pnpm dev:web`                   |
 | Todo en Docker (base de datos, API, web)                 | `pnpm stack:app` (detener: `pnpm stack:down`)             |
 | Arrancar la base de datos + Redis                        | `pnpm infra:up:redis`                                     |
+| Arrancar Mailpit (correos de desarrollo en :8025)        | `pnpm infra:up:mail`                                      |
 | Detener la infraestructura (conserva los datos)          | `pnpm infra:down`                                         |
 | Estado / logs de los contenedores                        | `pnpm infra:ps` / `pnpm infra:logs`                       |
 | Comprobar la conexión a la base de datos y PostGIS       | `pnpm db:check`                                           |
@@ -106,7 +110,9 @@ Todos los comandos se ejecutan desde la raíz del repositorio.
 > **elimina para siempre todos los datos locales de la base de datos.** Antes te pide escribir
 > `vtp`.
 
-Redis es opcional y está apagado por defecto; nada del flujo normal de `pnpm dev` lo necesita.
+Redis y Mailpit son opcionales y están apagados por defecto; nada del flujo normal de `pnpm dev`
+los necesita. Sin Mailpit, los correos, los códigos de acceso y las notificaciones push se
+escriben en el log de la API.
 
 ## Endpoints de salud
 

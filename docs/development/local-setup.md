@@ -113,8 +113,10 @@ pnpm dev:all          # todo lo anterior en una sola interfaz de Turborepo
 La API arranca aunque la base de datos esté caída; en ese caso `/api/v1/health/ready` devuelve 503.
 
 En desarrollo, los códigos de acceso de un solo uso **se imprimen en la consola de la API**
-(`OTP_DELIVERY=console`); busca `[DEV ONLY] login code for +58 *** ***4567 via sms: 123456`.
-Todavía no hay ningún proveedor de SMS, WhatsApp ni correo integrado.
+(`OTP_DELIVERY=console`); busca `[DEV ONLY] login code for +58 *** ***4567 via sms: 123456`. Los
+correos y las notificaciones push también van al log (`[DEV ONLY] e-mail to …`,
+`[DEV ONLY] push to …`), salvo que uses Mailpit (ver arriba). No hay proveedor de SMS ni WhatsApp:
+con `OTP_DELIVERY=email` solo funcionan los códigos por correo.
 
 Para correr la API (y la web) en Docker, ver [docker.md](docker.md).
 

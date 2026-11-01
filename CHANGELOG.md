@@ -72,6 +72,10 @@ pull request.
 
 ### Cambiado
 
+- **Documentación al día** con liquidaciones, cancelaciones con reembolso y notificaciones: README,
+  arquitectura, autenticación (códigos por correo), apps móviles (push), portal, organizaciones,
+  idiomas, Docker y Mailpit (`VTP_MAIL_DELIVERY`), instalación local, Android (proyecto de EAS),
+  preparación del VPS (SMTP y push), seguridad y hoja de ruta.
 - **El repositorio es público y la CI corre en GitHub Actions** (`.github/workflows/ci.yml`), en
   las máquinas de GitHub y sin costo (ADR-023). El runner propio queda solo para lanzarlo a mano.
 - La web pública cambió de dirección: `/es` y `/es/buscar` (las anteriores, `/` y `/buscar`,

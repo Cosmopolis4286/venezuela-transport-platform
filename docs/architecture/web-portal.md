@@ -83,5 +83,7 @@ organización → invitar por teléfono → iniciar sesión con código → acep
 administración → revisión KYC con descarga de documentos → incorporar al solicitante → cerrar
 sesión, más la renovación forzada del token con solicitudes en paralelo) se verificó en Chromium
 contra una compilación de producción, igual que el flujo de la red (catálogo de paradas → ruta con
-4 paradas → tarifas → horarios → publicar → búsqueda pública → desactivar). Una batería
-automatizada de pruebas en el navegador dentro de la CI queda pendiente.
+4 paradas → tarifas → horarios → publicar → búsqueda pública → desactivar), las liquidaciones
+(saldo, pagos registrados y anulados, cola de reembolsos, política general y por empresa) y la
+cancelación de viajes pagados. Una batería automatizada de pruebas en el navegador dentro de la
+CI queda pendiente.

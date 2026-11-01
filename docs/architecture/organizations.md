@@ -71,9 +71,10 @@ puede tener como máximo 5 organizaciones esperando revisión a la vez.
 
 1. Un dueño o administrador invita por **correo o teléfono** con un rol
    (`POST /organizations/:id/invitations`).
-2. Todavía no se envía ningún mensaje (no hay proveedor de SMS ni correo). La persona invitada
-   inicia sesión con ese correo o teléfono — iniciar sesión con código lo verifica — y ve la
-   invitación en `GET /me/invitations`.
+2. Todavía no se le envía un mensaje con la invitación (las notificaciones cubren reservas,
+   viajes y taxis, ver [notifications.md](notifications.md)). La persona invitada inicia sesión
+   con ese correo o teléfono — iniciar sesión con código lo verifica — y ve la invitación en
+   `GET /me/invitations`.
 3. `POST /me/invitations/:id/accept` crea la membresía; `/decline` la rechaza.
 
 Las invitaciones solo se emparejan con los contactos **verificados** de la persona invitada, así
@@ -87,7 +88,9 @@ documentos para la revisión KYC ([onboarding.md](onboarding.md)).
 ## Personal de la plataforma
 
 Los usuarios pueden tener un rol de plataforma: `reviewer` (revisa organizaciones y solicitudes
-KYC, y administra el catálogo de paradas) o `admin` (todo lo que puede un revisor). No hay un endpoint HTTP
+KYC, y administra el catálogo de paradas) o `admin` (todo lo que puede un revisor, más el dinero:
+política de comisión y reembolsos, pagos a las empresas y cola de reembolsos, ver
+[settlements.md](settlements.md)). No hay un endpoint HTTP
 para otorgarlo; alguien con acceso a la base de datos ejecuta:
 
 ```bash
