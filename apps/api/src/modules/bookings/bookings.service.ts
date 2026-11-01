@@ -299,7 +299,7 @@ export class BookingsService {
     booking: BookingRow,
   ): Promise<{ quote: CancellationQuote; payment: PaymentRow | undefined; fareRefund: string }> {
     const [trip] = await db
-      .select({ organizationId: trips.organizationId })
+      .select({ organizationId: trips.organizationId, departedAt: trips.departedAt })
       .from(trips)
       .where(eq(trips.id, booking.tripId));
     const { refundTiers } = await policyFor(db, trip!.organizationId);
@@ -317,7 +317,7 @@ export class BookingsService {
       .from(payments)
       .where(and(eq(payments.bookingId, booking.id), eq(payments.status, 'confirmed')));
     const hoursLeft = (booking.departsAt.getTime() - Date.now()) / 3_600_000;
-    const cancellable = hoursLeft > 0 && (boarded?.n ?? 0) === 0;
+    const cancellable = hoursLeft > 0 && (boarded?.n ?? 0) === 0 && !trip!.departedAt;
     const refundPercent = cancellable ? refundPercentFor(refundTiers, hoursLeft) : 0;
     const refundAmount = payment ? percentOf(payment.amount, refundPercent) : '0.00';
     return {
@@ -558,5 +558,7 @@ export function summary(
     heldSeats: seatsWith('held'),
     vehicle: row.vehicle,
     driver: row.driver,
+    departedAt: trip.departedAt?.toISOString() ?? null,
+    arrivedAt: trip.arrivedAt?.toISOString() ?? null,
   };
 }

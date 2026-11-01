@@ -1,4 +1,15 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Put, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type {
   DispatchBoard,
@@ -54,6 +65,26 @@ export class DriverController {
   @Get()
   trips(@CurrentAuth() auth: Authenticated): Promise<DriverTrip[]> {
     return this.dispatch.driving(auth.user.id);
+  }
+
+  @Post(':tripId/depart')
+  @HttpCode(HttpStatus.OK)
+  depart(
+    @CurrentAuth() auth: Authenticated,
+    @Param('tripId', ParseUUIDPipe) tripId: string,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<DriverTrip> {
+    return this.dispatch.markTrip(auth, tripId, 'depart', meta);
+  }
+
+  @Post(':tripId/arrive')
+  @HttpCode(HttpStatus.OK)
+  arrive(
+    @CurrentAuth() auth: Authenticated,
+    @Param('tripId', ParseUUIDPipe) tripId: string,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<DriverTrip> {
+    return this.dispatch.markTrip(auth, tripId, 'arrive', meta);
   }
 
   @Get(':tripId/passengers')

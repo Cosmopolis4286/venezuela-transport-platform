@@ -1,16 +1,19 @@
 import {
   boolean,
+  date,
   integer,
   index,
   jsonb,
+  pgEnum,
   pgTable,
+  primaryKey,
   smallint,
   text,
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import type { LayoutSeat } from '@vtp/shared-types';
-import { timestamps } from '../identity/identity.schema.js';
+import { VEHICLE_DOCUMENT_KINDS, type LayoutSeat } from '@vtp/shared-types';
+import { timestamps, users } from '../identity/identity.schema.js';
 import { organizations } from '../organizations/organizations.schema.js';
 
 /** Seat map of a type of vehicle an operator runs. Validated with `layoutProblem()`. */
@@ -55,3 +58,23 @@ export const vehicles = pgTable(
 );
 
 export type VehicleRow = typeof vehicles.$inferSelect;
+
+export const vehicleDocumentKind = pgEnum('vehicle_document_kind', VEHICLE_DOCUMENT_KINDS);
+
+/** One paper of a vehicle (registration, insurance, transport permit) and its last valid day. */
+export const vehicleDocuments = pgTable(
+  'vehicle_documents',
+  {
+    vehicleId: uuid()
+      .notNull()
+      .references(() => vehicles.id, { onDelete: 'cascade' }),
+    kind: vehicleDocumentKind().notNull(),
+    number: text().notNull(),
+    expiresOn: date({ mode: 'string' }).notNull(),
+    updatedByUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (t) => [primaryKey({ columns: [t.vehicleId, t.kind] })],
+);
+
+export type VehicleDocumentRow = typeof vehicleDocuments.$inferSelect;

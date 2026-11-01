@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { assignmentText } from '@/lib/labels';
+import { assignmentText, tripProgress } from '@/lib/labels';
 import { apiFetch } from '@/lib/server/api';
 
 export default function TripsPage({
@@ -85,6 +85,9 @@ async function Trips({
                       {trip.departureTime} · {trip.route.name}
                     </Link>
                     <Badge variant="outline">{SERVICE_CLASS_LABELS[trip.serviceClass]}</Badge>
+                    {tripProgress(trip) ? (
+                      <Badge variant="secondary">{tripProgress(trip)}</Badge>
+                    ) : null}
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {trip.soldSeats} vendidos · {trip.heldSeats} apartados ·{' '}

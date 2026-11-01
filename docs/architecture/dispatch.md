@@ -50,19 +50,42 @@ pasajeros muestran el vehículo y el conductor.
 
 Un viaje de otro conductor, o de una organización de la que ya no conduce, da 404.
 
+## Salida y llegada
+
+El conductor asignado marca en su app **Marcar salida** al dejar el origen
+(`POST /me/driving/:tripId/depart`) y **Marcar llegada** al terminar (`…/arrive`):
+
+- la salida se puede marcar desde **2 horas antes** de la hora programada
+  (`409 TRIP_TOO_EARLY` antes);
+- cada paso se marca una sola vez y en orden (`409 TRIP_WRONG_STEP`): no hay llegada sin salida;
+- las horas quedan en el viaje (`departedAt`, `arrivedAt`) y se ven en el tablero de despacho, en
+  la lista de viajes del portal y en la app del conductor;
+- **después de la salida, los pasajeros ya no pueden cancelar** su reserva, aunque todavía no sea
+  la hora de abordar.
+
+Eventos de auditoría: `trip.departed`, `trip.arrived`.
+
+## Documentos de los vehículos
+
+En el tablero de despacho, un vehículo con documentos vencidos o por vencer en 30 días aparece
+marcado en la lista ("documentos vencidos", "documentos por vencer"). **No impide asignarlo**:
+decidir si se bloquea es una decisión pendiente ([hoja de ruta](../roadmap.md)). Los documentos se
+cargan en **Vehículos** ([fleet.md](fleet.md#documentos-de-los-vehículos)).
+
 ## Endpoints (`/api/v1`)
 
-| Método y ruta                                | Quién                                  |
-| -------------------------------------------- | -------------------------------------- |
-| `GET /organizations/:id/vehicles`            | Miembros                               |
-| `POST`/`PATCH /organizations/:id/vehicles…`  | `fleet.manage`                         |
-| `GET /organizations/:id/dispatch?date=`      | `operations.dispatch`                  |
-| `PUT /organizations/:id/dispatch/assignment` | `operations.dispatch`                  |
-| `GET /me/driving`                            | Con sesión — sus viajes como conductor |
-| `GET /me/driving/:tripId/passengers`         | El conductor asignado                  |
+| Método y ruta                                 | Quién                                  |
+| --------------------------------------------- | -------------------------------------- |
+| `GET /organizations/:id/vehicles`             | Miembros                               |
+| `POST`/`PATCH /organizations/:id/vehicles…`   | `fleet.manage`                         |
+| `GET /organizations/:id/dispatch?date=`       | `operations.dispatch`                  |
+| `PUT /organizations/:id/dispatch/assignment`  | `operations.dispatch`                  |
+| `GET /me/driving`                             | Con sesión — sus viajes como conductor |
+| `GET /me/driving/:tripId/passengers`          | El conductor asignado                  |
+| `POST /me/driving/:tripId/depart`, `…/arrive` | El conductor asignado                  |
 
 ## Todavía no
 
-Documentos de los vehículos (registro, póliza) con vencimiento, que el conductor marque la salida
-y la llegada, y ubicación en tiempo real. Cuando un despachador asigna a un conductor, este
-recibe un push en la app de transportistas ([notifications.md](notifications.md)).
+Ubicación en tiempo real, avisar a los pasajeros cuando el autobús sale o se atrasa, y que un
+despachador marque la salida en nombre del conductor. Cuando un despachador asigna a un conductor,
+este recibe un push en la app de transportistas ([notifications.md](notifications.md)).

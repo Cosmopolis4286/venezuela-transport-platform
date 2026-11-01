@@ -39,6 +39,17 @@ Los vehículos no se borran: se **desactivan**. Uno inactivo conserva sus viajes
 puede asignar de nuevo. Los administra `fleet.manage` en el portal (**Vehículos**); cualquier
 miembro puede verlos.
 
+## Documentos de los vehículos
+
+Cada vehículo puede tener tres documentos, cada uno con su **número** y su **último día de
+vigencia**: certificado de circulación, póliza de seguro (RCV) y permiso de transporte
+(`vehicle_documents`). Su estado se calcula con la fecha de Venezuela: **vigente**, **por vencer**
+(30 días o menos) o **vencido**. El vehículo trae sus documentos y una alerta con el peor estado
+(`documentAlert`), que también aparece en el tablero de despacho.
+
+En el portal, **Vehículos → Documentos** de cada unidad: guardar o reemplazar cada documento, o
+quitarlo. Solo `fleet.manage` los edita.
+
 ## Endpoints (`/api/v1`)
 
 | Método y ruta                                                         | Quién          |
@@ -47,10 +58,12 @@ miembro puede verlos.
 | `POST …/seat-layouts`, `PATCH`/`DELETE …/seat-layouts/:layoutId`      | `fleet.manage` |
 | `GET /organizations/:id/vehicles`                                     | Miembros       |
 | `POST …/vehicles`, `PATCH …/vehicles/:vehicleId`                      | `fleet.manage` |
+| `PUT`/`DELETE …/vehicles/:vehicleId/documents/:kind`                  | `fleet.manage` |
 
 Eventos de auditoría: `seat_layout.created`, `.updated`, `.deleted`; `vehicle.created`,
-`vehicle.updated`.
+`vehicle.updated`, `vehicle.document_set`, `vehicle.document_removed`.
 
 ## Todavía no
 
-Documentos de los vehículos (registro, póliza) con fecha de vencimiento.
+Subir el archivo de cada documento, avisar por correo antes de que venza y bloquear la asignación
+de vehículos con documentos vencidos (si se decide).

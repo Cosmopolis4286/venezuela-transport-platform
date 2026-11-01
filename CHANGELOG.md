@@ -13,6 +13,12 @@ pull request.
 
 ### Agregado
 
+- **Salida y llegada de cada viaje.** El conductor marca en su app la salida (desde 2 horas
+  antes) y la llegada; la empresa lo ve en el despacho y en la lista de viajes, y desde la salida
+  los pasajeros ya no pueden cancelar.
+- **Documentos de los vehículos.** Certificado de circulación, póliza RCV y permiso de transporte
+  con su número y vencimiento, en **Vehículos**; los vencidos o por vencer (30 días) se marcan en
+  el portal y en el tablero de despacho.
 - **Reportes y métricas.** Las empresas de autobuses ven en **Reportes** sus ventas (vendido,
   comisión, lo que ganan, cancelaciones y devoluciones) por ruta y por día, y la ocupación de cada
   salida (capacidad, vendidos, abordaron), para un rango de días, y los descargan en CSV. Los

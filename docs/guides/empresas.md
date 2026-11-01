@@ -35,10 +35,15 @@ En la página de la organización:
 
 ## 4. El día de la salida
 
-- **Vehículos**: registra placas y el mapa de puestos de cada unidad.
+- **Vehículos**: registra placas y el mapa de puestos de cada unidad, y en **Documentos** el
+  certificado de circulación, la póliza RCV y el permiso de transporte con su vencimiento. Se
+  marcan **por vencer** (30 días o menos) y **vencidos**, y el despacho los avisa al elegir el
+  vehículo.
 - **Despacho**: para cada salida del día, elige vehículo y conductor. El sistema no deja poner un
   vehículo o un conductor en dos viajes a la vez. El conductor recibe un aviso en su app.
 - **Viajes y pasajeros**: las reservas de cada salida y la lista de pasajeros, con quién abordó.
+  Cuando el conductor marca la salida y la llegada, la salida muestra "En ruta desde las…" y
+  "Llegó…".
 - Los inspectores escanean los boletos con la app de transportistas ([guía](conductores.md)).
 
 ## 5. Taxis (líneas de taxis)

@@ -25,6 +25,12 @@ En el inicio están las salidas que te asignó un despachador (también te llega
 teléfono). Abre una para ver las horas, el vehículo y quién viaja en cada puesto con su tramo y si
 ya abordó. Por privacidad, no se muestran los documentos de los pasajeros.
 
+### Marcar la salida y la llegada
+
+En la pantalla del viaje, toca **Marcar salida** cuando el autobús deja el terminal (se puede desde
+2 horas antes de la hora programada) y **Marcar llegada** al terminar. La empresa ve el estado en
+su tablero, y desde la salida los pasajeros ya no pueden cancelar.
+
 ## 4. Validar boletos (inspectores)
 
 **Validar boletos** abre la cámara: apunta al código QR del pasajero. Si no se puede leer, escribe

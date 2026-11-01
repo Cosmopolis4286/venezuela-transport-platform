@@ -113,6 +113,9 @@ export interface TripSummary {
   /** Assigned by a dispatcher. */
   vehicle: TripVehicle | null;
   driver: TripDriver | null;
+  /** Marked by the driver when the bus leaves the origin and reaches the last stop (UTC ISO). */
+  departedAt: string | null;
+  arrivedAt: string | null;
 }
 
 /** `GET /organizations/:id/trips/:tripId/manifest` — passenger list for boarding. */
