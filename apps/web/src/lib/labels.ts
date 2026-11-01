@@ -1,4 +1,4 @@
-import { vehicleName } from '@vtp/shared-types';
+import { networkClock, vehicleName } from '@vtp/shared-types';
 
 export { APPLICATION_STATUS_LABELS, ORGANIZATION_STATUS_LABELS } from '@vtp/shared-types';
 
@@ -34,3 +34,20 @@ export function assignmentText(trip: {
     : 'sin conductor';
   return `${vehicle} · ${driver}`;
 }
+
+/** "En ruta desde las 14:05" / "Llegó 22:40", or null before the driver marks the departure. */
+export function tripProgress(trip: {
+  departedAt: string | null;
+  arrivedAt: string | null;
+}): string | null {
+  if (trip.arrivedAt) return `Llegó ${networkClock(trip.arrivedAt)}`;
+  if (trip.departedAt) return `En ruta desde las ${networkClock(trip.departedAt)}`;
+  return null;
+}
+
+/** Suffix for a vehicle whose papers need attention. */
+export const DOCUMENT_ALERT_TEXT = {
+  expired: 'documentos vencidos',
+  expiring: 'documentos por vencer',
+  valid: '',
+} as const;

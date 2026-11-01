@@ -44,3 +44,31 @@ export async function updateVehicle(_: FormState, form: FormData): Promise<FormS
   refresh();
   return { success: 'Vehículo guardado.' };
 }
+
+const documentPath = (form: FormData) =>
+  `${vehiclesPath(form)}/${encodeURIComponent(text(form, 'vehicleId'))}/documents/${encodeURIComponent(text(form, 'kind'))}`;
+
+export async function saveVehicleDocument(_: FormState, form: FormData): Promise<FormState> {
+  try {
+    await apiRequest(documentPath(form), {
+      method: 'PUT',
+      body: { number: text(form, 'number'), expiresOn: text(form, 'expiresOn') },
+    });
+  } catch (error) {
+    return failure(error, {
+      VALIDATION_FAILED: 'Escribe el número del documento y su fecha de vencimiento.',
+    });
+  }
+  refresh();
+  return { success: 'Documento guardado.' };
+}
+
+export async function removeVehicleDocument(_: FormState, form: FormData): Promise<FormState> {
+  try {
+    await apiRequest(documentPath(form), { method: 'DELETE' });
+  } catch (error) {
+    return failure(error);
+  }
+  refresh();
+  return { success: 'Documento quitado.' };
+}

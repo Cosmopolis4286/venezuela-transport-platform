@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { ActionForm, SubmitButton } from '@/components/portal/action-form';
 import { Badge } from '@/components/ui/badge';
+import { DOCUMENT_ALERT_TEXT, tripProgress } from '@/lib/labels';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { Input, Select } from '@/components/ui/input';
@@ -123,7 +124,7 @@ async function Dispatch({
               // Keep the current vehicle selectable even if it no longer fits or is inactive.
               const vehicles =
                 departure.vehicle && !fitting.some((v) => v.id === departure.vehicle!.id)
-                  ? [departure.vehicle, ...fitting]
+                  ? [{ ...departure.vehicle, documentAlert: null }, ...fitting]
                   : fitting;
               const drivers =
                 departure.driver &&
@@ -143,7 +144,9 @@ async function Dispatch({
                       <Badge variant="outline">
                         {SERVICE_CLASS_LABELS[departure.serviceClass]}
                       </Badge>
-                      {departure.vehicle && departure.driver ? (
+                      {tripProgress(departure) ? (
+                        <Badge variant="secondary">{tripProgress(departure)}</Badge>
+                      ) : departure.vehicle && departure.driver ? (
                         <Badge variant="success">Asignada</Badge>
                       ) : (
                         <Badge variant="warning">Por asignar</Badge>
@@ -184,6 +187,9 @@ async function Dispatch({
                           {vehicles.map((vehicle) => (
                             <option key={vehicle.id} value={vehicle.id}>
                               {vehicleName(vehicle)}
+                              {vehicle.documentAlert
+                                ? ` · ${DOCUMENT_ALERT_TEXT[vehicle.documentAlert]}`
+                                : ''}
                             </option>
                           ))}
                         </Select>
