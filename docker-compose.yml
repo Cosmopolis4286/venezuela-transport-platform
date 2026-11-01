@@ -128,7 +128,7 @@ services:
   # Development mail catcher: the API sends to SMTP port 1025 and nothing leaves the machine.
   # Read the messages at http://localhost:8025 (pnpm infra:up:mail).
   mailpit:
-    image: axllent/mailpit:v1.27
+    image: axllent/mailpit:v1.32
     profiles: ['mail']
     restart: unless-stopped
     ports:
