@@ -3,16 +3,22 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import {
   PAYMENT_METHOD_CURRENCY,
   PAYMENT_METHODS,
+  PAYMENT_REVIEW_HOLD_HOURS,
+  paymentAccountProblem,
+  toNetworkIso,
   type Booking,
   type ExchangeRate,
   type Payment,
+  type PaymentAccount,
+  type PaymentAccountInput,
   type PaymentCurrency,
   type PaymentMethod,
   type PaymentOption,
+  type PaymentReview,
   type RateCurrency,
   type ReplaceExchangeRatesRequest,
 } from '@vtp/shared-types';
-import { and, eq, inArray, ne } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, ne } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { AppConfigService } from '../../config/app-config.service.js';
 import { DatabaseService } from '../../database/database.service.js';
@@ -20,15 +26,24 @@ import { AuditService } from '../audit/audit.service.js';
 import { bookings, trips, type BookingRow } from '../bookings/bookings.schema.js';
 import { BookingsService } from '../bookings/bookings.service.js';
 import { expireHolds } from '../bookings/occupancy.js';
+import { users } from '../identity/identity.schema.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
+import { routes } from '../network/network.schema.js';
+import { organizations } from '../organizations/organizations.schema.js';
 import type { OrganizationAccess } from '../organizations/organization-access.js';
 import { departureText } from '../notifications/format.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { recordEarning } from '../settlements/ledger.js';
 import { compareAmounts, convert, toScaled } from './money.js';
-import { PAYMENT_PROVIDERS, type PaymentProvider } from './payment-provider.js';
+import { PAYMENT_PROVIDER, type PaymentProvider } from './payment-provider.js';
 import { toPayment } from './payment-view.js';
-import { exchangeRates, payments, type PaymentRow } from './payments.schema.js';
+import {
+  exchangeRates,
+  paymentAccounts,
+  payments,
+  type PaymentAccountRow,
+  type PaymentRow,
+} from './payments.schema.js';
 
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
@@ -58,7 +73,7 @@ export class PaymentsService {
     private readonly audit: AuditService,
     private readonly config: AppConfigService,
     private readonly notifications: NotificationsService,
-    @Inject(PAYMENT_PROVIDERS) private readonly providers: PaymentProvider[],
+    @Inject(PAYMENT_PROVIDER) private readonly provider: PaymentProvider | null,
   ) {}
 
   // --- Exchange rates (operators) ------------------------------------------------------------
@@ -143,16 +158,24 @@ export class PaymentsService {
     const option = (await this.optionsFor(booking, organizationId)).find(
       (o) => o.method === method,
     );
-    if (!option)
-      throw conflict(
+    const unavailable = () =>
+      conflict(
         'This payment method is not available for this booking',
         'PAYMENT_METHOD_UNAVAILABLE',
       );
-    const provider = this.providerFor(method)!;
+    const provider = this.provider;
+    if (!option || !provider) throw unavailable();
 
     let payment: PaymentRow | undefined;
     for (let attempt = 0; !payment && attempt < 3; attempt++) {
       const reference = `${booking.code}-${randomCode(2)}`;
+      const instructions = await provider.instructions({
+        method,
+        amount: option.amount,
+        currency: option.currency,
+        reference,
+      });
+      if (!instructions) throw unavailable();
       try {
         payment = await this.database.db.transaction(async (tx) => {
           // Lock the booking so two requests cannot both leave a pending payment.
@@ -166,6 +189,12 @@ export class PaymentsService {
               'This booking is no longer waiting for payment',
               'BOOKING_NOT_AWAITING_PAYMENT',
             );
+          const [underReview] = await tx
+            .select({ id: payments.id })
+            .from(payments)
+            .where(and(eq(payments.bookingId, booking.id), eq(payments.status, 'reported')));
+          if (underReview)
+            throw conflict('A reported payment is being verified', 'PAYMENT_UNDER_REVIEW');
           await tx
             .update(payments)
             .set({ status: 'cancelled' })
@@ -181,12 +210,7 @@ export class PaymentsService {
               rate: option.rate,
               reference,
               provider: provider.name,
-              instructions: provider.instructions({
-                method,
-                amount: option.amount,
-                currency: option.currency,
-                reference,
-              }),
+              instructions,
               expiresAt: booking.expiresAt,
             })
             .returning();
@@ -249,7 +273,8 @@ export class PaymentsService {
         )
         .for('update');
       if (!payment) throw notFound('No payment with this reference');
-      if (payment.status !== 'pending' && payment.status !== 'cancelled') {
+      const open = payment.status === 'pending' || payment.status === 'reported';
+      if (!open && payment.status !== 'cancelled') {
         return { payment, outcome: 'duplicate' as const };
       }
       const received = {
@@ -259,7 +284,7 @@ export class PaymentsService {
       const enough =
         incoming.currency === payment.currency &&
         compareAmounts(incoming.amount, payment.amount) >= 0;
-      if (payment.status === 'pending' && enough) {
+      if (open && enough) {
         if (await this.bookings.confirmHeld(tx, payment.bookingId)) {
           await recordEarning(tx, payment.bookingId);
           const [row] = await tx
@@ -327,8 +352,283 @@ export class PaymentsService {
     return this.config.get('PAYMENT_PROVIDER') === 'simulated';
   }
 
-  private providerFor(method: PaymentMethod): PaymentProvider | undefined {
-    return this.providers.find((p) => p.supports(method));
+  // --- Manual payments (ADR-027) -------------------------------------------------------------
+
+  /**
+   * "I paid": the payer gives the operation number of a manual payment. The seats stay held
+   * while staff verify it. A payment voided because the hold ran out can still be reported: if
+   * the money arrived, it is refunded.
+   */
+  async report(
+    auth: Authenticated,
+    paymentId: string,
+    operationNumber: string,
+    meta: RequestMeta,
+  ): Promise<Booking> {
+    await expireHolds(this.database.db);
+    await this.voidStale();
+    const payment = await this.database.db.transaction(async (tx) => {
+      const [row] = await tx
+        .select({ payment: payments, booking: bookings })
+        .from(payments)
+        .innerJoin(bookings, eq(bookings.id, payments.bookingId))
+        .where(and(eq(payments.id, paymentId), eq(payments.userId, auth.user.id)))
+        .for('update');
+      if (!row || row.payment.provider !== 'manual') throw notFound('Payment not found');
+      const expired = row.payment.status === 'cancelled' && row.booking.status !== 'held';
+      if (row.payment.status !== 'pending' && !expired) {
+        throw conflict('This payment can no longer be reported', 'PAYMENT_NOT_REPORTABLE');
+      }
+      if (row.booking.status === 'held') {
+        const review = new Date(
+          Math.min(
+            Date.now() + PAYMENT_REVIEW_HOLD_HOURS * 3_600_000,
+            row.booking.departsAt.getTime(),
+          ),
+        );
+        if (!row.booking.expiresAt || review > row.booking.expiresAt) {
+          await tx
+            .update(bookings)
+            .set({ expiresAt: review })
+            .where(eq(bookings.id, row.booking.id));
+        }
+      }
+      const [updated] = await tx
+        .update(payments)
+        .set({
+          status: 'reported',
+          payerReference: operationNumber.trim(),
+          reportedAt: new Date(),
+          expiresAt: null,
+        })
+        .where(eq(payments.id, paymentId))
+        .returning();
+      return updated!;
+    });
+    await this.audit.record({
+      action: 'payment.reported',
+      actorUserId: auth.user.id,
+      targetType: 'payment',
+      targetId: payment.id,
+      ip: meta.ip,
+      metadata: { bookingId: payment.bookingId, operationNumber: payment.payerReference },
+    });
+    return this.bookings.getMine(auth.user.id, payment.bookingId);
+  }
+
+  /** Reported payments waiting for staff, oldest first. */
+  async reviewQueue(): Promise<PaymentReview[]> {
+    const rows = await this.database.db
+      .select({
+        payment: payments,
+        booking: bookings,
+        route: routes.name,
+        operator: {
+          id: organizations.id,
+          legal: organizations.legalName,
+          trade: organizations.tradeName,
+        },
+        payer: {
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          phone: users.phone,
+        },
+      })
+      .from(payments)
+      .innerJoin(bookings, eq(bookings.id, payments.bookingId))
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .innerJoin(routes, eq(routes.id, trips.routeId))
+      .innerJoin(organizations, eq(organizations.id, trips.organizationId))
+      .innerJoin(users, eq(users.id, payments.userId))
+      .where(and(eq(payments.status, 'reported'), eq(payments.provider, 'manual')))
+      .orderBy(asc(payments.reportedAt));
+    return rows.map((r) => ({
+      payment: toPayment(r.payment),
+      booking: {
+        id: r.booking.id,
+        code: r.booking.code,
+        status: r.booking.status,
+        route: r.route,
+        departsAt: toNetworkIso(r.booking.departsAt),
+        expiresAt:
+          r.booking.status === 'held' && r.booking.expiresAt
+            ? r.booking.expiresAt.toISOString()
+            : null,
+      },
+      operator: { id: r.operator.id, name: r.operator.trade ?? r.operator.legal },
+      payer: {
+        name: [r.payer.firstName, r.payer.lastName].filter(Boolean).join(' ') || '—',
+        email: r.payer.email,
+        phone: r.payer.phone,
+      },
+    }));
+  }
+
+  /**
+   * Staff found the money: confirms the booking like an automatic adapter would (or marks the
+   * payment for refund when the booking can no longer be confirmed or the amount falls short).
+   */
+  async confirmReported(
+    paymentId: string,
+    receivedAmount: string | undefined,
+    auth: Authenticated,
+    meta: RequestMeta,
+  ): Promise<Payment> {
+    const payment = await this.requireReported(paymentId);
+    await this.database.db
+      .update(payments)
+      .set({ reviewedByUserId: auth.user.id })
+      .where(eq(payments.id, paymentId));
+    const result = await this.receive({
+      provider: 'manual',
+      reference: payment.reference,
+      amount: receivedAmount ?? payment.amount,
+      currency: payment.currency,
+      providerReference: payment.payerReference ?? payment.reference,
+    });
+    await this.audit.record({
+      action: 'payment.verified',
+      actorUserId: auth.user.id,
+      targetType: 'payment',
+      targetId: paymentId,
+      ip: meta.ip,
+      metadata: { receivedAmount: receivedAmount ?? payment.amount, outcome: result.status },
+    });
+    return toPayment(result);
+  }
+
+  /** Staff did not find the money: the payer is told why and gets a fresh hold to try again. */
+  async rejectReported(
+    paymentId: string,
+    reason: string,
+    auth: Authenticated,
+    meta: RequestMeta,
+  ): Promise<Payment> {
+    const rejectionReason = reason.trim();
+    const row = await this.database.db.transaction(async (tx) => {
+      const [locked] = await tx
+        .select()
+        .from(payments)
+        .where(eq(payments.id, paymentId))
+        .for('update');
+      if (!locked || locked.provider !== 'manual') throw notFound('Payment not found');
+      if (locked.status !== 'reported') {
+        throw conflict('This payment is not waiting for verification', 'PAYMENT_NOT_REPORTED');
+      }
+      const minutes = this.config.get('BOOKING_HOLD_MINUTES');
+      await tx
+        .update(bookings)
+        .set({ expiresAt: new Date(Date.now() + minutes * 60_000) })
+        .where(and(eq(bookings.id, locked.bookingId), eq(bookings.status, 'held')));
+      const [updated] = await tx
+        .update(payments)
+        .set({ status: 'rejected', rejectionReason, reviewedByUserId: auth.user.id })
+        .where(eq(payments.id, paymentId))
+        .returning();
+      return updated!;
+    });
+    await this.audit.record({
+      action: 'payment.rejected',
+      actorUserId: auth.user.id,
+      targetType: 'payment',
+      targetId: paymentId,
+      ip: meta.ip,
+      metadata: { bookingId: row.bookingId, reason: rejectionReason },
+    });
+    this.notifications.later(async () => {
+      const booking = await this.notifications.booking(row.bookingId);
+      return {
+        kind: 'payment_rejected',
+        userIds: [booking.userId],
+        app: 'passenger',
+        email: true,
+        reference: { key: 'bookingId', id: row.bookingId },
+        text: (m) => m.paymentRejected(booking.code, rejectionReason),
+      };
+    });
+    return toPayment(row);
+  }
+
+  // --- Receiving accounts (platform admins) --------------------------------------------------
+
+  async accounts(): Promise<PaymentAccount[]> {
+    const rows = await this.database.db
+      .select()
+      .from(paymentAccounts)
+      .where(isNull(paymentAccounts.organizationId));
+    return rows
+      .map(toAccount)
+      .sort((a, b) => PAYMENT_METHODS.indexOf(a.method) - PAYMENT_METHODS.indexOf(b.method));
+  }
+
+  async setAccount(
+    method: PaymentMethod,
+    input: PaymentAccountInput,
+    auth: Authenticated,
+    meta: RequestMeta,
+  ): Promise<PaymentAccount> {
+    const fields = Object.fromEntries(
+      Object.entries(input.fields).map(([k, v]) => [k, String(v).trim()]),
+    );
+    const problem = paymentAccountProblem(method, fields);
+    if (problem) throw new ApiException('VALIDATION_FAILED', problem, HttpStatus.BAD_REQUEST);
+    const values = { fields, active: input.active, updatedByUserId: auth.user.id };
+    const [existing] = await this.database.db
+      .select({ id: paymentAccounts.id })
+      .from(paymentAccounts)
+      .where(and(isNull(paymentAccounts.organizationId), eq(paymentAccounts.method, method)));
+    const [row] = existing
+      ? await this.database.db
+          .update(paymentAccounts)
+          .set(values)
+          .where(eq(paymentAccounts.id, existing.id))
+          .returning()
+      : await this.database.db
+          .insert(paymentAccounts)
+          .values({ method, ...values })
+          .returning();
+    await this.audit.record({
+      action: 'payment_account.saved',
+      actorUserId: auth.user.id,
+      targetType: 'payment_account',
+      targetId: row!.id,
+      ip: meta.ip,
+      metadata: { method, active: input.active },
+    });
+    return toAccount(row!);
+  }
+
+  async removeAccount(
+    method: PaymentMethod,
+    auth: Authenticated,
+    meta: RequestMeta,
+  ): Promise<void> {
+    const [row] = await this.database.db
+      .delete(paymentAccounts)
+      .where(and(isNull(paymentAccounts.organizationId), eq(paymentAccounts.method, method)))
+      .returning({ id: paymentAccounts.id });
+    if (!row) throw notFound('No account for this method');
+    await this.audit.record({
+      action: 'payment_account.removed',
+      actorUserId: auth.user.id,
+      targetType: 'payment_account',
+      targetId: row.id,
+      ip: meta.ip,
+      metadata: { method },
+    });
+  }
+
+  private async requireReported(paymentId: string): Promise<PaymentRow> {
+    const [payment] = await this.database.db
+      .select()
+      .from(payments)
+      .where(eq(payments.id, paymentId));
+    if (!payment || payment.provider !== 'manual') throw notFound('Payment not found');
+    if (payment.status !== 'reported') {
+      throw conflict('This payment is not waiting for verification', 'PAYMENT_NOT_REPORTED');
+    }
+    return payment;
   }
 
   /**
@@ -380,13 +680,23 @@ export class PaymentsService {
       .from(exchangeRates)
       .where(eq(exchangeRates.organizationId, organizationId));
     const rates = new Map<RateCurrency, string>(rows.map((r) => [r.currency, r.unitsPerUsd]));
+    const available = this.provider ? await this.provider.methods() : [];
     return PAYMENT_METHODS.flatMap((method) => {
-      if (!this.providerFor(method)) return [];
+      if (!available.includes(method)) return [];
       const currency = PAYMENT_METHOD_CURRENCY[method];
       const converted = convert(booking.totalAmount, booking.currency, currency, rates);
       return converted ? [{ method, currency, ...converted }] : [];
     });
   }
+}
+
+function toAccount(row: PaymentAccountRow): PaymentAccount {
+  return {
+    method: row.method,
+    fields: row.fields,
+    active: row.active,
+    updatedAt: row.updatedAt.toISOString(),
+  };
 }
 
 function randomCode(length: number): string {

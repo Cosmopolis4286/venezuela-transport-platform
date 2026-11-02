@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -10,16 +11,33 @@ import {
   Put,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import type { Booking, ExchangeRate, Payment, PaymentOption } from '@vtp/shared-types';
+import type {
+  Booking,
+  ExchangeRate,
+  Payment,
+  PaymentAccount,
+  PaymentOption,
+  PaymentReview,
+} from '@vtp/shared-types';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { CurrentAuth, ReqMeta } from '../identity/auth.decorators.js';
+import { RequirePlatformRole } from '../identity/platform-role.guard.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import {
   CurrentOrganization,
   RequireOrganizationAccess,
   type OrganizationAccess,
 } from '../organizations/organization-access.js';
-import { CreatePaymentDto, ReplaceExchangeRatesDto, SimulatePaymentDto } from './payments.dto.js';
+import {
+  ConfirmPaymentDto,
+  CreatePaymentDto,
+  PaymentAccountDto,
+  PaymentMethodParamDto,
+  RejectPaymentDto,
+  ReplaceExchangeRatesDto,
+  ReportPaymentDto,
+  SimulatePaymentDto,
+} from './payments.dto.js';
 import { PaymentsService } from './payments.service.js';
 
 /** Passengers pay their held bookings. */
@@ -45,6 +63,18 @@ export class MyPaymentsController {
     @ReqMeta() meta: RequestMeta,
   ): Promise<Payment> {
     return this.payments.create(auth, bookingId, body.method, meta);
+  }
+
+  /** Manual payments: "I paid", with the operation number; staff verify it. */
+  @Post('payments/:paymentId/report')
+  @HttpCode(HttpStatus.OK)
+  report(
+    @CurrentAuth() auth: Authenticated,
+    @Param('paymentId', ParseUUIDPipe) paymentId: string,
+    @Body() body: ReportPaymentDto,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<Booking> {
+    return this.payments.report(auth, paymentId, body.operationNumber, meta);
   }
 
   /** Only with `PAYMENT_PROVIDER=simulated` (never in production): pretends the money arrived. */
@@ -84,5 +114,66 @@ export class ExchangeRatesController {
     @ReqMeta() meta: RequestMeta,
   ): Promise<ExchangeRate[]> {
     return this.payments.replaceRates(access, body, auth, meta);
+  }
+}
+
+/** Platform admins: receiving accounts and verification of reported payments (ADR-027). */
+@ApiTags('admin')
+@ApiBearerAuth()
+@RequirePlatformRole()
+@Controller({ path: 'admin', version: '1' })
+export class AdminPaymentsController {
+  constructor(private readonly payments: PaymentsService) {}
+
+  @Get('payment-accounts')
+  accounts(): Promise<PaymentAccount[]> {
+    return this.payments.accounts();
+  }
+
+  @Put('payment-accounts/:method')
+  setAccount(
+    @Param() params: PaymentMethodParamDto,
+    @Body() body: PaymentAccountDto,
+    @CurrentAuth() auth: Authenticated,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<PaymentAccount> {
+    return this.payments.setAccount(params.method, body, auth, meta);
+  }
+
+  @Delete('payment-accounts/:method')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  removeAccount(
+    @Param() params: PaymentMethodParamDto,
+    @CurrentAuth() auth: Authenticated,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<void> {
+    return this.payments.removeAccount(params.method, auth, meta);
+  }
+
+  @Get('payments/review')
+  review(): Promise<PaymentReview[]> {
+    return this.payments.reviewQueue();
+  }
+
+  @Post('payments/:paymentId/confirm')
+  @HttpCode(HttpStatus.OK)
+  confirm(
+    @Param('paymentId', ParseUUIDPipe) paymentId: string,
+    @Body() body: ConfirmPaymentDto,
+    @CurrentAuth() auth: Authenticated,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<Payment> {
+    return this.payments.confirmReported(paymentId, body.receivedAmount, auth, meta);
+  }
+
+  @Post('payments/:paymentId/reject')
+  @HttpCode(HttpStatus.OK)
+  reject(
+    @Param('paymentId', ParseUUIDPipe) paymentId: string,
+    @Body() body: RejectPaymentDto,
+    @CurrentAuth() auth: Authenticated,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<Payment> {
+    return this.payments.rejectReported(paymentId, body.reason, auth, meta);
   }
 }

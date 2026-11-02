@@ -411,3 +411,29 @@ paquetes de Android); sin él, solo llega el correo. Quien entra solo con un tel
 recibir códigos hasta que haya un proveedor de SMS o WhatsApp. Los envíos en segundo plano se
 pierden si la API se reinicia justo en ese momento (queda la acción hecha, pero no el aviso); con
 más volumen convendrá una cola persistente.
+
+## ADR-027: Pagos verificados a mano a las cuentas de la plataforma; después, cobro por empresa
+
+**Decisión.** Mientras no haya adaptadores de bancos o pasarelas, el proveedor `manual` (por
+defecto en producción) muestra las **cuentas de cobro de la plataforma** que el administrador
+carga por método. El pasajero paga con el concepto que le da la app y escribe el **número de
+operación** ("Ya pagué"); un administrador lo busca en el banco y **confirma** (con el monto que
+llegó) o **rechaza** con un motivo que ve el pasajero. Mientras espera, la reserva sigue apartada
+hasta 6 horas (nunca después de la salida); un rechazo da un apartado nuevo de 15 minutos para
+intentarlo otra vez. Confirmar pasa por el mismo `PaymentsService.receive` de los adaptadores, así
+que el libro de liquidaciones, los reembolsos y los avisos no cambian. Ver
+[payments.md](payments.md#pagos-verificados-a-mano).
+
+El segundo paso, decidido por el dueño del producto, es **híbrido y configurable por empresa**:
+por defecto cobra la plataforma (y le paga a cada empresa lo que gana); una empresa puede cobrar
+con sus propias cuentas, verificar sus pagos y deberle la comisión a la plataforma. La tabla
+`payment_accounts` ya tiene `organization_id` para eso.
+
+**Por qué.** Sin esto no se puede vender ningún boleto: los contratos con bancos y la revisión
+legal tardan, y en Venezuela pagar por pago móvil y enviar la referencia es lo habitual. No
+necesita credenciales ni costos.
+
+**Compromisos.** Alguien tiene que mirar la cola de **Pagos** con frecuencia; un pago que nadie
+verifica en 6 horas deja vencer el apartado y, si el dinero llegó, se reembolsa. Las cuentas que
+ve el pasajero son de la plataforma: la revisión legal de cobrar por cuenta de terceros (ADR-018)
+sigue pendiente antes de operar con dinero real.

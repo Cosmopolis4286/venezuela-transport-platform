@@ -74,7 +74,7 @@ describe('validateEnv', () => {
 
   it('simulates payments outside production and refuses the simulator in production', () => {
     expect(validateEnv(valid).PAYMENT_PROVIDER).toBe('simulated');
-    expect(validateEnv(productionValid).PAYMENT_PROVIDER).toBe('disabled');
+    expect(validateEnv(productionValid).PAYMENT_PROVIDER).toBe('manual');
     expect(() => validateEnv({ ...productionValid, PAYMENT_PROVIDER: 'simulated' })).toThrow(
       /PAYMENT_PROVIDER/,
     );

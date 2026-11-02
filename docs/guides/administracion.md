@@ -4,8 +4,8 @@ Para el personal de VTP. El panel está en `/admin` de la web y en español. Hay
 ([organizaciones](../architecture/organizations.md#personal-de-la-plataforma)):
 
 - **Revisor**: aprueba organizaciones y solicitudes KYC, y mantiene el catálogo de paradas.
-- **Administrador**: todo lo anterior, más el dinero (políticas, pagos a las empresas,
-  reembolsos).
+- **Administrador**: todo lo anterior, más el dinero (cuentas de cobro y verificación de pagos,
+  políticas, pagos a las empresas, reembolsos).
 
 Los roles se otorgan desde el servidor, nunca desde la web:
 `pnpm platform:grant --email persona@ejemplo.com --role admin` (o `reviewer`, `none`).
@@ -23,6 +23,23 @@ Los roles se otorgan desde el servidor, nunca desde la web:
 Agrega los terminales y paradas que usan las rutas (nombre, ciudad, estado y, si la tienes, la
 ubicación). Desactivar una parada la saca de las búsquedas nuevas, sin romper las rutas que ya la
 usan.
+
+## Pagos (`/admin/payments`, solo administradores)
+
+**Cuentas de cobro**: los datos que ven los pasajeros al pagar (pago móvil, transferencia, PIX,
+USDT). Solo se ofrecen los métodos con una cuenta **activa**; desmarca **Activa** para dejar de
+ofrecer uno sin borrar sus datos.
+
+**Por verificar**: los pagos que los pasajeros informaron con su número de operación, los más
+antiguos primero. Para cada uno:
+
+1. Búscalo en el banco o la billetera por el **número de operación** y el **concepto**
+   (`VTP-…`).
+2. Si llegó, **Confirmar**. Si llegó otro monto, escríbelo antes: si no alcanza, el pago pasa a
+   **Reembolsos**.
+3. Si no llegó, **Rechazar** con un motivo claro: el pasajero lo recibe y puede pagar de nuevo.
+
+Los puestos esperan hasta 6 horas; revisa la cola varias veces al día.
 
 ## Liquidaciones (`/admin/settlements`, solo administradores)
 
@@ -75,6 +92,7 @@ terminados y cancelados o vencidos.
 
 | Cada…  | Tarea                                                                         |
 | ------ | ----------------------------------------------------------------------------- |
+| Día    | Verificar los pagos informados (varias veces al día)                          |
 | Día    | Atender la cola de reembolsos y las revisiones pendientes                     |
 | Semana | Pagar los saldos de las empresas (la frecuencia es una decisión de operación) |
 | Mes    | Revisar las reservas pagadas de cada empresa y la política general            |

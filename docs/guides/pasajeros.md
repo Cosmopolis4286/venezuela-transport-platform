@@ -25,16 +25,21 @@ Los puestos quedan apartados **15 minutos** mientras pagas. Si no pagas a tiempo
 
 Elige cómo pagar: **pago móvil**, **transferencia** (en bolívares), **PIX** (en reales) o
 **USDT**. La app muestra el monto ya convertido y los datos para pagar, con una **referencia**:
-escríbela en el concepto de la transferencia para que el pago se reconozca solo.
+escríbela en el concepto de la transferencia.
 
-Cuando llega el dinero, la reserva pasa a **Confirmada**, ves un **código QR por pasajero** y te
+Después de pagar, escribe el **número de operación** de tu comprobante (en USDT, el hash de la
+transacción) y toca **Ya pagué**. Nuestro equipo lo verifica; mientras tanto tus puestos siguen
+apartados (hasta 6 horas, nunca después de la salida). Si no encontramos el pago, la app te dice
+por qué y puedes pagar de nuevo.
+
+Cuando se confirma el dinero, la reserva pasa a **Confirmada**, ves un **código QR por pasajero** y te
 llega un aviso al teléfono y un correo. Si pagaste de menos, en otra moneda o tarde, la app te
 avisa y el dinero se te devuelve.
 
 Antes de pagar, la reserva muestra la **política de cancelación** de la empresa (cuánto se
 devuelve según cuántas horas antes canceles), para que la conozcas antes de comprar.
 
-> Hoy los pagos son de prueba (proveedor simulado): la app ofrece "Simular pago".
+> En los entornos de prueba los pagos son simulados: la app ofrece "Simular pago".
 
 ## 4. Viajar
 

@@ -35,6 +35,8 @@ export interface NotificationMessages {
   applicationDecided: (organization: string, accepted: boolean) => NotificationText;
   /** To the invited e-mail (or the person who already has it verified). */
   invitationReceived: (organization: string) => NotificationText;
+  /** (manual payments) Staff did not find the money the payer reported. */
+  paymentRejected: (bookingCode: string, reason: string) => NotificationText;
   /** Appended to every e-mail. */
   footer: string;
 }
@@ -112,6 +114,10 @@ const es: NotificationMessages = {
   invitationReceived: (organization) => ({
     title: `${organization} te invitó a VTP`,
     body: `${organization} te invitó a su equipo. Entra en VTP con este correo o teléfono para aceptar la invitación; vence en 7 días.`,
+  }),
+  paymentRejected: (code, reason) => ({
+    title: 'No encontramos tu pago',
+    body: `Reserva ${code}: ${reason} Revisa los datos y vuelve a intentarlo desde la app.`,
   }),
   footer: 'VTP · Transporte terrestre en Venezuela. Este es un mensaje automático.',
 };
@@ -191,6 +197,10 @@ const en: NotificationMessages = {
     title: `${organization} invited you to VTP`,
     body: `${organization} invited you to its team. Sign in to VTP with this e-mail or phone to accept; the invitation expires in 7 days.`,
   }),
+  paymentRejected: (code, reason) => ({
+    title: 'We could not find your payment',
+    body: `Booking ${code}: ${reason} Check the details and try again from the app.`,
+  }),
   footer: 'VTP · Ground transport in Venezuela. This is an automatic message.',
 };
 
@@ -268,6 +278,10 @@ const ptBR: NotificationMessages = {
   invitationReceived: (organization) => ({
     title: `${organization} convidou você para o VTP`,
     body: `${organization} convidou você para a equipe. Entre no VTP com este e-mail ou telefone para aceitar; o convite vence em 7 dias.`,
+  }),
+  paymentRejected: (code, reason) => ({
+    title: 'Não encontramos seu pagamento',
+    body: `Reserva ${code}: ${reason} Confira os dados e tente de novo pelo app.`,
   }),
   footer: 'VTP · Transporte rodoviário na Venezuela. Esta é uma mensagem automática.',
 };

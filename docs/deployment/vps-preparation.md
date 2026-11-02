@@ -56,8 +56,9 @@ es una alternativa válida si incluye copias de seguridad y PostGIS.
 - [ ] `DATABASE_PASSWORD` única y fuerte (la API rechaza en producción las débiles o de ejemplo).
       Usa un rol de la aplicación con los mínimos privilegios, separado del rol dueño que corre las
       migraciones.
-- [ ] `PAYMENT_PROVIDER=disabled` hasta integrar proveedores de pago reales (la API rechaza
-      `simulated` en producción).
+- [ ] `PAYMENT_PROVIDER=manual` (por defecto) con las cuentas de cobro cargadas en **Pagos** del
+      panel, hasta integrar proveedores reales; `disabled` apaga los pagos. La API rechaza
+      `simulated` en producción.
 - [ ] Correo: una cuenta SMTP con dominio propio verificado (SPF, DKIM y DMARC en el DNS),
       `MAIL_DELIVERY=smtp`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` (secreto) y
       `MAIL_FROM` con ese dominio; luego `OTP_DELIVERY=email` para los códigos de acceso. Sin

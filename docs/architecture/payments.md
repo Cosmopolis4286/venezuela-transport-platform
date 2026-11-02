@@ -2,7 +2,8 @@
 
 Módulo `apps/api/src/modules/payments`, contratos en `packages/shared-types/src/api/payments.ts`.
 Es el paso 3 del ADR-018: el pasajero paga una reserva apartada, la plataforma confirma el pago
-automáticamente y cada puesto recibe un boleto con un código QR que los inspectores escanean al
+(un adaptador automático, o un administrador que lo verifica a mano, ADR-027) y cada puesto recibe
+un boleto con un código QR que los inspectores escanean al
 abordar. Lo que cada reserva pagada le deja a la empresa (tarifa menos comisión) y la cola de
 reembolsos están en [settlements.md](settlements.md).
 
@@ -16,8 +17,9 @@ reembolsos están en [settlements.md](settlements.md).
    PIX, billetera) y una **referencia** como `VTP-7K3QXA-4M` para escribir en el concepto de la
    transferencia. Elegir otro método anula el pago pendiente anterior; una reserva tiene como
    máximo un pago pendiente.
-4. El adaptador del proveedor informa que llegó el dinero (`PaymentsService.receive`). La app
-   consulta cada 5 s.
+4. El adaptador del proveedor informa que llegó el dinero (`PaymentsService.receive`); con el
+   proveedor `manual`, el pasajero informa el número de operación y un administrador lo verifica
+   ([abajo](#pagos-verificados-a-mano)). La app consulta cada 5 s.
 5. Si la reserva sigue apartada, pasa a `confirmed` y cada pasajero recibe un boleto.
 
 ## Tasas de cambio
@@ -40,7 +42,9 @@ ofrece. Con una tarifa en bolívares, el pago móvil y la transferencia no neces
 | Estado       | Significado                                                                                   |
 | ------------ | --------------------------------------------------------------------------------------------- |
 | `pending`    | Esperando el dinero; vence con el apartado de la reserva                                      |
+| `reported`   | (manual) El pasajero dice que pagó y dio el número de operación; espera la verificación       |
 | `confirmed`  | Llegó a tiempo; la reserva queda confirmada                                                   |
+| `rejected`   | (manual) El administrador no encontró el dinero; el pasajero ve el motivo y puede reintentar  |
 | `cancelled`  | Reemplazado por otro método, o la reserva se canceló o venció antes de que llegara el dinero  |
 | `refund_due` | Llegó dinero para una reserva que ya no se puede confirmar, o llegó de menos o en otra moneda |
 | `refunded`   | Un administrador de la plataforma devolvió un pago `refund_due` (con su referencia)           |
@@ -78,10 +82,38 @@ Sus credenciales van en variables de entorno.
 | Valor       | Por defecto         | Comportamiento                                                                                                                   |
 | ----------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | `simulated` | fuera de producción | Cuentas ficticias (`Banco Simulado`, `…SIMULADO…`); `POST /me/payments/:id/simulate` informa el dinero (pruebas, demostraciones) |
-| `disabled`  | en producción       | No se ofrece ningún método; los apartados simplemente vencen                                                                     |
+| `manual`    | en producción       | Las cuentas de cobro de la plataforma; el pasajero informa el número de operación y un administrador verifica (ADR-027)          |
+| `disabled`  | —                   | No se ofrece ningún método; los apartados simplemente vencen                                                                     |
 
 La configuración **rechaza `simulated` en producción**, y el endpoint de simulación responde 404
 siempre que el simulador está apagado.
+
+## Pagos verificados a mano
+
+Con `PAYMENT_PROVIDER=manual` (ADR-027):
+
+1. Un administrador carga las **cuentas de cobro** en **Pagos** (`PUT /admin/payment-accounts/:method`):
+   banco, teléfono y RIF para pago móvil; banco, cuenta, titular y RIF para transferencia; clave
+   y favorecido para PIX; red y dirección para USDT. Solo se ofrecen los métodos con una cuenta
+   **activa**.
+2. El pasajero elige el método y ve esos datos, el monto y el **concepto** (`VTP-7K3QXA-4M`).
+3. Paga en su banco y toca **Ya pagué** con el número de operación
+   (`POST /me/payments/:id/report`): el pago pasa a `reported` y los puestos quedan apartados
+   hasta `PAYMENT_REVIEW_HOLD_HOURS` (6) horas, nunca después de la salida. Mientras tanto no se
+   puede empezar otro pago (`409 PAYMENT_UNDER_REVIEW`). Un pago anulado porque el apartado venció
+   también se puede informar: si el dinero llegó, se reembolsa.
+4. El administrador ve la cola en **Pagos** (`GET /admin/payments/review`, los más antiguos
+   primero) y busca el pago en el banco:
+   - **Confirmar** (`POST /admin/payments/:id/confirm`, con el monto que llegó si es distinto):
+     llama a `receive` como un adaptador. Si la reserva sigue apartada y el monto alcanza, queda
+     confirmada; si no, el pago queda `refund_due`.
+   - **Rechazar** (`POST /admin/payments/:id/reject`, con el motivo): el pago queda `rejected`, el
+     pasajero recibe el motivo por push y correo y un apartado nuevo de `BOOKING_HOLD_MINUTES`
+     para volver a intentarlo.
+
+Solo los administradores de la plataforma ven las cuentas y la cola (es dinero). Eventos de
+auditoría: `payment.reported`, `payment.verified`, `payment.rejected`, `payment_account.saved`,
+`payment_account.removed`.
 
 ## Boletos
 
@@ -109,19 +141,25 @@ abordaje.
 
 ## Endpoints (`/api/v1`)
 
-| Método y ruta                              | Quién                                             |
-| ------------------------------------------ | ------------------------------------------------- |
-| `GET /me/bookings/:id/payment-options`     | El dueño de la reserva, mientras está apartada    |
-| `POST /me/bookings/:id/payments`           | El dueño de la reserva, mientras está apartada    |
-| `POST /me/payments/:id/simulate`           | El dueño del pago; solo con el proveedor simulado |
-| `GET /organizations/:id/exchange-rates`    | Miembros                                          |
-| `PUT /organizations/:id/exchange-rates`    | `routes.manage`                                   |
-| `POST /organizations/:id/tickets/validate` | `tickets.validate`                                |
+| Método y ruta                                 | Quién                                             |
+| --------------------------------------------- | ------------------------------------------------- |
+| `GET /me/bookings/:id/payment-options`        | El dueño de la reserva, mientras está apartada    |
+| `POST /me/bookings/:id/payments`              | El dueño de la reserva, mientras está apartada    |
+| `POST /me/payments/:id/simulate`              | El dueño del pago; solo con el proveedor simulado |
+| `POST /me/payments/:id/report`                | El dueño del pago; solo con el proveedor manual   |
+| `GET /admin/payment-accounts`                 | Administradores de la plataforma                  |
+| `PUT, DELETE /admin/payment-accounts/:method` | Administradores de la plataforma                  |
+| `GET /admin/payments/review`                  | Administradores de la plataforma                  |
+| `POST /admin/payments/:id/confirm`            | Administradores de la plataforma                  |
+| `POST /admin/payments/:id/reject`             | Administradores de la plataforma                  |
+| `GET /organizations/:id/exchange-rates`       | Miembros                                          |
+| `PUT /organizations/:id/exchange-rates`       | `routes.manage`                                   |
+| `POST /organizations/:id/tickets/validate`    | `tickets.validate`                                |
 
 Eventos de auditoría: `payment.created`, `payment.confirmed`, `payment.refund_due`,
 `exchange_rates.replaced`, `ticket.boarded`.
 
 ## Todavía no
 
-Adaptadores de proveedores reales (primero contratos y revisión legal, ver ADR-018) y la validación
-sin conexión.
+Adaptadores de proveedores reales (primero contratos y revisión legal, ver ADR-018), el cobro con
+las cuentas de cada empresa (segundo paso del ADR-027) y la validación sin conexión.

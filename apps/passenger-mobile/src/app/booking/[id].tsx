@@ -88,7 +88,7 @@ export default function BookingScreen() {
         {data.code}
       </Text>
       <Badge label={shared.bookingStatus[status]} tone={BOOKING_TONE[status]} />
-      {status === 'held' ? (
+      {status === 'held' && data.payment?.status !== 'reported' ? (
         <Banner tone="warning">{t.booking.held(formatClock(secondsLeft))}</Banner>
       ) : null}
       {status === 'confirmed' ? <Banner tone="success">{t.booking.confirmed}</Banner> : null}

@@ -3,6 +3,7 @@ import {
   Body,
   Button,
   Card,
+  Field,
   Heading,
   Subheading,
   useApi,
@@ -33,7 +34,8 @@ const POLL_MS = 5000;
 
 /**
  * Paying a held booking: choose a method (amounts already converted with the operator's rate),
- * then follow the instructions. Confirmation is automatic; the screen polls for it.
+ * then follow the instructions. Automatic providers confirm on their own; with manual payments
+ * the passenger reports the operation number and staff verify it (ADR-027). The screen polls.
  */
 export function PaymentPanel({
   booking,
@@ -47,19 +49,23 @@ export function PaymentPanel({
   const { api } = useAuth();
   const { t } = useT();
   const pending = booking.payment?.status === 'pending' ? booking.payment : null;
+  const reported = booking.payment?.status === 'reported' ? booking.payment : null;
+  const rejected = booking.payment?.status === 'rejected' ? booking.payment : null;
   const [choosing, setChoosing] = useState(false);
+  const [operation, setOperation] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const showOptions = !pending || choosing;
+  const showOptions = (!pending && !reported) || choosing;
   const options = useApi<PaymentOption[]>(
     showOptions ? `/me/bookings/${booking.id}/payment-options` : null,
   );
 
+  const waiting = Boolean(pending ?? reported);
   useEffect(() => {
-    if (!pending) return;
+    if (!waiting) return;
     const timer = setInterval(() => void reload(), POLL_MS);
     return () => clearInterval(timer);
-  }, [pending, reload]);
+  }, [waiting, reload]);
 
   const run = async (key: string, action: () => Promise<void>) => {
     setBusy(key);
@@ -83,6 +89,17 @@ export function PaymentPanel({
       await reload();
     });
 
+  const report = (payment: Payment) =>
+    run('report', async () => {
+      onBooking(
+        await api.request<Booking>(`/me/payments/${payment.id}/report`, {
+          method: 'POST',
+          body: { operationNumber: operation.trim() },
+        }),
+      );
+      setOperation('');
+    });
+
   const simulate = (payment: Payment) =>
     run('simulate', async () => {
       onBooking(
@@ -95,18 +112,53 @@ export function PaymentPanel({
       {booking.payment?.status === 'refund_due' ? (
         <Banner tone="warning">{t.payment.mismatch}</Banner>
       ) : null}
-      {pending && !choosing ? (
-        <PaymentInstructions payment={pending} fareCurrency={booking.total.currency} />
+      {rejected?.rejectionReason ? (
+        <Banner tone="error">{t.payment.rejected(rejected.rejectionReason)}</Banner>
       ) : null}
-      {error ? <Banner tone="error">{error}</Banner> : null}
-      {pending && !choosing ? (
+      {reported ? (
         <>
+          <Banner tone="info">{t.payment.reported(reported.payerReference ?? '')}</Banner>
+          <PaymentInstructions payment={reported} fareCurrency={booking.total.currency} />
+          {error ? <Banner tone="error">{error}</Banner> : null}
           <Button
             title={t.payment.check}
             variant="secondary"
             loading={busy === 'check'}
             onPress={() => void run('check', reload)}
           />
+        </>
+      ) : null}
+      {pending && !choosing ? (
+        <PaymentInstructions payment={pending} fareCurrency={booking.total.currency} />
+      ) : null}
+      {error && !reported ? <Banner tone="error">{error}</Banner> : null}
+      {reported ? null : pending && !choosing ? (
+        <>
+          {pending.manual ? (
+            <>
+              <Field
+                label={t.payment.operation}
+                hint={t.payment.operationHint}
+                value={operation}
+                onChangeText={setOperation}
+                autoCapitalize="characters"
+                autoCorrect={false}
+              />
+              <Button
+                title={t.payment.reportPaid}
+                loading={busy === 'report'}
+                disabled={operation.trim().length < 4}
+                onPress={() => void report(pending)}
+              />
+            </>
+          ) : (
+            <Button
+              title={t.payment.check}
+              variant="secondary"
+              loading={busy === 'check'}
+              onPress={() => void run('check', reload)}
+            />
+          )}
           {pending.simulated ? (
             <Button
               title={t.payment.simulate}
@@ -224,7 +276,13 @@ function PaymentInstructions({
           </Text>
         </View>
       ))}
-      <Body muted>{t.payment.exact(payment.reference)}</Body>
+      {payment.status === 'pending' ? (
+        <Body muted>
+          {payment.manual
+            ? t.payment.exactManual(payment.reference)
+            : t.payment.exact(payment.reference)}
+        </Body>
+      ) : null}
     </Card>
   );
 }
