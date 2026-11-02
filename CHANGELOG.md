@@ -13,6 +13,10 @@ pull request.
 
 ### Agregado
 
+- **Pagos verificados a mano (ADR-027).** Con `PAYMENT_PROVIDER=manual` (nuevo valor por defecto
+  en producción) el pasajero ve las cuentas de cobro de la plataforma, paga y escribe el número de
+  operación; un administrador confirma o rechaza en **Pagos** del panel, donde también carga las
+  cuentas. Los puestos quedan apartados hasta 6 horas mientras se verifica. Migración `0016`.
 - **Avisos de revisiones e invitaciones.** Push y correo cuando la plataforma revisa una empresa o
   una solicitud KYC, cuando la empresa suma (o no) a un solicitante, y cuando alguien recibe una
   invitación (por correo aunque todavía no tenga cuenta). Migración `0015`.

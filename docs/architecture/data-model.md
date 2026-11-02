@@ -35,7 +35,8 @@ PostgreSQL generados desde las listas de `@vtp/shared-types`.
 |                 | `bookings`                       | Reservas: tramo, montos congelados, estado (`held`, `confirmed`, `cancelled`, `expired`), recordatorio enviado |
 |                 | `booking_passengers`             | Un puesto por fila; un índice parcial único impide vender un puesto dos veces; abordaje                        |
 | `payments`      | `exchange_rates`                 | Tasas de cambio de cada empresa                                                                                |
-|                 | `payments`                       | Intentos de pago con monto y tasa congelados, referencia, estado y reembolso                                   |
+|                 | `payments`                       | Intentos de pago con monto y tasa congelados, referencia, estado, número de operación informado y reembolso    |
+|                 | `payment_accounts`               | Cuentas de cobro por método (de la plataforma; con `organization_id`, de una empresa: ADR-027)                 |
 | `settlements`   | `platform_settings`              | La política general (una sola fila): comisión y tramos de reembolso                                            |
 |                 | `organization_policies`          | La política propia de una empresa (lo que deja vacío usa la general)                                           |
 |                 | `settlement_entries`             | Libro de cada empresa: una fila al pagarse una reserva y otra (negativa) si se cancela                         |

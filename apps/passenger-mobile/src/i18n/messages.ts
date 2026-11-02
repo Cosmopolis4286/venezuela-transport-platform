@@ -132,6 +132,15 @@ const es = {
       `Tasa de la empresa: 1 ${fare} = ${value} ${currency}`,
     exact: (reference: string) =>
       `Paga el monto exacto y escribe la referencia ${reference}. La confirmación es automática.`,
+    exactManual: (reference: string) =>
+      `Paga el monto exacto y escribe la referencia ${reference} en el concepto. Después escribe aquí el número de operación.`,
+    operation: 'Número de operación',
+    operationHint: 'Está en el comprobante de tu banco (en USDT, el hash de la transacción).',
+    reportPaid: 'Ya pagué',
+    reported: (operation: string) =>
+      `Estamos verificando tu pago (operación ${operation}). Te avisaremos cuando se confirme; mientras tanto tus puestos siguen apartados.`,
+    rejected: (reason: string) =>
+      `No encontramos tu pago: ${reason} Revisa los datos y paga de nuevo.`,
   },
   bookings: {
     none: 'Aún no tienes reservas.',
@@ -308,6 +317,15 @@ const en: Messages = {
     rate: (fare, value, currency) => `Company rate: 1 ${fare} = ${value} ${currency}`,
     exact: (reference) =>
       `Pay the exact amount and write the reference ${reference}. Confirmation is automatic.`,
+    exactManual: (reference) =>
+      `Pay the exact amount and write the reference ${reference} in the payment concept. Then enter the operation number here.`,
+    operation: 'Operation number',
+    operationHint: 'It is on your bank receipt (for USDT, the transaction hash).',
+    reportPaid: 'I have paid',
+    reported: (operation) =>
+      `We are checking your payment (operation ${operation}). We will let you know when it is confirmed; your seats stay held meanwhile.`,
+    rejected: (reason) =>
+      `We could not find your payment: ${reason} Check the details and pay again.`,
   },
   bookings: {
     none: 'You have no bookings yet.',
@@ -484,6 +502,15 @@ const ptBR: Messages = {
     rate: (fare, value, currency) => `Taxa da empresa: 1 ${fare} = ${value} ${currency}`,
     exact: (reference) =>
       `Pague o valor exato e escreva a referência ${reference}. A confirmação é automática.`,
+    exactManual: (reference) =>
+      `Pague o valor exato e escreva a referência ${reference} na descrição. Depois informe aqui o número da operação.`,
+    operation: 'Número da operação',
+    operationHint: 'Está no comprovante do seu banco (em USDT, o hash da transação).',
+    reportPaid: 'Já paguei',
+    reported: (operation) =>
+      `Estamos verificando seu pagamento (operação ${operation}). Avisaremos quando for confirmado; enquanto isso seus assentos continuam reservados.`,
+    rejected: (reason) =>
+      `Não encontramos seu pagamento: ${reason} Confira os dados e pague de novo.`,
   },
   bookings: {
     none: 'Você ainda não tem reservas.',

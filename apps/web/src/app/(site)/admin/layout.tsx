@@ -45,12 +45,15 @@ async function StaffOnly({ children }: { children: React.ReactNode }) {
   return children;
 }
 
-/** Settlements and refunds move money: only platform admins see them (the API agrees). */
+/** Payments, settlements and refunds move money: only platform admins see them (the API agrees). */
 async function MoneyLinks() {
   const user = await getCurrentUser();
   if (user.platformRole !== 'admin') return null;
   return (
     <>
+      <Link href="/admin/payments" className="text-sm opacity-90 hover:underline">
+        Pagos
+      </Link>
       <Link href="/admin/settlements" className="text-sm opacity-90 hover:underline">
         Liquidaciones
       </Link>

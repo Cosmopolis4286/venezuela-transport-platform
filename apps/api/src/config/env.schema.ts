@@ -104,10 +104,11 @@ export const envSchema = z
     BOOKING_HOLD_MINUTES: z.coerce.number().int().min(5).max(60).default(15),
     /**
      * Who confirms payments. `simulated` (default outside production) shows fake accounts and lets
-     * the payer confirm from the app; `disabled` (default in production) turns online payment off
-     * until a real provider adapter is configured.
+     * the payer confirm from the app; `manual` (default in production) shows the platform's
+     * receiving accounts and staff verify each reported payment (ADR-027); `disabled` turns online
+     * payment off.
      */
-    PAYMENT_PROVIDER: z.enum(['simulated', 'disabled']).optional(),
+    PAYMENT_PROVIDER: z.enum(['simulated', 'manual', 'disabled']).optional(),
 
     REDIS_URL: z
       .union([z.url({ protocol: /^rediss?$/ }), z.literal('')])
@@ -166,7 +167,7 @@ export const envSchema = z
       ctx.addIssue({
         code: 'custom',
         path: ['PAYMENT_PROVIDER'],
-        message: 'The simulated provider confirms payments without money; use disabled',
+        message: 'The simulated provider confirms payments without money; use manual or disabled',
       });
     }
     if (env.DATABASE_PASSWORD.length < 16 || /change-me/i.test(env.DATABASE_PASSWORD)) {
@@ -182,7 +183,7 @@ export const envSchema = z
     // Swagger defaults to on outside production and off in production.
     SWAGGER_ENABLED: env.SWAGGER_ENABLED ?? env.NODE_ENV !== 'production',
     PAYMENT_PROVIDER:
-      env.PAYMENT_PROVIDER ?? (env.NODE_ENV === 'production' ? 'disabled' : 'simulated'),
+      env.PAYMENT_PROVIDER ?? (env.NODE_ENV === 'production' ? 'manual' : 'simulated'),
     MAIL_DELIVERY: env.MAIL_DELIVERY ?? (env.NODE_ENV === 'production' ? 'disabled' : 'console'),
     PUSH_DELIVERY: env.PUSH_DELIVERY ?? (env.NODE_ENV === 'production' ? 'disabled' : 'console'),
   }));

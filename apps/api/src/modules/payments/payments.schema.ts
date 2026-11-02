@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   index,
+  boolean,
   jsonb,
   numeric,
   pgEnum,
@@ -8,6 +9,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
@@ -70,6 +72,12 @@ export const payments = pgTable(
     confirmedAt: timestamp({ withTimezone: true }),
     /** Part of `amount` that goes back after the passenger cancelled; null: all that arrived. */
     refundAmount: numeric({ precision: 14, scale: 2 }),
+    /** (manual) What the payer reported: the bank operation number or transaction hash. */
+    payerReference: text(),
+    reportedAt: timestamp({ withTimezone: true }),
+    /** (manual) Who confirmed or rejected it, and why it was rejected. */
+    reviewedByUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
+    rejectionReason: text(),
     /** Set when platform staff send a `refund_due` payment back (`refunded`). */
     refundedAt: timestamp({ withTimezone: true }),
     refundReference: text(),
@@ -78,7 +86,8 @@ export const payments = pgTable(
   },
   (t) => [
     uniqueIndex('payments_reference_key').on(t.reference),
-    // A booking waits for at most one payment at a time.
+    // A booking waits for at most one payment at a time. (No new payment starts while one is
+    // `reported`: `PaymentsService.create` checks it with the booking locked.)
     uniqueIndex('payments_booking_pending_key')
       .on(t.bookingId)
       .where(sql`${t.status} = 'pending'`),
@@ -87,5 +96,27 @@ export const payments = pgTable(
   ],
 );
 
+/**
+ * Where the money of one method goes when people verify payments (`manual` provider). One per
+ * method for the platform (`organizationId` null); operators' own accounts come with ADR-027's
+ * second step.
+ */
+export const paymentAccounts = pgTable(
+  'payment_accounts',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: uuid().references(() => organizations.id, { onDelete: 'cascade' }),
+    method: paymentMethod().notNull(),
+    fields: jsonb().$type<Record<string, string>>().notNull(),
+    active: boolean().notNull().default(true),
+    updatedByUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (t) => [
+    unique('payment_accounts_owner_method_key').on(t.organizationId, t.method).nullsNotDistinct(),
+  ],
+);
+
 export type ExchangeRateRow = typeof exchangeRates.$inferSelect;
 export type PaymentRow = typeof payments.$inferSelect;
+export type PaymentAccountRow = typeof paymentAccounts.$inferSelect;
