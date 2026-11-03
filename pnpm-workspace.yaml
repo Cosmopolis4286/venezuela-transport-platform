@@ -6,7 +6,7 @@ packages:
 # Reference them from a package.json with "catalog:".
 catalog:
   typescript: 6.0.3
-  eslint: 9.39.5
+  eslint: 10.14.0
   '@eslint/js': 10.0.1
   typescript-eslint: 8.72.1
   eslint-config-prettier: 10.1.8
