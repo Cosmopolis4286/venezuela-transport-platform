@@ -50,7 +50,7 @@ El script ejecuta migraciones antes de actualizar servicios y comprueba la API y
 
 ## Backups cifrados
 
-Genera uma chave age fora do VPS e conserva a chave privada em um gerenciador seguro, separada do
+Genera una clave age fuera del VPS y conserva la clave privada en un gestor seguro, separada del
 servidor. Configura la clave pública:
 
 ```bash
