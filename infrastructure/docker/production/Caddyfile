@@ -1,12 +1,14 @@
-# Automatic HTTPS (Let's Encrypt) for both hostnames. Domains come from compose.yml.
+# Automatic HTTPS (Let's Encrypt) for both hostnames.
 {
 	email {$VTP_ACME_EMAIL}
 }
 
 (common) {
 	encode zstd gzip
+	# API validates each KYC file up to FILE_UPLOAD_MAX_BYTES (10 MiB by default).
+	# Leave multipart overhead while keeping a bounded request size.
 	request_body {
-		max_size 1MB
+		max_size 12MB
 	}
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
