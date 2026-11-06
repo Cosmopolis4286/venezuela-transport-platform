@@ -1,140 +1,82 @@
 # Preparación del despliegue en un VPS
 
-> **No hay nada desplegado.** Este es el plan y la lista de verificación para un primer despliegue
-> de la API y la web en un VPS Linux. Los archivos de referencia para producción están en
-> `infrastructure/docker/production/`: `api.Dockerfile`, `web.Dockerfile`, `compose.yml` (Caddy +
-> API + web + PostGIS + `migrate` de una sola vez), `Caddyfile` y `env.example`. La CI construye
-> las dos imágenes en cada PR pero **no las publica en ningún lado**. No reutilices el
-> `docker-compose.yml` de desarrollo.
+> No hay servicios desplegados todavía. La configuración de producción vive en
+> `infrastructure/docker/production/`; el Compose de la raíz es exclusivamente para desarrollo.
 
-## Topología objetivo (un solo VPS, bajo costo)
+## Topología
 
-```
-Internet ──443──▶ Caddy (o Nginx + certbot)  ── TLS, HTTP→HTTPS, cabeceras de seguridad
-                      ├── app.example.ve  ──▶ web  (Next.js, `next start`, 127.0.0.1:3000)
-                      └── api.example.ve  ──▶ api  (NestJS, 127.0.0.1:4000)
-                                                 └──▶ PostgreSQL 18 + PostGIS (solo localhost / red de Docker)
+```text
+Internet :80/:443
+  └─ Caddy (TLS automático)
+      ├─ app.<dominio> → Next.js
+      └─ api.<dominio> → NestJS
+                          └─ PostgreSQL 18 + PostGIS (red privada)
 ```
 
-Para empezar basta un VPS de 2 vCPU / 4 GB de RAM (Ubuntu 24.04 LTS). Un PostgreSQL administrado
-es una alternativa válida si incluye copias de seguridad y PostGIS.
+Un VPS Ubuntu 24.04 LTS con 2 vCPU / 4 GB RAM sirve para una beta pequeña. No publiques
+PostgreSQL ni puertos internos de API/web. Solo abre SSH, TCP 80 y TCP 443.
 
-## 1. Base del servidor
+## Preparación
 
-- [ ] Crea un usuario con sudo que no sea root; desactiva el inicio de sesión SSH con contraseña y
-      como root (`PermitRootLogin no`, `PasswordAuthentication no`); usa solo llaves SSH.
-- [ ] `ufw default deny incoming`; permite solo `22/tcp` (o un puerto SSH propio), `80/tcp` y
-      `443/tcp`.
-- [ ] `unattended-upgrades` para los parches de seguridad; `fail2ban` para SSH.
-- [ ] Instala Docker Engine + el plugin de Compose. Nunca publiques el puerto de la base de datos
-      a internet; la publicación de puertos de Docker se salta `ufw`, así que enlaza a
-      `127.0.0.1` o usa una red interna.
-- [ ] Pon la zona horaria del servidor en UTC (se guarda `timestamptz`; se muestra en
-      `America/Caracas`).
+1. Crea usuario sudo no-root; desactiva SSH por contraseña y login root; usa llaves.
+2. Activa UFW (SSH/80/443), actualizaciones de seguridad y fail2ban.
+3. Instala Docker Engine + Compose v2, `curl` y `age`.
+4. Crea DNS A/AAAA para los dominios web y API apuntando al VPS.
+5. Crea `/etc/vtp` y copia los bloques de `infrastructure/docker/production/env.example` a
+   `compose.env`, `postgres.env`, `migrate.env` y `api.env`.
+6. Genera contraseñas distintas para owner y app y `AUTH_SECRET` con
+   `openssl rand -hex 32`. No reutilices valores de ejemplo.
+7. Protege secretos: `chown root:root /etc/vtp/*.env && chmod 600 /etc/vtp/*.env`.
 
-## 2. HTTPS y proxy inverso
+La base se inicializa con `vtp_owner`; el script `postgres/init-app-role.sh` crea `vtp_app`
+con permisos DML y grants por defecto. La API usa `vtp_app`; el contenedor one-off `migrate`
+usa `vtp_owner`. El script de inicialización solo se ejecuta sobre un volumen PostgreSQL vacío.
+En instalaciones existentes, crea el rol/grants con un procedimiento de migración controlado.
 
-- [ ] Registros DNS A/AAAA para los dominios de la web y la API.
-- [ ] Caddy obtiene y renueva los certificados de Let's Encrypt automáticamente (o Nginx +
-      certbot).
-- [ ] Reenvía `X-Forwarded-For`/`X-Forwarded-Proto` y define `API_TRUST_PROXY_HOPS=1` para que el
-      límite de solicitudes vea las IPs reales de los clientes (si no, todas las solicitudes
-      parecen venir del proxy).
-- [ ] Agrega HSTS, `X-Content-Type-Options: nosniff`, `Referrer-Policy` y una CSP para la web.
-- [ ] Limita el tamaño del cuerpo de las solicitudes (por ejemplo 1 MB, más para los documentos
-      KYC) y activa gzip/zstd en el proxy.
+## Publicación y despliegue
 
-## 3. Secretos y configuración
+`.github/workflows/publish-images.yml` publica imágenes con etiqueta SHA inmutable en GHCR
+cuando el workflow CI de `main` termina correctamente. Define la variable GitHub Actions
+`VTP_API_DOMAIN` con el hostname real de API. Si el paquete GHCR es privado, autentica el VPS
+con un token de solo lectura de paquetes.
 
-- [ ] Las variables de producción se entregan como variables de entorno reales (`env_file:` de
-      Compose con un archivo de root con `chmod 600` fuera del repositorio, o secretos de GitHub
-      Environments inyectados por el trabajo de despliegue). La API ignora los archivos `.env`
-      cuando `NODE_ENV=production`.
-- [ ] `NODE_ENV=production`, `API_HOST=0.0.0.0` (dentro del contenedor), `CORS_ORIGINS` explícito
-      (`https://app.example.ve`), `SWAGGER_ENABLED=false` salvo que sea público a propósito,
-      `APP_VERSION=<sha de git>`.
-- [ ] `DATABASE_PASSWORD` única y fuerte (la API rechaza en producción las débiles o de ejemplo).
-      Usa un rol de la aplicación con los mínimos privilegios, separado del rol dueño que corre las
-      migraciones.
-- [ ] `PAYMENT_PROVIDER=manual` (por defecto) con las cuentas de cobro cargadas en **Pagos** del
-      panel, hasta integrar proveedores reales; `disabled` apaga los pagos. La API rechaza
-      `simulated` en producción.
-- [ ] Correo: una cuenta SMTP con dominio propio verificado (SPF, DKIM y DMARC en el DNS),
-      `MAIL_DELIVERY=smtp`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` (secreto) y
-      `MAIL_FROM` con ese dominio; luego `OTP_DELIVERY=email` para los códigos de acceso. Sin
-      cuenta: `OTP_DELIVERY=disabled` (la API rechaza `console` para códigos, correo y push en
-      producción).
-- [ ] Push: `PUSH_DELIVERY=expo` cuando las apps de producción tengan su proyecto de EAS
-      (`EXPO_ACCESS_TOKEN` solo si se activa la seguridad de push mejorada).
-- [ ] Una sola instancia de la API mientras el límite de solicitudes viva en memoria; los
-      recordatorios de viaje sí soportan varias instancias.
-- [ ] `NEXT_PUBLIC_API_BASE_URL` se define al **compilar** la imagen de la web.
-- [ ] Rota cualquier secreto que alguna vez se haya pegado en un chat, un ticket o un log.
-
-## 4. Compilación y publicación
-
-Las imágenes se construyen desde la raíz del repositorio:
+Actualiza las imágenes en `/etc/vtp/compose.env` al mismo SHA y ejecuta:
 
 ```bash
-docker build -f infrastructure/docker/production/api.Dockerfile -t vtp-api:$(git rev-parse --short HEAD) .
-docker build -f infrastructure/docker/production/web.Dockerfile \
-  --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.example.ve/api/v1 \
-  -t vtp-web:$(git rev-parse --short HEAD) .
+sudo bash infrastructure/docker/production/deploy.sh
 ```
 
-- Imagen de la API: solo la salida de `pnpm deploy --prod` (sin dependencias de desarrollo ni
-  código fuente), corre como `node`, `HEALTHCHECK` sobre `/api/v1/health`, las migraciones van en
-  `drizzle/`.
-- Imagen de la web: la salida `standalone` de Next.js (activada con `NEXT_OUTPUT=standalone` solo
-  en el Dockerfile), corre como `node`. `NEXT_PUBLIC_API_BASE_URL` queda fijo al compilar, así que
-  se construye una imagen por entorno.
-- Detrás de un proxy que intercepta TLS, pasa su CA como secreto de compilación:
-  `--secret id=ca_bundle,src=/ruta/a/ca.crt` (nunca se copia en una capa).
-- [ ] Publica en un registro (GitHub Container Registry es gratis para repositorios privados
-      dentro de ciertos límites), con el sha de git como etiqueta. Requiere un workflow de
-      despliegue y credenciales del registro — todavía no está configurado.
-- [ ] Desplegar = `pull` → `run --rm migrate` → `up -d` → comprobar
-      `https://<api>/api/v1/health/ready` (los comandos están al inicio de `compose.yml`).
+El script valida Compose, descarga imágenes, corre migraciones con el rol owner, actualiza API/web
+y espera los healthchecks y URLs HTTPS. La web necesita que `NEXT_PUBLIC_API_BASE_URL` se haya
+compilado como `https://<api>/api/v1`.
 
-## 5. Migraciones de la base de datos
+## Pagos, correo y notificaciones
 
-- [ ] Las migraciones corren como un **paso separado de una sola vez** antes de arrancar la nueva
-      versión de la API (`docker compose run --rm migrate`), nunca automáticamente al arrancar la
-      API.
-- [ ] Solo migraciones compatibles hacia atrás (expandir → desplegar → contraer), para que la
-      versión anterior de la API siga funcionando durante y después de la migración, lo que
-      mantiene posible la vuelta atrás.
+- `PAYMENT_PROVIDER=manual`: carga cuentas reales verificadas desde el panel y exige revisión
+  humana del comprobante. No hay adaptador bancario/pasarela automático implementado.
+- Nunca uses `simulated` en producción.
+- OTP por correo requiere SMTP real con SPF/DKIM/DMARC; hasta configurarlo deja
+  `OTP_DELIVERY=disabled`. Push requiere el proyecto EAS de producción y credenciales.
+- Mantén una sola instancia API mientras el rate limiter sea local en memoria.
 
-## 6. Copias de seguridad
+## Backups y restauración
 
-- [ ] `pg_dump -Fc` cada noche a otro proveedor o bucket (cifrado, por ejemplo con `age`), con
-      retención de 7 diarias + 4 semanales + 6 mensuales. Considera archivar el WAL
-      (pgBackRest/WAL-G) cuando la tolerancia a la pérdida de datos baje de 24 h.
-- [ ] **Prueba de restauración** mensual en una base de datos temporal; una copia que nunca se
-      restauró no es una copia.
-- [ ] Respalda el volumen `api-uploads` (documentos KYC) con el mismo horario y cifrado que la
-      base de datos — los dos deben poder restaurarse juntos.
-- [ ] Respalda también la configuración del proxy inverso y el archivo de entorno de producción
-      (cifrados).
+El script `infrastructure/docker/production/backup.sh` crea un backup cifrado con age que incluye
+PostgreSQL y documentos KYC. Configura `VTP_BACKUP_AGE_RECIPIENT` con una clave pública age;
+guarda la privada fuera del servidor. Programa ejecución diaria y sincroniza los archivos
+`*.tar.gz.age` y `*.sha256` a almacenamiento externo. El script no implementa subida remota ni
+retención, por lo que debes configurarlas fuera de él.
 
-## 7. Chequeos de salud y monitoreo
+Ensaya la restauración en un host/base vacía antes de aceptar datos reales: verifica SHA-256,
+descifra, restaura el dump con `pg_restore`, restaura `uploads/` al volumen y valida el sistema.
+No restaures encima de la base activa sin mantenimiento y backup previo.
 
-- [ ] Chequeo de salud del contenedor u orquestador sobre `GET /api/v1/health`; el balanceador o
-      la puerta del despliegue sobre `GET /api/v1/health/ready` (503 mientras no se llega a la base
-      de datos).
-- [ ] Monitoreo de disponibilidad gratuito (por ejemplo Uptime Kuma en el propio servidor, o un
-      servicio externo gratuito) sobre ambos endpoints y la página de inicio de la web.
-- [ ] Los logs salen en JSON por stdout; rótalos con el driver de logs `local` de Docker
-      (`max-size`, `max-file`). Los logs no deben contener secretos ni datos personales de
-      pasajeros (la API oculta las cabeceras de autenticación y por defecto omite query strings y
-      cuerpos).
+## Antes de beta pública
 
-## 8. Volver atrás
-
-- [ ] Conserva las etiquetas de las imágenes anteriores. Volver atrás = redesplegar el sha
-      anterior; no hace falta recompilar.
-- [ ] Como las migraciones son compatibles hacia atrás, la versión anterior funciona con el
-      esquema nuevo. Si hay que deshacer una migración, restaurar desde la copia de seguridad es
-      el último recurso — documenta la decisión en las notas del incidente.
-- [ ] Anota el comando exacto para volver atrás junto al comando de despliegue, y practícalo una
-      vez antes del primer lanzamiento real.
+- [ ] Dominio/DNS y certificados emitidos.
+- [ ] Secrets únicos y permisos 600.
+- [ ] SMTP/OTP y EAS configurados.
+- [ ] Cuentas de pago verificadas y proceso humano de conciliación documentado.
+- [ ] Backups externos y prueba de restauración completada.
+- [ ] Pruebas end-to-end en el VPS: compra, confirmación, QR, abordaje, cancelación y reembolso.
+- [ ] Política de privacidad, términos, soporte e incidentes definidos.
