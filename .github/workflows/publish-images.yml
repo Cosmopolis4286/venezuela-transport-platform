@@ -31,6 +31,16 @@ jobs:
         shell: bash
         run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
+      - name: Require production API domain
+        shell: bash
+        env:
+          VTP_API_DOMAIN: ${{ vars.VTP_API_DOMAIN }}
+        run: |
+          if [[ -z "$VTP_API_DOMAIN" ]]; then
+            echo "Define la variable de Actions VTP_API_DOMAIN antes de publicar imágenes." >&2
+            exit 1
+          fi
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
