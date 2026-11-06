@@ -115,11 +115,24 @@ jobs:
       - name: Validate production Compose file
         working-directory: infrastructure/docker/production
         run: |
-          touch "$RUNNER_TEMP/api.env" "$RUNNER_TEMP/pg.env"
-          VTP_WEB_DOMAIN=app.example.invalid VTP_API_DOMAIN=api.example.invalid \
-          VTP_ACME_EMAIL=ci@example.invalid VTP_API_IMAGE=vtp-api:ci VTP_WEB_IMAGE=vtp-web:ci \
-          VTP_API_ENV_FILE="$RUNNER_TEMP/api.env" VTP_POSTGRES_ENV_FILE="$RUNNER_TEMP/pg.env" \
-            docker compose -f compose.yml --profile migrate config --quiet
+          touch "$RUNNER_TEMP/api.env" "$RUNNER_TEMP/migrate.env"
+          cat > "$RUNNER_TEMP/pg.env" <<'ENV'
+          POSTGRES_DB=vtp_ci
+          POSTGRES_USER=vtp_owner
+          POSTGRES_PASSWORD=ci-owner-password-only
+          VTP_APP_DB_USER=vtp_app
+          VTP_APP_DB_PASSWORD=ci-app-password-only
+          ENV
+          export VTP_WEB_DOMAIN=app.example.invalid VTP_API_DOMAIN=api.example.invalid
+          export VTP_ACME_EMAIL=ci@example.invalid VTP_API_IMAGE=vtp-api:ci VTP_WEB_IMAGE=vtp-web:ci
+          export VTP_API_ENV_FILE="$RUNNER_TEMP/api.env" VTP_MIGRATE_ENV_FILE="$RUNNER_TEMP/migrate.env"
+          export VTP_POSTGRES_ENV_FILE="$RUNNER_TEMP/pg.env"
+          docker compose -f compose.yml --profile migrate config --quiet
+          docker compose -f compose.yml up -d --wait postgres
+          docker compose -f compose.yml exec -T postgres \
+            psql -U vtp_owner -d vtp_ci -tAc "SELECT rolname FROM pg_roles WHERE rolname = 'vtp_app'" |
+            grep -qx vtp_app
+          docker compose -f compose.yml down --volumes
       - name: Build API image
         run: docker build -f infrastructure/docker/production/api.Dockerfile -t vtp-api:ci .
       - name: Build web image
