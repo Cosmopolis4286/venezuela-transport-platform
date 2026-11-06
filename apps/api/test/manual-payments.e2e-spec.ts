@@ -345,12 +345,15 @@ describe.runIf(expectDatabase)('Manual payments (e2e)', () => {
       // --- Second try: found, the booking is confirmed and the operator earns it.
       const second = (await pay(ana.auth, held.id, 'pago_movil').expect(201)).body as Payment;
       await report(ana.auth, second.id, '009988776655').expect(200);
-      const confirmed = (
-        await asAdmin(http().post(`/api/v1/admin/payments/${second.id}/confirm`))
-          .send({})
-          .expect(200)
-      ).body as Payment;
-      expect(confirmed.status).toBe('confirmed');
+      // Two simultaneous staff confirmations must still confirm once and create one ledger entry.
+      const confirmations = await Promise.all([
+        asAdmin(http().post(`/api/v1/admin/payments/${second.id}/confirm`)).send({}).expect(200),
+        asAdmin(http().post(`/api/v1/admin/payments/${second.id}/confirm`)).send({}).expect(200),
+      ]);
+      expect(confirmations.map((response) => (response.body as Payment).status)).toEqual([
+        'confirmed',
+        'confirmed',
+      ]);
       const paid = (
         await http()
           .get(`/api/v1/me/bookings/${held.id}`)
