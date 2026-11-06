@@ -1,12 +1,5 @@
 # REFERENCE production stack for a single Linux VPS. Not used in development.
-# See docs/deployment/vps-preparation.md before using it. Secrets live in env files OUTSIDE
-# the repository (root-owned, chmod 600), never in this file.
-#
-#   export VTP_API_IMAGE=ghcr.io/<owner>/vtp-api:<git-sha> VTP_WEB_IMAGE=ghcr.io/<owner>/vtp-web:<git-sha>
-#   docker compose -f compose.yml --env-file /etc/vtp/compose.env pull
-#   docker compose -f compose.yml --env-file /etc/vtp/compose.env run --rm migrate
-#   docker compose -f compose.yml --env-file /etc/vtp/compose.env up -d
-
+# Secrets live in env files OUTSIDE the repository (root-owned, chmod 600).
 name: vtp-prod
 
 x-logging: &logging
@@ -24,9 +17,9 @@ services:
       - '443:443'
       - '443:443/udp'
     environment:
-      VTP_WEB_DOMAIN: ${VTP_WEB_DOMAIN:?Set VTP_WEB_DOMAIN, e.g. app.example.ve}
-      VTP_API_DOMAIN: ${VTP_API_DOMAIN:?Set VTP_API_DOMAIN, e.g. api.example.ve}
-      VTP_ACME_EMAIL: ${VTP_ACME_EMAIL:?Set VTP_ACME_EMAIL for Let's Encrypt notices}
+      VTP_WEB_DOMAIN: ${VTP_WEB_DOMAIN:?Set VTP_WEB_DOMAIN}
+      VTP_API_DOMAIN: ${VTP_API_DOMAIN:?Set VTP_API_DOMAIN}
+      VTP_ACME_EMAIL: ${VTP_ACME_EMAIL:?Set VTP_ACME_EMAIL}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
@@ -39,7 +32,7 @@ services:
     logging: *logging
 
   api:
-    image: ${VTP_API_IMAGE:?Set VTP_API_IMAGE to an immutable tag (git SHA)}
+    image: ${VTP_API_IMAGE:?Set VTP_API_IMAGE to an immutable git SHA tag}
     restart: unless-stopped
     env_file: ${VTP_API_ENV_FILE:-/etc/vtp/api.env}
     environment:
@@ -51,19 +44,18 @@ services:
       FILE_STORAGE_DRIVER: local
       FILE_STORAGE_LOCAL_DIR: /app/var/uploads
     volumes:
-      # KYC documents: personal data. Back this volume up together with the database.
       - api-uploads:/app/var/uploads
     depends_on:
       postgres:
         condition: service_healthy
     logging: *logging
 
-  # One-off: docker compose run --rm migrate   (run BEFORE starting a new api image)
+  # Run explicitly before api rollout: docker compose --profile migrate run --rm migrate
   migrate:
     image: ${VTP_API_IMAGE:?Set VTP_API_IMAGE}
     profiles: ['migrate']
     restart: 'no'
-    env_file: ${VTP_API_ENV_FILE:-/etc/vtp/api.env}
+    env_file: ${VTP_MIGRATE_ENV_FILE:-/etc/vtp/migrate.env}
     environment:
       NODE_ENV: production
       DATABASE_HOST: postgres
@@ -74,11 +66,9 @@ services:
     logging: *logging
 
   web:
-    # NEXT_PUBLIC_API_BASE_URL is baked in when the image is built.
-    image: ${VTP_WEB_IMAGE:?Set VTP_WEB_IMAGE to an immutable tag (git SHA)}
+    image: ${VTP_WEB_IMAGE:?Set VTP_WEB_IMAGE to an immutable git SHA tag}
     restart: unless-stopped
     environment:
-      # Server Actions and the session proxy reach the API over the private network.
       API_INTERNAL_BASE_URL: http://api:4000/api/v1
     logging: *logging
 
@@ -86,9 +76,9 @@ services:
     image: postgis/postgis:18-3.6
     restart: unless-stopped
     env_file: ${VTP_POSTGRES_ENV_FILE:-/etc/vtp/postgres.env}
-    # No published ports: reachable only from this Compose network.
     volumes:
       - postgres-data:/var/lib/postgresql
+      - ./postgres/init-app-role.sh:/docker-entrypoint-initdb.d/20-init-app-role.sh:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
       interval: 10s
