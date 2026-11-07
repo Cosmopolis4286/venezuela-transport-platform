@@ -1,82 +1,70 @@
-# Preparación del despliegue en un VPS
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
-> No hay servicios desplegados todavía. La configuración de producción vive en
-> `infrastructure/docker/production/`; el Compose de la raíz es exclusivamente para desarrollo.
+: "${POSTGRES_USER:?POSTGRES_USER debe estar definido por la imagen PostgreSQL}"
+: "${POSTGRES_DB:?POSTGRES_DB debe estar definido por la imagen PostgreSQL}"
+: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD debe estar definido}"
+: "${VTP_APP_DB_USER:?Define VTP_APP_DB_USER en postgres.env}"
+: "${VTP_APP_DB_PASSWORD:?Define VTP_APP_DB_PASSWORD en postgres.env}"
 
-## Topología
+if [[ "$VTP_APP_DB_USER" == "$POSTGRES_USER" ]]; then
+  echo "VTP_APP_DB_USER debe ser distinto de POSTGRES_USER." >&2
+  exit 1
+fi
+if [[ "$VTP_APP_DB_PASSWORD" == "$POSTGRES_PASSWORD" ]]; then
+  echo "La contraseña runtime debe ser distinta de la contraseña owner." >&2
+  exit 1
+fi
 
-```text
-Internet :80/:443
-  └─ Caddy (TLS automático)
-      ├─ app.<dominio> → Next.js
-      └─ api.<dominio> → NestJS
-                          └─ PostgreSQL 18 + PostGIS (red privada)
-```
+psql \
+  --no-psqlrc \
+  --username "$POSTGRES_USER" \
+  --dbname "$POSTGRES_DB" \
+  --set=ON_ERROR_STOP=1 \
+  --set=app_user="$VTP_APP_DB_USER" \
+  --set=app_password="$VTP_APP_DB_PASSWORD" <<'SQL'
+SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', :'app_user', :'app_password')
+WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'app_user')
+\gexec
 
-Un VPS Ubuntu 24.04 LTS con 2 vCPU / 4 GB RAM sirve para una beta pequeña. No publiques
-PostgreSQL ni puertos internos de API/web. Solo abre SSH, TCP 80 y TCP 443.
+SELECT format(
+  'ALTER ROLE %I WITH LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD %L',
+  :'app_user',
+  :'app_password'
+)
+\gexec
 
-## Preparación
+SELECT format('GRANT CONNECT ON DATABASE %I TO %I', current_database(), :'app_user')
+\gexec
 
-1. Crea usuario sudo no-root; desactiva SSH por contraseña y login root; usa llaves.
-2. Activa UFW (SSH/80/443), actualizaciones de seguridad y fail2ban.
-3. Instala Docker Engine + Compose v2, `curl` y `age`.
-4. Crea DNS A/AAAA para los dominios web y API apuntando al VPS.
-5. Crea `/etc/vtp` y copia los bloques de `infrastructure/docker/production/env.example` a
-   `compose.env`, `postgres.env`, `migrate.env` y `api.env`.
-6. Genera contraseñas distintas para owner y app y `AUTH_SECRET` con
-   `openssl rand -hex 32`. No reutilices valores de ejemplo.
-7. Protege secretos: `chown root:root /etc/vtp/*.env && chmod 600 /etc/vtp/*.env`.
+SELECT format('GRANT USAGE ON SCHEMA public TO %I', :'app_user')
+\gexec
 
-La base se inicializa con `vtp_owner`; el script `postgres/init-app-role.sh` crea `vtp_app`
-con permisos DML y grants por defecto. La API usa `vtp_app`; el contenedor one-off `migrate`
-usa `vtp_owner`. El script de inicialización solo se ejecuta sobre un volumen PostgreSQL vacío.
-En instalaciones existentes, crea el rol/grants con un procedimiento de migración controlado.
+SELECT format(
+  'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO %I',
+  :'app_user'
+)
+\gexec
 
-## Publicación y despliegue
+SELECT format(
+  'GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO %I',
+  :'app_user'
+)
+\gexec
 
-`.github/workflows/publish-images.yml` publica imágenes con etiqueta SHA inmutable en GHCR
-cuando el workflow CI de `main` termina correctamente. Define la variable GitHub Actions
-`VTP_API_DOMAIN` con el hostname real de API. Si el paquete GHCR es privado, autentica el VPS
-con un token de solo lectura de paquetes.
+SELECT format(
+  'ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO %I',
+  current_user,
+  :'app_user'
+)
+\gexec
 
-Actualiza las imágenes en `/etc/vtp/compose.env` al mismo SHA y ejecuta:
+SELECT format(
+  'ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO %I',
+  current_user,
+  :'app_user'
+)
+\gexec
+SQL
 
-```bash
-sudo bash infrastructure/docker/production/deploy.sh
-```
-
-El script valida Compose, descarga imágenes, corre migraciones con el rol owner, actualiza API/web
-y espera los healthchecks y URLs HTTPS. La web necesita que `NEXT_PUBLIC_API_BASE_URL` se haya
-compilado como `https://<api>/api/v1`.
-
-## Pagos, correo y notificaciones
-
-- `PAYMENT_PROVIDER=manual`: carga cuentas reales verificadas desde el panel y exige revisión
-  humana del comprobante. No hay adaptador bancario/pasarela automático implementado.
-- Nunca uses `simulated` en producción.
-- OTP por correo requiere SMTP real con SPF/DKIM/DMARC; hasta configurarlo deja
-  `OTP_DELIVERY=disabled`. Push requiere el proyecto EAS de producción y credenciales.
-- Mantén una sola instancia API mientras el rate limiter sea local en memoria.
-
-## Backups y restauración
-
-El script `infrastructure/docker/production/backup.sh` crea un backup cifrado con age que incluye
-PostgreSQL y documentos KYC. Configura `VTP_BACKUP_AGE_RECIPIENT` con una clave pública age;
-guarda la privada fuera del servidor. Programa ejecución diaria y sincroniza los archivos
-`*.tar.gz.age` y `*.sha256` a almacenamiento externo. El script no implementa subida remota ni
-retención, por lo que debes configurarlas fuera de él.
-
-Ensaya la restauración en un host/base vacía antes de aceptar datos reales: verifica SHA-256,
-descifra, restaura el dump con `pg_restore`, restaura `uploads/` al volumen y valida el sistema.
-No restaures encima de la base activa sin mantenimiento y backup previo.
-
-## Antes de beta pública
-
-- [ ] Dominio/DNS y certificados emitidos.
-- [ ] Secrets únicos y permisos 600.
-- [ ] SMTP/OTP y EAS configurados.
-- [ ] Cuentas de pago verificadas y proceso humano de conciliación documentado.
-- [ ] Backups externos y prueba de restauración completada.
-- [ ] Pruebas end-to-end en el VPS: compra, confirmación, QR, abordaje, cancelación y reembolso.
-- [ ] Política de privacidad, términos, soporte e incidentes definidos.
+echo "El rol runtime '$VTP_APP_DB_USER' está listo."
