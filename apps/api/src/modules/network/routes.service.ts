@@ -40,7 +40,7 @@ const STATUS_TRANSITIONS: Record<RouteStatus, RouteStatus[]> = {
 
 const invalid = (message: string) =>
   new ApiException('VALIDATION_FAILED', message, HttpStatus.BAD_REQUEST);
-const conflict = (message: string) => new ApiException('CONFLICT', message, HttpStatus.CONFLICT);
+const conflict = ApiException.conflict;
 const notFound = (message = 'Route not found') =>
   new ApiException('NOT_FOUND', message, HttpStatus.NOT_FOUND);
 
@@ -96,7 +96,10 @@ export class RoutesService {
     meta: RequestMeta,
   ): Promise<Route> {
     if (!runsRoutes(access.organization.type)) {
-      throw conflict('Only bus companies and taxi lines publish routes');
+      throw conflict(
+        'Only bus companies and taxi lines publish routes',
+        'ORGANIZATION_TYPE_NOT_ALLOWED',
+      );
     }
     await this.assertStops(input.stops);
     const route = await this.database.db.transaction(async (tx) => {
@@ -169,7 +172,7 @@ export class RoutesService {
   ): Promise<void> {
     const route = await this.requireRoute(access, routeId);
     if (route.status !== 'draft')
-      throw conflict('Deactivate published routes instead of deleting them');
+      throw conflict('Deactivate published routes instead of deleting them', 'ROUTE_PUBLISHED');
     await this.database.db.delete(routes).where(eq(routes.id, route.id));
     await this.record('route.deleted', route, actor, meta);
   }
@@ -183,20 +186,29 @@ export class RoutesService {
   ): Promise<Route> {
     const route = await this.requireRoute(access, routeId);
     if (!STATUS_TRANSITIONS[route.status].includes(status)) {
-      throw conflict(`Cannot change a ${route.status} route to ${status}`);
+      throw conflict(`Cannot change a ${route.status} route to ${status}`, 'ROUTE_WRONG_STATUS');
     }
     if (status === 'active') {
       if (access.organization.status !== 'active') {
-        throw conflict('The organization must be approved before publishing routes');
+        throw conflict(
+          'The organization must be approved before publishing routes',
+          'ORGANIZATION_NOT_APPROVED',
+        );
       }
       const current = await this.load(route);
       if (!current.schedules.some((s) => s.active)) {
-        throw conflict('Add at least one active schedule before publishing the route');
+        throw conflict(
+          'Add at least one active schedule before publishing the route',
+          'ROUTE_NEEDS_SCHEDULE',
+        );
       }
       const origin = current.stops[0]!.stop.id;
       const destination = current.stops.at(-1)!.stop.id;
       if (!current.fares.some((f) => f.fromStopId === origin && f.toStopId === destination)) {
-        throw conflict('Set the fare from the origin to the final destination before publishing');
+        throw conflict(
+          'Set the fare from the origin to the final destination before publishing',
+          'ROUTE_NEEDS_FARE',
+        );
       }
     }
     // Conditional on the status read above, so two concurrent changes cannot both apply.
@@ -205,7 +217,7 @@ export class RoutesService {
       .set({ status })
       .where(and(eq(routes.id, route.id), eq(routes.status, route.status)))
       .returning();
-    if (!updated) throw conflict('The route changed, reload and retry');
+    if (!updated) throw conflict('The route changed, reload and retry', 'RELOAD_AND_RETRY');
     await this.record('route.status_changed', route, actor, meta, {
       from: route.status,
       to: status,
@@ -264,7 +276,8 @@ export class RoutesService {
       .select({ total: count() })
       .from(routeSchedules)
       .where(eq(routeSchedules.routeId, route.id))) as [{ total: number }];
-    if (total >= MAX_SCHEDULES_PER_ROUTE) throw conflict('This route has too many schedules');
+    if (total >= MAX_SCHEDULES_PER_ROUTE)
+      throw conflict('This route has too many schedules', 'TOO_MANY_SCHEDULES');
     const seating = await this.seating(access, input.seatLayoutId ?? null, input.seats);
     const [schedule] = await this.database.db
       .insert(routeSchedules)
@@ -331,7 +344,11 @@ export class RoutesService {
       .from(trips)
       .where(eq(trips.scheduleId, schedule.id))
       .limit(1);
-    if (booked) throw conflict('This schedule has bookings; pause it instead of deleting it');
+    if (booked)
+      throw conflict(
+        'This schedule has bookings; pause it instead of deleting it',
+        'SCHEDULE_HAS_BOOKINGS',
+      );
     await this.database.db.delete(routeSchedules).where(eq(routeSchedules.id, schedule.id));
     await this.record('route.schedule_deleted', route, actor, meta, { scheduleId });
     return this.load(route);

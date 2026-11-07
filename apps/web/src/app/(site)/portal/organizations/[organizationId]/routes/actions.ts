@@ -13,17 +13,15 @@ const ROUTE_RULES = {
   VALIDATION_FAILED:
     'Revisa el recorrido: elige paradas activas sin repetir, y cada parada debe tener más tiempo desde el origen que la anterior.',
 };
-const STATUS_RULES = {
-  CONFLICT:
-    'Para publicar la ruta necesitas al menos un horario activo, el precio del origen al destino final y que la organización esté aprobada.',
-};
+// Publishing refusals carry a reason (missing schedule, missing fare, organization not approved)
+// whose Spanish text the API error already provides.
+const STATUS_RULES = {};
 const FARE_RULES = {
   VALIDATION_FAILED: 'Revisa los precios: usa números mayores que cero, con hasta dos decimales.',
 };
 const SCHEDULE_RULES = {
   VALIDATION_FAILED:
     'Revisa el horario: indica la hora, al menos un día, un mapa de puestos o entre 1 y 100 puestos, y que la fecha final no sea anterior a la inicial.',
-  CONFLICT: 'Esta ruta ya tiene el máximo de horarios.',
 };
 
 const routesPath = (form: FormData) =>
@@ -82,7 +80,7 @@ export async function deleteRoute(_: FormState, form: FormData): Promise<FormSta
   try {
     await apiRequest(routePath(form), { method: 'DELETE' });
   } catch (error) {
-    return failure(error, { CONFLICT: 'Solo se pueden eliminar borradores; desactiva la ruta.' });
+    return failure(error);
   }
   redirect(`/portal/organizations/${text(form, 'organizationId')}`);
 }

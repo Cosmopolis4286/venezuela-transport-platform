@@ -44,10 +44,9 @@ export class FleetService {
     meta: RequestMeta,
   ): Promise<SeatLayout> {
     if (!runsRoutes(access.organization.type)) {
-      throw new ApiException(
-        'CONFLICT',
+      throw ApiException.conflict(
         'Only bus companies and taxi lines have seat layouts',
-        HttpStatus.CONFLICT,
+        'ORGANIZATION_TYPE_NOT_ALLOWED',
       );
     }
     assertValid(input);
@@ -96,10 +95,9 @@ export class FleetService {
     const layout = await this.require(access.organization.id, layoutId);
     const [usage] = await this.withUsage([layout]);
     if (usage!.scheduleCount > 0) {
-      throw new ApiException(
-        'CONFLICT',
+      throw ApiException.conflict(
         'Assign another layout to its schedules before deleting it',
-        HttpStatus.CONFLICT,
+        'LAYOUT_IN_USE',
       );
     }
     await this.database.db.delete(seatLayouts).where(eq(seatLayouts.id, layoutId));

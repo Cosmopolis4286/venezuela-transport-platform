@@ -20,7 +20,7 @@ import { NotificationsService } from '../notifications/notifications.service.js'
 import { trips, type TripRow } from '../bookings/bookings.schema.js';
 import { BookingsService, summary } from '../bookings/bookings.service.js';
 import { TripsService } from '../bookings/trips.service.js';
-import { vehicles } from '../fleet/fleet.schema.js';
+import { vehicleDocuments, vehicles } from '../fleet/fleet.schema.js';
 import { VehiclesService } from '../fleet/vehicles.service.js';
 import { users } from '../identity/identity.schema.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
@@ -172,6 +172,22 @@ export class DispatchService {
       ? await this.vehicles.require(organizationId, input.vehicleId)
       : null;
     if (vehicle && !vehicle.active) throw conflict('This vehicle is inactive', 'VEHICLE_INACTIVE');
+    if (vehicle) {
+      // No bus leaves without valid liability insurance (RCV) on the day of the trip; other
+      // documents only warn (decided by the product owner).
+      const [insurance] = await this.database.db
+        .select({ expiresOn: vehicleDocuments.expiresOn })
+        .from(vehicleDocuments)
+        .where(
+          and(eq(vehicleDocuments.vehicleId, vehicle.id), eq(vehicleDocuments.kind, 'insurance')),
+        );
+      if (insurance && insurance.expiresOn < input.serviceDate) {
+        throw conflict(
+          'The vehicle liability insurance (RCV) is expired on that date',
+          'VEHICLE_INSURANCE_EXPIRED',
+        );
+      }
+    }
     if (
       input.driverUserId &&
       !(await this.drivers(organizationId)).some((d) => d.userId === input.driverUserId)

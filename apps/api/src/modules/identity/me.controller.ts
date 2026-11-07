@@ -35,7 +35,10 @@ export class MeController {
     @ReqMeta() meta: RequestMeta,
   ): Promise<UserProfile> {
     if (body.version !== LEGAL_VERSION) {
-      throw ApiException.conflict(`The current version is ${LEGAL_VERSION}; reload and accept it`);
+      throw ApiException.conflict(
+        `The current version is ${LEGAL_VERSION}; reload and accept it`,
+        'RELOAD_AND_RETRY',
+      );
     }
     const user = await this.users.acceptTerms(auth.user.id, LEGAL_VERSION);
     await this.audit.record({

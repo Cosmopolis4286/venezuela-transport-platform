@@ -80,7 +80,6 @@ export async function createStop(_: FormState, form: FormData): Promise<FormStat
     });
   } catch (error) {
     return formFailure(error, {
-      CONFLICT: 'Ya existe una parada con ese nombre en esa ciudad.',
       VALIDATION_FAILED:
         'Revisa los datos: nombre, ciudad y estado son obligatorios, y la latitud y la longitud van juntas.',
     });

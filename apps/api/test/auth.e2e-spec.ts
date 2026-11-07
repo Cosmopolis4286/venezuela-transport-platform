@@ -99,7 +99,7 @@ describe.runIf(expectDatabase)('Authentication (e2e)', () => {
           acceptTerms: true,
         })
         .expect(409);
-      expect(dup.body.error.code).toBe('CONFLICT');
+      expect(dup.body.error).toMatchObject({ code: 'CONFLICT', reason: 'EMAIL_TAKEN' });
     });
 
     it('rejects short passwords with field details', async () => {

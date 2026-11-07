@@ -149,10 +149,9 @@ export class StopsService {
       return row!;
     } catch (error) {
       if (isUniqueViolation(error)) {
-        throw new ApiException(
-          'CONFLICT',
+        throw ApiException.conflict(
           'A stop with this name already exists in this city',
-          HttpStatus.CONFLICT,
+          'STOP_NAME_TAKEN',
         );
       }
       throw error;

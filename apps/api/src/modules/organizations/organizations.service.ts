@@ -80,10 +80,9 @@ export class OrganizationsService {
         .onConflictDoNothing({ target: organizations.rif })
         .returning();
       if (!created) {
-        throw new ApiException(
-          'CONFLICT',
+        throw ApiException.conflict(
           'An organization with this RIF is already registered',
-          HttpStatus.CONFLICT,
+          'RIF_TAKEN',
         );
       }
       await tx
@@ -123,8 +122,7 @@ export class OrganizationsService {
       .values({ organizationId, userId, role })
       .onConflictDoNothing()
       .returning({ userId: memberships.userId });
-    if (!added)
-      throw new ApiException('CONFLICT', 'This person is already a member', HttpStatus.CONFLICT);
+    if (!added) throw ApiException.conflict('This person is already a member', 'ALREADY_MEMBER');
   }
 
   async listForUser(userId: string): Promise<OrganizationMembershipSummary[]> {
@@ -310,10 +308,9 @@ export class OrganizationsService {
     if (!current)
       throw new ApiException('NOT_FOUND', 'Organization not found', HttpStatus.NOT_FOUND);
     if (!transition.from.includes(current.status)) {
-      throw new ApiException(
-        'CONFLICT',
+      throw ApiException.conflict(
         `Cannot ${input.decision} an organization that is ${current.status}`,
-        HttpStatus.CONFLICT,
+        'ORGANIZATION_WRONG_STATUS',
       );
     }
     const [updated] = await this.database.db
@@ -327,11 +324,7 @@ export class OrganizationsService {
       .where(and(eq(organizations.id, organizationId), eq(organizations.status, current.status)))
       .returning();
     if (!updated)
-      throw new ApiException(
-        'CONFLICT',
-        'The organization changed, reload and retry',
-        HttpStatus.CONFLICT,
-      );
+      throw ApiException.conflict('The organization changed, reload and retry', 'RELOAD_AND_RETRY');
     await this.audit.record({
       action: `organization.${input.decision === 'approve' ? 'approved' : input.decision === 'reject' ? 'rejected' : 'suspended'}`,
       actorUserId: reviewer.user.id,
@@ -420,11 +413,7 @@ export class OrganizationsService {
       .from(memberships)
       .where(and(eq(memberships.organizationId, organizationId), eq(memberships.role, 'owner')));
     if ((owners?.total ?? 0) === 0) {
-      throw new ApiException(
-        'CONFLICT',
-        'An organization must keep at least one owner',
-        HttpStatus.CONFLICT,
-      );
+      throw ApiException.conflict('An organization must keep at least one owner', 'LAST_OWNER');
     }
   }
 
