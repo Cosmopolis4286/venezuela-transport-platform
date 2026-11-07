@@ -123,7 +123,8 @@ docker build -f infrastructure/docker/production/web.Dockerfile \
       la puerta del despliegue sobre `GET /api/v1/health/ready` (503 mientras no se llega a la base
       de datos).
 - [ ] Monitoreo de disponibilidad gratuito (por ejemplo Uptime Kuma en el propio servidor, o un
-      servicio externo gratuito) sobre ambos endpoints y la página de inicio de la web.
+      servicio externo gratuito) sobre ambos endpoints y la página de inicio de la web, y
+      `ALERT_EMAIL` para recibir los errores 500 por correo ([monitoreo](monitoring.md)).
 - [ ] Los logs salen en JSON por stdout; rótalos con el driver de logs `local` de Docker
       (`max-size`, `max-file`). Los logs no deben contener secretos ni datos personales de
       pasajeros (la API oculta las cabeceras de autenticación y por defecto omite query strings y

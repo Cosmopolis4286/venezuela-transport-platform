@@ -13,6 +13,12 @@ pull request.
 
 ### Agregado
 
+- **Purga diaria de datos vencidos.** La API borra o anonimiza lo que superó su plazo de
+  conservación (códigos, avisos, auditoría, sesiones muertas, datos de pasajeros y taxis antiguos,
+  expedientes KYC rechazados o de cuentas borradas), según
+  [conservación y borrado](docs/legal/conservacion-y-borrado.md).
+- **Alertas de errores por correo** (`ALERT_EMAIL`, con límite de envíos) y guía de
+  [monitoreo gratuito](docs/deployment/monitoring.md).
 - **Mensajes de error claros en todas partes.** Los rechazos de cuentas, organizaciones,
   invitaciones, solicitudes KYC, paradas, rutas y mapas de puestos llevan ahora un `reason`
   estable con su texto en español, inglés y portugués (las apps ya no muestran el mensaje en

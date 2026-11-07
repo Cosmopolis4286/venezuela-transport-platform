@@ -13,6 +13,7 @@ import type {
   ApiFieldError,
 } from '@vtp/shared-types';
 import type { Request, Response } from 'express';
+import { reportUnexpectedError } from '../alerts/error-alerts.js';
 import { ApiException } from '../errors/api.exception.js';
 
 const STATUS_TO_CODE: Partial<Record<number, ApiErrorCode>> = {
@@ -70,6 +71,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       this.logger.error(
         exception instanceof Error ? (exception.stack ?? exception.message) : String(exception),
       );
+      reportUnexpectedError(exception, request);
     }
 
     const body: ApiErrorResponse = {

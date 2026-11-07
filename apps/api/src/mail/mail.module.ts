@@ -1,4 +1,5 @@
 import { Global, Module } from '@nestjs/common';
+import { ErrorAlertsService } from '../common/alerts/error-alerts.service.js';
 import { AppConfigService } from '../config/app-config.service.js';
 import { ConsoleMailer, DisabledMailer, MAILER, SmtpMailer } from './mailer.js';
 
@@ -29,6 +30,7 @@ import { ConsoleMailer, DisabledMailer, MAILER, SmtpMailer } from './mailer.js';
         }
       },
     },
+    ErrorAlertsService,
   ],
   exports: [MAILER],
 })

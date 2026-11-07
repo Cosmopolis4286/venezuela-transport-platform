@@ -79,6 +79,11 @@ export const envSchema = z
     /** Secret. Server-side only. */
     SMTP_PASSWORD: z.string().default(''),
     MAIL_FROM: z.string().default('VTP <no-reply@localhost>'),
+    /** Optional. Receives an e-mail when the API answers with an unexpected error (throttled). */
+    ALERT_EMAIL: z
+      .union([z.email(), z.literal('')])
+      .optional()
+      .transform((value) => value || undefined),
 
     /**
      * How push notifications are sent. `console` logs them (development), `expo` uses the Expo

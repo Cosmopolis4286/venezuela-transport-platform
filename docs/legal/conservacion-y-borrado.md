@@ -5,20 +5,26 @@ revisión legal (ver [README](README.md#lista-para-el-abogado)).
 
 ## Plazos
 
-| Datos                                         | Plazo propuesto                   | Fundamento                                                                              | Cómo se cumple hoy                                                       |
-| --------------------------------------------- | --------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Cuenta (correo, teléfono, nombre, contraseña) | Mientras exista                   | Contrato                                                                                | Se anonimiza al borrar la cuenta (abajo)                                 |
-| Reservas, boletos, listas de pasajeros        | 10 años                           | Comprobantes mercantiles y tributarios; normativa de transporte                         | Se conservan; purga pendiente (tarea programada)                         |
-| Pagos, reembolsos, liquidaciones              | 10 años                           | Código de Comercio, Código Orgánico Tributario, prevención de legitimación de capitales | Se conservan; purga pendiente                                            |
-| Expedientes KYC y sus archivos                | Mientras trabaje + 5 años         | Seguridad de los pasajeros; prevención de legitimación de capitales                     | Se conservan; purga pendiente                                            |
-| Sesiones                                      | Hasta vencer o revocarse          | Seguridad                                                                               | Se revocan al cerrar sesión, cambiar la contraseña o borrar la cuenta    |
-| Códigos de un solo uso                        | Minutos (registro 12 meses)       | Seguridad                                                                               | Vencen solos; purga pendiente                                            |
-| Identificadores push                          | Hasta desinstalar o cerrar sesión | Contrato                                                                                | Se eliminan al cerrar sesión, al fallar la entrega o al borrar la cuenta |
-| Registro de avisos                            | 12 meses                          | Soporte                                                                                 | Purga pendiente                                                          |
-| Auditoría                                     | 2 años                            | Seguridad; prueba                                                                       | Purga pendiente                                                          |
+| Datos                                         | Plazo propuesto                   | Fundamento                                                                              | Cómo se cumple hoy                                                                       |
+| --------------------------------------------- | --------------------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Cuenta (correo, teléfono, nombre, contraseña) | Mientras exista                   | Contrato                                                                                | Se anonimiza al borrar la cuenta (abajo)                                                 |
+| Reservas, boletos, listas de pasajeros        | 10 años                           | Comprobantes mercantiles y tributarios; normativa de transporte                         | Los nombres y documentos de los pasajeros se borran al vencer                            |
+| Pagos, reembolsos, liquidaciones              | 10 años                           | Código de Comercio, Código Orgánico Tributario, prevención de legitimación de capitales | Se conservan                                                                             |
+| Expedientes KYC y sus archivos                | Mientras trabaje + 5 años         | Seguridad de los pasajeros; prevención de legitimación de capitales                     | Rechazados o de cuentas borradas: archivos y datos se borran a los 5 años de la revisión |
+| Sesiones                                      | Hasta vencer o revocarse          | Seguridad                                                                               | Se revocan al cerrar sesión, cambiar la contraseña o borrar la cuenta                    |
+| Códigos de un solo uso                        | Minutos (registro 12 meses)       | Seguridad                                                                               | Vencen solos; se borran a los 12 meses                                                   |
+| Identificadores push                          | Hasta desinstalar o cerrar sesión | Contrato                                                                                | Se eliminan al cerrar sesión, al fallar la entrega o al borrar la cuenta                 |
+| Registro de avisos                            | 12 meses                          | Soporte                                                                                 | Se borra a los 12 meses                                                                  |
+| Auditoría                                     | 2 años                            | Seguridad; prueba                                                                       | Se borra a los 2 años                                                                    |
 
-**Pendiente técnico:** una tarea programada que purgue o anonimice lo vencido según esta tabla
-(está en el [roadmap](../roadmap.md)).
+**Purga automática:** la API ejecuta una vez al día `RetentionService`
+(`apps/api/src/modules/retention`), que aplica estos plazos: borra los códigos, avisos y auditoría
+vencidos y las sesiones revocadas o vencidas hace más de 30 días; reemplaza por «—» el nombre y el
+documento de los pasajeros de más de 10 años y la dirección, notas y teléfono de los taxis de más
+de 5 años; y borra los archivos y datos de los expedientes KYC rechazados o de cuentas borradas a
+los 5 años de su revisión. Las reservas, pagos y liquidaciones se conservan como comprobantes
+contables (sin datos personales al vencer). Si cambia un plazo, cambiar también `RETENTION` en
+`retention.service.ts`. El resultado queda en los registros (`Retention sweep`).
 
 ## Borrar una cuenta
 
