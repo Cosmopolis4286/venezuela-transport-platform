@@ -167,12 +167,13 @@ Lo que falta (y lo ya resuelto):
 - [x] Comisión de la plataforma y política de reembolsos (ADR-025), editables en la web.
 - [x] Reportes para las empresas y métricas de la plataforma.
 - [ ] Servidor, HTTPS, copias de seguridad con restauración probada, monitoreo
-      ([preparación del VPS](deployment/vps-preparation.md)).
+      ([preparación del VPS](deployment/vps-preparation.md)); alertas de errores por correo y guía
+      de [monitoreo gratuito](deployment/monitoring.md) listas.
 - [ ] Apps móviles firmadas y publicadas (EAS) con la URL de la API de producción.
 - [x] Borradores de términos, privacidad, reembolsos, condiciones para empresas y cookies, con su
       aceptación y el borrado de la cuenta ([docs/legal](legal/README.md)).
 - [ ] **Revisión de un abogado venezolano** de esos documentos y de la
       [lista de puntos abiertos](legal/README.md#lista-para-el-abogado); completar
       `docs/legal/empresa.json` (razón social, RIF, domicilio, correos).
-- [ ] Tarea programada que purgue o anonimice los datos vencidos
+- [x] Tarea programada que purgue o anonimice los datos vencidos
       ([conservación y borrado](legal/conservacion-y-borrado.md)).
