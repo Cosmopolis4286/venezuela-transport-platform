@@ -13,6 +13,7 @@ esto en cada pull request; ver [flujo del repositorio](repository-workflow.md).
 | Núcleo móvil               | `packages/mobile-core/src/**/*.test.ts`             | Vitest             | `pnpm --filter @vtp/mobile-core test`                                                 |
 | Web                        | `apps/web/src/**/*.test.ts`                         | Vitest             | `pnpm --filter @vtp/web test`                                                         |
 | Apps móviles               | `apps/*-mobile/src/**/*.test.ts`                    | Jest (jest-expo)   | `pnpm --filter @vtp/passenger-mobile test`                                            |
+| Navegador (web)            | `apps/web/e2e/*.pw.ts`                              | Playwright         | `pnpm --filter @vtp/web test:browser` (con la API y la web en marcha)                 |
 | Todo lo anterior salvo e2e | —                                                   | Turborepo          | `pnpm check` (lint + tipos + pruebas)                                                 |
 | Bundles móviles            | —                                                   | `expo export`      | `pnpm turbo run export --filter=@vtp/passenger-mobile --filter=@vtp/transport-mobile` |
 
@@ -51,9 +52,17 @@ cd apps/api && E2E_EXPECT_DATABASE=true pnpm exec vitest run --config ./vitest.c
 
 ## Pruebas en el navegador
 
-Todavía no hay una batería automática en la CI. Los flujos de la web y de las apps (en su vista
-previa web) se prueban con guiones de Playwright contra una compilación de producción antes de
-cada pull request grande:
+**Batería automática (CI).** `apps/web/e2e/*.pw.ts` prueba en Chromium, en escritorio y en un
+teléfono, la portada en dos idiomas, las cinco páginas legales (sin marcadores `{{…}}` sin
+completar) y el registro con contraseña, cerrar sesión y volver a entrar. El trabajo
+«Web browser tests» de la CI levanta PostgreSQL, la API y la web y la ejecuta; si falla, sube el
+informe de Playwright como artefacto. En local: `pnpm build`, arranca la API y la web, y
+`pnpm --filter @vtp/web test:browser` (`WEB_BASE_URL` cambia la dirección). Agrega aquí los flujos
+que no deben romperse.
+
+**Guiones manuales.** Los flujos más largos de la web y de las apps (en su vista previa web) se
+prueban con guiones de Playwright contra una compilación de producción antes de cada pull request
+grande:
 
 1. `pnpm build`, luego la API (`node dist/main.js` en `apps/api`), la web (`pnpm start` en
    `apps/web`) y, si hace falta, la app con `npx expo start --web` en `apps/passenger-mobile`.
@@ -62,8 +71,7 @@ cada pull request grande:
    computadora, `npx playwright install chromium`.
 
 La vista previa web de las apps guarda la sesión en memoria: navega dentro de la app en vez de
-recargar la página. Agregar estas pruebas a la CI está en los
-[riesgos de la hoja de ruta](../roadmap.md#riesgos-y-deuda-técnica).
+recargar la página.
 
 ## Qué probar al agregar algo
 

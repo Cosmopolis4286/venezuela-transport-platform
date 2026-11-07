@@ -76,3 +76,7 @@ Thumbs.db
 
 # Local file storage (uploaded KYC documents)
 apps/api/var/
+
+# Playwright
+test-results/
+playwright-report/

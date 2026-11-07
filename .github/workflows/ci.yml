@@ -88,6 +88,72 @@ jobs:
           test -z "$(git status --porcelain apps/api/drizzle)"
       - run: pnpm test:e2e
 
+  web-browser:
+    name: Web browser tests (Playwright)
+    # On the virtual machine: Playwright installs Chromium's system libraries for Ubuntu.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgis/postgis:18-3.6
+        env:
+          POSTGRES_DB: vtp_ci
+          POSTGRES_USER: vtp
+          POSTGRES_PASSWORD: ci-only-not-a-secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vtp -d vtp_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      # The API in development mode: simulated payments, codes and e-mails only in the log.
+      NODE_ENV: development
+      DATABASE_HOST: localhost
+      DATABASE_PORT: '5432'
+      DATABASE_NAME: vtp_ci
+      DATABASE_USER: vtp
+      DATABASE_PASSWORD: ci-only-not-a-secret
+      AUTH_SECRET: ci-only-not-a-secret-0123456789abcdef
+      AUTH_RATE_LIMIT_MAX: '100'
+      CORS_ORIGINS: http://localhost:3000
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:4000/api/v1
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.22.0
+      - name: Install dependencies
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+      - name: Install Chromium
+        run: pnpm --filter @vtp/web exec playwright install --with-deps chromium
+      - run: pnpm db:migrate
+      - name: Build API and web
+        run: pnpm turbo run build --filter=@vtp/api --filter=@vtp/web
+      - name: Start API and web
+        run: |
+          (cd apps/api && node dist/main.js > "$RUNNER_TEMP/api.log" 2>&1 &)
+          (cd apps/web && pnpm start > "$RUNNER_TEMP/web.log" 2>&1 &)
+          for i in $(seq 1 60); do
+            curl -fsS -o /dev/null http://localhost:4000/api/v1/health/ready &&
+              curl -fsS -o /dev/null http://localhost:3000/es && exit 0
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/api.log" "$RUNNER_TEMP/web.log"; exit 1
+      - run: pnpm --filter @vtp/web test:browser
+        env:
+          CI: '1'
+      - name: Server logs
+        if: failure()
+        run: cat "$RUNNER_TEMP/api.log" "$RUNNER_TEMP/web.log"
+      - uses: actions/upload-artifact@v5
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          retention-days: 7
+
   mobile-bundle:
     name: Mobile bundles (Android + iOS JS)
     runs-on: ubuntu-latest

@@ -127,9 +127,9 @@ las nuevas se fusionan una por una cuando su CI pasa en verde.
 
 Lo que hoy funciona pero conviene corregir antes de crecer:
 
-- **Sin pruebas de navegador en la CI.** Los flujos del portal y de las apps se probaron en
-  Chromium con guiones manuales; la CI solo corre pruebas unitarias, e2e de la API y
-  compilaciones. Una batería mínima con Playwright evitaría regresiones en las pantallas.
+- **Pocas pruebas de navegador en la CI.** La CI ya corre una batería mínima con Playwright
+  (portada, páginas legales, registro e inicio de sesión); los flujos de reservas, del portal y de
+  las apps siguen probándose con guiones manuales. Ampliarla con cada pantalla importante.
 - **Consultas periódicas.** Las apps consultan cada 5 segundos (pagos y taxis) y el tablero de
   taxis cada 10; los push avisan de los cambios importantes, pero las pantallas abiertas siguen
   consultando. Con muchos usuarios conviene WebSockets.
