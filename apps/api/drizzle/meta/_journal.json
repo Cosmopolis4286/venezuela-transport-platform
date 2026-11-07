@@ -127,6 +127,13 @@
       "when": 1793630633047,
       "tag": "0017_collection_per_operator",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794024871542,
+      "tag": "0018_password_reset",
+      "breakpoints": true
     }
   ]
 }

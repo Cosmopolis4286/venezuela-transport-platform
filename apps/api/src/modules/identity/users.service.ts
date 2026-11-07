@@ -70,6 +70,24 @@ export class UsersService {
     return user;
   }
 
+  /**
+   * Sets a new password after the user proved they control the account's e-mail (a reset code),
+   * which also marks that e-mail as verified.
+   */
+  async setPassword(userId: string, passwordHash: string): Promise<User> {
+    const [user] = await this.database.db
+      .update(users)
+      .set({
+        passwordHash,
+        emailVerifiedAt: sql`coalesce(${users.emailVerifiedAt}, now())`,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    if (!user) throw new ApiException('NOT_FOUND', 'User not found', HttpStatus.NOT_FOUND);
+    return user;
+  }
+
   /** Signs in by a contact the user just proved they control, creating the account on first use. */
   async findOrCreateByVerifiedContact(kind: ContactKind, value: string): Promise<User> {
     const column = kind === 'email' ? users.email : users.phone;

@@ -5,7 +5,8 @@ documentos, ver tus viajes, validar boletos y tomar taxis.
 
 ## 1. Entrar y unirte a una empresa
 
-1. Entra con un código (te llega por correo) o con correo y contraseña.
+1. Entra con un código (te llega por correo) o con correo y contraseña. Si olvidaste la
+   contraseña, toca **¿Olvidaste tu contraseña?** y elige una nueva con el código que te llega.
 2. Si una empresa te invitó con ese correo o teléfono, te llega un aviso y verás la invitación en
    el inicio:
    **Aceptar** o **Rechazar**.

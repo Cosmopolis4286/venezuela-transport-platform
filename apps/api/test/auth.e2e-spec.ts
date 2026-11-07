@@ -372,4 +372,98 @@ describe.runIf(expectDatabase)('Authentication (e2e)', () => {
       expect(res.body.error.code).toBe('OTP_INVALID');
     });
   });
+  describe('forgotten password', () => {
+    const forgot = (email: string) => http().post('/api/v1/auth/password/forgot').send({ email });
+    const reset = (body: object) => http().post('/api/v1/auth/password/reset').send(body);
+    const NEW_PASSWORD = 'otra-clave-nueva-y-larga';
+
+    it('e-mails a code, sets the new password, signs in and signs out the other sessions', async () => {
+      const { email, body } = await register();
+      const oldAuth = `Bearer ${body.tokens.accessToken}`;
+      await http().get('/api/v1/me').set('Authorization', oldAuth).expect(200);
+
+      const challenge = (await forgot(email.toUpperCase()).expect(202))
+        .body as OtpChallengeResponse;
+      expect(challenge).toMatchObject({ channel: 'email' });
+      const sent = otp.sent.findLast((m) => m.destination === email)!;
+      expect(sent.purpose).toBe('password_reset');
+
+      // A login code is not a reset code, and a wrong code changes nothing.
+      await reset({
+        challengeId: challenge.challengeId,
+        code: '000000',
+        password: NEW_PASSWORD,
+        client: 'web',
+      }).expect(400);
+      await reset({
+        challengeId: challenge.challengeId,
+        code: sent.code,
+        password: 'corta',
+        client: 'web',
+      }).expect(400);
+
+      const signedIn = (
+        await reset({
+          challengeId: challenge.challengeId,
+          code: sent.code,
+          password: NEW_PASSWORD,
+          client: 'web',
+        }).expect(200)
+      ).body as AuthResponse;
+      expect(signedIn.user).toMatchObject({ email, emailVerified: true });
+      // Single use; the old session is gone; the old password no longer works, the new one does.
+      await reset({
+        challengeId: challenge.challengeId,
+        code: sent.code,
+        password: NEW_PASSWORD,
+        client: 'web',
+      }).expect(400);
+      await http().get('/api/v1/me').set('Authorization', oldAuth).expect(401);
+      await http()
+        .post('/api/v1/auth/login')
+        .send({ email, password: PASSWORD, client: 'web' })
+        .expect(401);
+      await http()
+        .post('/api/v1/auth/login')
+        .send({ email, password: NEW_PASSWORD, client: 'web' })
+        .expect(200);
+    });
+
+    it('answers the same for an unknown e-mail, without sending anything', async () => {
+      const email = uniqueEmail();
+      const before = otp.sent.length;
+      const challenge = (await forgot(email).expect(202)).body as OtpChallengeResponse;
+      expect(Object.keys(challenge).sort()).toEqual(
+        ['challengeId', 'channel', 'destinationHint', 'expiresAt', 'resendAvailableAt'].sort(),
+      );
+      expect(otp.sent.length).toBe(before);
+      await reset({
+        challengeId: challenge.challengeId,
+        code: '123456',
+        password: NEW_PASSWORD,
+        client: 'web',
+      }).expect(400);
+      await forgot('no-es-un-correo').expect(400);
+    });
+
+    it('lets an account made with a code choose its first password', async () => {
+      const email = uniqueEmail();
+      const login = await otpLogin(email, 'email');
+      await http()
+        .post('/api/v1/auth/otp/verify')
+        .send({ challengeId: login.challengeId, code: otp.codeFor(email), client: 'passenger' })
+        .expect(200);
+      const challenge = (await forgot(email).expect(202)).body as OtpChallengeResponse;
+      await reset({
+        challengeId: challenge.challengeId,
+        code: otp.codeFor(email),
+        password: NEW_PASSWORD,
+        client: 'passenger',
+      }).expect(200);
+      await http()
+        .post('/api/v1/auth/login')
+        .send({ email, password: NEW_PASSWORD, client: 'passenger' })
+        .expect(200);
+    });
+  });
 });

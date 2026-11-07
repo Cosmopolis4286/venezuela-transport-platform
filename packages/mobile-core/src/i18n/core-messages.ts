@@ -19,6 +19,16 @@ const es = {
     resend: 'Reenviar código',
     useAnother: 'Usar otro número o correo',
     password: 'Contraseña',
+    forgot: '¿Olvidaste tu contraseña?',
+    forgotIntro:
+      'Te enviamos un código al correo de tu cuenta para que elijas una contraseña nueva. Al cambiarla se cierran tus otras sesiones.',
+    resetSent: (destination: string) =>
+      `Si ${destination} tiene una cuenta, le enviamos un código. Revisa también la carpeta de spam.`,
+    newPassword: 'Contraseña nueva',
+    repeatPassword: 'Repite la contraseña',
+    mismatch: 'Las contraseñas no coinciden.',
+    resetSubmit: 'Cambiar la contraseña y entrar',
+    backToSignIn: 'Volver a iniciar sesión',
   },
   register: {
     title: 'Crear cuenta',
@@ -56,6 +66,16 @@ const en: CoreMessages = {
     resend: 'Resend code',
     useAnother: 'Use another number or e-mail',
     password: 'Password',
+    forgot: 'Forgot your password?',
+    forgotIntro:
+      'We will e-mail a code to your account so you can choose a new password. Changing it signs out your other sessions.',
+    resetSent: (destination) =>
+      `If ${destination} has an account, we sent it a code. Check your spam folder too.`,
+    newPassword: 'New password',
+    repeatPassword: 'Repeat the password',
+    mismatch: 'The passwords do not match.',
+    resetSubmit: 'Change the password and sign in',
+    backToSignIn: 'Back to sign in',
   },
   register: {
     title: 'Create account',
@@ -91,6 +111,16 @@ const ptBR: CoreMessages = {
     resend: 'Reenviar código',
     useAnother: 'Usar outro número ou e-mail',
     password: 'Senha',
+    forgot: 'Esqueceu sua senha?',
+    forgotIntro:
+      'Enviamos um código para o e-mail da sua conta para você escolher uma nova senha. Ao trocá-la, suas outras sessões são encerradas.',
+    resetSent: (destination) =>
+      `Se ${destination} tiver uma conta, enviamos um código. Confira também a pasta de spam.`,
+    newPassword: 'Nova senha',
+    repeatPassword: 'Repita a senha',
+    mismatch: 'As senhas não coincidem.',
+    resetSubmit: 'Trocar a senha e entrar',
+    backToSignIn: 'Voltar para entrar',
   },
   register: {
     title: 'Criar conta',

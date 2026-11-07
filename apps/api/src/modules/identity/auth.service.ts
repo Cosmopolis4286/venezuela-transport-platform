@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import type {
   AuthClient,
@@ -7,6 +8,7 @@ import type {
   UserProfile,
 } from '@vtp/shared-types';
 import { ApiException } from '../../common/errors/api.exception.js';
+import { AppConfigService } from '../../config/app-config.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { contactKindFor, maskContact, normalizeContact, normalizeEmail } from './contact.js';
 import { DUMMY_PASSWORD_HASH, hashPassword, verifyPassword } from './crypto/password-hasher.js';
@@ -22,6 +24,7 @@ export class AuthService {
     private readonly sessions: SessionsService,
     private readonly otp: OtpService,
     private readonly audit: AuditService,
+    private readonly config: AppConfigService,
   ) {}
 
   async register(
@@ -130,6 +133,54 @@ export class AuthService {
     return this.users.toProfile(user);
   }
 
+  /**
+   * E-mails a code to choose a new password. Unknown or suspended accounts get the same answer
+   * without any e-mail, so the response never reveals who is registered.
+   */
+  async forgotPassword(rawEmail: string, meta: RequestMeta): Promise<OtpChallengeResponse> {
+    const email = this.requireEmail(rawEmail);
+    const user = await this.users.findByEmail(email);
+    if (!user || user.status !== 'active') {
+      await this.audit.record({ action: 'auth.password_reset.unknown', ip: meta.ip });
+      const now = Date.now();
+      return {
+        challengeId: randomUUID(),
+        channel: 'email',
+        destinationHint: maskContact('email', email),
+        expiresAt: new Date(now + this.config.get('OTP_TTL_MINUTES') * 60_000).toISOString(),
+        resendAvailableAt: new Date(
+          now + this.config.get('OTP_RESEND_SECONDS') * 1000,
+        ).toISOString(),
+      };
+    }
+    const response = await this.issueOtp('email', email, 'password_reset', user.id);
+    await this.audit.record({
+      action: 'auth.password_reset.requested',
+      actorUserId: user.id,
+      targetType: 'otp_challenge',
+      targetId: response.challengeId,
+      ip: meta.ip,
+    });
+    return response;
+  }
+
+  /** Sets the new password, signs out every session of the account and signs in here. */
+  async resetPassword(
+    input: { challengeId: string; code: string; password: string; client: AuthClient },
+    meta: RequestMeta,
+  ): Promise<AuthResponse> {
+    const challenge = await this.otp.verify(input.challengeId, input.code, 'password_reset');
+    const existing = challenge.userId ? await this.users.findById(challenge.userId) : undefined;
+    if (!existing) {
+      throw new ApiException('OTP_INVALID', 'The code is not valid', HttpStatus.BAD_REQUEST);
+    }
+    this.assertActive(existing);
+    const user = await this.users.setPassword(existing.id, await hashPassword(input.password));
+    await this.sessions.revokeAll(user.id, 'password_reset');
+    await this.audit.record({ action: 'auth.password_reset', actorUserId: user.id, ip: meta.ip });
+    return this.signIn(user, input.client, meta);
+  }
+
   async refresh(refreshToken: string, meta: RequestMeta): Promise<AuthResponse> {
     const { user, tokens } = await this.sessions.refresh(refreshToken, meta);
     return { user: this.users.toProfile(user), tokens };
@@ -149,7 +200,7 @@ export class AuthService {
   private async issueOtp(
     channel: OtpChannel,
     rawDestination: string,
-    purpose: 'login' | 'verify_contact',
+    purpose: 'login' | 'verify_contact' | 'password_reset',
     userId?: string,
   ): Promise<OtpChallengeResponse> {
     const kind = contactKindFor(channel);

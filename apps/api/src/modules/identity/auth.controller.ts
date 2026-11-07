@@ -6,7 +6,9 @@ import { AuthService } from './auth.service.js';
 import {
   OtpRequestDto,
   OtpVerifyDto,
+  PasswordForgotDto,
   PasswordLoginDto,
+  PasswordResetDto,
   RefreshDto,
   RegisterDto,
 } from './dto/auth.dto.js';
@@ -52,6 +54,30 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   verifyOtp(@Body() body: OtpVerifyDto, @ReqMeta() meta: RequestMeta): Promise<AuthResponse> {
     return this.auth.verifyLoginOtp(body, meta);
+  }
+
+  /** E-mails a code to choose a new password (same answer whether or not the e-mail exists). */
+  @Public()
+  @AuthThrottle()
+  @Post('password/forgot')
+  @HttpCode(HttpStatus.ACCEPTED)
+  forgotPassword(
+    @Body() body: PasswordForgotDto,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<OtpChallengeResponse> {
+    return this.auth.forgotPassword(body.email, meta);
+  }
+
+  /** The code and the new password: signs in, and out of every other session. */
+  @Public()
+  @AuthThrottle()
+  @Post('password/reset')
+  @HttpCode(HttpStatus.OK)
+  resetPassword(
+    @Body() body: PasswordResetDto,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<AuthResponse> {
+    return this.auth.resetPassword(body, meta);
   }
 
   @Public()

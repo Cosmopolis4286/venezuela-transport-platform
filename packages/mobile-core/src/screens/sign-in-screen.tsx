@@ -5,7 +5,7 @@ import { useAuth } from '../auth/auth-context';
 import { useI18n } from '../i18n/i18n-context';
 import { Banner, Body, Button, Field, Heading, Screen, Segmented } from '../ui/components';
 
-type Mode = 'code' | 'password';
+type Mode = 'code' | 'password' | 'reset';
 
 /** Seconds left until `iso`, ticking every second (0 once reached). */
 function useSecondsUntil(iso: string | undefined): number {
@@ -42,15 +42,21 @@ export function SignInScreen({
       <Heading>{title}</Heading>
       <Body muted>{subtitle}</Body>
       {notice ? <Banner tone="warning">{notice}</Banner> : null}
-      <Segmented
-        options={[
-          { value: 'code', label: t.withCode },
-          { value: 'password', label: t.withPassword },
-        ]}
-        value={mode}
-        onChange={setMode}
-      />
-      {mode === 'code' ? <CodeSignIn /> : <PasswordSignIn />}
+      {mode === 'reset' ? (
+        <ResetPassword onBack={() => setMode('password')} />
+      ) : (
+        <>
+          <Segmented
+            options={[
+              { value: 'code', label: t.withCode },
+              { value: 'password', label: t.withPassword },
+            ]}
+            value={mode}
+            onChange={setMode}
+          />
+          {mode === 'code' ? <CodeSignIn /> : <PasswordSignIn onForgot={() => setMode('reset')} />}
+        </>
+      )}
       <Button variant="link" title={t.noAccount} onPress={onRegister} />
     </Screen>
   );
@@ -145,7 +151,7 @@ function CodeSignIn() {
   );
 }
 
-function PasswordSignIn() {
+function PasswordSignIn({ onForgot }: { onForgot: () => void }) {
   const { signInWithPassword } = useAuth();
   const t = useI18n().core.signIn;
   const [email, setEmail] = useState('');
@@ -191,6 +197,101 @@ function PasswordSignIn() {
         loading={busy}
         disabled={!email.trim() || !password}
       />
+      <Button variant="link" title={t.forgot} onPress={onForgot} />
+    </>
+  );
+}
+
+/** Forgotten password: an e-mailed code, then the new password (twice); signs in. */
+function ResetPassword({ onBack }: { onBack: () => void }) {
+  const { forgotPassword, resetPassword } = useAuth();
+  const t = useI18n().core.signIn;
+  const [email, setEmail] = useState('');
+  const [challenge, setChallenge] = useState<OtpChallengeResponse | null>(null);
+  const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [repeat, setRepeat] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async (action: () => Promise<void>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await action();
+    } catch (e) {
+      setError(userMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const send = () => run(async () => setChallenge(await forgotPassword(email.trim())));
+  const submit = () => {
+    if (password !== repeat) {
+      setError(t.mismatch);
+      return;
+    }
+    void run(() => resetPassword(challenge!.challengeId, code, password));
+  };
+
+  return (
+    <>
+      <Body>{t.forgotIntro}</Body>
+      {challenge ? (
+        <>
+          <Banner tone="success">{t.resetSent(challenge.destinationHint)}</Banner>
+          <Field
+            label={t.code}
+            value={code}
+            onChangeText={(text) => setCode(text.replace(/\D/g, '').slice(0, 6))}
+            keyboardType="number-pad"
+            autoComplete="one-time-code"
+            textContentType="oneTimeCode"
+            maxLength={6}
+            autoFocus
+          />
+          <Field
+            label={t.newPassword}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            autoComplete="new-password"
+            textContentType="newPassword"
+          />
+          <Field
+            label={t.repeatPassword}
+            value={repeat}
+            onChangeText={setRepeat}
+            secureTextEntry
+            autoComplete="new-password"
+            textContentType="newPassword"
+            onSubmitEditing={submit}
+          />
+          {error ? <Banner tone="error">{error}</Banner> : null}
+          <Button
+            title={t.resetSubmit}
+            onPress={submit}
+            loading={busy}
+            disabled={code.length !== 6 || !password || !repeat}
+          />
+        </>
+      ) : (
+        <>
+          <Field
+            label={t.emailAddress}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoComplete="email"
+            textContentType="emailAddress"
+            onSubmitEditing={send}
+          />
+          {error ? <Banner tone="error">{error}</Banner> : null}
+          <Button title={t.sendCode} onPress={send} loading={busy} disabled={!email.trim()} />
+        </>
+      )}
+      <Button variant="link" title={t.backToSignIn} onPress={onBack} />
     </>
   );
 }

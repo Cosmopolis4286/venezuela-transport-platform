@@ -91,3 +91,43 @@ export async function signInWithCode(state: CodeState, form: FormData): Promise<
   await startSession(response);
   redirect(safeNextPath(form.get('next')));
 }
+
+export interface ResetState extends FormState {
+  challenge?: OtpChallengeResponse;
+}
+
+/**
+ * Forgotten password, step 1: e-mails a code (the API answers the same for unknown e-mails).
+ * Step 2: the code and the new password; signs in.
+ */
+export async function resetPassword(state: ResetState, form: FormData): Promise<ResetState> {
+  const challengeId = text(form, 'challengeId');
+  if (!challengeId) {
+    try {
+      const challenge = await apiRequest<OtpChallengeResponse>('/auth/password/forgot', {
+        method: 'POST',
+        auth: false,
+        body: { email: text(form, 'email') },
+      });
+      return { challenge };
+    } catch (error) {
+      return failure(error);
+    }
+  }
+  const password = String(form.get('password') ?? '');
+  if (password !== String(form.get('confirm') ?? '')) {
+    return { error: 'Las contraseñas no coinciden.', challenge: state.challenge };
+  }
+  let response: AuthResponse;
+  try {
+    response = await apiRequest<AuthResponse>('/auth/password/reset', {
+      method: 'POST',
+      auth: false,
+      body: { challengeId, code: text(form, 'code'), password, client: 'web' },
+    });
+  } catch (error) {
+    return { ...failure(error), challenge: state.challenge };
+  }
+  await startSession(response);
+  redirect('/portal');
+}

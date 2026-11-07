@@ -33,6 +33,10 @@ export interface AuthContextValue {
   requestCode(channel: OtpChannel, destination: string): Promise<OtpChallengeResponse>;
   verifyCode(challengeId: string, code: string): Promise<void>;
   signInWithPassword(email: string, password: string): Promise<void>;
+  /** E-mails a code to choose a new password (same answer for unknown e-mails). */
+  forgotPassword(email: string): Promise<OtpChallengeResponse>;
+  /** Sets the new password with that code and signs in. */
+  resetPassword(challengeId: string, code: string, password: string): Promise<void>;
   register(input: Omit<RegisterRequest, 'client'>): Promise<void>;
   signOut(): Promise<void>;
   /** Reloads the profile (e.g. after KYC approval); from `unavailable`, retries loading the session. */
@@ -103,6 +107,18 @@ export function AuthProvider({ api, children }: { api: ApiClient; children: Reac
           await api.request<AuthResponse>('/auth/login', {
             auth: false,
             body: { email, password, client: api.client },
+          }),
+        ),
+      forgotPassword: (email) =>
+        api.request<OtpChallengeResponse>('/auth/password/forgot', {
+          auth: false,
+          body: { email },
+        }),
+      resetPassword: async (challengeId, code, password) =>
+        signedIn(
+          await api.request<AuthResponse>('/auth/password/reset', {
+            auth: false,
+            body: { challengeId, code, password, client: api.client },
           }),
         ),
       register: async (input) =>
