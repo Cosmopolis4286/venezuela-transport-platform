@@ -40,7 +40,8 @@ En la página de la organización:
   marcan **por vencer** (30 días o menos) y **vencidos**, y el despacho los avisa al elegir el
   vehículo.
 - **Despacho**: para cada salida del día, elige vehículo y conductor. El sistema no deja poner un
-  vehículo o un conductor en dos viajes a la vez. El conductor recibe un aviso en su app.
+  vehículo o un conductor en dos viajes a la vez, ni un vehículo con la **póliza RCV vencida** ese
+  día. El conductor recibe un aviso en su app.
 - **Cancelar una salida** (en Despacho, antes de que salga): escribe el motivo. Se cancelan todas
   sus reservas, las pagadas se reembolsan **completas** (la comisión de VTP la asume tu empresa),
   y cada pasajero recibe un aviso con el motivo. La salida deja de venderse.

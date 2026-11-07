@@ -97,13 +97,12 @@ Ordenadas por lo que bloquean. La recomendación es un punto de partida, no una 
 
 ### Operación y producto
 
-| Decisión                                                                                                                          | Bloquea                     | Recomendación                                                                                   |
-| --------------------------------------------------------------------------------------------------------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------- |
-| **Proveedor de correo** (SMTP) para los códigos de acceso y avisos: cuál contratar y desde qué dominio                            | Producción                  | Cualquier SMTP con dominio propio verificado (SPF/DKIM); decidido: push en las apps + correo    |
-| **Nombres de las apps y de los paquetes de Android** (por ejemplo `ve.vtp.pasajeros`) y la cuenta de Expo (EAS)                   | APK de prueba y las tiendas | Decidirlos ya: cambiar un nombre de paquete después de publicar obliga a publicar una app nueva |
-| **Documentos de vehículos vencidos**: ¿se bloquea asignar un vehículo con la póliza o el permiso vencidos, o solo se avisa (hoy)? | Seguridad de la operación   | Bloquear con la póliza RCV vencida; avisar con los demás                                        |
-| **Servidor y dominio** para la API y la web (VPS, proveedor, dominio `.com.ve` o `.com`)                                          | Despliegue y APK de release | Un VPS pequeño con Caddy, como describe la [preparación del VPS](deployment/vps-preparation.md) |
-| **Aviso de privacidad y términos de uso** (se guardan cédulas de pasajeros y datos KYC)                                           | Producción                  | Borradores listos en [docs/legal](legal/README.md); falta la revisión de un abogado             |
+| Decisión                                                                                                        | Bloquea                     | Recomendación                                                                                   |
+| --------------------------------------------------------------------------------------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------- |
+| **Proveedor de correo** (SMTP) para los códigos de acceso y avisos: cuál contratar y desde qué dominio          | Producción                  | Cualquier SMTP con dominio propio verificado (SPF/DKIM); decidido: push en las apps + correo    |
+| **Nombres de las apps y de los paquetes de Android** (por ejemplo `ve.vtp.pasajeros`) y la cuenta de Expo (EAS) | APK de prueba y las tiendas | Decidirlos ya: cambiar un nombre de paquete después de publicar obliga a publicar una app nueva |
+| **Servidor y dominio** para la API y la web (VPS, proveedor, dominio `.com.ve` o `.com`)                        | Despliegue y APK de release | Un VPS pequeño con Caddy, como describe la [preparación del VPS](deployment/vps-preparation.md) |
+| **Aviso de privacidad y términos de uso** (se guardan cédulas de pasajeros y datos KYC)                         | Producción                  | Borradores listos en [docs/legal](legal/README.md); falta la revisión de un abogado             |
 
 ### Valores por defecto para confirmar
 
@@ -128,11 +127,6 @@ las nuevas se fusionan una por una cuando su CI pasa en verde.
 
 Lo que hoy funciona pero conviene corregir antes de crecer:
 
-- **Conflictos antiguos sin `reason`.** Las reservas, los pagos, los vehículos, el despacho y los
-  taxis ya dicen por qué rechazan algo con un `reason` estable. Los conflictos de cuentas,
-  organizaciones, invitaciones, solicitudes KYC, paradas y rutas todavía muestran el mensaje en
-  inglés de la API en las apps móviles (el portal traduce los suyos). Agregarles un `reason` es
-  trabajo mecánico.
 - **Sin pruebas de navegador en la CI.** Los flujos del portal y de las apps se probaron en
   Chromium con guiones manuales; la CI solo corre pruebas unitarias, e2e de la API y
   compilaciones. Una batería mínima con Playwright evitaría regresiones en las pantallas.
@@ -148,7 +142,9 @@ Lo que hoy funciona pero conviene corregir antes de crecer:
 - **El selector de terminales del portal** muestra todos los terminales en una lista; con cientos
   de terminales hará falta una búsqueda.
 
-Ya corregido: la CI corre en las máquinas de GitHub desde que el repositorio es público (2026-10-31).
+Ya corregido: todos los rechazos `409` de la API llevan un `reason` estable con su texto en
+español, inglés y portugués (2026-11-07).
+También: la CI corre en las máquinas de GitHub desde que el repositorio es público (2026-10-31).
 También (2026-10-29): los errores del portal ya no se identifican por su texto en inglés,
 sino por un `reason` estable que también traduce las apps móviles; la hora de Venezuela se
 calcula en un solo lugar (`toNetworkIso`, `networkClock`); los roles que conducen y la

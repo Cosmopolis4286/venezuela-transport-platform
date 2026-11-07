@@ -13,6 +13,13 @@ pull request.
 
 ### Agregado
 
+- **Mensajes de error claros en todas partes.** Los rechazos de cuentas, organizaciones,
+  invitaciones, solicitudes KYC, paradas, rutas y mapas de puestos llevan ahora un `reason`
+  estable con su texto en español, inglés y portugués (las apps ya no muestran el mensaje en
+  inglés de la API).
+- **Póliza RCV vencida bloquea la asignación.** En Despacho no se puede asignar un vehículo cuya
+  póliza RCV esté vencida el día de la salida (`409 VEHICLE_INSURANCE_EXPIRED`); los demás
+  documentos solo avisan.
 - **Documentos legales, aceptación y borrar la cuenta.** Borradores de Términos y Condiciones,
   Política de Privacidad (con sección LGPD), Cancelación y Reembolsos, Condiciones para Empresas y
   Cookies en `docs/legal` (pendientes de revisión de un abogado), publicados en

@@ -65,5 +65,5 @@ Eventos de auditoría: `seat_layout.created`, `.updated`, `.deleted`; `vehicle.c
 
 ## Todavía no
 
-Subir el archivo de cada documento, avisar por correo antes de que venza y bloquear la asignación
-de vehículos con documentos vencidos (si se decide).
+Subir el archivo de cada documento y avisar por correo antes de que venza. (La póliza RCV vencida ya
+bloquea la asignación: ver [dispatch.md](dispatch.md#documentos-de-los-vehículos).)

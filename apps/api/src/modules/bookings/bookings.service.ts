@@ -237,7 +237,7 @@ export class BookingsService {
         .where(eq(bookings.id, booking.id))
         .for('update');
       if (locked?.status !== booking.status)
-        throw conflict('The booking changed, reload and retry');
+        throw conflict('The booking changed, reload and retry', 'RELOAD_AND_RETRY');
       if (locked.status === 'confirmed') {
         const { quote, payment, fareRefund } = await this.quote(tx, locked);
         if (!quote.cancellable) {

@@ -63,9 +63,7 @@ export async function deleteSeatLayout(_: FormState, form: FormData): Promise<Fo
       method: 'DELETE',
     });
   } catch (error) {
-    return failure(error, {
-      CONFLICT: 'Hay horarios usando este plano. Cámbialos a otro plano antes de eliminarlo.',
-    });
+    return failure(error);
   }
   redirect(`/portal/organizations/${text(form, 'organizationId')}`);
 }

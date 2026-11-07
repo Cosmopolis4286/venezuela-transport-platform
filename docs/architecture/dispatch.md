@@ -88,9 +88,10 @@ viajes la muestran como «Cancelada por la empresa». Auditoría: `trip.cancelle
 ## Documentos de los vehículos
 
 En el tablero de despacho, un vehículo con documentos vencidos o por vencer en 30 días aparece
-marcado en la lista ("documentos vencidos", "documentos por vencer"). **No impide asignarlo**:
-decidir si se bloquea es una decisión pendiente ([hoja de ruta](../roadmap.md)). Los documentos se
-cargan en **Vehículos** ([fleet.md](fleet.md#documentos-de-los-vehículos)).
+marcado en la lista ("documentos vencidos", "documentos por vencer"). Si la **póliza RCV** está
+vencida el día de la salida, **no se puede asignar** (`409 VEHICLE_INSURANCE_EXPIRED`); los demás
+documentos (certificado de circulación, permiso de transporte) solo avisan. Lo decidió el dueño del
+producto. Los documentos se cargan en **Vehículos** ([fleet.md](fleet.md#documentos-de-los-vehículos)).
 
 ## Endpoints (`/api/v1`)
 

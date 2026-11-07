@@ -76,8 +76,7 @@ export class InvitationsService {
           and(eq(memberships.organizationId, organization.id), eq(memberships.userId, existing.id)),
         )
         .limit(1);
-      if (member)
-        throw new ApiException('CONFLICT', 'This person is already a member', HttpStatus.CONFLICT);
+      if (member) throw ApiException.conflict('This person is already a member', 'ALREADY_MEMBER');
     }
 
     const [invitation] = await this.database.db
@@ -93,10 +92,9 @@ export class InvitationsService {
       .onConflictDoNothing()
       .returning();
     if (!invitation) {
-      throw new ApiException(
-        'CONFLICT',
+      throw ApiException.conflict(
         'There is already a pending invitation for this person',
-        HttpStatus.CONFLICT,
+        'INVITATION_PENDING',
       );
     }
     await this.audit.record({
@@ -229,8 +227,7 @@ export class InvitationsService {
           })
           .onConflictDoNothing()
           .returning({ userId: memberships.userId });
-        if (!joined)
-          throw new ApiException('CONFLICT', 'You are already a member', HttpStatus.CONFLICT);
+        if (!joined) throw ApiException.conflict('You are already a member', 'ALREADY_MEMBER');
       }
       await tx
         .update(invitations)

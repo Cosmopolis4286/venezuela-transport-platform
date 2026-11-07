@@ -126,10 +126,9 @@ export class VehiclesService {
     meta: RequestMeta,
   ): Promise<FleetVehicle> {
     if (!runsRoutes(access.organization.type)) {
-      throw new ApiException(
-        'CONFLICT',
+      throw ApiException.conflict(
         'Only bus companies and taxi lines have vehicles',
-        HttpStatus.CONFLICT,
+        'ORGANIZATION_TYPE_NOT_ALLOWED',
       );
     }
     const values = await this.values(access.organization.id, input);

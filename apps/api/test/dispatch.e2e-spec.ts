@@ -475,7 +475,13 @@ describe.runIf(expectDatabase)('Dispatch (e2e)', () => {
           .expect(200)
       ).body as DispatchBoard;
       expect(warned.vehicles.find((v) => v.id === bus.id)?.documentAlert).toBe('expired');
+      // An expired RCV blocks the assignment; other documents only warn.
+      await assign(morning, bus.id, null)
+        .expect(409)
+        .expect((res) => expect(res.body.error.reason).toBe('VEHICLE_INSURANCE_EXPIRED'));
       await doc('insurance', { number: 'RCV-2', expiresOn: addDays(today, 10) }).expect(200);
+      await assign(morning, bus.id, null).expect(200);
+      await assign(morning, null, null).expect(200);
       expect(
         (
           (await http().get(`${org}/vehicles`).set('Authorization', owner.auth).expect(200))

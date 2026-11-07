@@ -93,11 +93,7 @@ export class OnboardingService {
       .onConflictDoNothing()
       .returning();
     if (!row)
-      throw new ApiException(
-        'CONFLICT',
-        'You already have an open application',
-        HttpStatus.CONFLICT,
-      );
+      throw ApiException.conflict('You already have an open application', 'APPLICATION_OPEN');
     await this.audit.record({
       action: 'application.created',
       actorUserId: auth.user.id,
@@ -221,11 +217,7 @@ export class OnboardingService {
       .where(and(eq(applications.id, application.id), inArray(applications.status, [...EDITABLE])))
       .returning();
     if (!row)
-      throw new ApiException(
-        'CONFLICT',
-        'The application changed, reload and retry',
-        HttpStatus.CONFLICT,
-      );
+      throw ApiException.conflict('The application changed, reload and retry', 'RELOAD_AND_RETRY');
     await this.audit.record({
       action: 'application.submitted',
       actorUserId: auth.user.id,
@@ -310,10 +302,9 @@ export class OnboardingService {
         .limit(1);
       if (!application) throw notFound();
       if (application.status !== 'submitted') {
-        throw new ApiException(
-          'CONFLICT',
+        throw ApiException.conflict(
           `Cannot review an application that is ${application.status}`,
-          HttpStatus.CONFLICT,
+          'APPLICATION_WRONG_STATUS',
         );
       }
 
@@ -559,10 +550,9 @@ export class OnboardingService {
       .limit(1);
     if (!row) throw notFound('You have no open application');
     if (!(EDITABLE as readonly string[]).includes(row.status)) {
-      throw new ApiException(
-        'CONFLICT',
+      throw ApiException.conflict(
         'The application is under review and cannot be changed',
-        HttpStatus.CONFLICT,
+        'APPLICATION_UNDER_REVIEW',
       );
     }
     return row;

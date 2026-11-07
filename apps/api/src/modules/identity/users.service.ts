@@ -61,11 +61,7 @@ export class UsersService {
       .onConflictDoNothing({ target: users.email })
       .returning();
     if (!user) {
-      throw new ApiException(
-        'CONFLICT',
-        'An account with this e-mail already exists',
-        HttpStatus.CONFLICT,
-      );
+      throw ApiException.conflict('An account with this e-mail already exists', 'EMAIL_TAKEN');
     }
     return user;
   }
@@ -162,10 +158,9 @@ export class UsersService {
   }
 
   private contactTaken(kind: ContactKind): ApiException {
-    return new ApiException(
-      'CONFLICT',
+    return ApiException.conflict(
       `This ${kind === 'email' ? 'e-mail' : 'phone number'} belongs to another account`,
-      HttpStatus.CONFLICT,
+      'CONTACT_TAKEN',
     );
   }
 
