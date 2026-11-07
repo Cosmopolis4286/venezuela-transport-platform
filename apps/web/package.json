@@ -11,7 +11,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "clean": "rm -rf .next .turbo",
-    "legal:build": "tsx scripts/build-legal.ts"
+    "legal:build": "tsx scripts/build-legal.ts",
+    "test:browser": "playwright test"
   },
   "dependencies": {
     "@vtp/shared-types": "workspace:*",
@@ -26,6 +27,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@playwright/test": "1.56.1",
     "@tailwindcss/turbopack": "4.3.3",
     "@types/node": "catalog:",
     "@types/react": "catalog:",

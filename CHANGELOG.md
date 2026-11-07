@@ -13,6 +13,8 @@ pull request.
 
 ### Agregado
 
+- **Pruebas en el navegador en la CI.** Playwright prueba en Chromium (escritorio y teléfono) la
+  portada, las páginas legales y el registro e inicio de sesión contra la API y la web reales.
 - **Purga diaria de datos vencidos.** La API borra o anonimiza lo que superó su plazo de
   conservación (códigos, avisos, auditoría, sesiones muertas, datos de pasajeros y taxis antiguos,
   expedientes KYC rechazados o de cuentas borradas), según
