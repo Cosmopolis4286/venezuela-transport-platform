@@ -54,6 +54,10 @@ export const trips = pgTable(
     /** Marked by the assigned driver (dispatch). */
     departedAt: timestamp({ withTimezone: true }),
     arrivedAt: timestamp({ withTimezone: true }),
+    /** Set when the operator cancels the departure (`status = cancelled`); shown to passengers. */
+    cancellationReason: text(),
+    cancelledAt: timestamp({ withTimezone: true }),
+    cancelledByUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
     ...timestamps,
   },
   (t) => [

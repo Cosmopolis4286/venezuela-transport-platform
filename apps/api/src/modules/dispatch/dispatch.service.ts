@@ -107,6 +107,7 @@ export class DispatchService {
         driver: trip.driver,
         departedAt: trip.departedAt,
         arrivedAt: trip.arrivedAt,
+        cancellation: trip.cancellation,
       };
     });
     const withTrip = new Set(booked.map((t) => t.scheduleId));
@@ -133,6 +134,7 @@ export class DispatchService {
         driver: null,
         departedAt: null,
         arrivedAt: null,
+        cancellation: null,
       });
     }
     return {

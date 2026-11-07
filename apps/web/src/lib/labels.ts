@@ -39,7 +39,9 @@ export function assignmentText(trip: {
 export function tripProgress(trip: {
   departedAt: string | null;
   arrivedAt: string | null;
+  cancellation?: { reason: string } | null;
 }): string | null {
+  if (trip.cancellation) return 'Cancelada por la empresa';
   if (trip.arrivedAt) return `Llegó ${networkClock(trip.arrivedAt)}`;
   if (trip.departedAt) return `En ruta desde las ${networkClock(trip.departedAt)}`;
   return null;

@@ -65,6 +65,26 @@ El conductor asignado marca en su app **Marcar salida** al dejar el origen
 
 Eventos de auditoría: `trip.departed`, `trip.arrived`.
 
+## Cancelar una salida
+
+Un despachador (`operations.dispatch`) puede cancelar una salida que todavía no salió, con un
+motivo que ven los pasajeros (`POST /organizations/:id/dispatch/cancel`). Si nadie la había
+reservado, se crea su viaje ya cancelado, así deja de venderse. En una sola transacción:
+
+- el viaje pasa a `cancelled` con el motivo, la hora y quién lo canceló;
+- cada reserva **apartada** se cancela y sus pagos pendientes se anulan;
+- cada reserva **pagada** se cancela con **reembolso completo**: el pago pasa a `refund_due` (a la
+  cola de la plataforma o a la de la empresa, según quién cobró, ADR-027). En el libro, todo el
+  reembolso sale de lo que ganó la empresa y **la plataforma conserva su comisión**: la causa es
+  de la empresa (a diferencia de cuando cancela el pasajero, ADR-025);
+- los puestos quedan libres.
+
+Después, cada pasajero recibe un aviso (push y correo) con el motivo y lo que se le devuelve. La
+salida desaparece de la búsqueda, no se puede reservar (`409 DEPARTURE_NOT_BOOKABLE`), no se puede
+asignar (`409 TRIP_CANCELLED`) y sale de la lista del conductor. Cancelarla otra vez da
+`409 TRIP_CANCELLED`; una salida que ya salió, `409 TRIP_WRONG_STEP`. El tablero y la lista de
+viajes la muestran como «Cancelada por la empresa». Auditoría: `trip.cancelled`.
+
 ## Documentos de los vehículos
 
 En el tablero de despacho, un vehículo con documentos vencidos o por vencer en 30 días aparece
@@ -80,6 +100,7 @@ cargan en **Vehículos** ([fleet.md](fleet.md#documentos-de-los-vehículos)).
 | `POST`/`PATCH /organizations/:id/vehicles…`   | `fleet.manage`                         |
 | `GET /organizations/:id/dispatch?date=`       | `operations.dispatch`                  |
 | `PUT /organizations/:id/dispatch/assignment`  | `operations.dispatch`                  |
+| `POST /organizations/:id/dispatch/cancel`     | `operations.dispatch`                  |
 | `GET /me/driving`                             | Con sesión — sus viajes como conductor |
 | `GET /me/driving/:tripId/passengers`          | El conductor asignado                  |
 | `POST /me/driving/:tripId/depart`, `…/arrive` | El conductor asignado                  |

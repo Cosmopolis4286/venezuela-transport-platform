@@ -58,8 +58,17 @@ export default function BookingScreen() {
   const status = data.status === 'held' && secondsLeft === 0 ? 'expired' : data.status;
   // A cancelled booking whose payment had confirmed it: the passenger cancelled a paid trip.
   const cancelledPaid = status === 'cancelled' && Boolean(data.payment?.confirmedAt);
-  const refundDue = data.payment?.status === 'refund_due' && status !== 'held' && !cancelledPaid;
-  const refunded = data.payment?.status === 'refunded' && status !== 'held' && !cancelledPaid;
+  const operatorCancelled = Boolean(data.trip.cancellation);
+  const refundDue =
+    data.payment?.status === 'refund_due' &&
+    status !== 'held' &&
+    !cancelledPaid &&
+    !operatorCancelled;
+  const refunded =
+    data.payment?.status === 'refunded' &&
+    status !== 'held' &&
+    !cancelledPaid &&
+    !operatorCancelled;
   const refundText = (payment: NonNullable<Booking['payment']>) =>
     formatPaymentAmount(payment.refundAmount ?? payment.amount, payment.currency, locale);
   const extraDays = daysBetween(data.trip.departsAt, data.trip.arrivesAt);
@@ -95,7 +104,17 @@ export default function BookingScreen() {
       {status === 'expired' ? <Banner tone="error">{t.booking.expired}</Banner> : null}
       {refundDue ? <Banner tone="warning">{t.booking.refundDue}</Banner> : null}
       {refunded ? <Banner tone="info">{t.booking.refunded}</Banner> : null}
-      {cancelledPaid && data.payment ? (
+      {data.trip.cancellation ? (
+        <Banner tone="warning">
+          {t.booking.operatorCancelled(data.trip.cancellation.reason)}
+          {data.payment?.status === 'refund_due'
+            ? ` ${t.booking.operatorRefund(refundText(data.payment))}`
+            : data.payment?.status === 'refunded'
+              ? ` ${t.booking.operatorRefunded(refundText(data.payment))}`
+              : ''}
+        </Banner>
+      ) : null}
+      {cancelledPaid && data.payment && !data.trip.cancellation ? (
         <Banner tone="info">
           {data.payment.status === 'refund_due'
             ? t.booking.cancelledRefund(refundText(data.payment))

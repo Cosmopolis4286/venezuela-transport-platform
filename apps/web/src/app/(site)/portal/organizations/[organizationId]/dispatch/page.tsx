@@ -17,7 +17,7 @@ import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { Input, Select } from '@/components/ui/input';
 import { Field } from '@/components/ui/label';
 import { apiFetch } from '@/lib/server/api';
-import { assignTrip } from './actions';
+import { assignTrip, cancelDeparture } from './actions';
 
 export default function DispatchPage({
   params,
@@ -144,7 +144,9 @@ async function Dispatch({
                       <Badge variant="outline">
                         {SERVICE_CLASS_LABELS[departure.serviceClass]}
                       </Badge>
-                      {tripProgress(departure) ? (
+                      {departure.cancellation ? (
+                        <Badge variant="destructive">{tripProgress(departure)}</Badge>
+                      ) : tripProgress(departure) ? (
                         <Badge variant="secondary">{tripProgress(departure)}</Badge>
                       ) : departure.vehicle && departure.driver ? (
                         <Badge variant="success">Asignada</Badge>
@@ -168,51 +170,97 @@ async function Dispatch({
                       ) : null}
                     </span>
                   </div>
-                  <ActionForm
-                    action={assignTrip}
-                    hidden={{
-                      organizationId: organization.id,
-                      scheduleId: departure.scheduleId,
-                      serviceDate: departure.serviceDate,
-                    }}
-                  >
-                    <div className="grid items-end gap-3 sm:grid-cols-[1fr_1fr_auto]">
-                      <Field label="Vehículo" htmlFor={`vehicle-${key}`}>
-                        <Select
-                          id={`vehicle-${key}`}
-                          name="vehicleId"
-                          defaultValue={departure.vehicle?.id ?? ''}
-                        >
-                          <option value="">Sin vehículo</option>
-                          {vehicles.map((vehicle) => (
-                            <option key={vehicle.id} value={vehicle.id}>
-                              {vehicleName(vehicle)}
-                              {vehicle.documentAlert
-                                ? ` · ${DOCUMENT_ALERT_TEXT[vehicle.documentAlert]}`
-                                : ''}
-                            </option>
-                          ))}
-                        </Select>
-                      </Field>
-                      <Field label="Conductor" htmlFor={`driver-${key}`}>
-                        <Select
-                          id={`driver-${key}`}
-                          name="driverUserId"
-                          defaultValue={departure.driver?.userId ?? ''}
-                        >
-                          <option value="">Sin conductor</option>
-                          {drivers.map((driver) => (
-                            <option key={driver.userId} value={driver.userId}>
-                              {driverName(driver)}
-                            </option>
-                          ))}
-                        </Select>
-                      </Field>
-                      <SubmitButton size="sm" variant="outline">
-                        Guardar
-                      </SubmitButton>
-                    </div>
-                  </ActionForm>
+                  {departure.cancellation ? (
+                    <p className="text-sm text-muted-foreground">
+                      Motivo: «{departure.cancellation.reason}». Las reservas se cancelaron y las
+                      pagadas se reembolsan completas.
+                    </p>
+                  ) : (
+                    <>
+                      <ActionForm
+                        action={assignTrip}
+                        hidden={{
+                          organizationId: organization.id,
+                          scheduleId: departure.scheduleId,
+                          serviceDate: departure.serviceDate,
+                        }}
+                      >
+                        <div className="grid items-end gap-3 sm:grid-cols-[1fr_1fr_auto]">
+                          <Field label="Vehículo" htmlFor={`vehicle-${key}`}>
+                            <Select
+                              id={`vehicle-${key}`}
+                              name="vehicleId"
+                              defaultValue={departure.vehicle?.id ?? ''}
+                            >
+                              <option value="">Sin vehículo</option>
+                              {vehicles.map((vehicle) => (
+                                <option key={vehicle.id} value={vehicle.id}>
+                                  {vehicleName(vehicle)}
+                                  {vehicle.documentAlert
+                                    ? ` · ${DOCUMENT_ALERT_TEXT[vehicle.documentAlert]}`
+                                    : ''}
+                                </option>
+                              ))}
+                            </Select>
+                          </Field>
+                          <Field label="Conductor" htmlFor={`driver-${key}`}>
+                            <Select
+                              id={`driver-${key}`}
+                              name="driverUserId"
+                              defaultValue={departure.driver?.userId ?? ''}
+                            >
+                              <option value="">Sin conductor</option>
+                              {drivers.map((driver) => (
+                                <option key={driver.userId} value={driver.userId}>
+                                  {driverName(driver)}
+                                </option>
+                              ))}
+                            </Select>
+                          </Field>
+                          <SubmitButton size="sm" variant="outline">
+                            Guardar
+                          </SubmitButton>
+                        </div>
+                      </ActionForm>
+                      {departure.departedAt ? null : (
+                        <details className="text-sm">
+                          <summary className="cursor-pointer text-muted-foreground">
+                            Cancelar esta salida
+                          </summary>
+                          <div className="mt-2">
+                            <ActionForm
+                              action={cancelDeparture}
+                              hidden={{
+                                organizationId: organization.id,
+                                scheduleId: departure.scheduleId,
+                                serviceDate: departure.serviceDate,
+                              }}
+                            >
+                              <p className="text-sm text-muted-foreground">
+                                Se cancelan las {departure.soldSeats + departure.heldSeats} plazas
+                                vendidas o apartadas; las pagadas se reembolsan completas y la
+                                empresa asume la comisión. Avisamos a cada pasajero con el motivo.
+                              </p>
+                              <div className="flex flex-wrap items-end gap-2">
+                                <Input
+                                  name="reason"
+                                  required
+                                  minLength={5}
+                                  maxLength={300}
+                                  className="max-w-md"
+                                  placeholder="Motivo (lo verán los pasajeros)"
+                                  aria-label="Motivo de la cancelación"
+                                />
+                                <SubmitButton size="sm" variant="destructive">
+                                  Cancelar salida
+                                </SubmitButton>
+                              </div>
+                            </ActionForm>
+                          </div>
+                        </details>
+                      )}
+                    </>
+                  )}
                 </li>
               );
             })}

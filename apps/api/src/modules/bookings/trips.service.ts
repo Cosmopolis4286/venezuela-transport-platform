@@ -173,7 +173,7 @@ export class TripsService {
       capacity: trip ? trip.capacity : context.schedule.seats,
       takenSeats: taken.map((t) => t.seatNumber).sort(compareSeats),
       fare: context.fare,
-      bookable: isBookable(context),
+      bookable: isBookable(context) && trip?.status !== 'cancelled',
     };
   }
 

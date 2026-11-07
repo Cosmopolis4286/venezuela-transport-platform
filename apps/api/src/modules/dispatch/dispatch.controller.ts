@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type {
+  CancelDepartureResult,
   DispatchBoard,
   DispatchDeparture,
   DriverManifest,
@@ -24,7 +25,8 @@ import {
   RequireOrganizationAccess,
   type OrganizationAccess,
 } from '../organizations/organization-access.js';
-import { AssignTripDto, DispatchDateQueryDto } from './dispatch.dto.js';
+import { BookingsService } from '../bookings/bookings.service.js';
+import { AssignTripDto, CancelDepartureDto, DispatchDateQueryDto } from './dispatch.dto.js';
 import { DispatchService } from './dispatch.service.js';
 
 /** Dispatchers assign a vehicle and a driver to each departure. */
@@ -32,7 +34,10 @@ import { DispatchService } from './dispatch.service.js';
 @ApiBearerAuth()
 @Controller({ path: 'organizations/:organizationId/dispatch', version: '1' })
 export class DispatchController {
-  constructor(private readonly dispatch: DispatchService) {}
+  constructor(
+    private readonly dispatch: DispatchService,
+    private readonly bookings: BookingsService,
+  ) {}
 
   @Get()
   @RequireOrganizationAccess('operations.dispatch')
@@ -52,6 +57,19 @@ export class DispatchController {
     @ReqMeta() meta: RequestMeta,
   ): Promise<DispatchDeparture> {
     return this.dispatch.assign(access, body, auth, meta);
+  }
+
+  /** Cancels a departure before it leaves: releases or fully refunds every booking. */
+  @Post('cancel')
+  @RequireOrganizationAccess('operations.dispatch')
+  @HttpCode(HttpStatus.OK)
+  cancel(
+    @CurrentOrganization() access: OrganizationAccess,
+    @Body() body: CancelDepartureDto,
+    @CurrentAuth() auth: Authenticated,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<CancelDepartureResult> {
+    return this.bookings.cancelDeparture(access.organization.id, body, auth, meta);
   }
 }
 

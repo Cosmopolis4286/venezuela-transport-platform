@@ -42,5 +42,6 @@ export const NOTIFICATION_KINDS = [
   'application_decided',
   'invitation_received',
   'payment_rejected',
+  'departure_cancelled',
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];

@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type { AssignTripRequest } from '@vtp/shared-types';
-import { IsUUID, Matches, ValidateIf } from 'class-validator';
+import type { AssignTripRequest, CancelDepartureRequest } from '@vtp/shared-types';
+import { IsString, IsUUID, Length, Matches, ValidateIf } from 'class-validator';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -28,4 +28,22 @@ export class AssignTripDto implements AssignTripRequest {
   @ValidateIf((o: AssignTripDto) => o.driverUserId !== null)
   @IsUUID()
   driverUserId!: string | null;
+}
+
+export class CancelDepartureDto implements CancelDepartureRequest {
+  @ApiProperty()
+  @IsUUID()
+  scheduleId!: string;
+
+  @ApiProperty({ example: '2026-11-20' })
+  @Matches(ISO_DATE, { message: 'serviceDate must be YYYY-MM-DD' })
+  serviceDate!: string;
+
+  @ApiProperty({
+    example: 'La unidad tuvo una falla mecánica.',
+    description: 'Shown to passengers',
+  })
+  @IsString()
+  @Length(5, 300)
+  reason!: string;
 }

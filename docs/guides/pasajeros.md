@@ -78,4 +78,5 @@ autobús ya salió.
 | Pagué pero la reserva sigue apartada  | Toca **Ya pagué, comprobar**. Si el monto o la moneda no coinciden, la app lo dice y se te devuelve                            |
 | Se venció el apartado mientras pagaba | Si el dinero llega antes de que otra persona tome los puestos, la reserva se confirma igual                                    |
 | Olvidé mi contraseña                  | En **Iniciar sesión → Con contraseña**, toca **¿Olvidaste tu contraseña?**: te llega un código al correo para elegir una nueva |
+| ¿Y si la empresa cancela la salida?   | Te avisamos con el motivo y te devolvemos **todo** lo que pagaste, por el mismo medio                                          |
 | ¿Puedo cambiar de fecha?              | Todavía no: cancela (con el reembolso que corresponda) y compra otra salida                                                    |

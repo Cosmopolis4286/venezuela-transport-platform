@@ -1,6 +1,6 @@
 'use server';
 
-import type { AssignTripRequest } from '@vtp/shared-types';
+import type { AssignTripRequest, CancelDepartureResult } from '@vtp/shared-types';
 import { refresh } from 'next/cache';
 import type { FormState } from '@/lib/form-state';
 import { apiRequest } from '@/lib/server/api';
@@ -28,4 +28,30 @@ export async function assignTrip(_: FormState, form: FormData): Promise<FormStat
   }
   refresh();
   return { success: 'Asignación guardada.' };
+}
+
+/** Cancels a whole departure: every held booking is released and every paid one refunded. */
+export async function cancelDeparture(_: FormState, form: FormData): Promise<FormState> {
+  let result: CancelDepartureResult;
+  try {
+    result = await apiRequest<CancelDepartureResult>(
+      `/organizations/${encodeURIComponent(text(form, 'organizationId'))}/dispatch/cancel`,
+      {
+        method: 'POST',
+        body: {
+          scheduleId: text(form, 'scheduleId'),
+          serviceDate: text(form, 'serviceDate'),
+          reason: text(form, 'reason'),
+        },
+      },
+    );
+  } catch (error) {
+    return failure(error, {
+      VALIDATION_FAILED: 'Explica a los pasajeros por qué se cancela (entre 5 y 300 caracteres).',
+    });
+  }
+  refresh();
+  return {
+    success: `Salida cancelada: ${result.cancelledBookings} reservas canceladas, ${result.refundsDue} por reembolsar.`,
+  };
 }

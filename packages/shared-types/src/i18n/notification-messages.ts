@@ -39,6 +39,14 @@ export interface NotificationMessages {
   invitationReceived: (organization: string) => NotificationText;
   /** (manual payments) Staff did not find the money the payer reported. */
   paymentRejected: (bookingCode: string, reason: string) => NotificationText;
+  /** The operator cancelled the departure; `refund` is the formatted amount, or null if unpaid. */
+  departureCancelled: (
+    bookingCode: string,
+    route: string,
+    departs: string,
+    reason: string,
+    refund: string | null,
+  ) => NotificationText;
   /** Appended to every e-mail. */
   footer: string;
 }
@@ -120,6 +128,10 @@ const es: NotificationMessages = {
   invitationReceived: (organization) => ({
     title: `${organization} te invitó a VTP`,
     body: `${organization} te invitó a su equipo. Entra en VTP con este correo o teléfono para aceptar la invitación; vence en 7 días.`,
+  }),
+  departureCancelled: (code, route, departs, reason, refund) => ({
+    title: 'La empresa canceló tu viaje',
+    body: `${route}, ${departs} (reserva ${code}): ${reason} ${refund ? `Te devolveremos ${refund} completo por el mismo medio con el que pagaste.` : 'Tus puestos se liberaron.'}`,
   }),
   paymentRejected: (code, reason) => ({
     title: 'No encontramos tu pago',
@@ -207,6 +219,10 @@ const en: NotificationMessages = {
     title: `${organization} invited you to VTP`,
     body: `${organization} invited you to its team. Sign in to VTP with this e-mail or phone to accept; the invitation expires in 7 days.`,
   }),
+  departureCancelled: (code, route, departs, reason, refund) => ({
+    title: 'The company cancelled your trip',
+    body: `${route}, ${departs} (booking ${code}): ${reason} ${refund ? `We will refund ${refund} in full the same way you paid.` : 'Your seats were released.'}`,
+  }),
   paymentRejected: (code, reason) => ({
     title: 'We could not find your payment',
     body: `Booking ${code}: ${reason} Check the details and try again from the app.`,
@@ -292,6 +308,10 @@ const ptBR: NotificationMessages = {
   invitationReceived: (organization) => ({
     title: `${organization} convidou você para o VTP`,
     body: `${organization} convidou você para a equipe. Entre no VTP com este e-mail ou telefone para aceitar; o convite vence em 7 dias.`,
+  }),
+  departureCancelled: (code, route, departs, reason, refund) => ({
+    title: 'A empresa cancelou sua viagem',
+    body: `${route}, ${departs} (reserva ${code}): ${reason} ${refund ? `Vamos devolver ${refund} integralmente pelo mesmo meio do pagamento.` : 'Seus assentos foram liberados.'}`,
   }),
   paymentRejected: (code, reason) => ({
     title: 'Não encontramos seu pagamento',
