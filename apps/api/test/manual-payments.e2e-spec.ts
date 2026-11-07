@@ -353,8 +353,11 @@ describe.runIf(expectDatabase)('Manual payments (e2e)', () => {
       expect(confirmations.map((response) => response.status).sort()).toEqual(
         expect.arrayContaining([200]),
       );
-      expect(confirmations.every((response) => response.status === 200 || response.status === 409))
-        .toBe(true);
+      expect(
+        confirmations.every(
+          (response) => response.status === 200 || response.status === 409,
+        ),
+      ).toBe(true);
       for (const response of confirmations.filter((item) => item.status === 200)) {
         expect((response.body as Payment).status).toBe('confirmed');
       }
