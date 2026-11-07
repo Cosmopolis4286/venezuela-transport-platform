@@ -1,4 +1,5 @@
 import {
+  LEGAL_VERSION,
   sharedMessages,
   type AuthResponse,
   type OtpChallengeResponse,
@@ -18,6 +19,7 @@ import {
 import type { ApiClient } from '../api/client';
 import { ApiError, userMessage } from '../api/errors';
 import { currentLocale } from '../i18n/active-locale';
+import { CORE_MESSAGES } from '../i18n/core-messages';
 import { unregisterFromPush } from '../push/push-registration';
 
 export type AuthState =
@@ -37,8 +39,13 @@ export interface AuthContextValue {
   forgotPassword(email: string): Promise<OtpChallengeResponse>;
   /** Sets the new password with that code and signs in. */
   resetPassword(challengeId: string, code: string, password: string): Promise<void>;
-  register(input: Omit<RegisterRequest, 'client'>): Promise<void>;
+  /** Signs up; the screen made the person accept the Terms and Privacy Policy. */
+  register(input: Omit<RegisterRequest, 'client' | 'acceptTerms'>): Promise<void>;
   signOut(): Promise<void>;
+  /** Accepts the current Terms and Privacy Policy. */
+  acceptTerms(): Promise<void>;
+  /** Deletes the account (the API refuses while something is pending) and signs out. */
+  deleteAccount(): Promise<void>;
   /** Reloads the profile (e.g. after KYC approval); from `unavailable`, retries loading the session. */
   reload(): Promise<void>;
 }
@@ -99,7 +106,7 @@ export function AuthProvider({ api, children }: { api: ApiClient; children: Reac
         signedIn(
           await api.request<AuthResponse>('/auth/otp/verify', {
             auth: false,
-            body: { challengeId, code, client: api.client },
+            body: { challengeId, code, client: api.client, acceptTerms: true },
           }),
         ),
       signInWithPassword: async (email, password) =>
@@ -125,13 +132,27 @@ export function AuthProvider({ api, children }: { api: ApiClient; children: Reac
         signedIn(
           await api.request<AuthResponse>('/auth/register', {
             auth: false,
-            body: { ...input, client: api.client },
+            body: { ...input, client: api.client, acceptTerms: true },
           }),
         ),
       signOut: async () => {
         await unregisterFromPush(api);
         await api.endSession();
         setState({ status: 'signedOut' });
+      },
+      acceptTerms: async () => {
+        const user = await api.request<UserProfile>('/me/terms', {
+          body: { version: LEGAL_VERSION },
+        });
+        setState({ status: 'signedIn', user });
+      },
+      deleteAccount: async () => {
+        await api.request('/me', { method: 'DELETE' });
+        await api.endSession();
+        setState({
+          status: 'signedOut',
+          notice: CORE_MESSAGES[currentLocale()].legal.deleted,
+        });
       },
       reload: async () => {
         if (state.status !== 'signedIn') return loadUser();

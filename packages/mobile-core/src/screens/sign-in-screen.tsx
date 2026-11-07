@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { userMessage } from '../api/errors';
 import { useAuth } from '../auth/auth-context';
 import { useI18n } from '../i18n/i18n-context';
+import { LegalLinks } from '../legal/legal-links';
 import { Banner, Body, Button, Field, Heading, Screen, Segmented } from '../ui/components';
 
 type Mode = 'code' | 'password' | 'reset';
@@ -140,6 +141,7 @@ function CodeSignIn() {
       />
       {error ? <Banner tone="error">{error}</Banner> : null}
       <Button title={t.enter} onPress={verify} loading={busy} disabled={code.length !== 6} />
+      <LegalLinks prefix="continue" />
       <Button
         variant="secondary"
         title={resendIn > 0 ? t.resendIn(resendIn) : t.resend}

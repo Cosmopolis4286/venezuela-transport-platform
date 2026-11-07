@@ -3,11 +3,13 @@ import {
   Body,
   Button,
   Card,
+  DeleteAccount,
   Heading,
   LanguagePicker,
   Row,
   Screen,
   Subheading,
+  TermsPrompt,
   useAuth,
   useCurrentUser,
 } from '@vtp/mobile-core';
@@ -25,6 +27,7 @@ export default function Account() {
   return (
     <Screen>
       <Heading>{t.account.hello(name ? user.firstName : null)}</Heading>
+      <TermsPrompt />
       <Card>
         <Subheading>{t.account.yourAccount}</Subheading>
         {name ? <Body>{name}</Body> : null}
@@ -58,6 +61,7 @@ export default function Account() {
         }}
       />
       <LanguagePicker />
+      <DeleteAccount />
     </Screen>
   );
 }

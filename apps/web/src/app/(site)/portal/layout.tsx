@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
+import { TermsNotice } from '@/components/portal/terms-notice';
 import { UserMenu } from '@/components/portal/user-menu';
 
 export const metadata: Metadata = {
@@ -24,6 +25,9 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         </div>
       </header>
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-6 py-10">
+        <Suspense fallback={null}>
+          <TermsNotice />
+        </Suspense>
         {children}
       </main>
     </div>

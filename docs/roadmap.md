@@ -103,7 +103,7 @@ Ordenadas por lo que bloquean. La recomendación es un punto de partida, no una 
 | **Nombres de las apps y de los paquetes de Android** (por ejemplo `ve.vtp.pasajeros`) y la cuenta de Expo (EAS)                   | APK de prueba y las tiendas | Decidirlos ya: cambiar un nombre de paquete después de publicar obliga a publicar una app nueva |
 | **Documentos de vehículos vencidos**: ¿se bloquea asignar un vehículo con la póliza o el permiso vencidos, o solo se avisa (hoy)? | Seguridad de la operación   | Bloquear con la póliza RCV vencida; avisar con los demás                                        |
 | **Servidor y dominio** para la API y la web (VPS, proveedor, dominio `.com.ve` o `.com`)                                          | Despliegue y APK de release | Un VPS pequeño con Caddy, como describe la [preparación del VPS](deployment/vps-preparation.md) |
-| **Aviso de privacidad y términos de uso** (se guardan cédulas de pasajeros y datos KYC)                                           | Producción                  | Redactarlos con un abogado junto con la revisión legal                                          |
+| **Aviso de privacidad y términos de uso** (se guardan cédulas de pasajeros y datos KYC)                                           | Producción                  | Borradores listos en [docs/legal](legal/README.md); falta la revisión de un abogado             |
 
 ### Valores por defecto para confirmar
 
@@ -173,4 +173,10 @@ Lo que falta (y lo ya resuelto):
 - [ ] Servidor, HTTPS, copias de seguridad con restauración probada, monitoreo
       ([preparación del VPS](deployment/vps-preparation.md)).
 - [ ] Apps móviles firmadas y publicadas (EAS) con la URL de la API de producción.
-- [ ] Aviso de privacidad y términos de uso (se guardan números de cédula de los pasajeros).
+- [x] Borradores de términos, privacidad, reembolsos, condiciones para empresas y cookies, con su
+      aceptación y el borrado de la cuenta ([docs/legal](legal/README.md)).
+- [ ] **Revisión de un abogado venezolano** de esos documentos y de la
+      [lista de puntos abiertos](legal/README.md#lista-para-el-abogado); completar
+      `docs/legal/empresa.json` (razón social, RIF, domicilio, correos).
+- [ ] Tarea programada que purgue o anonimice los datos vencidos
+      ([conservación y borrado](legal/conservacion-y-borrado.md)).

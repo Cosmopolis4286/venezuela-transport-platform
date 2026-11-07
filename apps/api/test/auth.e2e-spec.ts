@@ -1,8 +1,11 @@
 import { randomInt, randomUUID } from 'node:crypto';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import type { AuthResponse, OtpChallengeResponse } from '@vtp/shared-types';
+import { LEGAL_VERSION, type AuthResponse, type OtpChallengeResponse } from '@vtp/shared-types';
+import { eq } from 'drizzle-orm';
 import request from 'supertest';
+import { DatabaseService } from '../src/database/database.service.js';
+import { users } from '../src/modules/identity/identity.schema.js';
 import type { OtpMessage, OtpSender } from '../src/modules/identity/otp/otp-sender.js';
 
 // Full sign-in flows against the real database (run `pnpm db:migrate` first).
@@ -64,6 +67,7 @@ describe.runIf(expectDatabase)('Authentication (e2e)', () => {
         firstName: 'María',
         lastName: 'Pérez',
         client: 'passenger',
+        acceptTerms: true,
       })
       .expect(201);
     return { email, body: res.body as AuthResponse };
@@ -86,7 +90,14 @@ describe.runIf(expectDatabase)('Authentication (e2e)', () => {
 
       const dup = await http()
         .post('/api/v1/auth/register')
-        .send({ email, password: PASSWORD, firstName: 'A', lastName: 'B', client: 'web' })
+        .send({
+          email,
+          password: PASSWORD,
+          firstName: 'A',
+          lastName: 'B',
+          client: 'web',
+          acceptTerms: true,
+        })
         .expect(409);
       expect(dup.body.error.code).toBe('CONFLICT');
     });
@@ -100,6 +111,7 @@ describe.runIf(expectDatabase)('Authentication (e2e)', () => {
           firstName: 'A',
           lastName: 'B',
           client: 'web',
+          acceptTerms: true,
         })
         .expect(400);
       expect(res.body.error.code).toBe('VALIDATION_FAILED');
@@ -464,6 +476,106 @@ describe.runIf(expectDatabase)('Authentication (e2e)', () => {
         .post('/api/v1/auth/login')
         .send({ email, password: NEW_PASSWORD, client: 'passenger' })
         .expect(200);
+    });
+  });
+  describe('terms and account deletion', () => {
+    it('requires accepting the terms to register and records the version', async () => {
+      const refused = await http()
+        .post('/api/v1/auth/register')
+        .send({
+          email: uniqueEmail(),
+          password: PASSWORD,
+          firstName: 'A',
+          lastName: 'B',
+          client: 'web',
+        })
+        .expect(400);
+      expect(refused.body.error.details).toEqual(
+        expect.arrayContaining([expect.objectContaining({ field: 'acceptTerms' })]),
+      );
+      const { body } = await register();
+      expect(body.user.termsVersion).toBe(LEGAL_VERSION);
+    });
+
+    it('records acceptance when signing in with a code, and re-acceptance of a new version', async () => {
+      const email = uniqueEmail();
+      const first = await otpLogin(email, 'email');
+      const signedIn = (
+        await http()
+          .post('/api/v1/auth/otp/verify')
+          .send({ challengeId: first.challengeId, code: otp.codeFor(email), client: 'passenger' })
+          .expect(200)
+      ).body as AuthResponse;
+      expect(signedIn.user.termsVersion).toBeNull();
+      const auth = `Bearer ${signedIn.tokens.accessToken}`;
+      await http()
+        .post('/api/v1/me/terms')
+        .set('Authorization', auth)
+        .send({ version: '2000-01-01' })
+        .expect(409);
+      const accepted = await http()
+        .post('/api/v1/me/terms')
+        .set('Authorization', auth)
+        .send({ version: LEGAL_VERSION })
+        .expect(200);
+      expect(accepted.body.termsVersion).toBe(LEGAL_VERSION);
+
+      const other = uniqueEmail();
+      const second = await otpLogin(other, 'email');
+      const withTerms = (
+        await http()
+          .post('/api/v1/auth/otp/verify')
+          .send({
+            challengeId: second.challengeId,
+            code: otp.codeFor(other),
+            client: 'passenger',
+            acceptTerms: true,
+          })
+          .expect(200)
+      ).body as AuthResponse;
+      expect(withTerms.user.termsVersion).toBe(LEGAL_VERSION);
+    });
+
+    it('deletes the account: erases its data, ends its sessions, frees the e-mail', async () => {
+      const { email, body } = await register();
+      const auth = `Bearer ${body.tokens.accessToken}`;
+      await http().delete('/api/v1/me').set('Authorization', auth).expect(204);
+      await http().get('/api/v1/me').set('Authorization', auth).expect(401);
+      await http()
+        .post('/api/v1/auth/login')
+        .send({ email, password: PASSWORD, client: 'web' })
+        .expect(401);
+      const db = app.get(DatabaseService).db;
+      const [row] = await db.select().from(users).where(eq(users.id, body.user.id));
+      expect(row).toMatchObject({
+        status: 'deleted',
+        email: null,
+        phone: null,
+        firstName: null,
+        lastName: null,
+        passwordHash: null,
+      });
+      expect(row!.deletedAt).not.toBeNull();
+      // The e-mail can open a new, empty account.
+      const again = await register(email);
+      expect(again.body.user.id).not.toBe(body.user.id);
+    });
+
+    it('refuses while the person is the only owner of an organization', async () => {
+      const { body } = await register();
+      const auth = `Bearer ${body.tokens.accessToken}`;
+      await http()
+        .post('/api/v1/organizations')
+        .set('Authorization', auth)
+        .send({
+          type: 'bus_company',
+          legalName: `Dueña Única ${randomUUID()}`,
+          rif: `J-${randomInt(10_000_000, 99_999_999)}-${randomInt(0, 9)}`,
+        })
+        .expect(201);
+      const res = await http().delete('/api/v1/me').set('Authorization', auth).expect(409);
+      expect(res.body.error.reason).toBe('ACCOUNT_OWNS_ORGANIZATION');
+      await http().get('/api/v1/me').set('Authorization', auth).expect(200);
     });
   });
 });

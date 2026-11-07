@@ -1,0 +1,17 @@
+{
+  "revisado_por_abogado": false,
+  "version": "2026-11-07",
+  "fecha_vigencia": "[FECHA DE ENTRADA EN VIGENCIA]",
+  "nombre_comercial": "VTP",
+  "razon_social": "[RAZÓN SOCIAL DE LA EMPRESA QUE OPERA VTP]",
+  "rif": "[RIF J-00000000-0]",
+  "domicilio": "[DOMICILIO FISCAL COMPLETO, CIUDAD, ESTADO, VENEZUELA]",
+  "registro_mercantil": "[DATOS DEL REGISTRO MERCANTIL: OFICINA, FECHA, TOMO Y NÚMERO]",
+  "correo_soporte": "[soporte@dominio]",
+  "correo_privacidad": "[privacidad@dominio]",
+  "telefono": "[TELÉFONO DE ATENCIÓN]",
+  "sitio_web": "[https://dominio]",
+  "ciudad_jurisdiccion": "[CIUDAD DE LOS TRIBUNALES COMPETENTES]",
+  "encargado_datos": "[NOMBRE O CARGO DEL RESPONSABLE DE PROTECCIÓN DE DATOS]",
+  "hospedaje": "[PROVEEDOR Y PAÍS DONDE SE ALOJAN LOS SERVIDORES]"
+}

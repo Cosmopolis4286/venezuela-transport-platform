@@ -13,6 +13,12 @@ pull request.
 
 ### Agregado
 
+- **Documentos legales, aceptación y borrar la cuenta.** Borradores de Términos y Condiciones,
+  Política de Privacidad (con sección LGPD), Cancelación y Reembolsos, Condiciones para Empresas y
+  Cookies en `docs/legal` (pendientes de revisión de un abogado), publicados en
+  `/{idioma}/legal/…` con enlaces en el pie del sitio y en las apps. Aceptación obligatoria al
+  registrarse (versión y fecha guardadas, `POST /me/terms` para nuevas versiones) y **Borrar mi
+  cuenta** en el portal y en las dos apps (`DELETE /me`). Migraciones `0020` y `0021`.
 - **La empresa cancela una salida.** En **Despacho**, con un motivo: se cancelan sus reservas, las
   pagadas se reembolsan completas (la plataforma conserva su comisión), cada pasajero recibe un
   aviso y la salida deja de venderse (`POST /organizations/:id/dispatch/cancel`). Migración `0019`.

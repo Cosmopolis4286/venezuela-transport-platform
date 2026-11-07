@@ -3,6 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { AppConfigService } from '../../config/app-config.service.js';
 import { MAILER, type Mailer } from '../../mail/mailer.js';
 import { AuditModule } from '../audit/audit.module.js';
+import { AccountDeletionService } from './account-deletion.service.js';
 import { AuthController } from './auth.controller.js';
 import { AuthGuard } from './auth.guard.js';
 import { AuthService } from './auth.service.js';
@@ -19,6 +20,7 @@ import { UsersService } from './users.service.js';
   imports: [AuditModule],
   controllers: [AuthController, MeController],
   providers: [
+    AccountDeletionService,
     AuthService,
     UsersService,
     SessionsService,

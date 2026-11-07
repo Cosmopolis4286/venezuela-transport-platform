@@ -29,6 +29,10 @@ export type ApiErrorCode = (typeof API_ERROR_CODES)[number];
  * clients show `API_ERROR_REASON_MESSAGES` instead of matching the English `message`.
  */
 export const API_ERROR_REASONS = [
+  // Accounts
+  'ACCOUNT_HAS_TRIPS',
+  'ACCOUNT_HAS_REFUNDS',
+  'ACCOUNT_OWNS_ORGANIZATION',
   // Bookings and payments
   'SEAT_TAKEN',
   'TOO_MANY_HOLDS',

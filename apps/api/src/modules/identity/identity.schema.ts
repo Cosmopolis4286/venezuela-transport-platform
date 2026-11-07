@@ -13,7 +13,7 @@ import {
 import { AUTH_CLIENTS, OTP_CHANNELS, OTP_PURPOSES, PLATFORM_ROLES } from '@vtp/shared-types';
 import { citext } from '../../database/column-types.js';
 
-export const userStatus = pgEnum('user_status', ['active', 'suspended']);
+export const userStatus = pgEnum('user_status', ['active', 'suspended', 'deleted']);
 export const authClient = pgEnum('auth_client', AUTH_CLIENTS);
 export const otpChannel = pgEnum('otp_channel', OTP_CHANNELS);
 export const otpPurpose = pgEnum('otp_purpose', OTP_PURPOSES);
@@ -45,12 +45,21 @@ export const users = pgTable(
     identityVerifiedAt: timestamp({ withTimezone: true }),
     /** Platform staff only (granted with `pnpm platform:grant`); null for everyone else. */
     platformRole: platformRole(),
+    /** Version of the Terms and Privacy Policy accepted (`LEGAL_VERSION`), and when. */
+    termsVersion: text(),
+    termsAcceptedAt: timestamp({ withTimezone: true }),
+    /** Set when the person deleted the account (`status = deleted`, personal data erased). */
+    deletedAt: timestamp({ withTimezone: true }),
     ...timestamps,
   },
   (t) => [
     uniqueIndex('users_email_key').on(t.email),
     uniqueIndex('users_phone_key').on(t.phone),
-    check('users_contact_present', sql`${t.email} is not null or ${t.phone} is not null`),
+    // A deleted account keeps no contact (its personal data was erased).
+    check(
+      'users_contact_present',
+      sql`${t.email} is not null or ${t.phone} is not null or ${t.deletedAt} is not null`,
+    ),
   ],
 );
 

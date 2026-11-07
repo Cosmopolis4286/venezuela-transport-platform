@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import type { UserProfile } from '@vtp/shared-types';
+import { LEGAL_VERSION, type UserProfile } from '@vtp/shared-types';
 import { and, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService } from '../../database/database.service.js';
@@ -57,7 +57,7 @@ export class UsersService {
   }): Promise<User> {
     const [user] = await this.database.db
       .insert(users)
-      .values(input)
+      .values({ ...input, termsVersion: LEGAL_VERSION, termsAcceptedAt: new Date() })
       .onConflictDoNothing({ target: users.email })
       .returning();
     if (!user) {
@@ -82,6 +82,17 @@ export class UsersService {
         emailVerifiedAt: sql`coalesce(${users.emailVerifiedAt}, now())`,
         updatedAt: new Date(),
       })
+      .where(eq(users.id, userId))
+      .returning();
+    if (!user) throw new ApiException('NOT_FOUND', 'User not found', HttpStatus.NOT_FOUND);
+    return user;
+  }
+
+  /** Records that the user accepted `version` of the Terms and Privacy Policy now. */
+  async acceptTerms(userId: string, version: string): Promise<User> {
+    const [user] = await this.database.db
+      .update(users)
+      .set({ termsVersion: version, termsAcceptedAt: new Date(), updatedAt: new Date() })
       .where(eq(users.id, userId))
       .returning();
     if (!user) throw new ApiException('NOT_FOUND', 'User not found', HttpStatus.NOT_FOUND);
@@ -170,6 +181,7 @@ export class UsersService {
       status: user.status,
       identityVerified: user.identityVerifiedAt !== null,
       platformRole: user.platformRole,
+      termsVersion: user.termsVersion,
       createdAt: user.createdAt.toISOString(),
     };
   }

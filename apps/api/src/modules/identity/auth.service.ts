@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { HttpStatus, Injectable } from '@nestjs/common';
-import type {
-  AuthClient,
-  AuthResponse,
-  OtpChallengeResponse,
-  OtpChannel,
-  UserProfile,
+import {
+  LEGAL_VERSION,
+  type AuthClient,
+  type AuthResponse,
+  type OtpChallengeResponse,
+  type OtpChannel,
+  type UserProfile,
 } from '@vtp/shared-types';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { AppConfigService } from '../../config/app-config.service.js';
@@ -44,7 +45,12 @@ export class AuthService {
       firstName: input.firstName.trim(),
       lastName: input.lastName.trim(),
     });
-    await this.audit.record({ action: 'auth.register', actorUserId: user.id, ip: meta.ip });
+    await this.audit.record({
+      action: 'auth.register',
+      actorUserId: user.id,
+      ip: meta.ip,
+      metadata: { termsVersion: LEGAL_VERSION },
+    });
     return this.signIn(user, input.client, meta);
   }
 
@@ -85,15 +91,24 @@ export class AuthService {
   }
 
   async verifyLoginOtp(
-    input: { challengeId: string; code: string; client: AuthClient },
+    input: { challengeId: string; code: string; client: AuthClient; acceptTerms?: boolean },
     meta: RequestMeta,
   ): Promise<AuthResponse> {
     const challenge = await this.otp.verify(input.challengeId, input.code, 'login');
-    const user = await this.users.findOrCreateByVerifiedContact(
+    let user = await this.users.findOrCreateByVerifiedContact(
       contactKindFor(challenge.channel),
       challenge.destination,
     );
     this.assertActive(user);
+    if (input.acceptTerms && user.termsVersion !== LEGAL_VERSION) {
+      user = await this.users.acceptTerms(user.id, LEGAL_VERSION);
+      await this.audit.record({
+        action: 'user.terms_accepted',
+        actorUserId: user.id,
+        ip: meta.ip,
+        metadata: { version: LEGAL_VERSION },
+      });
+    }
     await this.audit.record({
       action: 'auth.login.otp',
       actorUserId: user.id,

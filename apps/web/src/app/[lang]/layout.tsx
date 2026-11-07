@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { LanguageSwitcher } from '@/components/site/language-switcher';
+import { LegalFooter } from '@/components/site/legal-footer';
 import { getMessages } from '@/i18n/locale';
 import '../globals.css';
 
@@ -48,6 +49,7 @@ export default async function PublicLayout({ children }: LayoutProps<'/[lang]'>)
           </nav>
         </header>
         <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 py-16">{children}</main>
+        <LegalFooter segment={localeSegment(locale)} t={t.legal} />
       </body>
     </html>
   );

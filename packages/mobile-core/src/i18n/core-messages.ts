@@ -42,6 +42,22 @@ const es = {
     haveAccount: 'Ya tengo cuenta',
     emailTaken: 'Ya existe una cuenta con ese correo. Inicia sesión.',
   },
+  legal: {
+    acceptPrefix: 'Acepto los',
+    continuePrefix: 'Al continuar aceptas los',
+    terms: 'Términos y Condiciones',
+    and: 'y la',
+    privacy: 'Política de Privacidad',
+    newVersion:
+      'Actualizamos los Términos y la Política de Privacidad. Revísalos y acéptalos para seguir usando VTP.',
+    accept: 'Acepto',
+    deleteTitle: 'Borrar mi cuenta',
+    deleteIntro:
+      'Se borran tu correo, teléfono, nombre y contraseña y se cierran tus sesiones. Lo que la ley obliga a conservar (reservas, pagos, listas de pasajeros) queda guardado sin vínculo con tu cuenta. No se puede deshacer.',
+    deleteConfirm: 'Sí, borrar mi cuenta',
+    deleteKeep: 'No, conservarla',
+    deleted: 'Borramos tu cuenta y tus datos personales.',
+  },
   splash: { retry: 'Reintentar', signOut: 'Cerrar sesión' },
   language: { label: 'Idioma', automatic: 'Automático' },
 };
@@ -89,6 +105,22 @@ const en: CoreMessages = {
     haveAccount: 'I already have an account',
     emailTaken: 'There is already an account with that e-mail. Sign in.',
   },
+  legal: {
+    acceptPrefix: 'I accept the',
+    continuePrefix: 'By continuing you accept the',
+    terms: 'Terms and Conditions',
+    and: 'and the',
+    privacy: 'Privacy Policy',
+    newVersion:
+      'We updated the Terms and the Privacy Policy. Please review and accept them to keep using VTP.',
+    accept: 'I accept',
+    deleteTitle: 'Delete my account',
+    deleteIntro:
+      'Your e-mail, phone, name and password are erased and your sessions are closed. What the law requires us to keep (bookings, payments, passenger lists) stays, no longer tied to your account. This cannot be undone.',
+    deleteConfirm: 'Yes, delete my account',
+    deleteKeep: 'No, keep it',
+    deleted: 'We deleted your account and your personal data.',
+  },
   splash: { retry: 'Try again', signOut: 'Sign out' },
   language: { label: 'Language', automatic: 'Automatic' },
 };
@@ -133,6 +165,22 @@ const ptBR: CoreMessages = {
     submit: 'Criar conta',
     haveAccount: 'Já tenho conta',
     emailTaken: 'Já existe uma conta com esse e-mail. Entre.',
+  },
+  legal: {
+    acceptPrefix: 'Aceito os',
+    continuePrefix: 'Ao continuar você aceita os',
+    terms: 'Termos e Condições',
+    and: 'e a',
+    privacy: 'Política de Privacidade',
+    newVersion:
+      'Atualizamos os Termos e a Política de Privacidade. Revise e aceite para continuar usando o VTP.',
+    accept: 'Aceito',
+    deleteTitle: 'Excluir minha conta',
+    deleteIntro:
+      'Seu e-mail, telefone, nome e senha são apagados e suas sessões encerradas. O que a lei obriga a guardar (reservas, pagamentos, listas de passageiros) fica guardado sem vínculo com sua conta. Não pode ser desfeito.',
+    deleteConfirm: 'Sim, excluir minha conta',
+    deleteKeep: 'Não, manter',
+    deleted: 'Excluímos sua conta e seus dados pessoais.',
   },
   splash: { retry: 'Tentar novamente', signOut: 'Sair' },
   language: { label: 'Idioma', automatic: 'Automático' },

@@ -94,6 +94,12 @@ const es: SharedMessages = {
     network: 'No pudimos conectar con el servidor. Revisa tu conexión.',
   },
   reasons: {
+    ACCOUNT_HAS_TRIPS:
+      'Tienes viajes pagados o un taxi pendiente: cancélalos o espera a viajar antes de borrar la cuenta.',
+    ACCOUNT_HAS_REFUNDS:
+      'Tienes un pago en verificación o un reembolso por recibir: espera a que termine antes de borrar la cuenta.',
+    ACCOUNT_OWNS_ORGANIZATION:
+      'Eres el único dueño de una empresa: pasa la titularidad a otra persona antes de borrar la cuenta.',
     SEAT_TAKEN: 'Alguien acaba de apartar uno de esos puestos. Vuelve atrás y elige otro.',
     TOO_MANY_HOLDS: 'Tienes reservas sin pagar. Págalas o cancélalas antes de apartar más puestos.',
     DEPARTURE_NOT_BOOKABLE: 'Esta salida ya no se puede reservar.',
@@ -193,6 +199,12 @@ const en: SharedMessages = {
     network: 'We could not reach the server. Check your connection.',
   },
   reasons: {
+    ACCOUNT_HAS_TRIPS:
+      'You have paid trips or a pending taxi: cancel them or travel first, then delete the account.',
+    ACCOUNT_HAS_REFUNDS:
+      'You have a payment being checked or a refund on its way: wait until it finishes to delete the account.',
+    ACCOUNT_OWNS_ORGANIZATION:
+      'You are the only owner of a company: hand ownership to someone else before deleting the account.',
     SEAT_TAKEN: 'Someone just held one of those seats. Go back and choose another.',
     TOO_MANY_HOLDS: 'You have unpaid bookings. Pay or cancel them before holding more seats.',
     DEPARTURE_NOT_BOOKABLE: 'This departure can no longer be booked.',
@@ -293,6 +305,12 @@ const ptBR: SharedMessages = {
     network: 'Não conseguimos conectar ao servidor. Verifique sua conexão.',
   },
   reasons: {
+    ACCOUNT_HAS_TRIPS:
+      'Você tem viagens pagas ou um táxi pendente: cancele ou viaje antes de excluir a conta.',
+    ACCOUNT_HAS_REFUNDS:
+      'Você tem um pagamento em verificação ou um reembolso a receber: aguarde terminar para excluir a conta.',
+    ACCOUNT_OWNS_ORGANIZATION:
+      'Você é o único dono de uma empresa: passe a titularidade para outra pessoa antes de excluir a conta.',
     SEAT_TAKEN: 'Alguém acabou de reservar um desses assentos. Volte e escolha outro.',
     TOO_MANY_HOLDS:
       'Você tem reservas sem pagar. Pague ou cancele antes de reservar mais assentos.',

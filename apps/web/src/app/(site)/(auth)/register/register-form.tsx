@@ -45,8 +45,34 @@ export function RegisterForm() {
             required
           />
         </Field>
+        <label className="flex items-start gap-2 text-sm">
+          <input type="checkbox" name="acceptTerms" required className="mt-1" />
+          <span>
+            Acepto los{' '}
+            <Link
+              href="/es/legal/terminos"
+              target="_blank"
+              className="underline underline-offset-4"
+            >
+              Términos y Condiciones
+            </Link>{' '}
+            y la{' '}
+            <Link
+              href="/es/legal/privacidad"
+              target="_blank"
+              className="underline underline-offset-4"
+            >
+              Política de Privacidad
+            </Link>
+            .
+          </span>
+        </label>
         {state.error ? (
-          <Alert variant="destructive">{state.fieldErrors?.password ?? state.error}</Alert>
+          <Alert variant="destructive">
+            {state.fieldErrors?.acceptTerms
+              ? 'Debes aceptar los Términos y la Política de Privacidad para crear la cuenta.'
+              : (state.fieldErrors?.password ?? state.error)}
+          </Alert>
         ) : null}
         <Button type="submit" disabled={pending}>
           {pending ? 'Creando…' : 'Crear cuenta'}

@@ -48,6 +48,7 @@ export async function register(_: FormState, form: FormData): Promise<FormState>
         firstName: text(form, 'firstName'),
         lastName: text(form, 'lastName'),
         client: 'web',
+        acceptTerms: form.get('acceptTerms') === 'on',
       },
     });
   } catch (error) {
@@ -82,7 +83,7 @@ export async function signInWithCode(state: CodeState, form: FormData): Promise<
     response = await apiRequest<AuthResponse>('/auth/otp/verify', {
       method: 'POST',
       auth: false,
-      body: { challengeId, code: text(form, 'code'), client: 'web' },
+      body: { challengeId, code: text(form, 'code'), client: 'web', acceptTerms: true },
     });
   } catch (error) {
     // Stay on the code step so the user can retry or ask for a new code.

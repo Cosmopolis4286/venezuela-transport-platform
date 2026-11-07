@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { ApiError, userMessage } from '../api/errors';
 import { useAuth } from '../auth/auth-context';
 import { useI18n } from '../i18n/i18n-context';
+import { LegalLinks } from '../legal/legal-links';
 import { Banner, Body, Button, Field, Heading, Screen } from '../ui/components';
+import { Pressable, View } from 'react-native';
+import { useColors } from '../ui/theme';
 
 const PASSWORD_MIN = 10;
 
@@ -10,6 +13,8 @@ export function RegisterScreen({ onSignIn }: { onSignIn: () => void }) {
   const { register } = useAuth();
   const t = useI18n().core.register;
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '' });
+  const [accepted, setAccepted] = useState(false);
+  const colors = useColors();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const set = (key: keyof typeof form) => (value: string) =>
@@ -19,7 +24,8 @@ export function RegisterScreen({ onSignIn }: { onSignIn: () => void }) {
     form.firstName.trim() &&
     form.lastName.trim() &&
     form.email.trim() &&
-    form.password.length >= PASSWORD_MIN;
+    form.password.length >= PASSWORD_MIN &&
+    accepted;
 
   const submit = async () => {
     setBusy(true);
@@ -72,6 +78,25 @@ export function RegisterScreen({ onSignIn }: { onSignIn: () => void }) {
         hint={t.atLeast(PASSWORD_MIN)}
         error={tooShort ? t.atLeast(PASSWORD_MIN) : undefined}
       />
+      <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+        <Pressable
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: accepted }}
+          onPress={() => setAccepted((a) => !a)}
+          style={{
+            width: 22,
+            height: 22,
+            marginTop: 1,
+            borderRadius: 4,
+            borderWidth: 2,
+            borderColor: colors.text,
+            backgroundColor: accepted ? colors.text : 'transparent',
+          }}
+        />
+        <View style={{ flex: 1 }}>
+          <LegalLinks prefix="accept" />
+        </View>
+      </View>
       {error ? <Banner tone="error">{error}</Banner> : null}
       <Button title={t.submit} onPress={submit} loading={busy} disabled={!complete} />
       <Button variant="link" title={t.haveAccount} onPress={onSignIn} />

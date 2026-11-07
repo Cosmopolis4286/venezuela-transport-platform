@@ -12,7 +12,8 @@ export type OtpChannel = (typeof OTP_CHANNELS)[number];
 export const OTP_PURPOSES = ['login', 'verify_contact', 'password_reset'] as const;
 export type OtpPurpose = (typeof OTP_PURPOSES)[number];
 
-export type UserStatus = 'active' | 'suspended';
+/** `deleted`: the person deleted the account; its personal data was erased. */
+export type UserStatus = 'active' | 'suspended' | 'deleted';
 
 export interface UserProfile {
   id: string;
@@ -28,6 +29,8 @@ export interface UserProfile {
   identityVerified: boolean;
   /** Platform staff role (`admin`, `reviewer`), or null for regular users. */
   platformRole: 'admin' | 'reviewer' | null;
+  /** Version of the Terms and Privacy Policy the user accepted (`LEGAL_VERSION`), or null. */
+  termsVersion: string | null;
   createdAt: string;
 }
 
@@ -52,6 +55,8 @@ export interface RegisterRequest {
   firstName: string;
   lastName: string;
   client: AuthClient;
+  /** Must be true: the person accepts the current Terms and Privacy Policy. */
+  acceptTerms: true;
 }
 
 /** `POST /api/v1/auth/login` */
@@ -86,6 +91,8 @@ export interface OtpVerifyRequest {
   challengeId: string;
   code: string;
   client: AuthClient;
+  /** True when the screen told the person that continuing accepts the Terms and Privacy Policy. */
+  acceptTerms?: boolean;
 }
 
 /** `POST /api/v1/me/contact-verification/confirm` */

@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   AUTH_CLIENTS,
   OTP_CHANNELS,
+  type AcceptTermsRequest,
   type AuthClient,
   type ContactVerificationConfirmRequest,
   type OtpChannel,
@@ -15,6 +16,8 @@ import {
   type UpdateProfileRequest,
 } from '@vtp/shared-types';
 import {
+  Equals,
+  IsBoolean,
   IsEmail,
   IsIn,
   IsOptional,
@@ -53,6 +56,10 @@ export class RegisterDto implements RegisterRequest {
   @ApiProperty({ enum: AUTH_CLIENTS })
   @IsIn(AUTH_CLIENTS)
   client!: AuthClient;
+
+  @ApiProperty({ enum: [true], description: 'Accepts the current Terms and Privacy Policy' })
+  @Equals(true, { message: 'Accept the Terms and the Privacy Policy to create an account' })
+  acceptTerms!: true;
 }
 
 export class PasswordLoginDto implements PasswordLoginRequest {
@@ -94,6 +101,11 @@ export class OtpVerifyDto implements OtpVerifyRequest {
   @ApiProperty({ enum: AUTH_CLIENTS })
   @IsIn(AUTH_CLIENTS)
   client!: AuthClient;
+
+  @ApiPropertyOptional({ description: 'Continuing accepts the current Terms and Privacy Policy' })
+  @IsOptional()
+  @IsBoolean()
+  acceptTerms?: boolean;
 }
 
 export class ContactVerificationConfirmDto implements ContactVerificationConfirmRequest {
@@ -151,4 +163,11 @@ export class PasswordResetDto implements PasswordResetRequest {
   @ApiProperty({ enum: AUTH_CLIENTS })
   @IsIn(AUTH_CLIENTS)
   client!: AuthClient;
+}
+
+export class AcceptTermsDto implements AcceptTermsRequest {
+  @ApiProperty({ example: '2026-11-07', description: 'Must be the current LEGAL_VERSION' })
+  @IsString()
+  @MaxLength(20)
+  version!: string;
 }
