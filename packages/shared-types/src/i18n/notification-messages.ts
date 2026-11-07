@@ -13,6 +13,8 @@ export interface NotificationText {
 
 export interface NotificationMessages {
   otp: (code: string, minutes: number) => NotificationText;
+  /** The code to choose a new password. */
+  passwordReset: (code: string, minutes: number) => NotificationText;
   paymentConfirmed: (bookingCode: string, route: string, departs: string) => NotificationText;
   bookingCancelled: (bookingCode: string, refund: string | null) => NotificationText;
   refundSent: (bookingCode: string, amount: string, reference: string) => NotificationText;
@@ -45,6 +47,10 @@ const es: NotificationMessages = {
   otp: (code, minutes) => ({
     title: `Tu código de VTP: ${code}`,
     body: `Tu código para entrar en VTP es ${code}. Vence en ${minutes} minutos. Si no lo pediste, ignora este correo; nadie de VTP te lo pedirá nunca.`,
+  }),
+  passwordReset: (code, minutes) => ({
+    title: `Código para cambiar tu contraseña de VTP: ${code}`,
+    body: `Usa el código ${code} para elegir una contraseña nueva. Vence en ${minutes} minutos. Si no lo pediste, ignora este correo: tu contraseña no cambia.`,
   }),
   paymentConfirmed: (code, route, departs) => ({
     title: 'Pago confirmado',
@@ -127,6 +133,10 @@ const en: NotificationMessages = {
     title: `Your VTP code: ${code}`,
     body: `Your code to sign in to VTP is ${code}. It expires in ${minutes} minutes. If you did not ask for it, ignore this e-mail; VTP will never ask you for it.`,
   }),
+  passwordReset: (code, minutes) => ({
+    title: `Code to change your VTP password: ${code}`,
+    body: `Use the code ${code} to choose a new password. It expires in ${minutes} minutes. If you did not ask for it, ignore this e-mail: your password does not change.`,
+  }),
   paymentConfirmed: (code, route, departs) => ({
     title: 'Payment confirmed',
     body: `Your booking ${code} (${route}, ${departs}) is paid. Show each passenger's QR code when boarding.`,
@@ -208,6 +218,10 @@ const ptBR: NotificationMessages = {
   otp: (code, minutes) => ({
     title: `Seu código VTP: ${code}`,
     body: `Seu código para entrar no VTP é ${code}. Ele vence em ${minutes} minutos. Se você não pediu, ignore este e-mail; o VTP nunca vai pedi-lo a você.`,
+  }),
+  passwordReset: (code, minutes) => ({
+    title: `Código para trocar sua senha do VTP: ${code}`,
+    body: `Use o código ${code} para escolher uma nova senha. Ele vence em ${minutes} minutos. Se você não pediu, ignore este e-mail: sua senha não muda.`,
   }),
   paymentConfirmed: (code, route, departs) => ({
     title: 'Pagamento confirmado',

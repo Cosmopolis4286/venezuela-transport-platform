@@ -11,7 +11,7 @@ import type { OtpMessage, OtpSender } from './otp-sender.js';
 export class EmailOtpSender implements OtpSender {
   constructor(private readonly mailer: Mailer) {}
 
-  async send({ channel, destination, code, expiresAt }: OtpMessage): Promise<void> {
+  async send({ channel, destination, code, expiresAt, purpose }: OtpMessage): Promise<void> {
     if (channel !== 'email') {
       throw new ApiException(
         'SERVICE_UNAVAILABLE',
@@ -21,7 +21,10 @@ export class EmailOtpSender implements OtpSender {
     }
     const minutes = Math.max(1, Math.round((expiresAt.getTime() - Date.now()) / 60_000));
     const messages = notificationMessages('es');
-    const { title, body } = messages.otp(code, minutes);
+    const { title, body } =
+      purpose === 'password_reset'
+        ? messages.passwordReset(code, minutes)
+        : messages.otp(code, minutes);
     await this.mailer.send({
       to: destination,
       subject: title,

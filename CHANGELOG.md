@@ -13,6 +13,9 @@ pull request.
 
 ### Agregado
 
+- **Recuperar la contraseña.** «¿Olvidaste tu contraseña?» en la web y en las apps: un código al
+  correo para elegir una nueva, que cierra las demás sesiones (`POST /auth/password/forgot` y
+  `/reset`; no revela si un correo está registrado). Migración `0018`.
 - **Cobro por empresa (ADR-027).** Un administrador elige, por empresa, si los pagos los recibe la
   plataforma (por defecto) o la empresa en sus propias cuentas. En ese caso la empresa carga sus
   cuentas, verifica los pagos y hace sus reembolsos en **Cobros** del portal (nuevo permiso

@@ -5,8 +5,11 @@ export type AuthClient = (typeof AUTH_CLIENTS)[number];
 export const OTP_CHANNELS = ['sms', 'whatsapp', 'email'] as const;
 export type OtpChannel = (typeof OTP_CHANNELS)[number];
 
-/** `login` signs in (creating the account if needed); `verify_contact` confirms a contact of the signed-in user. */
-export const OTP_PURPOSES = ['login', 'verify_contact'] as const;
+/**
+ * `login` signs in (creating the account if needed); `verify_contact` confirms a contact of the
+ * signed-in user; `password_reset` lets someone who forgot their password choose a new one.
+ */
+export const OTP_PURPOSES = ['login', 'verify_contact', 'password_reset'] as const;
 export type OtpPurpose = (typeof OTP_PURPOSES)[number];
 
 export type UserStatus = 'active' | 'suspended';
@@ -89,6 +92,25 @@ export interface OtpVerifyRequest {
 export interface ContactVerificationConfirmRequest {
   challengeId: string;
   code: string;
+}
+
+/**
+ * `POST /api/v1/auth/password/forgot` — e-mails a code to choose a new password. The answer looks
+ * the same whether or not an account has that e-mail, so it never reveals who is registered.
+ */
+export interface PasswordForgotRequest {
+  email: string;
+}
+
+/**
+ * `POST /api/v1/auth/password/reset` — the code from that e-mail and the new password. Signs in,
+ * and signs out every other session of the account.
+ */
+export interface PasswordResetRequest {
+  challengeId: string;
+  code: string;
+  password: string;
+  client: AuthClient;
 }
 
 /** `POST /api/v1/auth/refresh` */

@@ -4,11 +4,12 @@ Implementada en `apps/api/src/modules/identity`. Contratos en `packages/shared-t
 
 ## Formas de iniciar sesión
 
-| Método                                                | Quién                                             | Endpoints                                            |
-| ----------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------- |
-| Correo + contraseña                                   | Pasajeros (y cualquiera con una cuenta de correo) | `POST /auth/register`, `POST /auth/login`            |
-| Código de un solo uso por SMS, WhatsApp o correo      | Pasajeros; el primer uso crea la cuenta           | `POST /auth/otp/request` → `POST /auth/otp/verify`   |
-| Agregar o verificar un teléfono o correo en la cuenta | Cualquier usuario con sesión                      | `POST /me/contact-verification/request` → `/confirm` |
+| Método                                                | Quién                                              | Endpoints                                                  |
+| ----------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------- |
+| Correo + contraseña                                   | Pasajeros (y cualquiera con una cuenta de correo)  | `POST /auth/register`, `POST /auth/login`                  |
+| Código de un solo uso por SMS, WhatsApp o correo      | Pasajeros; el primer uso crea la cuenta            | `POST /auth/otp/request` → `POST /auth/otp/verify`         |
+| Agregar o verificar un teléfono o correo en la cuenta | Cualquier usuario con sesión                       | `POST /me/contact-verification/request` → `/confirm`       |
+| Recuperar la contraseña con un código por correo      | Quien la olvidó (o quiere ponerle una a su cuenta) | `POST /auth/password/forgot` → `POST /auth/password/reset` |
 
 Todas las rutas están bajo `/api/v1`. Conductores, tripulaciones y operadores de terminal usan las
 mismas cuentas; lo que pueden hacer dentro de una empresa viene de sus **membresías en
@@ -48,6 +49,20 @@ una organización por sí solo.
   `INVALID_CREDENTIALS` y tardan lo mismo (se verifica un hash ficticio cuando la cuenta no
   existe).
 
+### Recuperar la contraseña
+
+1. `POST /auth/password/forgot` con el correo: si hay una cuenta activa con ese correo, le llega
+   un código de 6 dígitos (propósito `password_reset`, mismo vencimiento, intentos y límites de
+   envío que los demás códigos). La respuesta tiene la misma forma aunque el correo no exista, y
+   entonces no se envía nada: no revela quién está registrado.
+2. `POST /auth/password/reset` con el código y la contraseña nueva: la guarda, marca el correo como
+   verificado, **cierra todas las sesiones** de la cuenta y abre una nueva (responde como un
+   inicio de sesión). Un código de entrar no sirve para esto, ni al revés.
+
+Sirve también para ponerle contraseña a una cuenta creada con un código. En la web:
+`/login/forgot` (enlace «¿Olvidaste tu contraseña?»); en las apps, el mismo enlace en **Con
+contraseña**.
+
 ## Códigos de un solo uso
 
 - 6 dígitos, válidos `OTP_TTL_MINUTES` (5), con `OTP_MAX_ATTEMPTS` (5) intentos fallidos, de un
@@ -85,12 +100,12 @@ una organización por sí solo.
 ## Eventos de auditoría
 
 `auth.register`, `auth.login.password`, `auth.login.password_failed`, `auth.login.otp`,
-`auth.otp.requested`, `auth.refresh.reuse_detected`, `auth.logout`, `user.contact_verified`,
+`auth.otp.requested`, `auth.password_reset.requested`, `auth.password_reset.unknown`,
+`auth.password_reset`, `auth.refresh.reuse_detected`, `auth.logout`, `user.contact_verified`,
 `user.profile_updated` — guardados en `audit_events` con el id del usuario, la IP y metadatos no
 sensibles.
 
 ## Todavía no implementado
 
-Códigos por SMS o WhatsApp (sin proveedor contratado), restablecer la contraseña (reutilizará los
-códigos de un solo uso), ver y revocar las otras sesiones, inicio de sesión con redes sociales y
+Códigos por SMS o WhatsApp (sin proveedor contratado), ver y revocar las otras sesiones, inicio de sesión con redes sociales y
 doble factor para las cuentas del personal.

@@ -7,7 +7,9 @@ import {
   type OtpChannel,
   type OtpRequest,
   type OtpVerifyRequest,
+  type PasswordForgotRequest,
   type PasswordLoginRequest,
+  type PasswordResetRequest,
   type RefreshRequest,
   type RegisterRequest,
   type UpdateProfileRequest,
@@ -123,4 +125,30 @@ export class UpdateProfileDto implements UpdateProfileRequest {
   @IsString()
   @Length(1, 80)
   lastName?: string;
+}
+
+export class PasswordForgotDto implements PasswordForgotRequest {
+  @ApiProperty({ example: 'maria@example.com' })
+  @IsString()
+  @MaxLength(254)
+  email!: string;
+}
+
+export class PasswordResetDto implements PasswordResetRequest {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  challengeId!: string;
+
+  @ApiProperty({ example: '123456' })
+  @Matches(/^\d{6}$/, { message: 'code must be 6 digits' })
+  code!: string;
+
+  @ApiProperty({ minLength: PASSWORD_MIN, maxLength: PASSWORD_MAX })
+  @IsString()
+  @Length(PASSWORD_MIN, PASSWORD_MAX)
+  password!: string;
+
+  @ApiProperty({ enum: AUTH_CLIENTS })
+  @IsIn(AUTH_CLIENTS)
+  client!: AuthClient;
 }

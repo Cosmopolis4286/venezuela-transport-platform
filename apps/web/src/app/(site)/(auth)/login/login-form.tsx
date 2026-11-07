@@ -76,6 +76,12 @@ function PasswordForm({ next }: { next: string }) {
       <Button type="submit" disabled={pending}>
         {pending ? 'Entrando…' : 'Entrar'}
       </Button>
+      <Link
+        href="/login/forgot"
+        className="text-center text-sm text-muted-foreground underline-offset-4 hover:underline"
+      >
+        ¿Olvidaste tu contraseña?
+      </Link>
     </form>
   );
 }

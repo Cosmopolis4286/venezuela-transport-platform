@@ -134,6 +134,14 @@ export class SessionsService {
     return { user, tokens: issued.tokens };
   }
 
+  /** Signs a user out everywhere (after a password reset). */
+  async revokeAll(userId: string, reason: string): Promise<void> {
+    await this.database.db
+      .update(sessions)
+      .set({ revokedAt: new Date(), revokedReason: reason })
+      .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)));
+  }
+
   async revoke(sessionId: string, reason: string): Promise<void> {
     await this.database.db
       .update(sessions)
