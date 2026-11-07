@@ -11,6 +11,13 @@ import { formatDate } from '@/lib/labels';
 
 const percent = (rate: string) => `${rate.replace('.', ',')} %`;
 
+/** A positive balance is owed to the operator; a negative one, by the operator to the platform. */
+function balanceText(balance: string, currency: Parameters<typeof formatPaymentAmount>[1]) {
+  return balance.startsWith('-')
+    ? `Debe ${formatPaymentAmount(balance.slice(1), currency)}`
+    : formatPaymentAmount(balance, currency);
+}
+
 /** Balance per currency: fares, commission, payouts and what is still owed. */
 export function SettlementBalances({ settlement }: { settlement: OrganizationSettlement }) {
   return (
@@ -25,6 +32,11 @@ export function SettlementBalances({ settlement }: { settlement: OrganizationSet
         {settlement.refundTiersOverride ? ' (acordado con la empresa)' : ' (por defecto)'}. La
         plataforma conserva su comisión; el reembolso se descuenta de lo ganado por la empresa.
       </p>
+      <p className="text-sm text-muted-foreground">
+        {settlement.paymentCollection === 'operator'
+          ? 'Cobros: la empresa recibe los pagos en sus propias cuentas, los verifica, hace sus reembolsos y le paga la comisión a la plataforma.'
+          : 'Cobros: la plataforma recibe los pagos de los pasajeros y le paga a la empresa lo que gana.'}
+      </p>
       {settlement.balances.length === 0 ? (
         <p className="text-sm text-muted-foreground">Todavía no hay reservas pagadas.</p>
       ) : (
@@ -36,8 +48,10 @@ export function SettlementBalances({ settlement }: { settlement: OrganizationSet
                 <th className="py-2 pr-4 text-right font-normal">Boletos vendidos</th>
                 <th className="py-2 pr-4 text-right font-normal">Comisión</th>
                 <th className="py-2 pr-4 text-right font-normal">Para la empresa</th>
-                <th className="py-2 pr-4 text-right font-normal">Pagado</th>
-                <th className="py-2 text-right font-normal">Saldo por pagar</th>
+                <th className="py-2 pr-4 text-right font-normal">Cobrado por la empresa</th>
+                <th className="py-2 pr-4 text-right font-normal">Pagado a la empresa</th>
+                <th className="py-2 pr-4 text-right font-normal">Pagado por la empresa</th>
+                <th className="py-2 text-right font-normal">Saldo</th>
               </tr>
             </thead>
             <tbody className="tabular-nums">
@@ -54,15 +68,25 @@ export function SettlementBalances({ settlement }: { settlement: OrganizationSet
                     {formatPaymentAmount(b.earned, b.currency)}
                   </td>
                   <td className="py-2 pr-4 text-right">
+                    {formatPaymentAmount(b.collected, b.currency)}
+                  </td>
+                  <td className="py-2 pr-4 text-right">
                     {formatPaymentAmount(b.paidOut, b.currency)}
                   </td>
+                  <td className="py-2 pr-4 text-right">
+                    {formatPaymentAmount(b.received, b.currency)}
+                  </td>
                   <td className="py-2 text-right font-semibold">
-                    {formatPaymentAmount(b.balance, b.currency)}
+                    {balanceText(b.balance, b.currency)}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          <p className="pt-2 text-xs text-muted-foreground">
+            Saldo = para la empresa − cobrado por la empresa − pagado a la empresa + pagado por la
+            empresa. «Debe» es lo que la empresa le debe a la plataforma (su comisión).
+          </p>
         </div>
       )}
     </div>
@@ -97,6 +121,9 @@ export function SettlementEntries({ entries }: { entries: SettlementEntry[] }) {
                 {e.kind === 'cancellation' ? (
                   <span className="text-muted-foreground"> · cancelada</span>
                 ) : null}
+                {e.collectedBy === 'operator' ? (
+                  <span className="text-muted-foreground"> · cobró la empresa</span>
+                ) : null}
               </td>
               <td className="py-2 pr-4">
                 {e.route.name} · {formatDate(`${e.serviceDate}T12:00:00-04:00`)}
@@ -126,6 +153,7 @@ export function PayoutLine({ payout, children }: { payout: Payout; children?: Re
           {formatPaymentAmount(payout.amount, payout.currency)}
         </span>
         <span className="text-sm text-muted-foreground">
+          {payout.direction === 'from_operator' ? 'De la empresa a la plataforma · ' : ''}
           {PAYOUT_METHOD_LABELS[payout.method]} · ref. {payout.reference} ·{' '}
           {formatDate(payout.createdAt)}
         </span>

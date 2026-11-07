@@ -53,12 +53,25 @@ En la página de la organización:
    conductor y vehículo con su tarifa, o tus conductores la toman desde su app.
 3. Por ahora el pasajero le paga al conductor; la plataforma no cobra los taxis.
 
-## 6. Liquidaciones: lo que te debe la plataforma
+## 6. Cobros y liquidaciones
 
-Los pasajeros le pagan a VTP. Por cada reserva pagada, tu empresa gana la tarifa menos la comisión
-de la plataforma, en la moneda de la tarifa. En **Liquidaciones** (dueño y administrador) ves:
+**¿Quién recibe el dinero?** Por defecto, VTP: los pasajeros pagan a las cuentas de la plataforma y
+VTP le paga a tu empresa lo que gana. Si lo acuerdas con VTP, tu empresa puede **cobrar con sus
+propias cuentas**. Entonces, en **Cobros** (dueño y administrador):
 
-- el **saldo** por moneda: vendido, comisión, ganado, pagado y lo que falta por pagar;
+1. Carga tus **cuentas de cobro** (pago móvil, transferencia, PIX, USDT): es lo que ven tus
+   pasajeros al pagar.
+2. Revisa **Por verificar** varias veces al día: busca cada pago en tu banco por el número de
+   operación y el concepto (`VTP-…`) y **Confirma** o **Rechaza** con un motivo (los puestos
+   esperan hasta 6 horas).
+3. Atiende tus **Reembolsos**: devuelve el dinero por el mismo medio y registra la referencia.
+4. Págale a VTP su **comisión**; tu saldo en Liquidaciones muestra cuánto debes.
+
+Por cada reserva pagada, tu empresa gana la tarifa menos la comisión de la plataforma, en la moneda
+de la tarifa. En **Liquidaciones** (dueño y administrador) ves:
+
+- el **saldo** por moneda: vendido, comisión, ganado, lo cobrado por tu empresa, los pagos en cada
+  sentido y lo que falta por pagar (o «Debe», si tu empresa le debe la comisión a VTP);
 - la **comisión** y la **política de reembolsos** que se aplican a tu empresa;
 - las **reservas pagadas** de cada mes, incluidas las canceladas (con monto negativo);
 - los **pagos recibidos** de VTP, con su referencia.

@@ -1,4 +1,4 @@
-import type { RefundTier, SettlementPolicy } from '@vtp/shared-types';
+import type { PaymentCollection, RefundTier, SettlementPolicy } from '@vtp/shared-types';
 import { and, count, eq } from 'drizzle-orm';
 import type { Database, Transaction } from '../../database/database.service.js';
 import { bookingPassengers, bookings, trips } from '../bookings/bookings.schema.js';
@@ -49,7 +49,11 @@ export async function policyFor(
   db: Database | Transaction,
   organizationId: string,
 ): Promise<
-  SettlementPolicy & { commissionOverride: string | null; refundTiersOverride: RefundTier[] | null }
+  SettlementPolicy & {
+    commissionOverride: string | null;
+    refundTiersOverride: RefundTier[] | null;
+    paymentCollection: PaymentCollection;
+  }
 > {
   const [platform] = await db.select().from(platformSettings).where(eq(platformSettings.id, 1));
   if (!platform) throw new Error('platform_settings has no row: run the migrations');
@@ -62,14 +66,20 @@ export async function policyFor(
     refundTiers: own?.refundTiers ?? platform.refundTiers,
     commissionOverride: own?.commissionRate ?? null,
     refundTiersOverride: own?.refundTiers ?? null,
+    paymentCollection: own?.paymentCollection ?? 'platform',
   };
 }
 
 /**
  * Writes what a booking that was just confirmed earns its operator, with the commission in force
- * now. Runs inside the confirming transaction; a second call for the same booking does nothing.
+ * now, and who received the money. Runs inside the confirming transaction; a second call for the
+ * same booking does nothing.
  */
-export async function recordEarning(tx: Transaction, bookingId: string): Promise<void> {
+export async function recordEarning(
+  tx: Transaction,
+  bookingId: string,
+  collectedBy: PaymentCollection = 'platform',
+): Promise<void> {
   const [row] = await tx
     .select({
       organizationId: trips.organizationId,
@@ -90,6 +100,7 @@ export async function recordEarning(tx: Transaction, bookingId: string): Promise
     .values({
       organizationId: row.organizationId,
       bookingId,
+      collectedBy,
       seats: seats?.n ?? 0,
       currency: row.currency,
       gross: row.gross,
@@ -121,6 +132,7 @@ export async function recordCancellation(
       organizationId: earning.organizationId,
       bookingId,
       kind: 'cancellation',
+      collectedBy: earning.collectedBy,
       seats: -earning.seats,
       currency: earning.currency,
       gross: negative(fareRefund),

@@ -144,7 +144,7 @@ export class AdminSettlementsController {
 
   @Get('refunds')
   refunds(): Promise<RefundDuePayment[]> {
-    return this.settlements.refundsDue();
+    return this.settlements.refundsDue(null);
   }
 
   @Post('refunds/:paymentId')
@@ -155,6 +155,39 @@ export class AdminSettlementsController {
     @CurrentAuth() auth: Authenticated,
     @ReqMeta() meta: RequestMeta,
   ): Promise<void> {
-    return this.settlements.markRefunded(paymentId, body.reference, auth, meta);
+    return this.settlements.markRefunded(paymentId, null, body.reference, auth, meta);
+  }
+}
+
+/** An operator that collects its own payments sends their refunds itself (ADR-027). */
+@ApiTags('settlements')
+@ApiBearerAuth()
+@Controller({ path: 'organizations/:organizationId/refunds', version: '1' })
+export class OrganizationRefundsController {
+  constructor(private readonly settlements: SettlementsService) {}
+
+  @Get()
+  @RequireOrganizationAccess('finance.manage')
+  refunds(@CurrentOrganization() access: OrganizationAccess): Promise<RefundDuePayment[]> {
+    return this.settlements.refundsDue(access.organization.id);
+  }
+
+  @Post(':paymentId')
+  @RequireOrganizationAccess('finance.manage')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  markRefunded(
+    @CurrentOrganization() access: OrganizationAccess,
+    @Param('paymentId', ParseUUIDPipe) paymentId: string,
+    @Body() body: MarkRefundedDto,
+    @CurrentAuth() auth: Authenticated,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<void> {
+    return this.settlements.markRefunded(
+      paymentId,
+      access.organization.id,
+      body.reference,
+      auth,
+      meta,
+    );
   }
 }

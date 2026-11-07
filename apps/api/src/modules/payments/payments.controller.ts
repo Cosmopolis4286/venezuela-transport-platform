@@ -6,11 +6,13 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseEnumPipe,
   ParseUUIDPipe,
   Post,
   Put,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { PAYMENT_METHODS, type PaymentMethod } from '@vtp/shared-types';
 import type {
   Booking,
   ExchangeRate,
@@ -39,6 +41,9 @@ import {
   SimulatePaymentDto,
 } from './payments.dto.js';
 import { PaymentsService } from './payments.service.js';
+
+/** `:method` alone (a DTO for `@Param()` would also receive `:organizationId` and reject it). */
+const methodPipe = new ParseEnumPipe(Object.fromEntries(PAYMENT_METHODS.map((m) => [m, m])));
 
 /** Passengers pay their held bookings. */
 @ApiTags('payments')
@@ -127,7 +132,7 @@ export class AdminPaymentsController {
 
   @Get('payment-accounts')
   accounts(): Promise<PaymentAccount[]> {
-    return this.payments.accounts();
+    return this.payments.accounts(null);
   }
 
   @Put('payment-accounts/:method')
@@ -137,7 +142,7 @@ export class AdminPaymentsController {
     @CurrentAuth() auth: Authenticated,
     @ReqMeta() meta: RequestMeta,
   ): Promise<PaymentAccount> {
-    return this.payments.setAccount(params.method, body, auth, meta);
+    return this.payments.setAccount(null, params.method, body, auth, meta);
   }
 
   @Delete('payment-accounts/:method')
@@ -147,12 +152,12 @@ export class AdminPaymentsController {
     @CurrentAuth() auth: Authenticated,
     @ReqMeta() meta: RequestMeta,
   ): Promise<void> {
-    return this.payments.removeAccount(params.method, auth, meta);
+    return this.payments.removeAccount(null, params.method, auth, meta);
   }
 
   @Get('payments/review')
   review(): Promise<PaymentReview[]> {
-    return this.payments.reviewQueue();
+    return this.payments.reviewQueue(null);
   }
 
   @Post('payments/:paymentId/confirm')
@@ -163,7 +168,7 @@ export class AdminPaymentsController {
     @CurrentAuth() auth: Authenticated,
     @ReqMeta() meta: RequestMeta,
   ): Promise<Payment> {
-    return this.payments.confirmReported(paymentId, body.receivedAmount, auth, meta);
+    return this.payments.confirmReported(paymentId, null, body.receivedAmount, auth, meta);
   }
 
   @Post('payments/:paymentId/reject')
@@ -174,6 +179,85 @@ export class AdminPaymentsController {
     @CurrentAuth() auth: Authenticated,
     @ReqMeta() meta: RequestMeta,
   ): Promise<Payment> {
-    return this.payments.rejectReported(paymentId, body.reason, auth, meta);
+    return this.payments.rejectReported(paymentId, null, body.reason, auth, meta);
+  }
+}
+
+/**
+ * An operator that collects its own payments (ADR-027): its receiving accounts and the
+ * verification of what its passengers report. Refunds: `OrganizationRefundsController`.
+ */
+@ApiTags('payments')
+@ApiBearerAuth()
+@Controller({ path: 'organizations/:organizationId', version: '1' })
+export class OrganizationPaymentsController {
+  constructor(private readonly payments: PaymentsService) {}
+
+  @Get('payment-accounts')
+  @RequireOrganizationAccess('finance.view')
+  accounts(@CurrentOrganization() access: OrganizationAccess): Promise<PaymentAccount[]> {
+    return this.payments.accounts(access.organization.id);
+  }
+
+  @Put('payment-accounts/:method')
+  @RequireOrganizationAccess('finance.manage')
+  setAccount(
+    @CurrentOrganization() access: OrganizationAccess,
+    @Param('method', methodPipe) method: PaymentMethod,
+    @Body() body: PaymentAccountDto,
+    @CurrentAuth() auth: Authenticated,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<PaymentAccount> {
+    return this.payments.setAccount(access.organization.id, method, body, auth, meta);
+  }
+
+  @Delete('payment-accounts/:method')
+  @RequireOrganizationAccess('finance.manage')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  removeAccount(
+    @CurrentOrganization() access: OrganizationAccess,
+    @Param('method', methodPipe) method: PaymentMethod,
+    @CurrentAuth() auth: Authenticated,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<void> {
+    return this.payments.removeAccount(access.organization.id, method, auth, meta);
+  }
+
+  @Get('payments/review')
+  @RequireOrganizationAccess('finance.manage')
+  review(@CurrentOrganization() access: OrganizationAccess): Promise<PaymentReview[]> {
+    return this.payments.reviewQueue(access.organization.id);
+  }
+
+  @Post('payments/:paymentId/confirm')
+  @RequireOrganizationAccess('finance.manage')
+  @HttpCode(HttpStatus.OK)
+  confirm(
+    @CurrentOrganization() access: OrganizationAccess,
+    @Param('paymentId', ParseUUIDPipe) paymentId: string,
+    @Body() body: ConfirmPaymentDto,
+    @CurrentAuth() auth: Authenticated,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<Payment> {
+    return this.payments.confirmReported(
+      paymentId,
+      access.organization.id,
+      body.receivedAmount,
+      auth,
+      meta,
+    );
+  }
+
+  @Post('payments/:paymentId/reject')
+  @RequireOrganizationAccess('finance.manage')
+  @HttpCode(HttpStatus.OK)
+  reject(
+    @CurrentOrganization() access: OrganizationAccess,
+    @Param('paymentId', ParseUUIDPipe) paymentId: string,
+    @Body() body: RejectPaymentDto,
+    @CurrentAuth() auth: Authenticated,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<Payment> {
+    return this.payments.rejectReported(paymentId, access.organization.id, body.reason, auth, meta);
   }
 }

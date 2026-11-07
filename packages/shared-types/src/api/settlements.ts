@@ -49,6 +49,14 @@ export function refundPercentFor(tiers: readonly RefundTier[], hoursLeft: number
   return tiers.find((tier) => hoursLeft >= tier.hoursBefore)?.percent ?? 0;
 }
 
+/**
+ * Who receives passengers' payments for an operator (ADR-027). `platform` (default): the
+ * platform's accounts; it pays the operator what it earned. `operator`: the operator's own
+ * accounts; it verifies its payments, sends its refunds and owes the platform its commission.
+ */
+export const PAYMENT_COLLECTIONS = ['platform', 'operator'] as const;
+export type PaymentCollection = (typeof PAYMENT_COLLECTIONS)[number];
+
 /** Commission and refund tiers in force (the platform's, or an operator's own). */
 export interface SettlementPolicy {
   /** Percentage, e.g. `"8.00"`. */
@@ -73,9 +81,16 @@ export interface SettlementBalance {
   commission: string;
   /** `gross - commission`. */
   earned: string;
+  /** Fares the operator received directly in its own accounts (minus what it refunded). */
+  collected: string;
   /** Payouts made (voided ones excluded). */
   paidOut: string;
-  /** `earned - paidOut`: still owed to the operator. */
+  /** What the operator paid the platform (its commission on what it collected). */
+  received: string;
+  /**
+   * `earned - collected - paidOut + received`: still owed to the operator, or, when negative,
+   * what the operator owes the platform.
+   */
   balance: string;
 }
 
@@ -88,6 +103,8 @@ export interface OrganizationSettlement {
   /** Refund tiers applied to this operator's cancellations, and its own ones if any. */
   refundTiers: RefundTier[];
   refundTiersOverride: RefundTier[] | null;
+  /** Who receives this operator's passengers' payments. */
+  paymentCollection: PaymentCollection;
   /** One per currency with activity, USD first. */
   balances: SettlementBalance[];
 }
@@ -98,6 +115,8 @@ export interface SettlementEntry {
   bookingId: string;
   /** `cancellation` entries are negative: the refund taken back when a passenger cancelled. */
   kind: 'booking' | 'cancellation';
+  /** Who received the passenger's money. */
+  collectedBy: PaymentCollection;
   bookingCode: string;
   route: { id: string; name: string };
   serviceDate: string;
@@ -110,9 +129,14 @@ export interface SettlementEntry {
   createdAt: string;
 }
 
+/** `to_operator`: the platform paid the operator. `from_operator`: the operator paid its commission. */
+export const PAYOUT_DIRECTIONS = ['to_operator', 'from_operator'] as const;
+export type PayoutDirection = (typeof PAYOUT_DIRECTIONS)[number];
+
 export interface Payout {
   id: string;
   organizationId: string;
+  direction: PayoutDirection;
   currency: Currency;
   amount: string;
   method: PayoutMethod;
@@ -144,10 +168,16 @@ export type UpdateSettlementPolicyRequest = SettlementPolicy;
 export interface SetOrganizationPolicyRequest {
   commissionRate: string | null;
   refundTiers: RefundTier[] | null;
+  /** Omitted: unchanged. */
+  paymentCollection?: PaymentCollection;
 }
 
-/** `POST /admin/organizations/:id/payouts` */
+/**
+ * `POST /admin/organizations/:id/payouts` — money sent to the operator (never more than it is
+ * owed), or with `direction: from_operator` received from it (never more than it owes).
+ */
 export interface CreatePayoutRequest {
+  direction?: PayoutDirection;
   currency: Currency;
   amount: string;
   method: PayoutMethod;

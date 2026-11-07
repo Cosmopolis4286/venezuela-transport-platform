@@ -39,7 +39,12 @@ antiguos primero. Para cada uno:
    **Reembolsos**.
 3. Si no llegó, **Rechazar** con un motivo claro: el pasajero lo recibe y puede pagar de nuevo.
 
-Los puestos esperan hasta 6 horas; revisa la cola varias veces al día.
+Los puestos esperan hasta 6 horas; revisa la cola varias veces al día. Los pagos de las empresas
+que cobran con sus propias cuentas no aparecen aquí: los verifican ellas en su portal.
+
+**Empresas que cobran ellas mismas**: en **Liquidaciones → la empresa → Política**, elige «La
+empresa, en sus propias cuentas». Su saldo baja en la comisión de cada reserva; cuando te pague,
+regístralo en **Registrar un pago** con el tipo «Pago de la empresa a la plataforma».
 
 ## Liquidaciones (`/admin/settlements`, solo administradores)
 

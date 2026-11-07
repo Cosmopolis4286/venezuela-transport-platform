@@ -4,6 +4,7 @@ import { IdentityModule } from '../identity/identity.module.js';
 import { OrganizationsModule } from '../organizations/organizations.module.js';
 import {
   AdminSettlementsController,
+  OrganizationRefundsController,
   OrganizationSettlementsController,
 } from './settlements.controller.js';
 import { SettlementsService } from './settlements.service.js';
@@ -14,7 +15,11 @@ import { SettlementsService } from './settlements.service.js';
  */
 @Module({
   imports: [IdentityModule, AuditModule, OrganizationsModule],
-  controllers: [OrganizationSettlementsController, AdminSettlementsController],
+  controllers: [
+    OrganizationSettlementsController,
+    OrganizationRefundsController,
+    AdminSettlementsController,
+  ],
   providers: [SettlementsService],
 })
 export class SettlementsModule {}

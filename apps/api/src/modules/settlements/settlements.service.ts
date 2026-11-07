@@ -7,6 +7,7 @@ import {
   type AdminSettlementSummary,
   type CreatePayoutRequest,
   type Currency,
+  type PaymentCollection,
   refundTiersProblem,
   type OrganizationSettlement,
   type Payout,
@@ -29,6 +30,7 @@ import { NotificationsService } from '../notifications/notifications.service.js'
 import { organizations } from '../organizations/organizations.schema.js';
 import { fromScaled, toScaled } from '../payments/money.js';
 import { payments } from '../payments/payments.schema.js';
+import { collectedBy } from '../payments/payments.service.js';
 import { normalizeRate } from './ledger.js';
 import {
   organizationPolicies,
@@ -45,6 +47,11 @@ const invalid = (message: string) =>
 /** Sum of a numeric column as a two-decimal string ("0.00" when there are no rows). */
 const total = (column: AnyColumn) => sql<string>`coalesce(sum(${column}), 0)::numeric(14, 2)::text`;
 
+/** Fares the operator received itself (net of its refunds). */
+const collectedTotal = sql<string>`coalesce(sum(${settlementEntries.gross}) filter (where ${settlementEntries.collectedBy} = 'operator'), 0)::numeric(14, 2)::text`;
+const paidOutTotal = sql<string>`coalesce(sum(${payouts.amount}) filter (where ${payouts.direction} = 'to_operator'), 0)::numeric(14, 2)::text`;
+const receivedTotal = sql<string>`coalesce(sum(${payouts.amount}) filter (where ${payouts.direction} = 'from_operator'), 0)::numeric(14, 2)::text`;
+
 const organizationColumns = {
   id: organizations.id,
   type: organizations.type,
@@ -57,7 +64,9 @@ interface Totals {
   gross?: string;
   commission?: string;
   earned?: string;
+  collected?: string;
   paidOut?: string;
+  received?: string;
 }
 
 @Injectable()
@@ -101,6 +110,7 @@ export class SettlementsService {
       id: entry.id,
       bookingId: entry.bookingId,
       kind: entry.kind,
+      collectedBy: entry.collectedBy,
       bookingCode: rest.bookingCode,
       route: rest.route,
       serviceDate: rest.serviceDate,
@@ -196,12 +206,28 @@ export class SettlementsService {
     const commissionRate =
       input.commissionRate === null ? null : normalizeRate(input.commissionRate);
     const refundTiers = input.refundTiers === null ? null : checkTiers(input.refundTiers);
-    if (commissionRate === null && refundTiers === null) {
+    const [current] = await this.database.db
+      .select({ paymentCollection: organizationPolicies.paymentCollection })
+      .from(organizationPolicies)
+      .where(eq(organizationPolicies.organizationId, organizationId));
+    // Stored only when the operator collects; null means the platform does.
+    const collection: PaymentCollection | null =
+      input.paymentCollection === undefined
+        ? (current?.paymentCollection ?? null)
+        : input.paymentCollection === 'operator'
+          ? 'operator'
+          : null;
+    if (commissionRate === null && refundTiers === null && collection === null) {
       await this.database.db
         .delete(organizationPolicies)
         .where(eq(organizationPolicies.organizationId, organizationId));
     } else {
-      const values = { commissionRate, refundTiers, updatedByUserId: auth.user.id };
+      const values = {
+        commissionRate,
+        refundTiers,
+        paymentCollection: collection,
+        updatedByUserId: auth.user.id,
+      };
       await this.database.db
         .insert(organizationPolicies)
         .values({ organizationId, ...values })
@@ -216,12 +242,15 @@ export class SettlementsService {
       targetType: 'organization',
       targetId: organizationId,
       ip: meta.ip,
-      metadata: { commissionRate, refundTiers },
+      metadata: { commissionRate, refundTiers, paymentCollection: collection ?? 'platform' },
     });
     return this.settlement(organizationId);
   }
 
-  /** Records money sent to an operator; never more than what is owed in that currency. */
+  /**
+   * Records money sent to an operator (never more than what it is owed in that currency), or
+   * received from one that collects itself (never more than what it owes).
+   */
   async createPayout(
     organizationId: string,
     input: CreatePayoutRequest,
@@ -237,8 +266,11 @@ export class SettlementsService {
         .where(eq(organizations.id, organizationId))
         .for('update');
       if (!organization) throw notFound('Organization not found');
-      const [earned] = await tx
-        .select({ earned: total(settlementEntries.earned) })
+      const [ledger] = await tx
+        .select({
+          earned: total(settlementEntries.earned),
+          collected: collectedTotal,
+        })
         .from(settlementEntries)
         .where(
           and(
@@ -246,8 +278,8 @@ export class SettlementsService {
             eq(settlementEntries.currency, input.currency),
           ),
         );
-      const [paid] = await tx
-        .select({ paid: total(payouts.amount) })
+      const [moved] = await tx
+        .select({ paidOut: paidOutTotal, received: receivedTotal })
         .from(payouts)
         .where(
           and(
@@ -256,17 +288,28 @@ export class SettlementsService {
             isNull(payouts.voidedAt),
           ),
         );
-      const balance = toScaled(earned!.earned, 2) - toScaled(paid!.paid, 2);
-      if (toScaled(input.amount, 2) > balance) {
+      const balance = toScaled(
+        balanceOf({ ...ledger!, ...moved! } as Totals, input.currency).balance,
+        2,
+      );
+      const direction = input.direction ?? 'to_operator';
+      if (direction === 'to_operator' && toScaled(input.amount, 2) > balance) {
         throw ApiException.conflict(
           'The payout is larger than the balance owed in this currency',
           'PAYOUT_EXCEEDS_BALANCE',
+        );
+      }
+      if (direction === 'from_operator' && toScaled(input.amount, 2) > -balance) {
+        throw ApiException.conflict(
+          'The amount is larger than what the operator owes in this currency',
+          'COLLECTION_EXCEEDS_DEBT',
         );
       }
       const [row] = await tx
         .insert(payouts)
         .values({
           organizationId,
+          direction,
           currency: input.currency,
           amount: fromScaled(toScaled(input.amount, 2), 2),
           method: input.method,
@@ -285,6 +328,7 @@ export class SettlementsService {
       ip: meta.ip,
       metadata: {
         organizationId,
+        direction: payout.direction,
         currency: payout.currency,
         amount: payout.amount,
         method: payout.method,
@@ -323,8 +367,11 @@ export class SettlementsService {
     return toPayout(row);
   }
 
-  /** Payments whose money must go back to the payer, oldest first. */
-  async refundsDue(): Promise<RefundDuePayment[]> {
+  /**
+   * Payments whose money must go back to the payer, oldest first: those the platform received
+   * (`collector` null) or those one operator received in its own accounts.
+   */
+  async refundsDue(collector: string | null): Promise<RefundDuePayment[]> {
     const rows = await this.database.db
       .select({
         payment: payments,
@@ -342,7 +389,7 @@ export class SettlementsService {
       .innerJoin(trips, eq(trips.id, bookings.tripId))
       .innerJoin(organizations, eq(organizations.id, trips.organizationId))
       .innerJoin(users, eq(users.id, payments.userId))
-      .where(eq(payments.status, 'refund_due'))
+      .where(and(eq(payments.status, 'refund_due'), collectedBy(collector)))
       .orderBy(payments.updatedAt);
     return rows.map(({ payment, payer, ...rest }) => ({
       paymentId: payment.id,
@@ -368,6 +415,7 @@ export class SettlementsService {
 
   async markRefunded(
     paymentId: string,
+    collector: string | null,
     reference: string,
     auth: Authenticated,
     meta: RequestMeta,
@@ -380,13 +428,15 @@ export class SettlementsService {
         refundReference: reference.trim(),
         refundedByUserId: auth.user.id,
       })
-      .where(and(eq(payments.id, paymentId), eq(payments.status, 'refund_due')))
+      .where(
+        and(eq(payments.id, paymentId), eq(payments.status, 'refund_due'), collectedBy(collector)),
+      )
       .returning({ id: payments.id, bookingId: payments.bookingId });
     if (!row) {
       const [existing] = await this.database.db
         .select({ id: payments.id })
         .from(payments)
-        .where(eq(payments.id, paymentId));
+        .where(and(eq(payments.id, paymentId), collectedBy(collector)));
       if (!existing) throw notFound('Payment not found');
       throw ApiException.conflict(
         'This payment is not awaiting a refund',
@@ -447,6 +497,7 @@ export class SettlementsService {
         gross: total(settlementEntries.gross),
         commission: total(settlementEntries.commission),
         earned: total(settlementEntries.earned),
+        collected: collectedTotal,
       })
       .from(settlementEntries)
       .where(inArray(settlementEntries.organizationId, organizationIds))
@@ -455,7 +506,8 @@ export class SettlementsService {
       .select({
         organizationId: payouts.organizationId,
         currency: payouts.currency,
-        paidOut: total(payouts.amount),
+        paidOut: paidOutTotal,
+        received: receivedTotal,
       })
       .from(payouts)
       .where(and(inArray(payouts.organizationId, organizationIds), isNull(payouts.voidedAt)))
@@ -479,6 +531,7 @@ export class SettlementsService {
         commissionOverride: own?.commissionRate ?? null,
         refundTiers: own?.refundTiers ?? platform.refundTiers,
         refundTiersOverride: own?.refundTiers ?? null,
+        paymentCollection: own?.paymentCollection ?? 'platform',
         balances: CURRENCIES.flatMap((currency) => {
           const t = totals.get(`${organizationId}:${currency}`);
           return t ? [balanceOf(t, currency)] : [];
@@ -497,14 +550,19 @@ function checkTiers(tiers: RefundTier[]): RefundTier[] {
 
 function balanceOf(t: Totals, currency: Currency): SettlementBalance {
   const earned = t.earned ?? '0.00';
+  const collected = t.collected ?? '0.00';
   const paidOut = t.paidOut ?? '0.00';
+  const received = t.received ?? '0.00';
+  const s = (amount: string) => toScaled(amount, 2);
   return {
     currency,
     gross: t.gross ?? '0.00',
     commission: t.commission ?? '0.00',
     earned,
+    collected,
     paidOut,
-    balance: fromScaled(toScaled(earned, 2) - toScaled(paidOut, 2), 2),
+    received,
+    balance: fromScaled(s(earned) - s(collected) - s(paidOut) + s(received), 2),
   };
 }
 
@@ -512,6 +570,7 @@ function toPayout(row: PayoutRow): Payout {
   return {
     id: row.id,
     organizationId: row.organizationId,
+    direction: row.direction,
     currency: row.currency,
     amount: row.amount,
     method: row.method,

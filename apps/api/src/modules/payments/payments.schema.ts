@@ -62,6 +62,8 @@ export const payments = pgTable(
     rate: numeric({ precision: 18, scale: 6 }),
     /** Written by the payer in the transfer concept; matches incoming money to this payment. */
     reference: text().notNull(),
+    /** The operator that receives the money in its own accounts; null: the platform (ADR-027). */
+    collectorOrganizationId: uuid().references(() => organizations.id, { onDelete: 'restrict' }),
     /** Adapter that issued the instructions and confirms the payment (`simulated`, …). */
     provider: text().notNull(),
     instructions: jsonb().$type<{ label: string; value: string }[]>().notNull(),
@@ -98,8 +100,7 @@ export const payments = pgTable(
 
 /**
  * Where the money of one method goes when people verify payments (`manual` provider). One per
- * method for the platform (`organizationId` null); operators' own accounts come with ADR-027's
- * second step.
+ * method for the platform (`organizationId` null) and for each operator that collects itself.
  */
 export const paymentAccounts = pgTable(
   'payment_accounts',

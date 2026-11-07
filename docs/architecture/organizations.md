@@ -20,19 +20,20 @@ Un rol por persona en cada organización. Una persona puede pertenecer a varias 
 
 ## Permisos
 
-| Permiso                                           | owner | admin | dispatcher | ticket_agent | driver | inspector |
-| ------------------------------------------------- | :---: | :---: | :--------: | :----------: | :----: | :-------: |
-| `organization.manage`                             |  ✅   |  ✅   |            |              |        |           |
-| `members.view`                                    |  ✅   |  ✅   |     ✅     |              |        |           |
-| `members.manage` (invitar, cambiar roles, quitar) |  ✅   |  ✅   |            |              |        |           |
-| `operations.dispatch`                             |  ✅   |  ✅   |     ✅     |              |        |           |
-| `routes.manage` (rutas, tarifas, horarios, tasas) |  ✅   |  ✅   |            |              |        |           |
-| `fleet.manage` (mapas de puestos)                 |  ✅   |  ✅   |            |              |        |           |
-| `bookings.view` (viajes y lista de pasajeros)     |  ✅   |  ✅   |     ✅     |      ✅      |        |    ✅     |
-| `tickets.sell`                                    |  ✅   |  ✅   |            |      ✅      |        |           |
-| `tickets.validate` (escanear boletos)             |  ✅   |  ✅   |            |              |        |    ✅     |
-| `trips.drive`                                     |  ✅   |       |            |              |   ✅   |           |
-| `finance.view` (saldo y liquidaciones)            |  ✅   |  ✅   |            |              |        |           |
+| Permiso                                                                      | owner | admin | dispatcher | ticket_agent | driver | inspector |
+| ---------------------------------------------------------------------------- | :---: | :---: | :--------: | :----------: | :----: | :-------: |
+| `organization.manage`                                                        |  ✅   |  ✅   |            |              |        |           |
+| `members.view`                                                               |  ✅   |  ✅   |     ✅     |              |        |           |
+| `members.manage` (invitar, cambiar roles, quitar)                            |  ✅   |  ✅   |            |              |        |           |
+| `operations.dispatch`                                                        |  ✅   |  ✅   |     ✅     |              |        |           |
+| `routes.manage` (rutas, tarifas, horarios, tasas)                            |  ✅   |  ✅   |            |              |        |           |
+| `fleet.manage` (mapas de puestos)                                            |  ✅   |  ✅   |            |              |        |           |
+| `bookings.view` (viajes y lista de pasajeros)                                |  ✅   |  ✅   |     ✅     |      ✅      |        |    ✅     |
+| `tickets.sell`                                                               |  ✅   |  ✅   |            |      ✅      |        |           |
+| `tickets.validate` (escanear boletos)                                        |  ✅   |  ✅   |            |              |        |    ✅     |
+| `trips.drive`                                                                |  ✅   |       |            |              |   ✅   |           |
+| `finance.view` (saldo y liquidaciones)                                       |  ✅   |  ✅   |            |              |        |           |
+| `finance.manage` (cuentas, verificar pagos y reembolsos si cobra la empresa) |  ✅   |  ✅   |            |              |        |           |
 
 Reglas además de la matriz:
 

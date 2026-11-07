@@ -13,6 +13,11 @@ pull request.
 
 ### Agregado
 
+- **Cobro por empresa (ADR-027).** Un administrador elige, por empresa, si los pagos los recibe la
+  plataforma (por defecto) o la empresa en sus propias cuentas. En ese caso la empresa carga sus
+  cuentas, verifica los pagos y hace sus reembolsos en **Cobros** del portal (nuevo permiso
+  `finance.manage`), y su saldo muestra la comisión que le debe a la plataforma, que se registra
+  como un pago «de la empresa a la plataforma». Migración `0017`.
 - **Pagos verificados a mano (ADR-027).** Con `PAYMENT_PROVIDER=manual` (nuevo valor por defecto
   en producción) el pasajero ve las cuentas de cobro de la plataforma, paga y escribe el número de
   operación; un administrador confirma o rechaza en **Pagos** del panel, donde también carga las

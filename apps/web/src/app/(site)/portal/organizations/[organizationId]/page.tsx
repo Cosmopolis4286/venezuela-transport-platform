@@ -131,6 +131,22 @@ async function Organization({ params }: { params: Promise<{ organizationId: stri
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-col gap-1">
+              <CardTitle>Cobros</CardTitle>
+              <CardDescription>
+                Quién recibe los pagos de tus pasajeros; si los recibe tu empresa, tus cuentas, los
+                pagos por verificar y los reembolsos.
+              </CardDescription>
+            </div>
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/portal/organizations/${organization.id}/payments`}>Ver cobros</Link>
+            </Button>
+          </div>
+        </Card>
+      ) : null}
+      {runsRoutes(organization.type) && permissions.includes('finance.view') ? (
+        <Card>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-col gap-1">
               <CardTitle>Liquidaciones</CardTitle>
               <CardDescription>
                 Lo que la plataforma le debe a la empresa por los boletos vendidos, y los pagos
