@@ -90,8 +90,9 @@ jobs:
 
   web-browser:
     name: Web browser tests (Playwright)
-    # On the virtual machine: Playwright installs Chromium's system libraries for Ubuntu.
-    runs-on: ubuntu-latest
+    # On the virtual machine: Playwright installs Chromium's system libraries for Ubuntu. Pinned
+    # to an Ubuntu release this Playwright version supports; move it when upgrading Playwright.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     services:
       postgres:
@@ -146,7 +147,7 @@ jobs:
           CI: '1'
       - name: Server logs
         if: failure()
-        run: cat "$RUNNER_TEMP/api.log" "$RUNNER_TEMP/web.log"
+        run: cat "$RUNNER_TEMP/api.log" "$RUNNER_TEMP/web.log" || true
       - uses: actions/upload-artifact@v5
         if: failure()
         with:
