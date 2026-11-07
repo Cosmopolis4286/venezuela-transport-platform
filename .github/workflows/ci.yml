@@ -107,8 +107,6 @@ jobs:
           --health-cmd "pg_isready -U vtp -d vtp_ci"
           --health-interval 5s --health-timeout 5s --health-retries 20
     env:
-      # The API in development mode: simulated payments, codes and e-mails only in the log.
-      NODE_ENV: development
       DATABASE_HOST: localhost
       DATABASE_PORT: '5432'
       DATABASE_NAME: vtp_ci
@@ -134,7 +132,9 @@ jobs:
         run: pnpm turbo run build --filter=@vtp/api --filter=@vtp/web
       - name: Start API and web
         run: |
-          (cd apps/api && node dist/main.js > "$RUNNER_TEMP/api.log" 2>&1 &)
+          # The API in development mode (simulated payments, codes and e-mails only in the log).
+          # Only here: `next build` needs NODE_ENV=production.
+          (cd apps/api && NODE_ENV=development node dist/main.js > "$RUNNER_TEMP/api.log" 2>&1 &)
           (cd apps/web && pnpm start > "$RUNNER_TEMP/web.log" 2>&1 &)
           for i in $(seq 1 60); do
             curl -fsS -o /dev/null http://localhost:4000/api/v1/health/ready &&
