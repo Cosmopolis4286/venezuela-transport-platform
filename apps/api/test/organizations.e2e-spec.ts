@@ -312,6 +312,7 @@ describe.runIf(expectDatabase)('Organizations (e2e)', () => {
             firstName: 'Luis',
             lastName: 'Rojas',
             client: 'web',
+            acceptTerms: true,
           })
           .expect(201)
       ).body as AuthResponse;

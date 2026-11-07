@@ -99,9 +99,10 @@ Las variables de la web que son solo del servidor **no** deben usar el prefijo `
 
 Plantillas: `apps/*-mobile/.env.example`. Se validan en `src/config/env.ts`.
 
-| Variable                   | Obligatoria | Secreta          | Por defecto                    | Para qué                                       |
-| -------------------------- | ----------- | ---------------- | ------------------------------ | ---------------------------------------------- |
-| `EXPO_PUBLIC_API_BASE_URL` | sí          | **no — pública** | `http://localhost:4000/api/v1` | URL base de la API incluida en el bundle de JS |
+| Variable                   | Obligatoria | Secreta          | Por defecto                    | Para qué                                                                                  |
+| -------------------------- | ----------- | ---------------- | ------------------------------ | ----------------------------------------------------------------------------------------- |
+| `EXPO_PUBLIC_API_BASE_URL` | sí          | **no — pública** | `http://localhost:4000/api/v1` | URL base de la API incluida en el bundle de JS                                            |
+| `EXPO_PUBLIC_WEB_URL`      | sí          | **no — pública** | `http://localhost:3000`        | Sitio web público, donde se abren los Términos y la Política de Privacidad desde las apps |
 
 Valores según el destino:
 

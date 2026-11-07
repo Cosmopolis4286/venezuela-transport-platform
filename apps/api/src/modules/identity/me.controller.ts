@@ -1,10 +1,17 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import type { OtpChallengeResponse, UserProfile } from '@vtp/shared-types';
+import { LEGAL_VERSION, type OtpChallengeResponse, type UserProfile } from '@vtp/shared-types';
+import { ApiException } from '../../common/errors/api.exception.js';
 import { AuditService } from '../audit/audit.service.js';
 import { AuthThrottle, CurrentAuth, ReqMeta } from './auth.decorators.js';
+import { AccountDeletionService } from './account-deletion.service.js';
 import { AuthService } from './auth.service.js';
-import { ContactVerificationConfirmDto, OtpRequestDto, UpdateProfileDto } from './dto/auth.dto.js';
+import {
+  AcceptTermsDto,
+  ContactVerificationConfirmDto,
+  OtpRequestDto,
+  UpdateProfileDto,
+} from './dto/auth.dto.js';
 import type { Authenticated, RequestMeta } from './sessions.service.js';
 import { UsersService } from './users.service.js';
 
@@ -16,7 +23,40 @@ export class MeController {
     private readonly users: UsersService,
     private readonly auth: AuthService,
     private readonly audit: AuditService,
+    private readonly deletion: AccountDeletionService,
   ) {}
+
+  /** Accepts the current Terms and Privacy Policy (after a new version is published). */
+  @Post('terms')
+  @HttpCode(HttpStatus.OK)
+  async acceptTerms(
+    @CurrentAuth() auth: Authenticated,
+    @Body() body: AcceptTermsDto,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<UserProfile> {
+    if (body.version !== LEGAL_VERSION) {
+      throw ApiException.conflict(`The current version is ${LEGAL_VERSION}; reload and accept it`);
+    }
+    const user = await this.users.acceptTerms(auth.user.id, LEGAL_VERSION);
+    await this.audit.record({
+      action: 'user.terms_accepted',
+      actorUserId: user.id,
+      ip: meta.ip,
+      metadata: { version: LEGAL_VERSION },
+    });
+    return this.users.toProfile(user);
+  }
+
+  /**
+   * Deletes the account: erases its personal data and signs it out everywhere. Refused while it
+   * has upcoming paid trips, payments being checked or refunded, or is the only owner of an
+   * organization.
+   */
+  @Delete()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteAccount(@CurrentAuth() auth: Authenticated, @ReqMeta() meta: RequestMeta): Promise<void> {
+    return this.deletion.delete(auth, meta);
+  }
 
   @Get()
   me(@CurrentAuth() auth: Authenticated): UserProfile {

@@ -49,6 +49,22 @@ una organización por sí solo.
   `INVALID_CREDENTIALS` y tardan lo mismo (se verifica un hash ficticio cuando la cuenta no
   existe).
 
+### Términos y borrado de la cuenta
+
+- **Aceptación**: `POST /auth/register` exige `acceptTerms: true` (casilla en la web y en las
+  apps); con un código, las pantallas avisan que continuar implica aceptarlos y envían
+  `acceptTerms: true` a `POST /auth/otp/verify`. La API guarda la versión (`LEGAL_VERSION`, igual a
+  `version` en [docs/legal/empresa.json](../legal/empresa.json)) y la fecha en `users.terms_version`
+  y `users.terms_accepted_at`. Si la versión cambia, el portal y las apps piden aceptarla de nuevo
+  (`POST /me/terms`). Auditoría: `user.terms_accepted`.
+- **Borrar la cuenta**: `DELETE /me`, desde Mi cuenta en el portal y en las dos apps. Se rechaza
+  (`409`) con viajes pagados pendientes o un taxi en curso (`ACCOUNT_HAS_TRIPS`), pagos en
+  verificación o reembolsos por recibir (`ACCOUNT_HAS_REFUNDS`), o si es el único dueño de una
+  organización (`ACCOUNT_OWNS_ORGANIZATION`). Si no: libera sus apartados, borra correo, teléfono,
+  nombre y contraseña, pasa la cuenta a `deleted`, revoca las sesiones y elimina sus dispositivos
+  push y membresías. Las reservas, pagos y expedientes KYC se conservan por obligación legal (ver
+  [conservación y borrado](../legal/conservacion-y-borrado.md)). Auditoría: `user.deleted`.
+
 ### Recuperar la contraseña
 
 1. `POST /auth/password/forgot` con el correo: si hay una cuenta activa con ese correo, le llega

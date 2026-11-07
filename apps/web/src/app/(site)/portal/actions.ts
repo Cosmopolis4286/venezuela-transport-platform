@@ -1,6 +1,6 @@
 'use server';
 
-import type { OrganizationMembershipSummary } from '@vtp/shared-types';
+import { LEGAL_VERSION, type OrganizationMembershipSummary } from '@vtp/shared-types';
 import { refresh } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { FormState } from '@/lib/form-state';
@@ -137,4 +137,28 @@ export async function decideApplicant(_: FormState, form: FormData): Promise<For
   }
   refresh();
   return { success: decision === 'accept' ? 'Solicitante incorporado.' : 'Solicitud rechazada.' };
+}
+
+/** Accepts the current Terms and Privacy Policy (after a new version is published). */
+export async function acceptTerms(): Promise<void> {
+  await apiRequest('/me/terms', { method: 'POST', body: { version: LEGAL_VERSION } });
+  refresh();
+}
+
+/** Deletes the account (the API refuses while something is pending) and signs out. */
+export async function deleteAccount(_: FormState, form: FormData): Promise<FormState> {
+  if (
+    String(form.get('confirm') ?? '')
+      .trim()
+      .toUpperCase() !== 'BORRAR'
+  ) {
+    return { error: 'Escribe BORRAR para confirmar.' };
+  }
+  try {
+    await apiRequest('/me', { method: 'DELETE' });
+  } catch (error) {
+    return failure(error);
+  }
+  await endSession();
+  redirect('/login?deleted=1');
 }

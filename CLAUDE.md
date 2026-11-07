@@ -41,6 +41,11 @@ that app.
   `app/[lang]`; portal, admin and login in `app/(site)` (Spanish).
 - Web forms: use `ActionForm` (pass `resetOnSuccess` only for "add" forms) and map API errors to
   Spanish with `failure(error, messages)` from `src/lib/server/form-actions.ts`.
+- Legal documents live in `docs/legal` (drafts for a lawyer, placeholders in `empresa.json`). After
+  editing one, run `pnpm --filter @vtp/web legal:build`; a material change bumps `version` there and
+  `LEGAL_VERSION` in shared-types, and users are asked to accept it again. Account deletion
+  (`DELETE /me`) anonymizes the user: update `account-deletion.service.ts` when a table gains
+  personal data.
 - Docs live in `docs/` (index: `docs/README.md`); update `.env.example` files and
   `docs/development/environment-variables.md` whenever configuration changes, the user guides in
   `docs/guides/` when screens change, and `docs/architecture/data-model.md` when tables change.

@@ -11,6 +11,11 @@ Por dónde empezar según lo que necesites.
   reembolsos.
 - [Glosario](glossary.md).
 
+## Documentos legales
+
+- [Documentos legales](legal/README.md): términos, privacidad, reembolsos, condiciones para
+  empresas, cookies y registros internos (borradores pendientes de revisión de un abogado).
+
 ## Estado y decisiones
 
 - [Progreso y hoja de ruta](roadmap.md): qué funciona, qué sigue, decisiones pendientes.

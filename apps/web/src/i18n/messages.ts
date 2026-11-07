@@ -15,6 +15,17 @@ const es = {
       '¿Tienes una empresa de transporte o una línea de taxis? Publica tus rutas desde el',
     operatorsLink: 'portal de operadores',
   },
+  legal: {
+    footer: 'Información legal',
+    terms: 'Términos y condiciones',
+    privacy: 'Privacidad',
+    refunds: 'Cancelaciones y reembolsos',
+    operators: 'Condiciones para empresas',
+    cookies: 'Cookies',
+    preliminary:
+      'Versión preliminar: este documento está pendiente de revisión legal y puede cambiar antes de la entrada en servicio.',
+    spanishGoverns: '',
+  },
   form: {
     origin: 'Origen',
     fromPlaceholder: '¿Desde dónde sales?',
@@ -56,6 +67,18 @@ const en: Messages = {
     operatorsBefore: 'Do you run a transport company or a taxi line? Publish your routes from the',
     operatorsLink: 'operator portal',
   },
+  legal: {
+    footer: 'Legal',
+    terms: 'Terms and conditions',
+    privacy: 'Privacy',
+    refunds: 'Cancellations and refunds',
+    operators: 'Terms for companies',
+    cookies: 'Cookies',
+    preliminary:
+      'Preliminary version: this document is pending legal review and may change before the service starts.',
+    spanishGoverns:
+      'This document is published in Spanish, which is the version that governs. Translations will follow.',
+  },
   form: {
     origin: 'From',
     fromPlaceholder: 'Where are you leaving from?',
@@ -95,6 +118,18 @@ const ptBR: Messages = {
     operatorsBefore:
       'Você tem uma empresa de transporte ou uma cooperativa de táxi? Publique suas rotas no',
     operatorsLink: 'portal de operadores',
+  },
+  legal: {
+    footer: 'Informações legais',
+    terms: 'Termos e condições',
+    privacy: 'Privacidade',
+    refunds: 'Cancelamentos e reembolsos',
+    operators: 'Condições para empresas',
+    cookies: 'Cookies',
+    preliminary:
+      'Versão preliminar: este documento está em revisão jurídica e pode mudar antes do início do serviço.',
+    spanishGoverns:
+      'Este documento está publicado em espanhol, que é a versão que prevalece. As traduções virão em breve.',
   },
   form: {
     origin: 'Origem',

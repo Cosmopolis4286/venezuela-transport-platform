@@ -19,7 +19,9 @@ export async function UserMenu() {
           Administración
         </Link>
       ) : null}
-      <span className="hidden sm:inline">{name}</span>
+      <Link href="/portal/account" className="hidden hover:underline sm:inline">
+        {name}
+      </Link>
       {user.identityVerified ? <Badge variant="success">Verificado</Badge> : null}
       <form action={logout}>
         <Button type="submit" variant="ghost" size="sm">

@@ -72,11 +72,13 @@ autobús ya salió.
 
 ## Preguntas frecuentes
 
-| Pregunta                              | Respuesta                                                                                                                      |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| No me llegó el código de acceso       | Revisa la carpeta de spam. Hoy los códigos llegan solo por correo; espera un minuto para pedir otro                            |
-| Pagué pero la reserva sigue apartada  | Toca **Ya pagué, comprobar**. Si el monto o la moneda no coinciden, la app lo dice y se te devuelve                            |
-| Se venció el apartado mientras pagaba | Si el dinero llega antes de que otra persona tome los puestos, la reserva se confirma igual                                    |
-| Olvidé mi contraseña                  | En **Iniciar sesión → Con contraseña**, toca **¿Olvidaste tu contraseña?**: te llega un código al correo para elegir una nueva |
-| ¿Y si la empresa cancela la salida?   | Te avisamos con el motivo y te devolvemos **todo** lo que pagaste, por el mismo medio                                          |
-| ¿Puedo cambiar de fecha?              | Todavía no: cancela (con el reembolso que corresponda) y compra otra salida                                                    |
+| Pregunta                                   | Respuesta                                                                                                                                                                                                                                  |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| No me llegó el código de acceso            | Revisa la carpeta de spam. Hoy los códigos llegan solo por correo; espera un minuto para pedir otro                                                                                                                                        |
+| Pagué pero la reserva sigue apartada       | Toca **Ya pagué, comprobar**. Si el monto o la moneda no coinciden, la app lo dice y se te devuelve                                                                                                                                        |
+| Se venció el apartado mientras pagaba      | Si el dinero llega antes de que otra persona tome los puestos, la reserva se confirma igual                                                                                                                                                |
+| Olvidé mi contraseña                       | En **Iniciar sesión → Con contraseña**, toca **¿Olvidaste tu contraseña?**: te llega un código al correo para elegir una nueva                                                                                                             |
+| ¿Y si la empresa cancela la salida?        | Te avisamos con el motivo y te devolvemos **todo** lo que pagaste, por el mismo medio                                                                                                                                                      |
+| ¿Cómo borro mi cuenta?                     | En **Mi cuenta → Borrar mi cuenta**. Antes debes no tener viajes pagados pendientes ni reembolsos por recibir. Se borran tus datos personales; lo que la ley obliga a conservar (reservas, pagos) queda guardado sin vínculo con tu cuenta |
+| ¿Dónde están los términos y la privacidad? | En el pie de página del sitio web (Información legal) y en los enlaces de la pantalla de registro                                                                                                                                          |
+| ¿Puedo cambiar de fecha?                   | Todavía no: cancela (con el reembolso que corresponda) y compra otra salida                                                                                                                                                                |

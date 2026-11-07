@@ -24,6 +24,11 @@ export function LoginForm() {
         <CardDescription>Usa un código por teléfono o correo, o tu contraseña.</CardDescription>
       </div>
       {params.get('expired') ? <Alert>Tu sesión expiró. Inicia sesión de nuevo.</Alert> : null}
+      {params.get('deleted') ? (
+        <Alert variant="success">
+          Borramos tu cuenta y tus datos personales. Gracias por usar VTP.
+        </Alert>
+      ) : null}
       <div role="tablist" className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1 text-sm">
         {(['code', 'password'] as const).map((value) => (
           <button
@@ -130,6 +135,23 @@ function CodeForm({ next }: { next: string }) {
       <Button type="submit" disabled={pending}>
         {pending ? 'Un momento…' : challenge ? 'Verificar y entrar' : 'Enviar código'}
       </Button>
+      {challenge ? (
+        <p className="text-center text-xs text-muted-foreground">
+          Al continuar aceptas los{' '}
+          <Link href="/es/legal/terminos" target="_blank" className="underline underline-offset-4">
+            Términos y Condiciones
+          </Link>{' '}
+          y la{' '}
+          <Link
+            href="/es/legal/privacidad"
+            target="_blank"
+            className="underline underline-offset-4"
+          >
+            Política de Privacidad
+          </Link>
+          .
+        </p>
+      ) : null}
     </form>
   );
 }

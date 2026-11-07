@@ -141,6 +141,20 @@
       "when": 1794059086318,
       "tag": "0019_departure_cancellation",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794060118140,
+      "tag": "0020_terms_and_account_deletion",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794060152544,
+      "tag": "0021_deleted_users_without_contact",
+      "breakpoints": true
     }
   ]
 }

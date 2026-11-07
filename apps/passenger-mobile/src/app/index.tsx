@@ -1,4 +1,5 @@
 import {
+  Banner,
   Body,
   Button,
   Card,
@@ -7,6 +8,7 @@ import {
   Screen,
   Segmented,
   Subheading,
+  TermsPrompt,
   useAuth,
   useColors,
 } from '@vtp/mobile-core';
@@ -55,6 +57,10 @@ export default function SearchScreen() {
     <Screen>
       <Heading>{t.home.heading}</Heading>
       <Body muted>{t.home.intro}</Body>
+      {state.status === 'signedOut' && state.notice ? (
+        <Banner tone="info">{state.notice}</Banner>
+      ) : null}
+      <TermsPrompt />
       <Card>
         <StopButton
           label={t.home.origin}

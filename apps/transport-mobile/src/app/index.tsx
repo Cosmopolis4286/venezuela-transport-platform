@@ -24,6 +24,8 @@ import {
   useAuth,
   useCurrentUser,
   userMessage,
+  DeleteAccount,
+  TermsPrompt,
 } from '@vtp/mobile-core';
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -86,6 +88,7 @@ export default function Home() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void reloadAll()} />}
     >
       <Heading>{user.firstName ? `Hola, ${user.firstName}` : 'Hola'}</Heading>
+      <TermsPrompt />
       {message ? <Banner tone={message.tone}>{message.text}</Banner> : null}
 
       {invitations.data?.length ? (
@@ -222,6 +225,7 @@ export default function Home() {
       ) : null}
 
       <Button variant="secondary" title="Cerrar sesión" onPress={() => void signOut()} />
+      <DeleteAccount />
     </Screen>
   );
 }
