@@ -4,7 +4,7 @@ import {
   type PaymentCurrency,
   type PaymentMethod,
 } from '@vtp/shared-types';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, type SQL } from 'drizzle-orm';
 import type { DatabaseService } from '../../database/database.service.js';
 import { paymentAccounts } from './payments.schema.js';
 
@@ -13,6 +13,8 @@ export interface PaymentInstructionInput {
   amount: string;
   currency: PaymentCurrency;
   reference: string;
+  /** The operator that receives the money; null: the platform (ADR-027). */
+  collector: string | null;
 }
 
 export type InstructionLine = { label: string; value: string };
@@ -28,8 +30,8 @@ export interface PaymentProvider {
   readonly name: string;
   /** People verify its payments: after paying, the payer reports the operation number. */
   readonly manual: boolean;
-  /** Methods it can take now. */
-  methods(): Promise<PaymentMethod[]>;
+  /** Methods it can take now for `collector` (an operator id, or null for the platform). */
+  methods(collector: string | null): Promise<PaymentMethod[]>;
   /** Where to send the money; null when the method stopped being available. */
   instructions(input: PaymentInstructionInput): Promise<InstructionLine[] | null>;
 }
@@ -37,31 +39,41 @@ export interface PaymentProvider {
 /** The active provider, or null when online payment is off (`PAYMENT_PROVIDER=disabled`). */
 export const PAYMENT_PROVIDER = Symbol('PAYMENT_PROVIDER');
 
-/** The platform's receiving accounts (`/admin/payment-accounts`); staff verify each payment. */
+/** Accounts of the platform (`organizationId` null) or of one operator. */
+export const accountOwner = (collector: string | null): SQL =>
+  collector
+    ? eq(paymentAccounts.organizationId, collector)
+    : isNull(paymentAccounts.organizationId);
+
+/**
+ * The receiving accounts of whoever collects: the platform (`/admin/payment-accounts`) or an
+ * operator that collects itself. People verify each payment.
+ */
 export class ManualPaymentProvider implements PaymentProvider {
   readonly name = 'manual';
   readonly manual = true;
 
   constructor(private readonly database: DatabaseService) {}
 
-  async methods(): Promise<PaymentMethod[]> {
+  async methods(collector: string | null): Promise<PaymentMethod[]> {
     const rows = await this.database.db
       .select({ method: paymentAccounts.method })
       .from(paymentAccounts)
-      .where(and(isNull(paymentAccounts.organizationId), eq(paymentAccounts.active, true)));
+      .where(and(accountOwner(collector), eq(paymentAccounts.active, true)));
     return rows.map((r) => r.method);
   }
 
   async instructions({
     method,
     reference,
+    collector,
   }: PaymentInstructionInput): Promise<InstructionLine[] | null> {
     const [account] = await this.database.db
       .select()
       .from(paymentAccounts)
       .where(
         and(
-          isNull(paymentAccounts.organizationId),
+          accountOwner(collector),
           eq(paymentAccounts.method, method),
           eq(paymentAccounts.active, true),
         ),

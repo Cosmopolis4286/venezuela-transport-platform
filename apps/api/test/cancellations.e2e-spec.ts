@@ -358,7 +358,9 @@ describe.runIf(expectDatabase)('Cancelling paid bookings (e2e)', () => {
           gross: '87.50',
           commission: '8.00',
           earned: '79.50',
+          collected: '0.00',
           paidOut: '0.00',
+          received: '0.00',
           balance: '79.50',
         },
       ]);

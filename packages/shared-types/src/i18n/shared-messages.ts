@@ -116,6 +116,8 @@ const es: SharedMessages = {
     TAXI_RIDE_WRONG_STEP: 'El viaje cambió de estado. Actualiza la pantalla.',
     TAXI_LINE_INACTIVE: 'La línea de taxi no está activa.',
     NOT_A_TAXI_LINE: 'Solo las líneas de taxi atienden solicitudes de taxi.',
+    COLLECTION_EXCEEDS_DEBT:
+      'El cobro es mayor que lo que la empresa le debe a la plataforma en esa moneda.',
     PAYOUT_EXCEEDS_BALANCE: 'El pago es mayor que el saldo de la empresa en esa moneda.',
     PAYOUT_ALREADY_VOIDED: 'Este pago a la empresa ya fue anulado.',
     PAYMENT_NOT_REFUND_DUE: 'Este pago no está pendiente de reembolso.',
@@ -213,6 +215,8 @@ const en: SharedMessages = {
     TAXI_RIDE_WRONG_STEP: 'The ride changed. Refresh the screen.',
     TAXI_LINE_INACTIVE: 'The taxi company is not active.',
     NOT_A_TAXI_LINE: 'Only taxi companies take taxi requests.',
+    COLLECTION_EXCEEDS_DEBT:
+      'The amount is larger than what the company owes the platform in that currency.',
     PAYOUT_EXCEEDS_BALANCE: "The payout is larger than the company's balance in that currency.",
     PAYOUT_ALREADY_VOIDED: 'This payout was already voided.',
     PAYMENT_NOT_REFUND_DUE: 'This payment is not awaiting a refund.',
@@ -312,6 +316,7 @@ const ptBR: SharedMessages = {
     TAXI_RIDE_WRONG_STEP: 'A viagem mudou de status. Atualize a tela.',
     TAXI_LINE_INACTIVE: 'A cooperativa de táxi não está ativa.',
     NOT_A_TAXI_LINE: 'Só cooperativas de táxi atendem pedidos de táxi.',
+    COLLECTION_EXCEEDS_DEBT: 'O valor é maior do que a empresa deve à plataforma nessa moeda.',
     PAYOUT_EXCEEDS_BALANCE: 'O repasse é maior que o saldo da empresa nessa moeda.',
     PAYOUT_ALREADY_VOIDED: 'Este repasse já foi anulado.',
     PAYMENT_NOT_REFUND_DUE: 'Este pagamento não está aguardando reembolso.',

@@ -100,6 +100,21 @@ async function OrganizationSettlementView({
             Tramos de reembolso propios (si no, los generales)
           </label>
           <RefundTierFields tiers={settlement.refundTiers} />
+          <Field
+            label="¿Quién recibe los pagos de los pasajeros?"
+            htmlFor="paymentCollection"
+            hint="Si cobra la empresa, usa sus propias cuentas, verifica sus pagos y sus reembolsos en el portal, y le debe la comisión a la plataforma. Aplica a los pagos que empiecen desde ahora."
+          >
+            <Select
+              id="paymentCollection"
+              name="paymentCollection"
+              className="max-w-sm"
+              defaultValue={settlement.paymentCollection}
+            >
+              <option value="platform">La plataforma (por defecto)</option>
+              <option value="operator">La empresa, en sus propias cuentas</option>
+            </Select>
+          </Field>
           <div>
             <SubmitButton variant="outline">Guardar política</SubmitButton>
           </div>
@@ -108,16 +123,27 @@ async function OrganizationSettlementView({
 
       <Card>
         <div className="flex flex-col gap-1">
-          <CardTitle>Registrar un pago a la empresa</CardTitle>
+          <CardTitle>Registrar un pago</CardTitle>
           <CardDescription>
-            Primero haz la transferencia; luego regístrala aquí con su referencia. No se puede pagar
-            más que el saldo de esa moneda.
+            Primero haz (o recibe) la transferencia; luego regístrala aquí con su referencia. No se
+            puede pagar a la empresa más que su saldo, ni cobrarle más de lo que debe.
           </CardDescription>
         </div>
         {owed.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No hay saldo por pagar.</p>
+          <p className="text-sm text-muted-foreground">No hay saldo pendiente.</p>
         ) : (
           <ActionForm action={createPayout} hidden={hidden} resetOnSuccess>
+            <Field label="Tipo" htmlFor="direction">
+              <Select
+                id="direction"
+                name="direction"
+                className="max-w-sm"
+                defaultValue={owed[0]!.balance.startsWith('-') ? 'from_operator' : 'to_operator'}
+              >
+                <option value="to_operator">Pago de la plataforma a la empresa</option>
+                <option value="from_operator">Pago de la empresa a la plataforma (comisión)</option>
+              </Select>
+            </Field>
             <div className="grid gap-3 sm:grid-cols-4">
               <Field label="Moneda" htmlFor="currency">
                 <Select id="currency" name="currency" defaultValue={owed[0]!.currency}>

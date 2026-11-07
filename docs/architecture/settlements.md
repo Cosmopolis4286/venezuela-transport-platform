@@ -47,11 +47,19 @@ porcentajes enteros. Las horas se cuentan hasta la hora en que el pasajero abord
 
 ## Saldo y pagos a las empresas
 
-El saldo se calcula por moneda: `ganado − pagado`, donde los pagos anulados no cuentan.
+El saldo se calcula por moneda:
+`ganado − cobrado por la empresa − pagado a la empresa + pagado por la empresa`, donde los pagos
+anulados no cuentan. Si cobra la plataforma, «cobrado por la empresa» es cero y el saldo es lo que
+la plataforma le debe. Si cobra la empresa (ADR-027), la empresa ya tiene la tarifa: por cada
+reserva el saldo baja en la comisión, y un saldo **negativo** es lo que la empresa le debe a la
+plataforma. Cada entrada del libro anota quién cobró (`collected_by`); una cancelación copia el de
+su reserva.
 
 Un administrador registra cada transferencia que hace a una empresa (`payouts`): moneda, monto,
 medio (transferencia, pago móvil, USDT), referencia y una nota. Reglas:
 
+- Un pago **de la empresa a la plataforma** (su comisión) se registra igual, con
+  `direction: from_operator`, y nunca por más de lo que debe (`409 COLLECTION_EXCEEDS_DEBT`).
 - **Nunca más que el saldo** de esa moneda (`409 PAYOUT_EXCEEDS_BALANCE`). La fila de la
   organización se bloquea mientras se registra, así que dos pagos simultáneos no gastan el mismo
   saldo.
@@ -67,6 +75,9 @@ pasajero, su contacto, lo que se pedía y lo que llegó. El administrador devuel
 mismo medio y lo marca con la referencia de la devolución: el pago pasa a `refunded`
 (`refunded_at`, `refund_reference`). Solo un pago `refund_due` se puede marcar
 (`409 PAYMENT_NOT_REFUND_DUE`). El pasajero ve en la app que se le devolvió.
+
+Los reembolsos de lo que cobró una empresa (ADR-027) no aparecen aquí: la empresa los devuelve y
+los marca en su portal (**Cobros**, `GET /organizations/:id/refunds`).
 
 ## Cancelar una reserva pagada
 
@@ -99,31 +110,34 @@ le debe ese monto a la plataforma, que lo descuenta de los pagos siguientes.
 
 ## Quién ve qué
 
-| Quién                                                | Ve y hace                                                                                          |
-| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Dueño y administrador de la empresa (`finance.view`) | Su saldo, sus reservas pagadas por mes y los pagos recibidos (portal → **Liquidaciones**)          |
-| Administrador de la plataforma (`admin`)             | Todo lo anterior para cada empresa, las políticas, registrar y anular pagos, la cola de reembolsos |
-| Revisor de la plataforma (`reviewer`)                | Nada de esto: el dinero es solo para los administradores (403)                                     |
+| Quién                                                  | Ve y hace                                                                                          |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| Dueño y administrador de la empresa (`finance.view`)   | Su saldo, sus reservas pagadas por mes y los pagos recibidos (portal → **Liquidaciones**)          |
+| Dueño y administrador de la empresa (`finance.manage`) | Si la empresa cobra: sus cuentas, los pagos por verificar y sus reembolsos (portal → **Cobros**)   |
+| Administrador de la plataforma (`admin`)               | Todo lo anterior para cada empresa, las políticas, registrar y anular pagos, la cola de reembolsos |
+| Revisor de la plataforma (`reviewer`)                  | Nada de esto: el dinero es solo para los administradores (403)                                     |
 
 ## Endpoints (`/api/v1`)
 
-| Método y ruta                                                   | Quién          |
-| --------------------------------------------------------------- | -------------- |
-| `GET /organizations/:id/settlement`                             | `finance.view` |
-| `GET /organizations/:id/settlement/entries?month=YYYY-MM`       | `finance.view` |
-| `GET /organizations/:id/payouts`                                | `finance.view` |
-| `GET /admin/settlements`                                        | Administrador  |
-| `GET /admin/organizations/:id/settlement`                       | Administrador  |
-| `GET /admin/organizations/:id/settlement/entries?month=YYYY-MM` | Administrador  |
-| `GET /admin/organizations/:id/payouts`                          | Administrador  |
-| `GET /admin/settlement-policy`, `PUT /admin/settlement-policy`  | Administrador  |
-| `PUT /admin/organizations/:id/policy`                           | Administrador  |
-| `GET /me/bookings/:id/cancellation`                             | El pasajero    |
-| `POST /me/bookings/:id/cancel`                                  | El pasajero    |
-| `POST /admin/organizations/:id/payouts`                         | Administrador  |
-| `POST /admin/payouts/:id/void`                                  | Administrador  |
-| `GET /admin/refunds`                                            | Administrador  |
-| `POST /admin/refunds/:paymentId`                                | Administrador  |
+| Método y ruta                                                   | Quién            |
+| --------------------------------------------------------------- | ---------------- |
+| `GET /organizations/:id/settlement`                             | `finance.view`   |
+| `GET /organizations/:id/settlement/entries?month=YYYY-MM`       | `finance.view`   |
+| `GET /organizations/:id/payouts`                                | `finance.view`   |
+| `GET /admin/settlements`                                        | Administrador    |
+| `GET /admin/organizations/:id/settlement`                       | Administrador    |
+| `GET /admin/organizations/:id/settlement/entries?month=YYYY-MM` | Administrador    |
+| `GET /admin/organizations/:id/payouts`                          | Administrador    |
+| `GET /admin/settlement-policy`, `PUT /admin/settlement-policy`  | Administrador    |
+| `PUT /admin/organizations/:id/policy`                           | Administrador    |
+| `GET /me/bookings/:id/cancellation`                             | El pasajero      |
+| `POST /me/bookings/:id/cancel`                                  | El pasajero      |
+| `POST /admin/organizations/:id/payouts`                         | Administrador    |
+| `POST /admin/payouts/:id/void`                                  | Administrador    |
+| `GET /admin/refunds`                                            | Administrador    |
+| `POST /admin/refunds/:paymentId`                                | Administrador    |
+| `GET /organizations/:id/refunds`                                | `finance.manage` |
+| `POST /organizations/:id/refunds/:paymentId`                    | `finance.manage` |
 
 El mes de `entries` es el calendario venezolano (por defecto, el actual) y se cuenta por la fecha
 en que se confirmó el pago. `GET /admin/settlements` lista las empresas de autobuses activas y

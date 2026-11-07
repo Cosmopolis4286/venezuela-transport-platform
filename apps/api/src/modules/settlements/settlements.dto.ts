@@ -3,10 +3,14 @@ import {
   COMMISSION_PATTERN,
   CURRENCIES,
   MAX_REFUND_TIERS,
+  PAYMENT_COLLECTIONS,
+  PAYOUT_DIRECTIONS,
   PAYOUT_METHODS,
   type CreatePayoutRequest,
   type Currency,
   type MarkRefundedRequest,
+  type PaymentCollection,
+  type PayoutDirection,
   type PayoutMethod,
   type RefundTier,
   type SetOrganizationPolicyRequest,
@@ -94,9 +98,19 @@ export class SetOrganizationPolicyDto implements SetOrganizationPolicyRequest {
   @ValidateNested({ each: true })
   @Type(() => RefundTierDto)
   refundTiers!: RefundTierDto[] | null;
+
+  @ApiPropertyOptional({ enum: PAYMENT_COLLECTIONS, description: 'Omitted: unchanged' })
+  @IsOptional()
+  @IsIn(PAYMENT_COLLECTIONS)
+  paymentCollection?: PaymentCollection;
 }
 
 export class CreatePayoutDto implements CreatePayoutRequest {
+  @ApiPropertyOptional({ enum: PAYOUT_DIRECTIONS, default: 'to_operator' })
+  @IsOptional()
+  @IsIn(PAYOUT_DIRECTIONS)
+  direction?: PayoutDirection;
+
   @ApiProperty({ enum: CURRENCIES })
   @IsIn(CURRENCIES)
   currency!: Currency;

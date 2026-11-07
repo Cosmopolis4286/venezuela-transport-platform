@@ -51,6 +51,8 @@ export async function setOrganizationPolicy(_: FormState, form: FormData): Promi
         body: {
           commissionRate: commissionRate || null,
           refundTiers: ownTiers ? tiersFrom(form) : null,
+          paymentCollection:
+            text(form, 'paymentCollection') === 'operator' ? 'operator' : 'platform',
         },
       },
     );
@@ -68,6 +70,7 @@ export async function createPayout(_: FormState, form: FormData): Promise<FormSt
       {
         method: 'POST',
         body: {
+          direction: text(form, 'direction') === 'from_operator' ? 'from_operator' : 'to_operator',
           currency: text(form, 'currency'),
           amount: decimal(form, 'amount'),
           method: text(form, 'method'),

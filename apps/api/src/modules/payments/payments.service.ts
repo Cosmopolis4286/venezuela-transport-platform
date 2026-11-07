@@ -33,9 +33,9 @@ import { organizations } from '../organizations/organizations.schema.js';
 import type { OrganizationAccess } from '../organizations/organization-access.js';
 import { departureText } from '../notifications/format.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
-import { recordEarning } from '../settlements/ledger.js';
+import { policyFor, recordEarning } from '../settlements/ledger.js';
 import { compareAmounts, convert, toScaled } from './money.js';
-import { PAYMENT_PROVIDER, type PaymentProvider } from './payment-provider.js';
+import { accountOwner, PAYMENT_PROVIDER, type PaymentProvider } from './payment-provider.js';
 import { toPayment } from './payment-view.js';
 import {
   exchangeRates,
@@ -144,7 +144,7 @@ export class PaymentsService {
   /** Methods the passenger can use now for a held booking, with converted amounts. */
   async options(auth: Authenticated, bookingId: string): Promise<PaymentOption[]> {
     const { booking, organizationId } = await this.requireHeld(auth.user.id, bookingId);
-    return this.optionsFor(booking, organizationId);
+    return this.optionsFor(booking, organizationId, await this.collectorFor(organizationId));
   }
 
   /** Starts paying with one method; a pending payment with another method is replaced. */
@@ -155,7 +155,8 @@ export class PaymentsService {
     meta: RequestMeta,
   ): Promise<Payment> {
     const { booking, organizationId } = await this.requireHeld(auth.user.id, bookingId);
-    const option = (await this.optionsFor(booking, organizationId)).find(
+    const collector = await this.collectorFor(organizationId);
+    const option = (await this.optionsFor(booking, organizationId, collector)).find(
       (o) => o.method === method,
     );
     const unavailable = () =>
@@ -174,6 +175,7 @@ export class PaymentsService {
         amount: option.amount,
         currency: option.currency,
         reference,
+        collector,
       });
       if (!instructions) throw unavailable();
       try {
@@ -209,6 +211,7 @@ export class PaymentsService {
               currency: option.currency,
               rate: option.rate,
               reference,
+              collectorOrganizationId: collector,
               provider: provider.name,
               instructions,
               expiresAt: booking.expiresAt,
@@ -286,7 +289,11 @@ export class PaymentsService {
         compareAmounts(incoming.amount, payment.amount) >= 0;
       if (open && enough) {
         if (await this.bookings.confirmHeld(tx, payment.bookingId)) {
-          await recordEarning(tx, payment.bookingId);
+          await recordEarning(
+            tx,
+            payment.bookingId,
+            payment.collectorOrganizationId ? 'operator' : 'platform',
+          );
           const [row] = await tx
             .update(payments)
             .set({ ...received, status: 'confirmed', confirmedAt: new Date() })
@@ -416,8 +423,8 @@ export class PaymentsService {
     return this.bookings.getMine(auth.user.id, payment.bookingId);
   }
 
-  /** Reported payments waiting for staff, oldest first. */
-  async reviewQueue(): Promise<PaymentReview[]> {
+  /** Reported payments waiting for whoever collects (an operator id, or null), oldest first. */
+  async reviewQueue(collector: string | null): Promise<PaymentReview[]> {
     const rows = await this.database.db
       .select({
         payment: payments,
@@ -441,7 +448,13 @@ export class PaymentsService {
       .innerJoin(routes, eq(routes.id, trips.routeId))
       .innerJoin(organizations, eq(organizations.id, trips.organizationId))
       .innerJoin(users, eq(users.id, payments.userId))
-      .where(and(eq(payments.status, 'reported'), eq(payments.provider, 'manual')))
+      .where(
+        and(
+          eq(payments.status, 'reported'),
+          eq(payments.provider, 'manual'),
+          collectedBy(collector),
+        ),
+      )
       .orderBy(asc(payments.reportedAt));
     return rows.map((r) => ({
       payment: toPayment(r.payment),
@@ -471,11 +484,12 @@ export class PaymentsService {
    */
   async confirmReported(
     paymentId: string,
+    collector: string | null,
     receivedAmount: string | undefined,
     auth: Authenticated,
     meta: RequestMeta,
   ): Promise<Payment> {
-    const payment = await this.requireReported(paymentId);
+    const payment = await this.requireReported(paymentId, collector);
     await this.database.db
       .update(payments)
       .set({ reviewedByUserId: auth.user.id })
@@ -501,6 +515,7 @@ export class PaymentsService {
   /** Staff did not find the money: the payer is told why and gets a fresh hold to try again. */
   async rejectReported(
     paymentId: string,
+    collector: string | null,
     reason: string,
     auth: Authenticated,
     meta: RequestMeta,
@@ -512,7 +527,8 @@ export class PaymentsService {
         .from(payments)
         .where(eq(payments.id, paymentId))
         .for('update');
-      if (!locked || locked.provider !== 'manual') throw notFound('Payment not found');
+      if (!locked || locked.provider !== 'manual' || locked.collectorOrganizationId !== collector)
+        throw notFound('Payment not found');
       if (locked.status !== 'reported') {
         throw conflict('This payment is not waiting for verification', 'PAYMENT_NOT_REPORTED');
       }
@@ -550,19 +566,17 @@ export class PaymentsService {
     return toPayment(row);
   }
 
-  // --- Receiving accounts (platform admins) --------------------------------------------------
+  // --- Receiving accounts (the platform's, or an operator's that collects itself) --------------
 
-  async accounts(): Promise<PaymentAccount[]> {
-    const rows = await this.database.db
-      .select()
-      .from(paymentAccounts)
-      .where(isNull(paymentAccounts.organizationId));
+  async accounts(owner: string | null): Promise<PaymentAccount[]> {
+    const rows = await this.database.db.select().from(paymentAccounts).where(accountOwner(owner));
     return rows
       .map(toAccount)
       .sort((a, b) => PAYMENT_METHODS.indexOf(a.method) - PAYMENT_METHODS.indexOf(b.method));
   }
 
   async setAccount(
+    owner: string | null,
     method: PaymentMethod,
     input: PaymentAccountInput,
     auth: Authenticated,
@@ -577,7 +591,7 @@ export class PaymentsService {
     const [existing] = await this.database.db
       .select({ id: paymentAccounts.id })
       .from(paymentAccounts)
-      .where(and(isNull(paymentAccounts.organizationId), eq(paymentAccounts.method, method)));
+      .where(and(accountOwner(owner), eq(paymentAccounts.method, method)));
     const [row] = existing
       ? await this.database.db
           .update(paymentAccounts)
@@ -586,7 +600,7 @@ export class PaymentsService {
           .returning()
       : await this.database.db
           .insert(paymentAccounts)
-          .values({ method, ...values })
+          .values({ organizationId: owner, method, ...values })
           .returning();
     await this.audit.record({
       action: 'payment_account.saved',
@@ -594,19 +608,20 @@ export class PaymentsService {
       targetType: 'payment_account',
       targetId: row!.id,
       ip: meta.ip,
-      metadata: { method, active: input.active },
+      metadata: { organizationId: owner, method, active: input.active },
     });
     return toAccount(row!);
   }
 
   async removeAccount(
+    owner: string | null,
     method: PaymentMethod,
     auth: Authenticated,
     meta: RequestMeta,
   ): Promise<void> {
     const [row] = await this.database.db
       .delete(paymentAccounts)
-      .where(and(isNull(paymentAccounts.organizationId), eq(paymentAccounts.method, method)))
+      .where(and(accountOwner(owner), eq(paymentAccounts.method, method)))
       .returning({ id: paymentAccounts.id });
     if (!row) throw notFound('No account for this method');
     await this.audit.record({
@@ -615,16 +630,17 @@ export class PaymentsService {
       targetType: 'payment_account',
       targetId: row.id,
       ip: meta.ip,
-      metadata: { method },
+      metadata: { organizationId: owner, method },
     });
   }
 
-  private async requireReported(paymentId: string): Promise<PaymentRow> {
+  private async requireReported(paymentId: string, collector: string | null): Promise<PaymentRow> {
     const [payment] = await this.database.db
       .select()
       .from(payments)
       .where(eq(payments.id, paymentId));
-    if (!payment || payment.provider !== 'manual') throw notFound('Payment not found');
+    if (!payment || payment.provider !== 'manual' || payment.collectorOrganizationId !== collector)
+      throw notFound('Payment not found');
     if (payment.status !== 'reported') {
       throw conflict('This payment is not waiting for verification', 'PAYMENT_NOT_REPORTED');
     }
@@ -674,13 +690,23 @@ export class PaymentsService {
     return row;
   }
 
-  private async optionsFor(booking: BookingRow, organizationId: string): Promise<PaymentOption[]> {
+  /** The operator's id when it collects its own payments (ADR-027), else null (the platform). */
+  private async collectorFor(organizationId: string): Promise<string | null> {
+    const { paymentCollection } = await policyFor(this.database.db, organizationId);
+    return paymentCollection === 'operator' ? organizationId : null;
+  }
+
+  private async optionsFor(
+    booking: BookingRow,
+    organizationId: string,
+    collector: string | null,
+  ): Promise<PaymentOption[]> {
     const rows = await this.database.db
       .select({ currency: exchangeRates.currency, unitsPerUsd: exchangeRates.unitsPerUsd })
       .from(exchangeRates)
       .where(eq(exchangeRates.organizationId, organizationId));
     const rates = new Map<RateCurrency, string>(rows.map((r) => [r.currency, r.unitsPerUsd]));
-    const available = this.provider ? await this.provider.methods() : [];
+    const available = this.provider ? await this.provider.methods(collector) : [];
     return PAYMENT_METHODS.flatMap((method) => {
       if (!available.includes(method)) return [];
       const currency = PAYMENT_METHOD_CURRENCY[method];
@@ -689,6 +715,12 @@ export class PaymentsService {
     });
   }
 }
+
+/** Payments received by an operator, or (null) by the platform. */
+export const collectedBy = (collector: string | null) =>
+  collector
+    ? eq(payments.collectorOrganizationId, collector)
+    : isNull(payments.collectorOrganizationId);
 
 function toAccount(row: PaymentAccountRow): PaymentAccount {
   return {

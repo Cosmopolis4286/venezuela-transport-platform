@@ -425,9 +425,12 @@ que el libro de liquidaciones, los reembolsos y los avisos no cambian. Ver
 [payments.md](payments.md#pagos-verificados-a-mano).
 
 El segundo paso, decidido por el dueño del producto, es **híbrido y configurable por empresa**:
-por defecto cobra la plataforma (y le paga a cada empresa lo que gana); una empresa puede cobrar
-con sus propias cuentas, verificar sus pagos y deberle la comisión a la plataforma. La tabla
-`payment_accounts` ya tiene `organization_id` para eso.
+por defecto cobra la plataforma (y le paga a cada empresa lo que gana); un administrador puede
+hacer que una empresa cobre con sus propias cuentas (`organization_policies.payment_collection`).
+Entonces la empresa verifica sus pagos y hace sus reembolsos en el portal, y le debe la comisión a
+la plataforma: el libro anota quién cobró cada reserva (`settlement_entries.collected_by`) y el
+saldo queda negativo hasta que la empresa paga (`payouts.direction = from_operator`). Ver
+[payments.md](payments.md#cobro-por-empresa) y [settlements.md](settlements.md).
 
 **Por qué.** Sin esto no se puede vender ningún boleto: los contratos con bancos y la revisión
 legal tardan, y en Venezuela pagar por pago móvil y enviar la referencia es lo habitual. No

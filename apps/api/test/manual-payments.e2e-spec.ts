@@ -10,7 +10,10 @@ import {
   type Payment,
   type PaymentAccount,
   type PaymentOption,
+  type OrganizationSettlement,
   type PaymentReview,
+  type Payout,
+  type RefundDuePayment,
   type Route,
   type SeatLayout,
   type Stop,
@@ -390,6 +393,130 @@ describe.runIf(expectDatabase)('Manual payments (e2e)', () => {
       await asAdmin(http().put('/api/v1/admin/payment-accounts/pago_movil'))
         .send({ fields: account.fields, active: true })
         .expect(200);
+
+      // === The company collects itself (ADR-027, second step) ===
+      const balanceUsd = async () =>
+        (
+          (await http().get(`${org}/settlement`).set('Authorization', owner.auth).expect(200))
+            .body as OrganizationSettlement
+        ).balances.find((b) => b.currency === 'USD')!;
+      const before = await balanceUsd();
+      const policy = (
+        await asAdmin(http().put(`/api/v1/admin/organizations/${organization.id}/policy`))
+          .send({ commissionRate: '10', refundTiers: null, paymentCollection: 'operator' })
+          .expect(200)
+      ).body as OrganizationSettlement;
+      expect(policy).toMatchObject({ paymentCollection: 'operator', commissionRate: '10.00' });
+
+      // Its own accounts: the owner manages them; outsiders cannot.
+      const outsider = await signIn();
+      await http()
+        .put(`${org}/payment-accounts/pago_movil`)
+        .set('Authorization', outsider.auth)
+        .send({ fields: account.fields, active: true })
+        .expect(404); // outsiders do not even learn the organization exists
+      const companyAccount = {
+        bank: '0105 – Banco Mercantil',
+        phone: '0412-9998877',
+        document: 'J-30111222-3',
+      };
+      await http()
+        .put(`${org}/payment-accounts/pago_movil`)
+        .set('Authorization', owner.auth)
+        .send({ fields: companyAccount, active: true })
+        .expect(200);
+      expect(
+        (
+          (await http().get(`${org}/payment-accounts`).set('Authorization', owner.auth).expect(200))
+            .body as PaymentAccount[]
+        ).map((a) => a.fields),
+      ).toEqual([companyAccount]);
+
+      // The passenger sees the company's account; the company verifies, not the platform.
+      const rosa = await signIn();
+      const own = await book(rosa.auth, ['3']);
+      const ownPayment = (await pay(rosa.auth, own.id, 'pago_movil').expect(201)).body as Payment;
+      expect(ownPayment.instructions[0]).toEqual({
+        label: 'Banco',
+        value: '0105 – Banco Mercantil',
+      });
+      await report(rosa.auth, ownPayment.id, '777666555').expect(200);
+      expect((await queue()).some((r) => r.payment.id === ownPayment.id)).toBe(false);
+      await asAdmin(http().post(`/api/v1/admin/payments/${ownPayment.id}/confirm`))
+        .send({})
+        .expect(404);
+      const companyQueue = (
+        await http().get(`${org}/payments/review`).set('Authorization', owner.auth).expect(200)
+      ).body as PaymentReview[];
+      expect(companyQueue.map((r) => r.payment.id)).toEqual([ownPayment.id]);
+      expect(
+        (
+          (
+            await http()
+              .post(`${org}/payments/${ownPayment.id}/confirm`)
+              .set('Authorization', owner.auth)
+              .send({})
+              .expect(200)
+          ).body as Payment
+        ).status,
+      ).toBe('confirmed');
+      const [entry] = await db
+        .select()
+        .from(settlementEntries)
+        .where(eq(settlementEntries.bookingId, own.id));
+      expect(entry).toMatchObject({
+        collectedBy: 'operator',
+        gross: '20.00',
+        commission: '2.00',
+        earned: '18.00',
+      });
+
+      // It now owes the commission: no payout; it pays the platform back at most what it owes.
+      const owing = await balanceUsd();
+      expect(Number(owing.collected) - Number(before.collected)).toBeCloseTo(20);
+      expect(Number(owing.balance) - Number(before.balance)).toBeCloseTo(-2);
+      const settle = (body: object) =>
+        asAdmin(http().post(`/api/v1/admin/organizations/${organization.id}/payouts`)).send({
+          currency: 'USD',
+          method: 'pago_movil',
+          reference: `COM-${run}`,
+          ...body,
+        });
+      if (Number(owing.balance) < 0) {
+        const debt = (-Number(owing.balance)).toFixed(2);
+        await settle({ amount: '0.01' })
+          .expect(409)
+          .expect((res) => expect(res.body.error.reason).toBe('PAYOUT_EXCEEDS_BALANCE'));
+        await settle({ direction: 'from_operator', amount: (Number(debt) + 1).toFixed(2) })
+          .expect(409)
+          .expect((res) => expect(res.body.error.reason).toBe('COLLECTION_EXCEEDS_DEBT'));
+        expect(
+          ((await settle({ direction: 'from_operator', amount: debt }).expect(201)).body as Payout)
+            .direction,
+        ).toBe('from_operator');
+        expect((await balanceUsd()).balance).toBe('0.00');
+      }
+
+      // Its refunds go to its own queue, not the platform's.
+      await http()
+        .post(`/api/v1/me/bookings/${own.id}/cancel`)
+        .set('Authorization', rosa.auth)
+        .expect(200);
+      const platformRefunds = (await asAdmin(http().get('/api/v1/admin/refunds')).expect(200))
+        .body as RefundDuePayment[];
+      expect(platformRefunds.some((r) => r.paymentId === ownPayment.id)).toBe(false);
+      const companyRefunds = (
+        await http().get(`${org}/refunds`).set('Authorization', owner.auth).expect(200)
+      ).body as RefundDuePayment[];
+      expect(companyRefunds.map((r) => r.paymentId)).toEqual([ownPayment.id]);
+      await asAdmin(http().post(`/api/v1/admin/refunds/${ownPayment.id}`))
+        .send({ reference: 'X1' })
+        .expect(404);
+      await http()
+        .post(`${org}/refunds/${ownPayment.id}`)
+        .set('Authorization', owner.auth)
+        .send({ reference: 'DEV-001' })
+        .expect(204);
     },
   );
 });

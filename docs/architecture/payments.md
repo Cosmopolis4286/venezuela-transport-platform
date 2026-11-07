@@ -115,6 +115,23 @@ Solo los administradores de la plataforma ven las cuentas y la cola (es dinero).
 auditoría: `payment.reported`, `payment.verified`, `payment.rejected`, `payment_account.saved`,
 `payment_account.removed`.
 
+## Cobro por empresa
+
+Por defecto cobra la plataforma. Un administrador puede hacer que una empresa cobre con **sus
+propias cuentas** (`PUT /admin/organizations/:id/policy` con `paymentCollection: operator`, en
+**Liquidaciones** del panel). Desde ese momento, los pagos que empiezan sus pasajeros:
+
+- muestran las cuentas de la empresa (`/organizations/:id/payment-accounts`, `finance.manage`
+  para editarlas) y guardan quién cobra (`payments.collector_organization_id`);
+- se verifican en el portal de la empresa (**Cobros**: `GET /organizations/:id/payments/review`,
+  `POST …/payments/:id/confirm|reject`, `finance.manage`), no en el panel de la plataforma;
+- si hay que devolver dinero, aparecen en los reembolsos de la empresa
+  (`GET /organizations/:id/refunds`, `POST …/refunds/:paymentId`), no en los de la plataforma.
+
+Cada endpoint solo acepta pagos de quien cobra: un administrador no confirma ni reembolsa un pago
+de una empresa (404), ni una empresa uno de la plataforma o de otra empresa. Lo que la empresa le
+debe a la plataforma está en [settlements.md](settlements.md#saldo-y-pagos-a-las-empresas).
+
 ## Boletos
 
 Una reserva confirmada devuelve `ticket: { qr, boardedAt }` por cada pasajero. El contenido del QR
@@ -161,5 +178,5 @@ Eventos de auditoría: `payment.created`, `payment.confirmed`, `payment.refund_d
 
 ## Todavía no
 
-Adaptadores de proveedores reales (primero contratos y revisión legal, ver ADR-018), el cobro con
-las cuentas de cada empresa (segundo paso del ADR-027) y la validación sin conexión.
+Adaptadores de proveedores reales (primero contratos y revisión legal, ver ADR-018) y la validación
+sin conexión.

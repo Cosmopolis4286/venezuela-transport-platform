@@ -14,6 +14,7 @@ import {
   AdminPaymentsController,
   ExchangeRatesController,
   MyPaymentsController,
+  OrganizationPaymentsController,
 } from './payments.controller.js';
 import { PaymentsService } from './payments.service.js';
 
@@ -23,7 +24,12 @@ import { PaymentsService } from './payments.service.js';
  */
 @Module({
   imports: [IdentityModule, AuditModule, OrganizationsModule, BookingsModule],
-  controllers: [MyPaymentsController, ExchangeRatesController, AdminPaymentsController],
+  controllers: [
+    MyPaymentsController,
+    ExchangeRatesController,
+    AdminPaymentsController,
+    OrganizationPaymentsController,
+  ],
   providers: [
     PaymentsService,
     {

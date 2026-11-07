@@ -162,7 +162,7 @@ Lo que falta (y lo ya resuelto):
       Brasil (ADR-018).
 - [x] Pagos verificados a mano a las cuentas de la plataforma (`PAYMENT_PROVIDER=manual`,
       ADR-027): falta cargar las cuentas reales.
-- [ ] Cobro con las cuentas de cada empresa (segundo paso del ADR-027).
+- [x] Cobro con las cuentas de cada empresa, configurable por empresa (ADR-027).
 - [ ] Adaptadores de proveedores de pago reales, con sus claves en la configuración del servidor.
 - [x] Códigos de acceso y avisos por correo (ADR-026): falta contratar la cuenta SMTP con dominio
       propio y configurar `OTP_DELIVERY=email` y `MAIL_DELIVERY=smtp`.

@@ -12,7 +12,12 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { PAYOUT_METHODS, type RefundTier } from '@vtp/shared-types';
+import {
+  PAYMENT_COLLECTIONS,
+  PAYOUT_DIRECTIONS,
+  PAYOUT_METHODS,
+  type RefundTier,
+} from '@vtp/shared-types';
 import { bookings } from '../bookings/bookings.schema.js';
 import { timestamps, users } from '../identity/identity.schema.js';
 import { currency } from '../network/network.schema.js';
@@ -20,6 +25,8 @@ import { organizations } from '../organizations/organizations.schema.js';
 
 export const payoutMethod = pgEnum('payout_method', PAYOUT_METHODS);
 export const settlementEntryKind = pgEnum('settlement_entry_kind', ['booking', 'cancellation']);
+export const paymentCollection = pgEnum('payment_collection', PAYMENT_COLLECTIONS);
+export const payoutDirection = pgEnum('payout_direction', PAYOUT_DIRECTIONS);
 
 /** The platform's defaults, editable by platform admins. A single row (`id = 1`). */
 export const platformSettings = pgTable(
@@ -42,6 +49,8 @@ export const organizationPolicies = pgTable('organization_policies', {
     .references(() => organizations.id, { onDelete: 'cascade' }),
   commissionRate: numeric({ precision: 5, scale: 2 }),
   refundTiers: jsonb().$type<RefundTier[]>(),
+  /** Null: the platform collects (ADR-027). */
+  paymentCollection: paymentCollection(),
   updatedByUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
   ...timestamps,
 });
@@ -62,6 +71,8 @@ export const settlementEntries = pgTable(
       .references(() => bookings.id, { onDelete: 'restrict' }),
     /** `booking` when it was paid; `cancellation` (negative amounts) when the passenger cancelled. */
     kind: settlementEntryKind().notNull().default('booking'),
+    /** Who received the passenger's money: with `operator`, the operator owes the commission. */
+    collectedBy: paymentCollection().notNull().default('platform'),
     seats: integer().notNull(),
     currency: currency().notNull(),
     gross: numeric({ precision: 12, scale: 2 }).notNull(),
@@ -85,6 +96,8 @@ export const payouts = pgTable(
     organizationId: uuid()
       .notNull()
       .references(() => organizations.id, { onDelete: 'restrict' }),
+    /** `from_operator`: the operator paid the platform its commission. */
+    direction: payoutDirection().notNull().default('to_operator'),
     currency: currency().notNull(),
     amount: numeric({ precision: 12, scale: 2 }).notNull(),
     method: payoutMethod().notNull(),

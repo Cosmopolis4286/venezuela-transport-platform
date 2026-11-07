@@ -60,6 +60,8 @@ export const ORGANIZATION_PERMISSIONS = [
   'tickets.validate',
   'trips.drive',
   'finance.view',
+  /** Receive passengers' payments in the organization's own accounts (ADR-027): accounts, verification, refunds. */
+  'finance.manage',
 ] as const;
 export type OrganizationPermission = (typeof ORGANIZATION_PERMISSIONS)[number];
 
@@ -76,6 +78,7 @@ export const ROLE_PERMISSIONS: Record<OrganizationRole, readonly OrganizationPer
     'tickets.sell',
     'tickets.validate',
     'finance.view',
+    'finance.manage',
   ],
   dispatcher: ['members.view', 'operations.dispatch', 'bookings.view'],
   ticket_agent: ['tickets.sell', 'bookings.view'],

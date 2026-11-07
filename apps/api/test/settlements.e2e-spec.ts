@@ -234,6 +234,7 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
         commissionOverride: null,
         refundTiers: platformPolicy.refundTiers,
         refundTiersOverride: null,
+        paymentCollection: 'platform',
         balances: [],
       });
       // Active bus companies are listed for the admins before their first sale.
@@ -300,7 +301,9 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
           gross: '75.00',
           commission: '7.13',
           earned: '67.87',
+          collected: '0.00',
           paidOut: '0.00',
+          received: '0.00',
           balance: '67.87',
         },
       ]);
