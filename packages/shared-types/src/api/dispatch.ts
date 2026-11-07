@@ -48,6 +48,27 @@ export interface DispatchDeparture {
   /** When the driver marked the departure and the arrival (UTC ISO); null until then. */
   departedAt: string | null;
   arrivedAt: string | null;
+  /** The operator cancelled this departure: why and when; null otherwise. */
+  cancellation: { reason: string; at: string } | null;
+}
+
+/**
+ * `POST /organizations/:id/dispatch/cancel` — cancels one departure before it leaves. Every held
+ * or paid booking is cancelled; paid ones are refunded in full (by whoever collected the money).
+ */
+export interface CancelDepartureRequest {
+  scheduleId: string;
+  serviceDate: string;
+  /** Shown to the passengers. */
+  reason: string;
+}
+
+export interface CancelDepartureResult {
+  tripId: string;
+  /** Bookings cancelled (held and paid). */
+  cancelledBookings: number;
+  /** Paid bookings now waiting for their refund. */
+  refundsDue: number;
 }
 
 /**

@@ -13,6 +13,9 @@ pull request.
 
 ### Agregado
 
+- **La empresa cancela una salida.** En **Despacho**, con un motivo: se cancelan sus reservas, las
+  pagadas se reembolsan completas (la plataforma conserva su comisión), cada pasajero recibe un
+  aviso y la salida deja de venderse (`POST /organizations/:id/dispatch/cancel`). Migración `0019`.
 - **Recuperar la contraseña.** «¿Olvidaste tu contraseña?» en la web y en las apps: un código al
   correo para elegir una nueva, que cierra las demás sesiones (`POST /auth/password/forgot` y
   `/reset`; no revela si un correo está registrado). Migración `0018`.

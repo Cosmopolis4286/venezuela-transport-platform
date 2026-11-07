@@ -84,6 +84,8 @@ export interface Booking {
     departsAt: string;
     arrivesAt: string;
     serviceClass: ServiceClass;
+    /** Set when the operator cancelled the whole departure (every passenger is refunded in full). */
+    cancellation: { reason: string } | null;
   };
   operator: Pick<Organization, 'id' | 'type' | 'legalName' | 'tradeName'>;
   route: { id: string; name: string };
@@ -122,6 +124,8 @@ export interface TripSummary {
   /** Marked by the driver when the bus leaves the origin and reaches the last stop (UTC ISO). */
   departedAt: string | null;
   arrivedAt: string | null;
+  /** The operator cancelled this departure: why and when (UTC ISO); null otherwise. */
+  cancellation: { reason: string; at: string } | null;
 }
 
 /** `GET /organizations/:id/trips/:tripId/manifest` — passenger list for boarding. */

@@ -41,6 +41,9 @@ En la página de la organización:
   vehículo.
 - **Despacho**: para cada salida del día, elige vehículo y conductor. El sistema no deja poner un
   vehículo o un conductor en dos viajes a la vez. El conductor recibe un aviso en su app.
+- **Cancelar una salida** (en Despacho, antes de que salga): escribe el motivo. Se cancelan todas
+  sus reservas, las pagadas se reembolsan **completas** (la comisión de VTP la asume tu empresa),
+  y cada pasajero recibe un aviso con el motivo. La salida deja de venderse.
 - **Viajes y pasajeros**: las reservas de cada salida y la lista de pasajeros, con quién abordó.
   Cuando el conductor marca la salida y la llegada, la salida muestra "En ruta desde las…" y
   "Llegó…".

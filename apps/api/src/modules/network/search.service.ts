@@ -1,9 +1,10 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import type { Departure } from '@vtp/shared-types';
-import { and, eq, gt } from 'drizzle-orm';
+import { and, eq, gt, inArray } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService } from '../../database/database.service.js';
+import { trips } from '../bookings/bookings.schema.js';
 import { takenSeatCounts } from '../bookings/occupancy.js';
 import { organizations } from '../organizations/organizations.schema.js';
 import { addDays, isCalendarDate, occurrencesOn, todayInVenezuela } from './departures.js';
@@ -78,25 +79,44 @@ export class SearchService {
       this.database.db,
       rows.map((row) => row.schedule.id),
     );
+    // Departures the operator cancelled are not offered.
+    const cancelled = new Set(
+      (
+        await this.database.db
+          .select({ scheduleId: trips.scheduleId, serviceDate: trips.serviceDate })
+          .from(trips)
+          .where(
+            and(
+              inArray(
+                trips.scheduleId,
+                rows.map((row) => row.schedule.id),
+              ),
+              eq(trips.status, 'cancelled'),
+            ),
+          )
+      ).map((t) => `${t.scheduleId}:${t.serviceDate}`),
+    );
     const departures: Departure[] = rows.flatMap((row) =>
-      occurrencesOn(date, row.schedule, row.fromOffset, row.toOffset).map((trip) => ({
-        scheduleId: row.schedule.id,
-        serviceDate: trip.serviceDate,
-        operator: row.operator,
-        route: row.route,
-        from: stops.get(from)!,
-        to: stops.get(to)!,
-        departsAt: trip.departsAt,
-        arrivesAt: trip.arrivesAt,
-        durationMinutes: trip.durationMinutes,
-        serviceClass: row.schedule.serviceClass,
-        seats: row.schedule.seats,
-        seatsAvailable: Math.max(
-          0,
-          row.schedule.seats - (taken.get(`${row.schedule.id}:${trip.serviceDate}`) ?? 0),
-        ),
-        fare: row.fare?.amount && row.fare.currency ? (row.fare as Departure['fare']) : null,
-      })),
+      occurrencesOn(date, row.schedule, row.fromOffset, row.toOffset)
+        .filter((trip) => !cancelled.has(`${row.schedule.id}:${trip.serviceDate}`))
+        .map((trip) => ({
+          scheduleId: row.schedule.id,
+          serviceDate: trip.serviceDate,
+          operator: row.operator,
+          route: row.route,
+          from: stops.get(from)!,
+          to: stops.get(to)!,
+          departsAt: trip.departsAt,
+          arrivesAt: trip.arrivesAt,
+          durationMinutes: trip.durationMinutes,
+          serviceClass: row.schedule.serviceClass,
+          seats: row.schedule.seats,
+          seatsAvailable: Math.max(
+            0,
+            row.schedule.seats - (taken.get(`${row.schedule.id}:${trip.serviceDate}`) ?? 0),
+          ),
+          fare: row.fare?.amount && row.fare.currency ? (row.fare as Departure['fare']) : null,
+        })),
     );
     // Same offset everywhere, so the ISO strings sort chronologically.
     return departures.sort((a, b) => a.departsAt.localeCompare(b.departsAt));

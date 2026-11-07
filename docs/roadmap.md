@@ -64,8 +64,8 @@ En orden; cada uno es un pull request.
 
 ## Pendientes menores
 
-- Reservas: que la empresa cancele un viaje (y reembolse a sus pasajeros); revender un puesto
-  liberado en una parada intermedia.
+- Reservas: revender un puesto liberado en una parada intermedia; mover a los pasajeros de una
+  salida cancelada a otra.
 - Red: excepciones a los horarios (feriados, salidas canceladas sueltas), andenes dentro de los
   terminales, estado en tiempo real.
 - Boletos: validación sin conexión (QR firmados y sincronización de abordajes).

@@ -118,13 +118,20 @@ export async function recordCancellation(
   tx: Transaction,
   bookingId: string,
   fareRefund: string,
+  /**
+   * The operator cancelled the departure: the whole refund comes out of what it earned, and the
+   * platform keeps its commission even on a full refund.
+   */
+  operatorCancelled = false,
 ): Promise<void> {
   const [earning] = await tx
     .select()
     .from(settlementEntries)
     .where(and(eq(settlementEntries.bookingId, bookingId), eq(settlementEntries.kind, 'booking')));
   if (!earning) return;
-  const { fromEarned, fromCommission } = splitRefund(fareRefund, earning.earned);
+  const { fromEarned, fromCommission } = operatorCancelled
+    ? { fromEarned: fareRefund, fromCommission: '0.00' }
+    : splitRefund(fareRefund, earning.earned);
   const negative = (amount: string) => (toScaled(amount, 2) === 0n ? '0.00' : `-${amount}`);
   await tx
     .insert(settlementEntries)

@@ -108,6 +108,10 @@ libera igual.
 Si la empresa ya cobró y luego un pasajero cancela, su saldo puede quedar **negativo**: la empresa
 le debe ese monto a la plataforma, que lo descuenta de los pagos siguientes.
 
+Si la **empresa** cancela la salida completa ([dispatch.md](dispatch.md#cancelar-una-salida)), cada
+pasajero recibe el reembolso completo y la plataforma conserva su comisión: la entrada de
+cancelación lleva `commission = 0` y descuenta todo el reembolso de lo ganado.
+
 ## Quién ve qué
 
 | Quién                                                  | Ve y hace                                                                                          |
@@ -149,5 +153,5 @@ Eventos de auditoría: `settlement.platform_policy_set`, `settlement.organizatio
 
 ## Todavía no
 
-Que la empresa cancele un viaje completo y reembolse a todos, comisión sobre los taxis (hoy se pagan directo al conductor), exportar el libro a una hoja de cálculo, y pagar a
+Comisión sobre los taxis (hoy se pagan directo al conductor), exportar el libro a una hoja de cálculo, y pagar a
 las empresas a través de un proveedor en vez de a mano.

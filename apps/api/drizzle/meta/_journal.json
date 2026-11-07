@@ -134,6 +134,13 @@
       "when": 1794024871542,
       "tag": "0018_password_reset",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794059086318,
+      "tag": "0019_departure_cancellation",
+      "breakpoints": true
     }
   ]
 }

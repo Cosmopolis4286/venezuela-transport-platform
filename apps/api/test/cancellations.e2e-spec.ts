@@ -389,6 +389,121 @@ describe.runIf(expectDatabase)('Cancelling paid bookings (e2e)', () => {
         refundAmount: '912.50',
         currency: 'VES',
       });
+
+      // === The operator cancels a whole departure (another day) ===
+      const otherDay = addDays(today, 4);
+      const scheduleId = scheduled.schedules[0]!.id;
+      const bookOn = async (seats: string[]) =>
+        (
+          await http()
+            .post('/api/v1/bookings')
+            .set('Authorization', passenger.auth)
+            .send({
+              scheduleId,
+              serviceDate: otherDay,
+              fromStopId: valencia.id,
+              toStopId: merida.id,
+              passengers: seats.map((seatNumber) => ({
+                seatNumber,
+                firstName: 'Rosa',
+                lastName: `Pasajera ${run}`,
+                documentType: 'V',
+                documentNumber: `${randomInt(10_000_000, 30_000_000)}`,
+              })),
+            })
+            .expect(201)
+        ).body as Booking;
+      const search = async () =>
+        (
+          await http()
+            .get(`/api/v1/search/departures?from=${valencia.id}&to=${merida.id}&date=${otherDay}`)
+            .expect(200)
+        ).body as { scheduleId: string }[];
+      expect((await search()).some((d) => d.scheduleId === scheduleId)).toBe(true);
+      const paidOne = await bookOn(['1', '2']);
+      await payWith(paidOne, 'usdt');
+      const heldOne = await bookOn(['3']);
+      const cancelDeparture = (auth: string, reason = 'La unidad tuvo una falla mecánica.') =>
+        http()
+          .post(`${org}/dispatch/cancel`)
+          .set('Authorization', auth)
+          .send({ scheduleId, serviceDate: otherDay, reason });
+      await cancelDeparture(passenger.auth).expect(404);
+      await cancelDeparture(owner.auth, 'no').expect(400);
+      expect((await cancelDeparture(owner.auth).expect(200)).body).toMatchObject({
+        tripId: paidOne.trip.id,
+        cancelledBookings: 2,
+        refundsDue: 1,
+      });
+      await cancelDeparture(owner.auth)
+        .expect(409)
+        .expect((res) => expect(res.body.error.reason).toBe('TRIP_CANCELLED'));
+
+      // Paid: refunded in full; the platform keeps its commission (the operator pays it).
+      const paidView = (
+        await http()
+          .get(`/api/v1/me/bookings/${paidOne.id}`)
+          .set('Authorization', passenger.auth)
+          .expect(200)
+      ).body as Booking;
+      expect(paidView).toMatchObject({
+        status: 'cancelled',
+        trip: { cancellation: { reason: 'La unidad tuvo una falla mecánica.' } },
+        payment: { status: 'refund_due', refundAmount: '50.00', currency: 'USDT' },
+      });
+      expect(
+        await db
+          .select({
+            gross: settlementEntries.gross,
+            commission: settlementEntries.commission,
+            earned: settlementEntries.earned,
+          })
+          .from(settlementEntries)
+          .where(
+            and(
+              eq(settlementEntries.bookingId, paidOne.id),
+              eq(settlementEntries.kind, 'cancellation'),
+            ),
+          ),
+      ).toEqual([{ gross: '-50.00', commission: '0.00', earned: '-50.00' }]);
+      const heldView = (
+        await http()
+          .get(`/api/v1/me/bookings/${heldOne.id}`)
+          .set('Authorization', passenger.auth)
+          .expect(200)
+      ).body as Booking;
+      expect(heldView.status).toBe('cancelled');
+
+      // No longer sold, searched or listed as bookable.
+      expect((await search()).some((d) => d.scheduleId === scheduleId)).toBe(false);
+      await http()
+        .post('/api/v1/bookings')
+        .set('Authorization', passenger.auth)
+        .send({
+          scheduleId,
+          serviceDate: otherDay,
+          fromStopId: valencia.id,
+          toStopId: merida.id,
+          passengers: [
+            {
+              seatNumber: '9',
+              firstName: 'Rosa',
+              lastName: 'Tarde',
+              documentType: 'V',
+              documentNumber: '12345678',
+            },
+          ],
+        })
+        .expect(409);
+      const board = (
+        await http()
+          .get(`${org}/dispatch?date=${otherDay}`)
+          .set('Authorization', owner.auth)
+          .expect(200)
+      ).body as { departures: { scheduleId: string; cancellation: unknown }[] };
+      expect(board.departures.find((d) => d.scheduleId === scheduleId)?.cancellation).toMatchObject(
+        { reason: 'La unidad tuvo una falla mecánica.' },
+      );
     },
   );
 });

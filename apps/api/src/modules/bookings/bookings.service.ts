@@ -7,6 +7,7 @@ import {
   toNetworkIso,
   refundPercentFor,
   type Booking,
+  type CancelDepartureResult,
   type CancellationQuote,
   type CreateBookingRequest,
   type RefundTier,
@@ -30,6 +31,7 @@ import { routes, routeSchedules } from '../network/network.schema.js';
 import { StopsService } from '../network/stops.service.js';
 import { organizations } from '../organizations/organizations.schema.js';
 import { currentPayment, toPayment } from '../payments/payment-view.js';
+import { departureText } from '../notifications/format.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { payments, type PaymentRow } from '../payments/payments.schema.js';
 import { percentOf, policyFor, recordCancellation } from '../settlements/ledger.js';
@@ -294,6 +296,122 @@ export class BookingsService {
     return (await this.toBookings([cancelled]))[0]!;
   }
 
+  /**
+   * The operator cancels one departure before it leaves (creating its trip if nobody booked it,
+   * so it also stops being sold). Held bookings are released; paid ones are refunded in full by
+   * whoever collected the money, and the platform keeps its commission. Passengers are told.
+   */
+  async cancelDeparture(
+    organizationId: string,
+    input: { scheduleId: string; serviceDate: string; reason: string },
+    auth: Authenticated,
+    meta: RequestMeta,
+  ): Promise<CancelDepartureResult> {
+    const reason = input.reason.trim();
+    const trip = await this.trips.ensure(organizationId, input.scheduleId, input.serviceDate);
+    const affected: { bookingId: string; userId: string; paid: boolean }[] = [];
+    await this.database.db.transaction(async (tx) => {
+      const [locked] = await tx.select().from(trips).where(eq(trips.id, trip.id)).for('update');
+      if (locked!.status === 'cancelled')
+        throw conflict('This trip is cancelled', 'TRIP_CANCELLED');
+      if (locked!.departedAt) {
+        throw conflict('The bus already left', 'TRIP_WRONG_STEP');
+      }
+      await tx
+        .update(trips)
+        .set({
+          status: 'cancelled',
+          cancellationReason: reason,
+          cancelledAt: new Date(),
+          cancelledByUserId: auth.user.id,
+        })
+        .where(eq(trips.id, trip.id));
+      const open = await tx
+        .select()
+        .from(bookings)
+        .where(and(eq(bookings.tripId, trip.id), inArray(bookings.status, ['held', 'confirmed'])))
+        .for('update');
+      for (const booking of open) {
+        const paid = booking.status === 'confirmed';
+        if (paid) {
+          const [payment] = await tx
+            .select()
+            .from(payments)
+            .where(and(eq(payments.bookingId, booking.id), eq(payments.status, 'confirmed')));
+          if (payment) {
+            await tx
+              .update(payments)
+              .set({
+                status: 'refund_due',
+                refundAmount: payment.receivedAmount ?? payment.amount,
+              })
+              .where(eq(payments.id, payment.id));
+          }
+          await recordCancellation(tx, booking.id, booking.totalAmount, true);
+        } else {
+          await tx
+            .update(payments)
+            .set({ status: 'cancelled' })
+            .where(and(eq(payments.bookingId, booking.id), eq(payments.status, 'pending')));
+        }
+        await tx
+          .update(bookings)
+          .set({ status: 'cancelled', cancelledAt: new Date(), expiresAt: null })
+          .where(eq(bookings.id, booking.id));
+        await tx
+          .update(bookingPassengers)
+          .set({ active: false })
+          .where(eq(bookingPassengers.bookingId, booking.id));
+        affected.push({ bookingId: booking.id, userId: booking.userId, paid });
+      }
+    });
+    await this.audit.record({
+      action: 'trip.cancelled',
+      actorUserId: auth.user.id,
+      targetType: 'trip',
+      targetId: trip.id,
+      ip: meta.ip,
+      metadata: { organizationId, reason, bookings: affected.length },
+    });
+    for (const { bookingId, userId, paid } of affected) {
+      this.notifications.later(async () => {
+        const booking = await this.notifications.booking(bookingId);
+        const [payment] = paid
+          ? await this.database.db
+              .select()
+              .from(payments)
+              .where(and(eq(payments.bookingId, bookingId), eq(payments.status, 'refund_due')))
+          : [];
+        return {
+          kind: 'departure_cancelled',
+          userIds: [userId],
+          app: 'passenger',
+          email: true,
+          reference: { key: 'bookingId', id: bookingId },
+          text: (m, locale) =>
+            m.departureCancelled(
+              booking.code,
+              booking.route,
+              departureText(booking.departsAt, locale),
+              reason,
+              payment
+                ? formatPaymentAmount(
+                    payment.refundAmount ?? payment.amount,
+                    payment.currency,
+                    locale,
+                  )
+                : null,
+            ),
+        };
+      });
+    }
+    return {
+      tripId: trip.id,
+      cancelledBookings: affected.length,
+      refundsDue: affected.filter((a) => a.paid).length,
+    };
+  }
+
   /** Refund for a confirmed booking now: in the payment's currency, and in the fare's. */
   private async quote(
     db: Database | Transaction,
@@ -501,6 +619,10 @@ export class BookingsService {
           departsAt: toNetworkIso(booking.departsAt),
           arrivesAt: toNetworkIso(booking.arrivesAt),
           serviceClass: trip.serviceClass,
+          cancellation:
+            trip.trip.status === 'cancelled'
+              ? { reason: trip.trip.cancellationReason ?? '' }
+              : null,
         },
         operator: trip.operator,
         route: trip.route,
@@ -566,5 +688,9 @@ export function summary(
     driver: row.driver,
     departedAt: trip.departedAt?.toISOString() ?? null,
     arrivedAt: trip.arrivedAt?.toISOString() ?? null,
+    cancellation:
+      trip.status === 'cancelled' && trip.cancelledAt
+        ? { reason: trip.cancellationReason ?? '', at: trip.cancelledAt.toISOString() }
+        : null,
   };
 }
