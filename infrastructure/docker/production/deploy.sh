@@ -1,82 +1,66 @@
-# Preparación del despliegue en un VPS
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
-> No hay servicios desplegados todavía. La configuración de producción vive en
-> `infrastructure/docker/production/`; el Compose de la raíz es exclusivamente para desarrollo.
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+COMPOSE_FILE="${VTP_COMPOSE_FILE:-$ROOT_DIR/compose.yml}"
+COMPOSE_ENV_FILE="${VTP_COMPOSE_ENV_FILE:-/etc/vtp/compose.env}"
 
-## Topología
+if [[ ! -f "$COMPOSE_FILE" ]]; then
+  echo "No existe el Compose de producción: $COMPOSE_FILE" >&2
+  exit 1
+fi
+if [[ ! -f "$COMPOSE_ENV_FILE" ]]; then
+  echo "No existe el archivo de entorno: $COMPOSE_ENV_FILE" >&2
+  exit 1
+fi
 
-```text
-Internet :80/:443
-  └─ Caddy (TLS automático)
-      ├─ app.<dominio> → Next.js
-      └─ api.<dominio> → NestJS
-                          └─ PostgreSQL 18 + PostGIS (red privada)
-```
+# The env file is root-owned and chmod 600 on the production host.
+set -a
+# shellcheck disable=SC1090
+source "$COMPOSE_ENV_FILE"
+set +a
 
-Un VPS Ubuntu 24.04 LTS con 2 vCPU / 4 GB RAM sirve para una beta pequeña. No publiques
-PostgreSQL ni puertos internos de API/web. Solo abre SSH, TCP 80 y TCP 443.
+: "${VTP_WEB_DOMAIN:?Define VTP_WEB_DOMAIN en $COMPOSE_ENV_FILE}"
+: "${VTP_API_DOMAIN:?Define VTP_API_DOMAIN en $COMPOSE_ENV_FILE}"
+: "${VTP_API_IMAGE:?Define VTP_API_IMAGE en $COMPOSE_ENV_FILE}"
+: "${VTP_WEB_IMAGE:?Define VTP_WEB_IMAGE en $COMPOSE_ENV_FILE}"
 
-## Preparación
+COMPOSE=(docker compose --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE")
+compose() {
+  "${COMPOSE[@]}" "$@"
+}
 
-1. Crea usuario sudo no-root; desactiva SSH por contraseña y login root; usa llaves.
-2. Activa UFW (SSH/80/443), actualizaciones de seguridad y fail2ban.
-3. Instala Docker Engine + Compose v2, `curl` y `age`.
-4. Crea DNS A/AAAA para los dominios web y API apuntando al VPS.
-5. Crea `/etc/vtp` y copia los bloques de `infrastructure/docker/production/env.example` a
-   `compose.env`, `postgres.env`, `migrate.env` y `api.env`.
-6. Genera contraseñas distintas para owner y app y `AUTH_SECRET` con
-   `openssl rand -hex 32`. No reutilices valores de ejemplo.
-7. Protege secretos: `chown root:root /etc/vtp/*.env && chmod 600 /etc/vtp/*.env`.
+echo "==> Validando configuración de producción"
+compose --profile migrate config --quiet
 
-La base se inicializa con `vtp_owner`; el script `postgres/init-app-role.sh` crea `vtp_app`
-con permisos DML y grants por defecto. La API usa `vtp_app`; el contenedor one-off `migrate`
-usa `vtp_owner`. El script de inicialización solo se ejecuta sobre un volumen PostgreSQL vacío.
-En instalaciones existentes, crea el rol/grants con un procedimiento de migración controlado.
+echo "==> Descargando imágenes"
+compose pull
 
-## Publicación y despliegue
+echo "==> Ejecutando migraciones con el usuario propietario"
+compose --profile migrate run --rm migrate
 
-`.github/workflows/publish-images.yml` publica imágenes con etiqueta SHA inmutable en GHCR
-cuando el workflow CI de `main` termina correctamente. Define la variable GitHub Actions
-`VTP_API_DOMAIN` con el hostname real de API. Si el paquete GHCR es privado, autentica el VPS
-con un token de solo lectura de paquetes.
+echo "==> Actualizando servicios"
+compose up -d --remove-orphans --wait --wait-timeout 180 postgres api web caddy
 
-Actualiza las imágenes en `/etc/vtp/compose.env` al mismo SHA y ejecuta:
+wait_for_url() {
+  local url="$1"
+  local description="$2"
+  local attempt
 
-```bash
-sudo bash infrastructure/docker/production/deploy.sh
-```
+  for attempt in $(seq 1 30); do
+    if curl --fail --silent --show-error --max-time 10 "$url" >/dev/null; then
+      echo "OK: $description"
+      return 0
+    fi
+    sleep 5
+  done
 
-El script valida Compose, descarga imágenes, corre migraciones con el rol owner, actualiza API/web
-y espera los healthchecks y URLs HTTPS. La web necesita que `NEXT_PUBLIC_API_BASE_URL` se haya
-compilado como `https://<api>/api/v1`.
+  echo "No respondió $description: $url" >&2
+  return 1
+}
 
-## Pagos, correo y notificaciones
+echo "==> Comprobando endpoints HTTPS"
+wait_for_url "https://$VTP_API_DOMAIN/api/v1/health/ready" "API"
+wait_for_url "https://$VTP_WEB_DOMAIN/es" "web"
 
-- `PAYMENT_PROVIDER=manual`: carga cuentas reales verificadas desde el panel y exige revisión
-  humana del comprobante. No hay adaptador bancario/pasarela automático implementado.
-- Nunca uses `simulated` en producción.
-- OTP por correo requiere SMTP real con SPF/DKIM/DMARC; hasta configurarlo deja
-  `OTP_DELIVERY=disabled`. Push requiere el proyecto EAS de producción y credenciales.
-- Mantén una sola instancia API mientras el rate limiter sea local en memoria.
-
-## Backups y restauración
-
-El script `infrastructure/docker/production/backup.sh` crea un backup cifrado con age que incluye
-PostgreSQL y documentos KYC. Configura `VTP_BACKUP_AGE_RECIPIENT` con una clave pública age;
-guarda la privada fuera del servidor. Programa ejecución diaria y sincroniza los archivos
-`*.tar.gz.age` y `*.sha256` a almacenamiento externo. El script no implementa subida remota ni
-retención, por lo que debes configurarlas fuera de él.
-
-Ensaya la restauración en un host/base vacía antes de aceptar datos reales: verifica SHA-256,
-descifra, restaura el dump con `pg_restore`, restaura `uploads/` al volumen y valida el sistema.
-No restaures encima de la base activa sin mantenimiento y backup previo.
-
-## Antes de beta pública
-
-- [ ] Dominio/DNS y certificados emitidos.
-- [ ] Secrets únicos y permisos 600.
-- [ ] SMTP/OTP y EAS configurados.
-- [ ] Cuentas de pago verificadas y proceso humano de conciliación documentado.
-- [ ] Backups externos y prueba de restauración completada.
-- [ ] Pruebas end-to-end en el VPS: compra, confirmación, QR, abordaje, cancelación y reembolso.
-- [ ] Política de privacidad, términos, soporte e incidentes definidos.
+echo "Despliegue completado. Imágenes: $VTP_API_IMAGE / $VTP_WEB_IMAGE"
