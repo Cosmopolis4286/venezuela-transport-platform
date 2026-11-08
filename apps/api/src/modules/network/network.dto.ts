@@ -3,9 +3,14 @@ import {
   CURRENCIES,
   ROUTE_STATUSES,
   SERVICE_CLASSES,
+  SERVICES,
   STOP_KINDS,
   TRANSPORT_MODES,
   type ChangeRouteStatusRequest,
+  type CityRef,
+  type IntercitySettingsInput,
+  type Service,
+  type ServiceAreaInput,
   type Currency,
   type Fare,
   type ReplaceFaresRequest,
@@ -140,10 +145,22 @@ export class RouteDto implements RouteInput {
   @IsOptional()
   @IsIn(TRANSPORT_MODES)
   mode?: TransportMode;
+
+  @ApiPropertyOptional({ enum: SERVICES, description: 'Only on creation; defaults to intercity' })
+  @IsOptional()
+  @IsIn(SERVICES)
+  service?: Service;
+
+  @ApiPropertyOptional({ nullable: true, description: 'Corridor of a suburban route' })
+  @IsOptional()
+  @IsUUID()
+  serviceAreaId?: string | null;
 }
 
-/** The mode is fixed once the route exists. */
-export class UpdateRouteDto extends PartialType(OmitType(RouteDto, ['mode'] as const)) {}
+/** The mode, service and corridor are fixed once the route exists. */
+export class UpdateRouteDto extends PartialType(
+  OmitType(RouteDto, ['mode', 'service', 'serviceAreaId'] as const),
+) {}
 
 export class RouteStatusDto implements ChangeRouteStatusRequest {
   @ApiProperty({ enum: ROUTE_STATUSES })
@@ -244,4 +261,55 @@ export class DepartureSearchQueryDto {
   @IsOptional()
   @IsIn(TRANSPORT_MODES)
   mode?: TransportMode;
+
+  @ApiPropertyOptional({ enum: SERVICES, description: 'Only this service' })
+  @IsOptional()
+  @IsIn(SERVICES)
+  service?: Service;
 }
+
+export class CityRefDto implements CityRef {
+  @ApiProperty({ example: 'Puerto Ordaz' })
+  @IsString()
+  @Length(2, 80)
+  city!: string;
+
+  @ApiProperty({ example: 'Bolívar' })
+  @IsString()
+  @Length(2, 60)
+  state!: string;
+}
+
+export class IntercitySettingsDto implements IntercitySettingsInput {
+  @ApiProperty()
+  @IsBoolean()
+  enabled!: boolean;
+
+  @ApiProperty({ type: [CityRefDto], description: 'Cities without intercity sales' })
+  @IsArray()
+  @ArrayMaxSize(200)
+  @ValidateNested({ each: true })
+  @Type(() => CityRefDto)
+  closedCities!: CityRefDto[];
+}
+
+export class ServiceAreaDto implements ServiceAreaInput {
+  @ApiProperty({ example: 'Ciudad Guayana' })
+  @IsString()
+  @Length(2, 80)
+  name!: string;
+
+  @ApiProperty({ type: [String], description: 'Catalog stops of the corridor' })
+  @IsArray()
+  @ArrayMinSize(2)
+  @ArrayMaxSize(200)
+  @IsUUID('all', { each: true })
+  stopIds!: string[];
+
+  @ApiPropertyOptional({ description: 'Platform admins only' })
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+}
+
+export class UpdateServiceAreaDto extends PartialType(ServiceAreaDto) {}

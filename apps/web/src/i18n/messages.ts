@@ -14,6 +14,9 @@ const es = {
     operatorsBefore:
       '¿Tienes una empresa de transporte o una línea de taxis? Publica tus rutas desde el',
     operatorsLink: 'portal de operadores',
+    services: 'Tipo de viaje',
+    suburbanHeading: 'Tus viajes diarios en bus, taxi o moto',
+    suburbanIntro: (areas: string) => `Reserva tu puesto con anticipación en ${areas}.`,
   },
   legal: {
     footer: 'Información legal',
@@ -68,6 +71,9 @@ const en: Messages = {
     intro: 'Compare schedules, prices and companies between terminals all over the country.',
     operatorsBefore: 'Do you run a transport company or a taxi line? Publish your routes from the',
     operatorsLink: 'operator portal',
+    services: 'Kind of trip',
+    suburbanHeading: 'Your daily trips by bus, taxi or motorcycle',
+    suburbanIntro: (areas) => `Book your seat in advance in ${areas}.`,
   },
   legal: {
     footer: 'Legal',
@@ -122,6 +128,9 @@ const ptBR: Messages = {
     operatorsBefore:
       'Você tem uma empresa de transporte ou uma cooperativa de táxi? Publique suas rotas no',
     operatorsLink: 'portal de operadores',
+    services: 'Tipo de viagem',
+    suburbanHeading: 'Suas viagens diárias de ônibus, táxi ou moto',
+    suburbanIntro: (areas) => `Reserve seu lugar com antecedência em ${areas}.`,
   },
   legal: {
     footer: 'Informações legais',

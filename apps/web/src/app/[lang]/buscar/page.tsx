@@ -13,10 +13,11 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { SearchForm } from '@/components/search/search-form';
+import { ServiceTabs } from '@/components/search/service-tabs';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { getMessages } from '@/i18n/locale';
-import { searchDepartures } from '@/lib/server/network';
+import { getServiceChoice, searchDepartures } from '@/lib/server/network';
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getMessages();
@@ -50,8 +51,11 @@ async function Results({
   const to = param(params.to);
   const date = param(params.date);
   const mode = modeParam(param(params.mode));
+  const { status, open, current } = await getServiceChoice(param(params.service));
+  // With two services, results stay on the chosen one; with one there is nothing to choose.
+  const service = open.length > 1 ? current : undefined;
   const complete = from && to && date;
-  const result = complete ? await searchDepartures(from, to, date, locale) : null;
+  const result = complete ? await searchDepartures(from, to, date, locale, service) : null;
   const first = result?.departures?.[0];
   // Every mode is fetched once, so each tab shows how many departures it has.
   const shown = result?.departures?.filter((d) => !mode || d.mode === mode) ?? [];
@@ -60,12 +64,26 @@ async function Results({
       from,
       to,
       date,
+      ...(service ? { service } : {}),
       ...(value ? { mode: value } : {}),
     })}`;
 
   return (
     <>
-      <SearchForm from={from} to={to} date={date || undefined} />
+      <div className="flex flex-col gap-3">
+        <ServiceTabs
+          open={open}
+          current={current}
+          href={(value) => `/${localeSegment(locale)}?service=${value}`}
+        />
+        <SearchForm
+          from={from}
+          to={to}
+          date={date || undefined}
+          service={service}
+          areas={current === 'suburban' ? status.suburban.areas : undefined}
+        />
+      </div>
       {!complete ? (
         <Alert>{t.results.choose}</Alert>
       ) : result?.error ? (
@@ -83,6 +101,7 @@ async function Results({
                   from: to,
                   to: from,
                   date,
+                  ...(service ? { service } : {}),
                   ...(mode ? { mode } : {}),
                 })}`}
                 className="underline"

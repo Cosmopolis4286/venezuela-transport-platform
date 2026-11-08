@@ -1,5 +1,10 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import type { StopSummary, TripAvailability } from '@vtp/shared-types';
+import {
+  serviceOpen,
+  type Service,
+  type StopSummary,
+  type TripAvailability,
+} from '@vtp/shared-types';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService, type Transaction } from '../../database/database.service.js';
@@ -12,6 +17,7 @@ import {
   routeStops,
   type RouteScheduleRow,
 } from '../network/network.schema.js';
+import { ServicesService } from '../network/services.service.js';
 import { StopsService } from '../network/stops.service.js';
 import { organizations } from '../organizations/organizations.schema.js';
 import {
@@ -27,6 +33,8 @@ import { occupiesSeat } from './occupancy.js';
 export interface DepartureContext {
   schedule: RouteScheduleRow;
   route: { id: string; name: string };
+  /** Its service and corridor, to check that sales are on (ADR-029). */
+  sale: { service: Service; serviceAreaId: string | null };
   operator: TripAvailability['operator'];
   from: StopSummary;
   to: StopSummary;
@@ -44,7 +52,21 @@ export class TripsService {
   constructor(
     private readonly database: DatabaseService,
     private readonly stops: StopsService,
+    private readonly services: ServicesService,
   ) {}
+
+  /** `409 SERVICE_DISABLED` when the departure's service or corridor is switched off. */
+  assertOnSale(context: DepartureContext): Promise<void> {
+    return this.services.assertOpen({ ...context.sale, from: context.from, to: context.to });
+  }
+
+  private async onSale(context: DepartureContext): Promise<boolean> {
+    return serviceOpen(await this.services.status(), {
+      ...context.sale,
+      from: context.from,
+      to: context.to,
+    });
+  }
 
   /**
    * Resolves a published departure: active schedule on an active route of an active organization,
@@ -60,6 +82,7 @@ export class TripsService {
       .select({
         schedule: routeSchedules,
         route: { id: routes.id, name: routes.name, status: routes.status },
+        sale: { service: routes.service, serviceAreaId: routes.serviceAreaId },
         operator: {
           id: organizations.id,
           type: organizations.type,
@@ -131,6 +154,7 @@ export class TripsService {
     return {
       schedule: row.schedule,
       route,
+      sale: row.sale,
       operator,
       from: stops.get(fromStopId)!,
       to: stops.get(toStopId)!,
@@ -173,7 +197,7 @@ export class TripsService {
       capacity: trip ? trip.capacity : context.schedule.seats,
       takenSeats: taken.map((t) => t.seatNumber).sort(compareSeats),
       fare: context.fare,
-      bookable: isBookable(context) && trip?.status !== 'cancelled',
+      bookable: isBookable(context) && trip?.status !== 'cancelled' && (await this.onSale(context)),
     };
   }
 

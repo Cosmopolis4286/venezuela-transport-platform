@@ -1,5 +1,14 @@
 import 'server-only';
-import { apiErrorText, type Departure, type Locale, type Stop } from '@vtp/shared-types';
+import {
+  apiErrorText,
+  openServices,
+  SERVICES,
+  type Departure,
+  type Locale,
+  type Service,
+  type ServicesStatus,
+  type Stop,
+} from '@vtp/shared-types';
 import { cacheLife } from 'next/cache';
 import { connection } from 'next/server';
 import { MESSAGES } from '@/i18n/messages';
@@ -20,6 +29,36 @@ export async function getStops(): Promise<Stop[]> {
   return cachedStops();
 }
 
+/** Which services are on sale (ADR-029). Public, cached for a few minutes like the stops. */
+async function cachedServices(): Promise<ServicesStatus> {
+  'use cache';
+  cacheLife('minutes');
+  return apiRequest<ServicesStatus>('/platform/services', { auth: false });
+}
+
+export interface ServiceChoice {
+  status: ServicesStatus;
+  /** The services passengers can choose; a selector is shown only for two. */
+  open: Service[];
+  /** The one to show: the requested one if it is open, else the first open one. */
+  current: Service;
+}
+
+/** The service a page shows, from its `?service=` parameter. */
+export async function getServiceChoice(requested: string): Promise<ServiceChoice> {
+  await connection();
+  const status = await cachedServices();
+  const open = openServices(status);
+  const wanted = (SERVICES as readonly string[]).includes(requested)
+    ? (requested as Service)
+    : null;
+  return {
+    status,
+    open,
+    current: wanted && open.includes(wanted) ? wanted : (open[0] ?? 'intercity'),
+  };
+}
+
 export type DepartureSearch =
   { departures: Departure[]; error?: undefined } | { departures?: undefined; error: string };
 
@@ -29,9 +68,10 @@ export async function searchDepartures(
   to: string,
   date: string,
   locale: Locale,
+  service?: Service,
 ): Promise<DepartureSearch> {
   const t = MESSAGES[locale].results;
-  const query = new URLSearchParams({ from, to, date });
+  const query = new URLSearchParams({ from, to, date, ...(service ? { service } : {}) });
   try {
     return {
       departures: await apiRequest<Departure[]>(`/search/departures?${query}`, { auth: false }),

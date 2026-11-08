@@ -28,6 +28,7 @@ import {
   type RouteScheduleRow,
 } from './network.schema.js';
 import { isCalendarDate } from './departures.js';
+import { ServicesService } from './services.service.js';
 import { toSummary } from './stops.service.js';
 
 const MAX_SCHEDULES_PER_ROUTE = 100;
@@ -51,6 +52,7 @@ export class RoutesService {
     private readonly database: DatabaseService,
     private readonly audit: AuditService,
     private readonly fleet: FleetService,
+    private readonly services: ServicesService,
   ) {}
 
   async list(organizationId: string): Promise<RouteSummary[]> {
@@ -78,6 +80,7 @@ export class RoutesService {
         id: route.id,
         name: route.name,
         mode: route.mode,
+        service: route.service,
         status: route.status,
         origin: toSummary(own[0]!.stop),
         destination: toSummary(own.at(-1)!.stop),
@@ -111,7 +114,13 @@ export class RoutesService {
         'TRANSPORT_MODE_NOT_ALLOWED',
       );
     }
+    const service = input.service ?? 'intercity';
+    const serviceAreaId = service === 'suburban' ? (input.serviceAreaId ?? null) : null;
+    if (service === 'suburban' && !serviceAreaId) {
+      throw conflict('Choose the corridor of the suburban route', 'SERVICE_AREA_REQUIRED');
+    }
     await this.assertStops(input.stops);
+    await this.assertInArea(serviceAreaId, input.stops);
     const route = await this.database.db.transaction(async (tx) => {
       const [row] = await tx
         .insert(routes)
@@ -119,6 +128,8 @@ export class RoutesService {
           organizationId: access.organization.id,
           name: input.name.trim(),
           mode,
+          service,
+          serviceAreaId,
           createdBy: actor.user.id,
         })
         .returning();
@@ -133,12 +144,15 @@ export class RoutesService {
   async update(
     access: OrganizationAccess,
     routeId: string,
-    input: Partial<Omit<RouteInput, 'mode'>>,
+    input: Partial<Omit<RouteInput, 'mode' | 'service' | 'serviceAreaId'>>,
     actor: Authenticated,
     meta: RequestMeta,
   ): Promise<Route> {
     const route = await this.requireRoute(access, routeId);
-    if (input.stops) await this.assertStops(input.stops);
+    if (input.stops) {
+      await this.assertStops(input.stops);
+      await this.assertInArea(route.serviceAreaId, input.stops);
+    }
     let droppedFares = 0;
     await this.database.db.transaction(async (tx) => {
       if (input.name) {
@@ -416,6 +430,18 @@ export class RoutesService {
       throw invalid('Every stop must exist in the catalog and be active');
   }
 
+  /** Every stop of a suburban route belongs to its corridor. */
+  private async assertInArea(serviceAreaId: string | null, list: RouteInput['stops']) {
+    if (!serviceAreaId) return;
+    const inArea = await this.services.areaStopIds(serviceAreaId);
+    if (list.some((s) => !inArea.has(s.stopId))) {
+      throw conflict(
+        'Every stop of a suburban route must belong to its corridor',
+        'ROUTE_OUTSIDE_SERVICE_AREA',
+      );
+    }
+  }
+
   private async writeStops(tx: Transaction, routeId: string, list: RouteInput['stops']) {
     await tx.insert(routeStops).values(
       list.map((stop, sequence) => ({
@@ -450,6 +476,8 @@ export class RoutesService {
       organizationId: row.organizationId,
       name: row.name,
       mode: row.mode,
+      service: row.service,
+      serviceAreaId: row.serviceAreaId,
       status: row.status,
       stops: stopRows.map(({ routeStop, stop }) => ({
         stop: toSummary(stop),

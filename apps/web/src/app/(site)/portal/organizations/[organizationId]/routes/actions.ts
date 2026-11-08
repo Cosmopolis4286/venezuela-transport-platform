@@ -33,8 +33,12 @@ const routePath = (form: FormData) =>
 function routeBody(form: FormData) {
   const hours = form.getAll('hours').map(Number);
   const minutes = form.getAll('minutes').map(Number);
+  const service = text(form, 'service');
   return {
     name: text(form, 'name'),
+    // Only the new-route form sends these: the service and corridor never change afterwards.
+    ...(service ? { service } : {}),
+    ...(service === 'suburban' ? { serviceAreaId: text(form, 'serviceAreaId') } : {}),
     stops: form
       .getAll('stopId')
       .map(String)

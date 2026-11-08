@@ -29,13 +29,19 @@ import { useSearch } from '@/lib/search-context';
 import { useRefreshOnFocus } from '@/lib/use-refresh-on-focus';
 
 export default function Results() {
-  const { from, to, date } = useSearch();
+  const { from, to, date, service, openServices } = useSearch();
   const colors = useColors();
   const { t, shared, locale } = useT();
   const [mode, setMode] = useState<TransportMode | 'all'>('all');
   const query =
     from && to
-      ? `/search/departures?${new URLSearchParams({ from: from.id, to: to.id, date })}`
+      ? `/search/departures?${new URLSearchParams({
+          from: from.id,
+          to: to.id,
+          date,
+          // With two services, results stay on the chosen one.
+          ...(openServices.length > 1 ? { service } : {}),
+        })}`
       : null;
   const departures = useApi<Departure[]>(query, { auth: false });
   useRefreshOnFocus(departures.reload);

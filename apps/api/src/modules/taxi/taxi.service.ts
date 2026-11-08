@@ -1,5 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
+  cityIn,
   formatMoney,
   rolesWith,
   TAXI_REQUEST_MINUTES,
@@ -23,6 +24,7 @@ import { normalizePhone } from '../identity/contact.js';
 import { users } from '../identity/identity.schema.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import { stops } from '../network/network.schema.js';
+import { ServicesService } from '../network/services.service.js';
 import { StopsService } from '../network/stops.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import type { OrganizationAccess } from '../organizations/organization-access.js';
@@ -70,12 +72,18 @@ export class TaxiService {
     private readonly stops: StopsService,
     private readonly vehicles: VehiclesService,
     private readonly notifications: NotificationsService,
+    private readonly services: ServicesService,
   ) {}
 
   // --- Passengers -------------------------------------------------------------------------
 
-  /** Active terminals served by at least one active taxi line. */
+  /**
+   * Active terminals served by at least one active taxi line, where intercity sales are on
+   * (terminal taxis are part of the intercity service, ADR-029).
+   */
   async terminals(): Promise<TaxiTerminal[]> {
+    const { intercity } = await this.services.status();
+    if (!intercity.enabled) return [];
     const rows = await this.database.db
       .select({ stopId: taxiServiceAreas.stopId, lines: count() })
       .from(taxiServiceAreas)
@@ -92,6 +100,7 @@ export class TaxiService {
     const summaries = await this.stops.summaries(rows.map((r) => r.stopId));
     return rows
       .map((r) => ({ ...summaries.get(r.stopId)!, lines: r.lines }))
+      .filter((t) => !cityIn(intercity.closedCities, t))
       .sort((a, b) => a.name.localeCompare(b.name, 'es'));
   }
 
@@ -101,7 +110,14 @@ export class TaxiService {
     meta: RequestMeta,
   ): Promise<TaxiRide> {
     const terminal = (await this.terminals()).find((t) => t.id === input.terminalStopId);
-    if (!terminal) throw conflict('No taxi line serves this terminal', 'TAXI_TERMINAL_NOT_SERVED');
+    if (!terminal) {
+      const [stop] = (await this.stops.summaries([input.terminalStopId])).values();
+      const { intercity } = await this.services.status();
+      if (stop && (!intercity.enabled || cityIn(intercity.closedCities, stop))) {
+        throw conflict('Terminal taxis are not available here right now', 'SERVICE_DISABLED');
+      }
+      throw conflict('No taxi line serves this terminal', 'TAXI_TERMINAL_NOT_SERVED');
+    }
     const address = input.address.trim();
     if (address.length < 5) throw invalid('Describe the address in at least 5 characters');
     let contactPhone: string | null = auth.user.phoneVerifiedAt ? auth.user.phone : null;

@@ -1,7 +1,7 @@
 // Only type imports from ../api: those modules derive their Spanish constants from this file.
 import type { BookingStatus } from '../api/bookings.js';
 import type { ApiErrorCode, ApiErrorReason } from '../api/errors.js';
-import type { ServiceClass, StopKind, TransportMode } from '../api/network.js';
+import type { Service, ServiceClass, StopKind, TransportMode } from '../api/network.js';
 import type { OrganizationType } from '../api/organizations.js';
 import type { PaymentMethod, PaymentStatus } from '../api/payments.js';
 import type { TaxiDirection, TaxiRideStatus } from '../api/taxi.js';
@@ -15,6 +15,7 @@ export interface SharedMessages {
   stopKind: Record<StopKind, string>;
   serviceClass: Record<ServiceClass, string>;
   transportMode: Record<TransportMode, string>;
+  service: Record<Service, string>;
   organizationType: Record<OrganizationType, string>;
   bookingStatus: Record<BookingStatus, string>;
   paymentMethod: Record<PaymentMethod, string>;
@@ -35,6 +36,7 @@ const es: SharedMessages = {
   stopKind: { terminal: 'Terminal', stop: 'Parada' },
   serviceClass: { standard: 'Convencional', executive: 'Ejecutivo', sleeper: 'Buscama' },
   transportMode: { bus: 'Bus', car: 'Taxi', motorcycle: 'Moto' },
+  service: { intercity: 'Entre ciudades', suburban: 'Suburbano' },
   organizationType: {
     bus_company: 'Empresa de autobuses',
     taxi_line: 'Línea de taxis',
@@ -107,6 +109,12 @@ const es: SharedMessages = {
     ORGANIZATION_NOT_APPROVED: 'La organización debe estar aprobada para publicar rutas.',
     ORGANIZATION_TYPE_NOT_ALLOWED: 'Este tipo de organización no puede hacer eso.',
     TRANSPORT_MODE_NOT_ALLOWED: 'Tu organización no opera ese tipo de vehículo.',
+    SERVICE_DISABLED: 'Este servicio no está disponible en este momento.',
+    SERVICE_AREA_REQUIRED: 'Elige el corredor de la ruta suburbana.',
+    ROUTE_OUTSIDE_SERVICE_AREA: 'Todas las paradas de una ruta suburbana deben ser de su corredor.',
+    SERVICE_AREA_NAME_TAKEN: 'Ya hay un corredor con ese nombre.',
+    SERVICE_AREA_STOP_IN_USE: 'Una ruta suburbana usa esa parada; no se puede quitar del corredor.',
+    LAST_SERVICE_ON: 'Debe quedar al menos un servicio encendido.',
     APPLICATION_OPEN: 'Ya tienes una solicitud abierta.',
     APPLICATION_UNDER_REVIEW: 'Tu solicitud está en revisión y no se puede cambiar ahora.',
     APPLICATION_WRONG_STATUS: 'La solicitud no está esperando revisión.',
@@ -167,6 +175,7 @@ const en: SharedMessages = {
   stopKind: { terminal: 'Terminal', stop: 'Stop' },
   serviceClass: { standard: 'Standard', executive: 'Executive', sleeper: 'Sleeper' },
   transportMode: { bus: 'Bus', car: 'Taxi', motorcycle: 'Motorcycle' },
+  service: { intercity: 'Between cities', suburban: 'Suburban' },
   organizationType: {
     bus_company: 'Bus company',
     taxi_line: 'Taxi company',
@@ -239,6 +248,12 @@ const en: SharedMessages = {
     ORGANIZATION_NOT_APPROVED: 'The organization must be approved to publish routes.',
     ORGANIZATION_TYPE_NOT_ALLOWED: 'This kind of organization cannot do that.',
     TRANSPORT_MODE_NOT_ALLOWED: 'Your organization does not run that kind of vehicle.',
+    SERVICE_DISABLED: 'This service is not available right now.',
+    SERVICE_AREA_REQUIRED: 'Choose the corridor of the suburban route.',
+    ROUTE_OUTSIDE_SERVICE_AREA: 'Every stop of a suburban route must belong to its corridor.',
+    SERVICE_AREA_NAME_TAKEN: 'There is already a corridor with that name.',
+    SERVICE_AREA_STOP_IN_USE: 'A suburban route uses that stop; it cannot leave the corridor.',
+    LAST_SERVICE_ON: 'At least one service must stay on.',
     APPLICATION_OPEN: 'You already have an open application.',
     APPLICATION_UNDER_REVIEW: 'Your application is under review and cannot be changed now.',
     APPLICATION_WRONG_STATUS: 'The application is not waiting for review.',
@@ -300,6 +315,7 @@ const ptBR: SharedMessages = {
   stopKind: { terminal: 'Terminal', stop: 'Parada' },
   serviceClass: { standard: 'Convencional', executive: 'Executivo', sleeper: 'Leito' },
   transportMode: { bus: 'Ônibus', car: 'Táxi', motorcycle: 'Moto' },
+  service: { intercity: 'Entre cidades', suburban: 'Suburbano' },
   organizationType: {
     bus_company: 'Empresa de ônibus',
     taxi_line: 'Cooperativa de táxi',
@@ -372,6 +388,12 @@ const ptBR: SharedMessages = {
     ORGANIZATION_NOT_APPROVED: 'A organização deve estar aprovada para publicar rotas.',
     ORGANIZATION_TYPE_NOT_ALLOWED: 'Este tipo de organização não pode fazer isso.',
     TRANSPORT_MODE_NOT_ALLOWED: 'Sua organização não opera esse tipo de veículo.',
+    SERVICE_DISABLED: 'Este serviço não está disponível no momento.',
+    SERVICE_AREA_REQUIRED: 'Escolha o corredor da rota suburbana.',
+    ROUTE_OUTSIDE_SERVICE_AREA: 'Todas as paradas de uma rota suburbana devem ser do seu corredor.',
+    SERVICE_AREA_NAME_TAKEN: 'Já existe um corredor com esse nome.',
+    SERVICE_AREA_STOP_IN_USE: 'Uma rota suburbana usa essa parada; ela não pode sair do corredor.',
+    LAST_SERVICE_ON: 'Pelo menos um serviço deve ficar ligado.',
     APPLICATION_OPEN: 'Você já tem uma solicitação aberta.',
     APPLICATION_UNDER_REVIEW: 'Sua solicitação está em análise e não pode ser alterada agora.',
     APPLICATION_WRONG_STATUS: 'A solicitação não está aguardando análise.',

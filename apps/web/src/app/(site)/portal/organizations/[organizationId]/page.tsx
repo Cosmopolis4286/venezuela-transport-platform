@@ -3,6 +3,7 @@ import {
   ORGANIZATION_TYPE_LABELS,
   ROLES_BY_ORGANIZATION_TYPE,
   ROUTE_STATUS_LABELS,
+  SERVICE_LABELS,
   TRANSPORT_MODE_LABELS,
   RATE_CURRENCIES,
   runsRoutes,
@@ -274,6 +275,9 @@ async function Routes({
                     {ROUTE_STATUS_LABELS[route.status]}
                   </Badge>
                   <Badge variant="outline">{TRANSPORT_MODE_LABELS[route.mode]}</Badge>
+                  {route.service === 'suburban' ? (
+                    <Badge variant="outline">{SERVICE_LABELS.suburban}</Badge>
+                  ) : null}
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {route.origin.city} → {route.destination.city} · {route.stopCount} paradas ·{' '}

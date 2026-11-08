@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import type { Departure, TransportMode } from '@vtp/shared-types';
+import { serviceOpen, type Departure, type Service, type TransportMode } from '@vtp/shared-types';
 import { and, eq, gt, inArray } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { ApiException } from '../../common/errors/api.exception.js';
@@ -9,6 +9,7 @@ import { takenSeatCounts } from '../bookings/occupancy.js';
 import { organizations } from '../organizations/organizations.schema.js';
 import { addDays, isCalendarDate, occurrencesOn, todayInVenezuela } from './departures.js';
 import { routeFares, routes, routeSchedules, routeStops } from './network.schema.js';
+import { ServicesService } from './services.service.js';
 import { StopsService } from './stops.service.js';
 
 /** How far ahead passengers can search. */
@@ -19,6 +20,7 @@ export class SearchService {
   constructor(
     private readonly database: DatabaseService,
     private readonly stops: StopsService,
+    private readonly services: ServicesService,
   ) {}
 
   /**
@@ -30,6 +32,7 @@ export class SearchService {
     to: string,
     date: string,
     mode?: TransportMode,
+    service?: Service,
   ): Promise<Departure[]> {
     if (from === to) throw invalid('Choose different stops for origin and destination');
     if (!isCalendarDate(date)) throw invalid('date is not a valid date');
@@ -45,6 +48,8 @@ export class SearchService {
         schedule: routeSchedules,
         route: { id: routes.id, name: routes.name },
         mode: routes.mode,
+        service: routes.service,
+        serviceAreaId: routes.serviceAreaId,
         operator: {
           id: organizations.id,
           type: organizations.type,
@@ -66,6 +71,7 @@ export class SearchService {
           eq(routes.id, boarding.routeId),
           eq(routes.status, 'active'),
           mode ? eq(routes.mode, mode) : undefined,
+          service ? eq(routes.service, service) : undefined,
         ),
       )
       .innerJoin(
@@ -88,9 +94,20 @@ export class SearchService {
     if (!rows.length) return [];
 
     const stops = await this.stops.summaries([from, to]);
+    // Services switched off are not on sale (ADR-029).
+    const status = await this.services.status();
+    const open = rows.filter((row) =>
+      serviceOpen(status, {
+        service: row.service,
+        serviceAreaId: row.serviceAreaId,
+        from: stops.get(from)!,
+        to: stops.get(to)!,
+      }),
+    );
+    if (!open.length) return [];
     const taken = await takenSeatCounts(
       this.database.db,
-      rows.map((row) => row.schedule.id),
+      open.map((row) => row.schedule.id),
     );
     // Departures the operator cancelled are not offered.
     const cancelled = new Set(
@@ -102,19 +119,21 @@ export class SearchService {
             and(
               inArray(
                 trips.scheduleId,
-                rows.map((row) => row.schedule.id),
+                open.map((row) => row.schedule.id),
               ),
               eq(trips.status, 'cancelled'),
             ),
           )
       ).map((t) => `${t.scheduleId}:${t.serviceDate}`),
     );
-    const departures: Departure[] = rows.flatMap((row) =>
+    const departures: Departure[] = open.flatMap((row) =>
       occurrencesOn(date, row.schedule, row.fromOffset, row.toOffset)
         .filter((trip) => !cancelled.has(`${row.schedule.id}:${trip.serviceDate}`))
         .map((trip) => ({
           scheduleId: row.schedule.id,
           mode: row.mode,
+          service: row.service,
+          serviceAreaId: row.serviceAreaId,
           serviceDate: trip.serviceDate,
           operator: row.operator,
           route: row.route,

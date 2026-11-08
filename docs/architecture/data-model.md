@@ -13,39 +13,41 @@ PostgreSQL generados desde las listas de `@vtp/shared-types`.
 
 ## Por módulo
 
-| Módulo          | Tabla                            | Qué guarda                                                                                                                                         |
-| --------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `identity`      | `users`                          | Personas: correo y teléfono (únicos, con su verificación), nombre, hash de la contraseña, rol de plataforma, versión de términos aceptada, borrado |
-|                 | `sessions`                       | Sesiones por app (`passenger`, `transport`, `web`) con los tokens guardados como hash y su rotación                                                |
-|                 | `otp_challenges`                 | Códigos de un solo uso (hash, intentos, vencimiento)                                                                                               |
-| `audit`         | `audit_events`                   | Quién hizo qué y cuándo (solo ids y metadatos no sensibles)                                                                                        |
-| `organizations` | `organizations`                  | Empresas de autobuses, líneas de taxis y terminales; RIF, estado de la revisión                                                                    |
-|                 | `organization_memberships`       | Persona + organización + rol                                                                                                                       |
-|                 | `organization_invitations`       | Invitaciones por correo o teléfono, con vencimiento                                                                                                |
-| `onboarding`    | `provider_applications`          | Solicitudes KYC de conductores y personal                                                                                                          |
-|                 | `provider_application_documents` | Documentos de cada solicitud (archivo en `FileStorage`, veredicto)                                                                                 |
-| `network`       | `stops`                          | Catálogo de terminales y paradas (con ubicación PostGIS)                                                                                           |
-|                 | `routes`, `route_stops`          | Rutas de cada empresa (con su tipo de vehículo) y sus paradas en orden                                                                             |
-|                 | `route_fares`                    | Tarifa por par de paradas (USD o VES)                                                                                                              |
-|                 | `route_schedules`                | Horarios semanales con su vigencia, clase de servicio y mapa de puestos                                                                            |
-| `fleet`         | `seat_layouts`                   | Mapas de puestos por tipo de vehículo                                                                                                              |
-|                 | `vehicles`                       | Vehículos de cada empresa (placa, tipo, mapa de puestos, activo)                                                                                   |
-|                 | `vehicle_documents`              | Certificado de circulación, póliza y permiso de cada vehículo, con su vencimiento                                                                  |
-| `bookings`      | `trips`                          | Un horario en una fecha; se crea con la primera reserva, al asignar o al cancelarla (motivo)                                                       |
-|                 | `bookings`                       | Reservas: tramo, montos congelados, estado (`held`, `confirmed`, `cancelled`, `expired`), recordatorio enviado                                     |
-|                 | `booking_passengers`             | Un puesto por fila; un índice parcial único impide vender un puesto dos veces; abordaje                                                            |
-| `payments`      | `exchange_rates`                 | Tasas de cambio de cada empresa                                                                                                                    |
-|                 | `payments`                       | Intentos de pago con monto y tasa congelados, referencia, estado, número de operación informado y reembolso                                        |
-|                 | `payment_accounts`               | Cuentas de cobro por método: de la plataforma, o de una empresa que cobra ella misma (ADR-027)                                                     |
-| `settlements`   | `platform_settings`              | La política general (una sola fila): comisión y tramos de reembolso                                                                                |
-|                 | `organization_policies`          | La política propia de una empresa (lo que deja vacío usa la general)                                                                               |
-|                 | `settlement_entries`             | Libro de cada empresa: una fila al pagarse una reserva y otra (negativa) si se cancela                                                             |
-|                 | `payouts`                        | Pagos de la plataforma a las empresas (se anulan, no se borran)                                                                                    |
-| `taxi`          | `taxi_service_areas`             | Terminales donde opera cada línea de taxis                                                                                                         |
-|                 | `taxi_rides`                     | Solicitudes y viajes de taxi; índices parciales únicos: un taxi abierto por pasajero, un viaje por conductor                                       |
-| `reports`       | —                                | No tiene tablas: lee el libro, las salidas y la actividad ([reports.md](reports.md))                                                               |
-| `notifications` | `push_devices`                   | Tokens de Expo por teléfono, con la app y el idioma                                                                                                |
-|                 | `notifications`                  | Registro de lo enviado (tipo, canal, estado, referencia), sin el texto                                                                             |
+| Módulo          | Tabla                                 | Qué guarda                                                                                                                                         |
+| --------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `identity`      | `users`                               | Personas: correo y teléfono (únicos, con su verificación), nombre, hash de la contraseña, rol de plataforma, versión de términos aceptada, borrado |
+|                 | `sessions`                            | Sesiones por app (`passenger`, `transport`, `web`) con los tokens guardados como hash y su rotación                                                |
+|                 | `otp_challenges`                      | Códigos de un solo uso (hash, intentos, vencimiento)                                                                                               |
+| `audit`         | `audit_events`                        | Quién hizo qué y cuándo (solo ids y metadatos no sensibles)                                                                                        |
+| `organizations` | `organizations`                       | Empresas de autobuses, líneas de taxis y terminales; RIF, estado de la revisión                                                                    |
+|                 | `organization_memberships`            | Persona + organización + rol                                                                                                                       |
+|                 | `organization_invitations`            | Invitaciones por correo o teléfono, con vencimiento                                                                                                |
+| `onboarding`    | `provider_applications`               | Solicitudes KYC de conductores y personal                                                                                                          |
+|                 | `provider_application_documents`      | Documentos de cada solicitud (archivo en `FileStorage`, veredicto)                                                                                 |
+| `network`       | `stops`                               | Catálogo de terminales y paradas (con ubicación PostGIS)                                                                                           |
+|                 | `routes`, `route_stops`               | Rutas de cada empresa (tipo de vehículo, servicio y corredor) y sus paradas en orden                                                               |
+|                 | `service_areas`, `service_area_stops` | Corredores suburbanos y sus paradas, encendidos o apagados (ADR-029)                                                                               |
+|                 | `network_settings`                    | Interruptor del servicio entre ciudades y ciudades cerradas (una fila)                                                                             |
+|                 | `route_fares`                         | Tarifa por par de paradas (USD o VES)                                                                                                              |
+|                 | `route_schedules`                     | Horarios semanales con su vigencia, clase de servicio y mapa de puestos                                                                            |
+| `fleet`         | `seat_layouts`                        | Mapas de puestos por tipo de vehículo                                                                                                              |
+|                 | `vehicles`                            | Vehículos de cada empresa (placa, tipo, mapa de puestos, activo)                                                                                   |
+|                 | `vehicle_documents`                   | Certificado de circulación, póliza y permiso de cada vehículo, con su vencimiento                                                                  |
+| `bookings`      | `trips`                               | Un horario en una fecha; se crea con la primera reserva, al asignar o al cancelarla (motivo)                                                       |
+|                 | `bookings`                            | Reservas: tramo, montos congelados, estado (`held`, `confirmed`, `cancelled`, `expired`), recordatorio enviado                                     |
+|                 | `booking_passengers`                  | Un puesto por fila; un índice parcial único impide vender un puesto dos veces; abordaje                                                            |
+| `payments`      | `exchange_rates`                      | Tasas de cambio de cada empresa                                                                                                                    |
+|                 | `payments`                            | Intentos de pago con monto y tasa congelados, referencia, estado, número de operación informado y reembolso                                        |
+|                 | `payment_accounts`                    | Cuentas de cobro por método: de la plataforma, o de una empresa que cobra ella misma (ADR-027)                                                     |
+| `settlements`   | `platform_settings`                   | La política general (una sola fila): comisión y tramos de reembolso                                                                                |
+|                 | `organization_policies`               | La política propia de una empresa (lo que deja vacío usa la general)                                                                               |
+|                 | `settlement_entries`                  | Libro de cada empresa: una fila al pagarse una reserva y otra (negativa) si se cancela                                                             |
+|                 | `payouts`                             | Pagos de la plataforma a las empresas (se anulan, no se borran)                                                                                    |
+| `taxi`          | `taxi_service_areas`                  | Terminales donde opera cada línea de taxis                                                                                                         |
+|                 | `taxi_rides`                          | Solicitudes y viajes de taxi; índices parciales únicos: un taxi abierto por pasajero, un viaje por conductor                                       |
+| `reports`       | —                                     | No tiene tablas: lee el libro, las salidas y la actividad ([reports.md](reports.md))                                                               |
+| `notifications` | `push_devices`                        | Tokens de Expo por teléfono, con la app y el idioma                                                                                                |
+|                 | `notifications`                       | Registro de lo enviado (tipo, canal, estado, referencia), sin el texto                                                                             |
 
 ## Relaciones principales
 

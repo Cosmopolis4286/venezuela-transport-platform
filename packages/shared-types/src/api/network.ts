@@ -20,6 +20,17 @@ export function runsRoutes(type: OrganizationType): boolean {
   return (ROUTE_OPERATOR_TYPES as readonly OrganizationType[]).includes(type);
 }
 
+// --- Services (ADR-029) -----------------------------------------------------------------------
+
+/**
+ * `intercity`: between cities (buses, shared cars, terminal taxis). `suburban`: short, frequent
+ * trips inside a corridor (`ServiceArea`). The operator chooses it when creating a route.
+ */
+export const SERVICES = ['intercity', 'suburban'] as const;
+export type Service = (typeof SERVICES)[number];
+
+export const SERVICE_LABELS: Record<Service, string> = SHARED_MESSAGES.es.service;
+
 // --- Transport modes -------------------------------------------------------------------------
 
 /**
@@ -172,6 +183,10 @@ export interface Route {
   name: string;
   /** Set when the route is created; never changes. */
   mode: TransportMode;
+  /** Set when the route is created; never changes. */
+  service: Service;
+  /** Corridor of a suburban route (every stop belongs to it); null for intercity routes. */
+  serviceAreaId: string | null;
   status: RouteStatus;
   stops: RouteStop[];
   fares: Fare[];
@@ -184,6 +199,7 @@ export interface RouteSummary {
   id: string;
   name: string;
   mode: TransportMode;
+  service: Service;
   status: RouteStatus;
   origin: StopSummary;
   destination: StopSummary;
@@ -201,6 +217,10 @@ export interface RouteInput {
   stops: { stopId: string; minutesFromOrigin: number }[];
   /** Only on creation; defaults to the organization's first mode (`modesFor`). */
   mode?: TransportMode;
+  /** Only on creation; defaults to `intercity`. */
+  service?: Service;
+  /** Required for suburban routes, on creation: every stop must belong to that corridor. */
+  serviceAreaId?: string | null;
 }
 
 /** `PUT …/routes/:routeId/fares` replaces every fare of the route. */
@@ -216,12 +236,15 @@ export interface ChangeRouteStatusRequest {
 // --- Search ------------------------------------------------------------------------------------
 
 /**
- * `GET /api/v1/search/departures?from=<stopId>&to=<stopId>&date=YYYY-MM-DD[&mode=bus]` (public).
- * Without `mode`, every mode.
+ * `GET /api/v1/search/departures?from=<stopId>&to=<stopId>&date=YYYY-MM-DD[&mode=bus][&service=]`
+ * (public). Without `mode` or `service`, all of them. Departures of a service that is switched off
+ * (`ServicesStatus`) are never listed.
  */
 export interface Departure {
   scheduleId: string;
   mode: TransportMode;
+  service: Service;
+  serviceAreaId: string | null;
   /** Date the bus leaves the route's origin (may be the day before `departsAt` at an intermediate stop). */
   serviceDate: string;
   operator: Pick<Organization, 'id' | 'type' | 'legalName' | 'tradeName'>;

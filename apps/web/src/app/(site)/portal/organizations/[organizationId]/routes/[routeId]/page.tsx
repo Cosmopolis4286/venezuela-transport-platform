@@ -2,6 +2,7 @@ import {
   CURRENCIES,
   DAY_OF_WEEK_LABELS,
   ROUTE_STATUS_LABELS,
+  SERVICE_LABELS,
   TRANSPORT_MODE_LABELS,
   SERVICE_CLASS_LABELS,
   SERVICE_CLASSES,
@@ -9,6 +10,7 @@ import {
   type OrganizationMembershipSummary,
   type Route,
   type SeatLayout,
+  type ServiceArea,
   type Stop,
 } from '@vtp/shared-types';
 import Link from 'next/link';
@@ -86,6 +88,9 @@ async function RouteDetail({
             {ROUTE_STATUS_LABELS[route.status]}
           </Badge>
           <Badge variant="outline">{TRANSPORT_MODE_LABELS[route.mode]}</Badge>
+          {route.service === 'suburban' ? (
+            <Badge variant="outline">{SERVICE_LABELS.suburban}</Badge>
+          ) : null}
         </div>
         <p className="text-sm text-muted-foreground">
           {origin.stop.city} → {destination.stop.city} · {route.stops.length} paradas ·{' '}
@@ -167,7 +172,11 @@ function Publish({ route, hidden }: { route: Route; hidden: Record<string, strin
 }
 
 async function EditStops({ route, hidden }: { route: Route; hidden: Record<string, string> }) {
-  const catalog = await apiFetch<Stop[]>('/stops');
+  const [catalog, areas] = await Promise.all([
+    apiFetch<Stop[]>('/stops'),
+    route.serviceAreaId ? apiFetch<ServiceArea[]>('/service-areas') : Promise.resolve([]),
+  ]);
+  const area = areas.find((a) => a.id === route.serviceAreaId);
   // Keep the route's own stops selectable even if one was deactivated later.
   const known = new Set(catalog.map((s) => s.id));
   const stops = [...catalog, ...route.stops.map((s) => s.stop).filter((s) => !known.has(s.id))];
@@ -184,6 +193,7 @@ async function EditStops({ route, hidden }: { route: Route; hidden: Record<strin
         })),
       }}
       submitLabel="Guardar recorrido"
+      areaStopIds={area?.stops.map((s) => s.id)}
     />
   );
 }

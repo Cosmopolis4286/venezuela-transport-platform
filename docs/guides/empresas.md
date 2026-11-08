@@ -26,7 +26,9 @@ En la página de la organización:
 
 1. **Mapas de puestos**: crea el de cada tipo de bus (hay plantillas).
 2. **Rutas → Nueva ruta**: nombre y paradas en orden, con los minutos desde el origen. Las paradas
-   salen del catálogo de VTP; si falta un terminal, pídeselo a la administración.
+   salen del catálogo de VTP; si falta un terminal, pídeselo a la administración. Si VTP tiene
+   corredores suburbanos, eliges también el **servicio**: entre ciudades o **suburbano**, y en ese
+   caso el corredor (solo puedes usar sus paradas). El servicio no cambia después.
 3. **Tarifas** por tramo (US$ o Bs.).
 4. **Horarios**: hora de salida, días de la semana, vigencia, clase de servicio y mapa de puestos.
 5. **Publicar** la ruta: desde ese momento aparece en las búsquedas.

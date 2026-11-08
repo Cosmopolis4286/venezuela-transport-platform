@@ -96,7 +96,7 @@ pantalla.
 - **Suburbano** muestra un formulario más corto, pensado para el viaje diario: el corredor (si hay
   uno solo, no se pregunta), desde y hasta (solo paradas del corredor), y **hoy** por defecto, con
   "mañana" a un toque. Debajo, una sola línea: "Paquetes de viajes desde US$ X →".
-- Se recuerda la última elección de cada persona (web: en la dirección `?servicio=` y en el
+- Se recuerda la última elección de cada persona (web: en la dirección `?service=` y en el
   navegador; app: en el teléfono), así quien viaja todos los días en el suburbano entra directo a
   su buscador.
 - Los textos de presentación de la página principal se adaptan a los servicios encendidos (por
@@ -325,7 +325,7 @@ de paquetes por tramo y tipo de vehículo. Nada de esto queda en el código.
 
 1. ✅ **Tipo de vehículo**: `TransportMode` en rutas, vehículos, despacho y búsqueda; pestañas
    en la web y la app.
-2. **Servicios y corredores**: `routes.service`, `service_areas`, interruptores en el panel,
+2. ✅ **Servicios y corredores**: `routes.service`, `service_areas`, interruptores en el panel,
    `GET /platform/services`, `SERVICE_DISABLED`, y el selector Entre ciudades · Suburbano en la
    web y la app.
 3. **Líneas de mototaxis**: `moto_line`, roles, KYC (licencia de moto).

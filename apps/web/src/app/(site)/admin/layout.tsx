@@ -21,6 +21,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Link href="/admin/stops" className="text-sm opacity-90 hover:underline">
               Terminales y paradas
             </Link>
+            <Link href="/admin/services" className="text-sm opacity-90 hover:underline">
+              Servicios
+            </Link>
             <Suspense>
               <MoneyLinks />
             </Suspense>

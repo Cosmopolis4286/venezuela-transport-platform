@@ -112,6 +112,7 @@ export class BookingsService {
       throw conflict('This trip cannot be booked online yet', 'DEPARTURE_NOT_BOOKABLE');
     if (!isBookable(context))
       throw conflict('This departure has already left', 'DEPARTURE_NOT_BOOKABLE');
+    await this.trips.assertOnSale(context);
     const fare = context.fare;
 
     const [{ active }] = (await this.database.db

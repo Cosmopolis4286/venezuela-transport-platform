@@ -24,6 +24,21 @@ Agrega los terminales y paradas que usan las rutas (nombre, ciudad, estado y, si
 ubicación). Desactivar una parada la saca de las búsquedas nuevas, sin romper las rutas que ya la
 usan.
 
+## Servicios (`/admin/services`)
+
+Qué se vende: el servicio **entre ciudades** y cada **corredor suburbano** (ADR-029).
+
+- **Corredores**: un corredor agrupa las paradas de un servicio suburbano (por ejemplo, Casacoima
+  – San Félix – Puerto Ordaz). Los revisores los crean y eligen sus paradas; un corredor nuevo
+  empieza **apagado**. No se puede quitar una parada que ya usa una ruta suburbana del corredor.
+- **Encender y apagar** (solo administradores): cada corredor por separado, y el servicio entre
+  ciudades en general o **solo en algunas ciudades** (no se venden salidas que suban o bajen
+  allí; tampoco taxis de esos terminales).
+- Apagar **solo detiene la venta**: los boletos pagados siguen valiendo y las empresas siguen
+  operando. Siempre debe quedar algo encendido.
+- La web y la app de pasajeros muestran el selector **Entre ciudades · Suburbano** solo cuando los
+  dos están encendidos. Los cambios tardan unos minutos en verse en la web.
+
 ## Pagos (`/admin/payments`, solo administradores)
 
 **Cuentas de cobro**: los datos que ven los pasajeros al pagar (pago móvil, transferencia, PIX,

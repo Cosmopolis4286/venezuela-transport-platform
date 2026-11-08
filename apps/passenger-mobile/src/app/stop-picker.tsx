@@ -1,5 +1,5 @@
 import { Banner, Body, Card, Field, Screen, useApi, useColors } from '@vtp/mobile-core';
-import type { Stop } from '@vtp/shared-types';
+import type { Stop, StopSummary } from '@vtp/shared-types';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, Text } from 'react-native';
@@ -9,7 +9,8 @@ import { useSearch } from '@/lib/search-context';
 /** Searches active terminals and stops; choosing one fills the origin or destination. */
 export default function StopPicker() {
   const { field } = useLocalSearchParams<{ field: 'from' | 'to' }>();
-  const { setStop } = useSearch();
+  const { setStop, service, areas } = useSearch();
+  const suburban = service === 'suburban';
   const colors = useColors();
   const { t, shared } = useT();
   const [query, setQuery] = useState('');
@@ -18,9 +19,16 @@ export default function StopPicker() {
     const timer = setTimeout(() => setDebounced(query.trim()), 250);
     return () => clearTimeout(timer);
   }, [query]);
-  const stops = useApi<Stop[]>(`/stops${debounced ? `?q=${encodeURIComponent(debounced)}` : ''}`, {
-    auth: false,
-  });
+  const catalog = useApi<Stop[] | StopSummary[]>(
+    suburban ? null : `/stops${debounced ? `?q=${encodeURIComponent(debounced)}` : ''}`,
+    { auth: false },
+  );
+  // Suburban: only the stops of the active corridors, filtered here (a short list).
+  const needle = debounced.toLowerCase();
+  const corridorStops = [...new Map(areas.flatMap((a) => a.stops).map((s) => [s.id, s])).values()]
+    .filter((s) => !needle || `${s.city} ${s.name}`.toLowerCase().includes(needle))
+    .sort((a, b) => a.city.localeCompare(b.city) || a.name.localeCompare(b.name));
+  const stops = suburban ? { data: corridorStops, error: undefined, loading: false } : catalog;
 
   return (
     <Screen>

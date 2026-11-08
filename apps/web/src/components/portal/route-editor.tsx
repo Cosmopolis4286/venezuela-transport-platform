@@ -33,6 +33,8 @@ export function RouteEditor({
   stops,
   initial,
   submitLabel,
+  areas = [],
+  areaStopIds,
 }: {
   action: (state: FormState, form: FormData) => Promise<FormState>;
   hidden: Record<string, string>;
@@ -40,7 +42,19 @@ export function RouteEditor({
   stops: StopSummary[];
   initial?: { name: string; stops: { stopId: string; minutesFromOrigin: number }[] };
   submitLabel: string;
+  /**
+   * New routes only: suburban corridors to choose from (ADR-029). Without any, there is no
+   * choice and the route is intercity.
+   */
+  areas?: { id: string; name: string; stopIds: string[] }[];
+  /** Editing a suburban route: only the stops of its corridor. */
+  areaStopIds?: string[];
 }) {
+  const [service, setService] = useState<'intercity' | 'suburban'>('intercity');
+  const [areaId, setAreaId] = useState(areas[0]?.id ?? '');
+  const area = service === 'suburban' ? areas.find((a) => a.id === areaId) : undefined;
+  const allowed = area?.stopIds ?? areaStopIds;
+  const choices = allowed ? stops.filter((s) => allowed.includes(s.id)) : stops;
   const [rows, setRows] = useState<Row[]>(() =>
     initial ? initial.stops.map((s) => row(s.stopId, s.minutesFromOrigin)) : [row(), row()],
   );
@@ -53,12 +67,48 @@ export function RouteEditor({
       next.splice(index + delta, 0, moved!);
       return next;
     });
-  const states = [...new Set(stops.map((s) => s.state))].sort();
+  const states = [...new Set(choices.map((s) => s.state))].sort();
   // Row keys are client-only counters; element ids must match between server and client.
   const uid = useId();
 
   return (
     <ActionForm action={action} hidden={hidden}>
+      {areas.length ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field
+            label="Servicio"
+            htmlFor="route-service"
+            hint="Suburbano: viajes cortos y frecuentes dentro de un corredor. No cambia después."
+          >
+            <Select
+              id="route-service"
+              name="service"
+              value={service}
+              onChange={(e) => setService(e.target.value as 'intercity' | 'suburban')}
+            >
+              <option value="intercity">Entre ciudades</option>
+              <option value="suburban">Suburbano</option>
+            </Select>
+          </Field>
+          {service === 'suburban' ? (
+            <Field label="Corredor" htmlFor="route-area" hint="Solo puedes usar sus paradas.">
+              <Select
+                id="route-area"
+                name="serviceAreaId"
+                required
+                value={areaId}
+                onChange={(e) => setAreaId(e.target.value)}
+              >
+                {areas.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : null}
+        </div>
+      ) : null}
       <Field label="Nombre de la ruta" htmlFor="route-name">
         <Input
           id="route-name"
@@ -99,7 +149,7 @@ export function RouteEditor({
                     <option value="">Elige una parada…</option>
                     {states.map((state) => (
                       <optgroup key={state} label={state}>
-                        {stops
+                        {choices
                           .filter((s) => s.state === state)
                           .map((s) => (
                             <option key={s.id} value={s.id}>

@@ -13,6 +13,12 @@ pull request.
 
 ### Agregado
 
+- **Servicios entre ciudades y suburbano** (ADR-029): cada ruta es de uno u otro (lo elige la
+  empresa); las suburbanas pertenecen a un **corredor**. En **Administración → Servicios** se
+  crean los corredores y se encienden o apagan por separado, y el servicio entre ciudades en
+  general o por ciudad; apagar solo detiene la venta (`SERVICE_DISABLED`). La web y la app de
+  pasajeros muestran el selector **Entre ciudades · Suburbano** solo con los dos encendidos; el
+  buscador suburbano ofrece solo las paradas del corredor. `GET /platform/services` es público.
 - **Tipo de vehículo** (bus, taxi o moto) en cada ruta y cada vehículo (ADR-028): cada tipo
   tiene sus propias tarifas; la búsqueda se filtra por tipo (`mode`) en la web y la app de
   pasajeros; el despacho solo asigna vehículos del tipo de la ruta (`VEHICLE_MODE_MISMATCH`).

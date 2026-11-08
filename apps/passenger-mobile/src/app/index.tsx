@@ -18,6 +18,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useT } from '@/i18n/use-t';
 import { upcomingDays } from '@/lib/dates';
 import { useSearch } from '@/lib/search-context';
+import { useRefreshOnFocus } from '@/lib/use-refresh-on-focus';
 
 function StopButton({
   label,
@@ -48,15 +49,39 @@ function StopButton({
 
 export default function SearchScreen() {
   const { state } = useAuth();
-  const { from, to, date, setDate, swap } = useSearch();
-  const { t, locale } = useT();
+  const {
+    from,
+    to,
+    date,
+    setDate,
+    swap,
+    service,
+    openServices,
+    setService,
+    areas,
+    reloadServices,
+  } = useSearch();
+  const { t, shared, locale } = useT();
+  useRefreshOnFocus(reloadServices);
   const days = upcomingDays(7, undefined, locale, t.home);
   const ready = from && to && from.id !== to.id;
+  const suburban = service === 'suburban';
 
   return (
     <Screen>
-      <Heading>{t.home.heading}</Heading>
-      <Body muted>{t.home.intro}</Body>
+      {/* Two services on sale: one choice at the top (ADR-029); with one, the screen as always. */}
+      {openServices.length > 1 ? (
+        <Segmented
+          label={t.home.services}
+          options={openServices.map((value) => ({ value, label: shared.service[value] }))}
+          value={service}
+          onChange={setService}
+        />
+      ) : null}
+      <Heading>{suburban ? t.home.suburbanHeading : t.home.heading}</Heading>
+      <Body muted>
+        {suburban ? t.home.suburbanIntro(areas.map((a) => a.name).join(', ')) : t.home.intro}
+      </Body>
       {state.status === 'signedOut' && state.notice ? (
         <Banner tone="info">{state.notice}</Banner>
       ) : null}
@@ -85,15 +110,18 @@ export default function SearchScreen() {
         <Button title={t.home.search} disabled={!ready} onPress={() => router.push('/results')} />
       </Card>
 
-      <Card>
-        <Subheading>{t.home.taxiTitle}</Subheading>
-        <Body muted>{t.home.taxiIntro}</Body>
-        <Button
-          variant="secondary"
-          title={t.home.taxiButton}
-          onPress={() => router.push(state.status === 'signedIn' ? '/taxi' : '/sign-in')}
-        />
-      </Card>
+      {/* Terminal taxis belong to the intercity service. */}
+      {suburban || !openServices.includes('intercity') ? null : (
+        <Card>
+          <Subheading>{t.home.taxiTitle}</Subheading>
+          <Body muted>{t.home.taxiIntro}</Body>
+          <Button
+            variant="secondary"
+            title={t.home.taxiButton}
+            onPress={() => router.push(state.status === 'signedIn' ? '/taxi' : '/sign-in')}
+          />
+        </Card>
+      )}
 
       <Subheading>{t.home.accountTitle}</Subheading>
       {state.status === 'signedIn' ? (

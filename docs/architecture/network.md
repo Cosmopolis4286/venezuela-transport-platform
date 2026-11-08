@@ -44,6 +44,16 @@ reservas, los puestos y el despacho se construyen sobre ella.
 - Horarios: `HH:MM`, al menos un día, de 1 a 100 puestos, `validUntil` igual o posterior a
   `validFrom`; hasta 100 por ruta. Pausar un horario (`active: false`) lo oculta de la búsqueda.
 
+## Servicios y corredores
+
+Cada ruta es **entre ciudades** o **suburbana** (`routes.service`, lo elige la empresa al crearla
+y no cambia). Una ruta suburbana pertenece a un **corredor** (`service_areas`, grupo de paradas
+que cura el personal de la plataforma) y todas sus paradas deben ser de él
+(`ROUTE_OUTSIDE_SERVICE_AREA`). Los interruptores de venta, `GET /platform/services` y las
+pantallas se describen en [suburban.md](suburban.md#0-dos-servicios-que-se-encienden-y-apagan-interurbano-y-suburbano)
+(ADR-029). La búsqueda nunca devuelve salidas de un servicio apagado, y apartar puestos en una da
+`409 SERVICE_DISABLED`; la búsqueda acepta además `service`.
+
 ## Búsqueda de salidas
 
 `GET /api/v1/search/departures?from=<stopId>&to=<stopId>&date=YYYY-MM-DD[&mode=bus]` es
@@ -76,16 +86,20 @@ primera reserva, a partir del mismo cálculo ([bookings.md](bookings.md)).
 
 ## Endpoints (`/api/v1`)
 
-| Método y ruta                                                        | Quién                                    |
-| -------------------------------------------------------------------- | ---------------------------------------- |
-| `GET /stops?q=&kind=`                                                | Público — paradas activas                |
-| `GET/POST /admin/stops`, `PATCH /admin/stops/:stopId`                | Revisor o administrador de la plataforma |
-| `GET /organizations/:id/routes`, `GET …/routes/:routeId`             | Miembros                                 |
-| `POST /organizations/:id/routes`, `PATCH`/`DELETE …/routes/:routeId` | `routes.manage`                          |
-| `POST …/routes/:routeId/status` (`active` / `inactive`)              | `routes.manage`                          |
-| `PUT …/routes/:routeId/fares`                                        | `routes.manage`                          |
-| `POST …/routes/:routeId/schedules`, `PATCH`/`DELETE …/schedules/:id` | `routes.manage`                          |
-| `GET /search/departures?from=&to=&date=`                             | Público                                  |
+| Método y ruta                                                        | Quién                                      |
+| -------------------------------------------------------------------- | ------------------------------------------ |
+| `GET /stops?q=&kind=`                                                | Público — paradas activas                  |
+| `GET/POST /admin/stops`, `PATCH /admin/stops/:stopId`                | Revisor o administrador de la plataforma   |
+| `GET /organizations/:id/routes`, `GET …/routes/:routeId`             | Miembros                                   |
+| `POST /organizations/:id/routes`, `PATCH`/`DELETE …/routes/:routeId` | `routes.manage`                            |
+| `POST …/routes/:routeId/status` (`active` / `inactive`)              | `routes.manage`                            |
+| `PUT …/routes/:routeId/fares`                                        | `routes.manage`                            |
+| `POST …/routes/:routeId/schedules`, `PATCH`/`DELETE …/schedules/:id` | `routes.manage`                            |
+| `GET /search/departures?from=&to=&date=`                             | Público                                    |
+| `GET /platform/services`                                             | Público — servicios y corredores en venta  |
+| `GET /service-areas`                                                 | Con sesión — todos los corredores          |
+| `POST /admin/service-areas`, `PATCH …/:areaId`                       | Revisor (encender o apagar: administrador) |
+| `GET /admin/services`, `PUT /admin/services/intercity`               | Administrador de la plataforma             |
 
 Eventos de auditoría: `stop.created`, `stop.updated`, `route.created`, `route.updated`,
 `route.deleted`, `route.status_changed`, `route.fares_replaced`, `route.schedule_created`,
