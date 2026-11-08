@@ -167,6 +167,8 @@ Lo que falta (y lo ya resuelto):
 - [x] Liquidaciones y cola de reembolsos (ADR-024).
 - [x] Comisión de la plataforma y política de reembolsos (ADR-025), editables en la web.
 - [x] Reportes para las empresas y métricas de la plataforma.
+- [x] Varias ciudades: zonas operativas que se activan desde `/admin/zones` (ADR-028); falta
+      usar «paradas cerca de mí» en la app de pasajeros (permiso de ubicación).
 - [ ] Servidor, HTTPS, copias de seguridad con restauración probada, monitoreo
       ([preparación del VPS](deployment/vps-preparation.md)); alertas de errores por correo, guía
       de [monitoreo gratuito](deployment/monitoring.md), scripts de

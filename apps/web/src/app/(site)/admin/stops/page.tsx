@@ -1,4 +1,10 @@
-import { STOP_KIND_LABELS, STOP_KINDS, type Stop } from '@vtp/shared-types';
+import {
+  STOP_KIND_LABELS,
+  STOP_KINDS,
+  ZONE_STATUS_LABELS,
+  type OperatingZone,
+  type Stop,
+} from '@vtp/shared-types';
 import Link from 'next/link';
 import { ActionForm, SubmitButton } from '@/components/portal/action-form';
 import { Badge } from '@/components/ui/badge';
@@ -7,14 +13,16 @@ import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { Input, Select } from '@/components/ui/input';
 import { Field } from '@/components/ui/label';
 import { apiFetch } from '@/lib/server/api';
-import { createStop, setStopActive } from '../actions';
+import { createStop, setStopActive, setStopZone } from '../actions';
 
 export default async function StopsPage({ searchParams }: PageProps<'/admin/stops'>) {
   const { q } = await searchParams;
   const query = typeof q === 'string' ? q : '';
-  const stops = await apiFetch<Stop[]>(
-    `/admin/stops${query ? `?q=${encodeURIComponent(query)}` : ''}`,
-  );
+  const [stops, zones] = await Promise.all([
+    apiFetch<Stop[]>(`/admin/stops${query ? `?q=${encodeURIComponent(query)}` : ''}`),
+    apiFetch<OperatingZone[]>('/admin/zones'),
+  ]);
+  const zoneById = new Map(zones.map((zone) => [zone.id, zone]));
 
   return (
     <>
@@ -62,6 +70,21 @@ export default async function StopsPage({ searchParams }: PageProps<'/admin/stop
                 <Input id="longitude" name="longitude" inputMode="decimal" />
               </Field>
             </div>
+            <Field
+              label="Zona"
+              htmlFor="zoneId"
+              hint="Automática: la zona cuyo radio contiene la ubicación"
+            >
+              <Select id="zoneId" name="zoneId" defaultValue="">
+                <option value="">Automática por ubicación</option>
+                <option value="none">Sin zona</option>
+                {zones.map((zone) => (
+                  <option key={zone.id} value={zone.id}>
+                    {zone.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
           </div>
           <div>
             <SubmitButton>Agregar al catálogo</SubmitButton>
@@ -93,6 +116,14 @@ export default async function StopsPage({ searchParams }: PageProps<'/admin/stop
                     <p className="font-medium">{stop.name}</p>
                     <Badge variant="outline">{STOP_KIND_LABELS[stop.kind]}</Badge>
                     {stop.active ? null : <Badge variant="secondary">Inactiva</Badge>}
+                    {stop.zoneId && zoneById.get(stop.zoneId) ? (
+                      <Badge variant="outline">
+                        {zoneById.get(stop.zoneId)!.name} ·{' '}
+                        {ZONE_STATUS_LABELS[zoneById.get(stop.zoneId)!.status]}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline">Sin zona</Badge>
+                    )}
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {stop.city}, {stop.state}
@@ -100,14 +131,37 @@ export default async function StopsPage({ searchParams }: PageProps<'/admin/stop
                     {stop.latitude !== null ? ` · ${stop.latitude}, ${stop.longitude}` : ''}
                   </p>
                 </div>
-                <ActionForm
-                  action={setStopActive}
-                  hidden={{ stopId: stop.id, active: String(!stop.active) }}
-                >
-                  <SubmitButton size="sm" variant="outline">
-                    {stop.active ? 'Desactivar' : 'Activar'}
-                  </SubmitButton>
-                </ActionForm>
+                <div className="flex flex-wrap items-center gap-2">
+                  {zones.length ? (
+                    <ActionForm action={setStopZone} hidden={{ stopId: stop.id }}>
+                      <div className="flex gap-2">
+                        <Select
+                          name="zoneId"
+                          aria-label={`Zona de ${stop.name}`}
+                          defaultValue={stop.zoneId ?? 'none'}
+                        >
+                          <option value="none">Sin zona</option>
+                          {zones.map((zone) => (
+                            <option key={zone.id} value={zone.id}>
+                              {zone.name}
+                            </option>
+                          ))}
+                        </Select>
+                        <SubmitButton size="sm" variant="outline">
+                          Cambiar zona
+                        </SubmitButton>
+                      </div>
+                    </ActionForm>
+                  ) : null}
+                  <ActionForm
+                    action={setStopActive}
+                    hidden={{ stopId: stop.id, active: String(!stop.active) }}
+                  >
+                    <SubmitButton size="sm" variant="outline">
+                      {stop.active ? 'Desactivar' : 'Activar'}
+                    </SubmitButton>
+                  </ActionForm>
+                </div>
               </li>
             ))}
           </ul>

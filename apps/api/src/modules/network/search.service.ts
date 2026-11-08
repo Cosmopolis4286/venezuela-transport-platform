@@ -33,6 +33,9 @@ export class SearchService {
       throw invalid(`Search between today and ${SEARCH_HORIZON_DAYS} days ahead`);
     }
 
+    // Zones that are coming soon or paused sell nothing (ADR-028).
+    if (!(await this.stops.areServed([from, to]))) return [];
+
     const boarding = alias(routeStops, 'boarding');
     const alighting = alias(routeStops, 'alighting');
     const rows = await this.database.db

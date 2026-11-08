@@ -9,6 +9,8 @@ import { SearchController } from './search.controller.js';
 import { SearchService } from './search.service.js';
 import { AdminStopsController, StopsController } from './stops.controller.js';
 import { StopsService } from './stops.service.js';
+import { AdminZonesController, ZonesController } from './zones.controller.js';
+import { ZonesService } from './zones.service.js';
 
 /**
  * The transport network: the stop catalog (platform staff), routes with fares and schedules
@@ -16,8 +18,15 @@ import { StopsService } from './stops.service.js';
  */
 @Module({
   imports: [IdentityModule, AuditModule, OrganizationsModule, FleetModule],
-  controllers: [StopsController, AdminStopsController, RoutesController, SearchController],
-  providers: [StopsService, RoutesService, SearchService],
+  controllers: [
+    StopsController,
+    AdminStopsController,
+    ZonesController,
+    AdminZonesController,
+    RoutesController,
+    SearchController,
+  ],
+  providers: [StopsService, ZonesService, RoutesService, SearchService],
   exports: [StopsService],
 })
 export class NetworkModule {}

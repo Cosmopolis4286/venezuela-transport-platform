@@ -1,10 +1,10 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import type { Stop } from '@vtp/shared-types';
+import type { NearbyStop, Stop } from '@vtp/shared-types';
 import { CurrentAuth, Public, ReqMeta } from '../identity/auth.decorators.js';
 import { RequirePlatformRole } from '../identity/platform-role.guard.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
-import { StopDto, StopSearchQueryDto, UpdateStopDto } from './network.dto.js';
+import { NearbyStopsQueryDto, StopDto, StopSearchQueryDto, UpdateStopDto } from './network.dto.js';
 import { StopsService } from './stops.service.js';
 
 /** Active terminals and stops, for the passenger search and route editors. */
@@ -17,6 +17,13 @@ export class StopsController {
   @Get()
   search(@Query() query: StopSearchQueryDto): Promise<Stop[]> {
     return this.stops.search(query);
+  }
+
+  /** For "near me": the passenger's GPS position, never stored. */
+  @Public()
+  @Get('nearby')
+  nearby(@Query() query: NearbyStopsQueryDto): Promise<NearbyStop[]> {
+    return this.stops.nearby(query);
   }
 }
 

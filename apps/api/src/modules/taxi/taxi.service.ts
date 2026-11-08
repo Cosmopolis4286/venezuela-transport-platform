@@ -102,6 +102,7 @@ export class TaxiService {
   ): Promise<TaxiRide> {
     const terminal = (await this.terminals()).find((t) => t.id === input.terminalStopId);
     if (!terminal) throw conflict('No taxi line serves this terminal', 'TAXI_TERMINAL_NOT_SERVED');
+    await this.stops.assertServed([terminal.id]);
     const address = input.address.trim();
     if (address.length < 5) throw invalid('Describe the address in at least 5 characters');
     let contactPhone: string | null = auth.user.phoneVerifiedAt ? auth.user.phone : null;

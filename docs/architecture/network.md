@@ -6,13 +6,14 @@ reservas, los puestos y el despacho se construyen sobre ella.
 
 ## Conceptos
 
-| Concepto    | Dueño                                 | Notas                                                                                                |
-| ----------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| **Parada**  | Personal de la plataforma (catálogo)  | `terminal` o `stop` (parada en la vía); nombre, ciudad, estado, dirección opcional y un punto WGS 84 |
-| **Ruta**    | Empresa de autobuses o línea de taxis | Paradas ordenadas (2–40) con el tiempo de viaje desde el origen; `draft` → `active` ⇄ `inactive`     |
-| **Tarifa**  | Ruta                                  | Precio entre dos paradas en el orden del viaje, en `USD` o `VES`; puede haber pares sin tarifa       |
-| **Horario** | Ruta                                  | Salida recurrente desde el origen: hora local, días de la semana, fechas de vigencia, clase, puestos |
-| **Salida**  | Se calcula, no se guarda              | Un horario en una fecha, visto desde la parada donde aborda el pasajero                              |
+| Concepto    | Dueño                                 | Notas                                                                                                   |
+| ----------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| **Zona**    | Administradores de la plataforma      | Ciudad o región: estado (`active`, `coming_soon`, `paused`), moneda propuesta, comisión, centro y radio |
+| **Parada**  | Personal de la plataforma (catálogo)  | `terminal` o `stop` (parada en la vía); nombre, ciudad, estado, dirección opcional y un punto WGS 84    |
+| **Ruta**    | Empresa de autobuses o línea de taxis | Paradas ordenadas (2–40) con el tiempo de viaje desde el origen; `draft` → `active` ⇄ `inactive`        |
+| **Tarifa**  | Ruta                                  | Precio entre dos paradas en el orden del viaje, en `USD` o `VES`; puede haber pares sin tarifa          |
+| **Horario** | Ruta                                  | Salida recurrente desde el origen: hora local, días de la semana, fechas de vigencia, clase, puestos    |
+| **Salida**  | Se calcula, no se guarda              | Un horario en una fecha, visto desde la parada donde aborda el pasajero                                 |
 
 - **Las paradas son compartidas.** Todas las empresas usan el mismo "Terminal La Bandera", así los
   pasajeros pueden buscar entre empresas. Las empresas le piden al personal de la plataforma las
@@ -39,6 +40,25 @@ reservas, los puestos y el despacho se construyen sobre ella.
 - Las tarifas son decimales positivos con hasta dos decimales. La lista se reemplaza completa.
 - Horarios: `HH:MM`, al menos un día, de 1 a 100 puestos, `validUntil` igual o posterior a
   `validFrom`; hasta 100 por ruta. Pausar un horario (`active: false`) lo oculta de la búsqueda.
+
+## Zonas operativas
+
+Una zona agrupa las paradas de una ciudad o región ([ADR-028](decisions.md)). Todo vive en la misma
+base de datos; la zona solo decide:
+
+- **Si vende.** Las paradas de una zona `coming_soon` o `paused` no aparecen en `GET /stops` ni en
+  «cerca de mí», la búsqueda entre ellas devuelve una lista vacía y crear una reserva o pedir un
+  taxi en ellas responde `409 ZONE_NOT_ACTIVE`. Las paradas sin zona venden siempre. Pausar una
+  zona no cancela las reservas ya pagadas.
+- **La comisión** de los viajes que suben en ella (si la empresa no tiene la suya), guardada en
+  cada asiento del libro de liquidaciones con el valor vigente al confirmar el pago.
+- **La moneda propuesta** para las tarifas de la zona.
+- **Qué paradas nuevas le tocan**: al crear una parada con ubicación y sin zona, entra en la zona
+  cuyo radio la contiene (la del centro más cercano si hay varias). Se puede cambiar a mano.
+
+`GET /stops/nearby?latitude=&longitude=&radiusKm=` devuelve las paradas activas de zonas activas
+dentro del radio (25 km por defecto, máximo 200), de la más cercana a la más lejana, con
+`distanceKm`. La posición del pasajero no se guarda.
 
 ## Búsqueda de salidas
 
@@ -72,6 +92,10 @@ primera reserva, a partir del mismo cálculo ([bookings.md](bookings.md)).
 | Método y ruta                                                        | Quién                                    |
 | -------------------------------------------------------------------- | ---------------------------------------- |
 | `GET /stops?q=&kind=`                                                | Público — paradas activas                |
+| `GET /stops/nearby?latitude=&longitude=&radiusKm=&kind=`             | Público — paradas cercanas               |
+| `GET /zones`                                                         | Público — zonas activas y próximas       |
+| `GET /admin/zones`                                                   | Revisor o administrador de la plataforma |
+| `POST /admin/zones`, `PATCH /admin/zones/:zoneId`                    | Administrador de la plataforma           |
 | `GET/POST /admin/stops`, `PATCH /admin/stops/:stopId`                | Revisor o administrador de la plataforma |
 | `GET /organizations/:id/routes`, `GET …/routes/:routeId`             | Miembros                                 |
 | `POST /organizations/:id/routes`, `PATCH`/`DELETE …/routes/:routeId` | `routes.manage`                          |
@@ -80,7 +104,7 @@ primera reserva, a partir del mismo cálculo ([bookings.md](bookings.md)).
 | `POST …/routes/:routeId/schedules`, `PATCH`/`DELETE …/schedules/:id` | `routes.manage`                          |
 | `GET /search/departures?from=&to=&date=`                             | Público                                  |
 
-Eventos de auditoría: `stop.created`, `stop.updated`, `route.created`, `route.updated`,
+Eventos de auditoría: `zone.created`, `zone.updated`, `stop.created`, `stop.updated`, `route.created`, `route.updated`,
 `route.deleted`, `route.status_changed`, `route.fares_replaced`, `route.schedule_created`,
 `.schedule_updated`, `.schedule_deleted`.
 

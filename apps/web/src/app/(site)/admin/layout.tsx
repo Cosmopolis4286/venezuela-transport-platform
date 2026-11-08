@@ -51,6 +51,9 @@ async function MoneyLinks() {
   if (user.platformRole !== 'admin') return null;
   return (
     <>
+      <Link href="/admin/zones" className="text-sm opacity-90 hover:underline">
+        Zonas
+      </Link>
       <Link href="/admin/payments" className="text-sm opacity-90 hover:underline">
         Pagos
       </Link>

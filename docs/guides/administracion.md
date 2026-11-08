@@ -21,8 +21,22 @@ Los roles se otorgan desde el servidor, nunca desde la web:
 ## Terminales y paradas (`/admin/stops`)
 
 Agrega los terminales y paradas que usan las rutas (nombre, ciudad, estado y, si la tienes, la
-ubicación). Desactivar una parada la saca de las búsquedas nuevas, sin romper las rutas que ya la
+ubicación). La zona se asigna sola por la ubicación; se puede elegir o cambiar a mano. Desactivar una parada la saca de las búsquedas nuevas, sin romper las rutas que ya la
 usan.
+
+## Zonas operativas (`/admin/zones`, solo administradores)
+
+Cada ciudad o región donde opera la plataforma. Para abrir una ciudad nueva:
+
+1. Crea la zona en **Próximamente**, con su moneda, su comisión (vacía usa la de la plataforma) y
+   el centro y radio del área (por ejemplo, 40 km).
+2. Carga sus terminales y paradas en **Terminales y paradas**: las que tienen ubicación dentro del
+   radio entran solas en la zona.
+3. Cuando las empresas tengan sus rutas publicadas, pulsa **Activar**. Desde ese momento se venden
+   pasajes y taxis allí.
+
+**Pausar** oculta la zona y detiene las ventas nuevas (por ejemplo, ante un paro); las reservas
+pagadas siguen valiendo. Las paradas sin zona venden como siempre.
 
 ## Pagos (`/admin/payments`, solo administradores)
 
