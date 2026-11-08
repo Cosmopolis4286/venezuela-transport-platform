@@ -4,7 +4,11 @@ import {
   ROUTE_STATUSES,
   SERVICE_CLASSES,
   STOP_KINDS,
+  ZONE_STATUSES,
+  COMMISSION_PATTERN,
   type ChangeRouteStatusRequest,
+  type OperatingZoneInput,
+  type ZoneStatus,
   type Currency,
   type Fare,
   type ReplaceFaresRequest,
@@ -87,6 +91,14 @@ export class StopDto implements StopInput {
   @IsOptional()
   @IsBoolean()
   active?: boolean;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Omitted on create: taken from the location',
+  })
+  @IsOptional()
+  @IsUUID()
+  zoneId?: string | null;
 }
 
 export class UpdateStopDto extends PartialType(StopDto) {}
@@ -228,4 +240,78 @@ export class DepartureSearchQueryDto {
   @ApiProperty({ example: '2026-11-20', description: 'Local date of departure from `from`' })
   @Matches(ISO_DATE, { message: 'date must be YYYY-MM-DD' })
   date!: string;
+}
+
+export class OperatingZoneDto implements OperatingZoneInput {
+  @ApiProperty({ example: 'Eje Casacoima – San Félix' })
+  @IsString()
+  @Length(2, 80)
+  name!: string;
+
+  @ApiProperty({ example: 'san-felix' })
+  @Matches(/^[a-z0-9]+(-[a-z0-9]+)*$/, { message: 'slug: lower-case letters, digits and hyphens' })
+  @Length(2, 60)
+  slug!: string;
+
+  @ApiPropertyOptional({ enum: ZONE_STATUSES })
+  @IsOptional()
+  @IsIn(ZONE_STATUSES)
+  status?: ZoneStatus;
+
+  @ApiPropertyOptional({ enum: CURRENCIES })
+  @IsOptional()
+  @IsIn(CURRENCIES)
+  defaultCurrency?: Currency;
+
+  @ApiPropertyOptional({ example: '15.00', nullable: true })
+  @IsOptional()
+  @IsString()
+  @Matches(COMMISSION_PATTERN, {
+    message: 'commissionRate must be a percentage between 0 and 100 with up to 2 decimals',
+  })
+  commissionRate?: string | null;
+
+  @ApiPropertyOptional({ example: 8.29, nullable: true })
+  @IsOptional()
+  @IsLatitude()
+  latitude?: number | null;
+
+  @ApiPropertyOptional({ example: -62.64, nullable: true })
+  @IsOptional()
+  @IsLongitude()
+  longitude?: number | null;
+
+  @ApiPropertyOptional({ example: 40, nullable: true })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(500)
+  radiusKm?: number | null;
+}
+
+export class UpdateOperatingZoneDto extends PartialType(OperatingZoneDto) {}
+
+export class NearbyStopsQueryDto {
+  @ApiProperty({ example: 8.3 })
+  @Type(() => Number)
+  @IsLatitude()
+  latitude!: number;
+
+  @ApiProperty({ example: -62.7 })
+  @Type(() => Number)
+  @IsLongitude()
+  longitude!: number;
+
+  @ApiPropertyOptional({ example: 25, description: 'Search radius (km), 1–200; default 25' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(200)
+  radiusKm?: number;
+
+  @ApiPropertyOptional({ enum: STOP_KINDS })
+  @IsOptional()
+  @IsIn(STOP_KINDS)
+  kind?: StopKind;
 }

@@ -101,6 +101,7 @@ export class BookingsService {
       throw invalid(`Book between 1 and ${MAX_SEATS_PER_BOOKING} seats`);
     }
     if (new Set(seats).size !== seats.length) throw invalid('Each seat can be chosen only once');
+    await this.stops.assertServed([input.fromStopId, input.toStopId]);
 
     const context = await this.trips.resolve(
       input.scheduleId,

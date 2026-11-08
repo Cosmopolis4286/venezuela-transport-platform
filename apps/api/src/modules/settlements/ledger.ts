@@ -2,6 +2,7 @@ import type { PaymentCollection, RefundTier, SettlementPolicy } from '@vtp/share
 import { and, count, eq } from 'drizzle-orm';
 import type { Database, Transaction } from '../../database/database.service.js';
 import { bookingPassengers, bookings, trips } from '../bookings/bookings.schema.js';
+import { operatingZones, stops } from '../network/network.schema.js';
 import { fromScaled, toScaled } from '../payments/money.js';
 import { organizationPolicies, platformSettings, settlementEntries } from './settlements.schema.js';
 
@@ -71,6 +72,25 @@ export async function policyFor(
 }
 
 /**
+ * The commission for a sale: the company's own rate, else the rate of the zone where the
+ * passenger boards (ADR-028), else the platform's.
+ */
+export async function commissionFor(
+  db: Database | Transaction,
+  organizationId: string,
+  boardingStopId: string,
+): Promise<string> {
+  const policy = await policyFor(db, organizationId);
+  if (policy.commissionOverride !== null) return policy.commissionOverride;
+  const [zone] = await db
+    .select({ rate: operatingZones.commissionRate })
+    .from(stops)
+    .innerJoin(operatingZones, eq(operatingZones.id, stops.zoneId))
+    .where(eq(stops.id, boardingStopId));
+  return zone?.rate ?? policy.commissionRate;
+}
+
+/**
  * Writes what a booking that was just confirmed earns its operator, with the commission in force
  * now, and who received the money. Runs inside the confirming transaction; a second call for the
  * same booking does nothing.
@@ -85,6 +105,7 @@ export async function recordEarning(
       organizationId: trips.organizationId,
       gross: bookings.totalAmount,
       currency: bookings.currency,
+      fromStopId: bookings.fromStopId,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -94,7 +115,7 @@ export async function recordEarning(
     .select({ n: count() })
     .from(bookingPassengers)
     .where(and(eq(bookingPassengers.bookingId, bookingId), eq(bookingPassengers.active, true)));
-  const commissionRate = normalizeRate((await policyFor(tx, row.organizationId)).commissionRate);
+  const commissionRate = normalizeRate(await commissionFor(tx, row.organizationId, row.fromStopId));
   await tx
     .insert(settlementEntries)
     .values({

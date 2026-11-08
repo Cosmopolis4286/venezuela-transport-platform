@@ -76,6 +76,8 @@ export async function createStop(_: FormState, form: FormData): Promise<FormStat
         address: text(form, 'address') || undefined,
         latitude: coordinate(form, 'latitude'),
         longitude: coordinate(form, 'longitude'),
+        // Empty: the API picks the zone from the location.
+        ...zoneField(form),
       },
     });
   } catch (error) {
@@ -86,6 +88,26 @@ export async function createStop(_: FormState, form: FormData): Promise<FormStat
   }
   refresh();
   return { success: 'Parada agregada al catálogo.' };
+}
+
+/** '' = automatic (omitted), 'none' = no zone, otherwise the zone id. */
+function zoneField(form: FormData): { zoneId?: string | null } {
+  const zone = text(form, 'zoneId');
+  if (!zone) return {};
+  return { zoneId: zone === 'none' ? null : zone };
+}
+
+export async function setStopZone(_: FormState, form: FormData): Promise<FormState> {
+  try {
+    await apiRequest(`/admin/stops/${encodeURIComponent(text(form, 'stopId'))}`, {
+      method: 'PATCH',
+      body: { zoneId: text(form, 'zoneId') === 'none' ? null : text(form, 'zoneId') },
+    });
+  } catch (error) {
+    return failure(error);
+  }
+  refresh();
+  return { success: 'Zona actualizada.' };
 }
 
 export async function setStopActive(_: FormState, form: FormData): Promise<FormState> {

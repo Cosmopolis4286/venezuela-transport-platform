@@ -16,7 +16,13 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { CURRENCIES, ROUTE_STATUSES, SERVICE_CLASSES, STOP_KINDS } from '@vtp/shared-types';
+import {
+  CURRENCIES,
+  ROUTE_STATUSES,
+  SERVICE_CLASSES,
+  STOP_KINDS,
+  ZONE_STATUSES,
+} from '@vtp/shared-types';
 import { timestamps, users } from '../identity/identity.schema.js';
 import { seatLayouts } from '../fleet/fleet.schema.js';
 import { organizations } from '../organizations/organizations.schema.js';
@@ -25,6 +31,40 @@ export const stopKind = pgEnum('stop_kind', STOP_KINDS);
 export const routeStatus = pgEnum('route_status', ROUTE_STATUSES);
 export const currency = pgEnum('currency', CURRENCIES);
 export const serviceClass = pgEnum('service_class', SERVICE_CLASSES);
+export const zoneStatus = pgEnum('zone_status', ZONE_STATUSES);
+
+/**
+ * Cities or regions the platform operates in (ADR-028). Everything stays in one database; a zone
+ * only decides whether its stops sell, their default currency and an optional commission.
+ */
+export const operatingZones = pgTable(
+  'operating_zones',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    name: text().notNull(),
+    slug: text().notNull(),
+    status: zoneStatus().notNull().default('coming_soon'),
+    defaultCurrency: currency().notNull().default('USD'),
+    /** Percentage, e.g. 15.00; null uses the platform rate. */
+    commissionRate: numeric({ precision: 5, scale: 2 }),
+    /** Centre of the area (WGS 84) and its radius: new stops inside are assigned to the zone. */
+    center: geometry({ type: 'point', mode: 'xy', srid: 4326 }),
+    radiusKm: integer(),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex('operating_zones_name_key').on(sql`lower(${t.name})`),
+    uniqueIndex('operating_zones_slug_key').on(t.slug),
+    check(
+      'operating_zones_commission_range',
+      sql`${t.commissionRate} is null or (${t.commissionRate} >= 0 and ${t.commissionRate} <= 100)`,
+    ),
+    check(
+      'operating_zones_area',
+      sql`(${t.center} is null) = (${t.radiusKm} is null) and (${t.radiusKm} is null or ${t.radiusKm} between 1 and 500)`,
+    ),
+  ],
+);
 
 /** Terminals and roadside stops. Shared reference data curated by platform staff. */
 export const stops = pgTable(
@@ -40,9 +80,12 @@ export const stops = pgTable(
     location: geometry({ type: 'point', mode: 'xy', srid: 4326 }),
     operatorOrganizationId: uuid().references(() => organizations.id, { onDelete: 'set null' }),
     active: boolean().notNull().default(true),
+    /** Null = not assigned to a zone yet (sells as if its zone were active). */
+    zoneId: uuid().references(() => operatingZones.id, { onDelete: 'set null' }),
     ...timestamps,
   },
   (t) => [
+    index('stops_zone_idx').on(t.zoneId),
     uniqueIndex('stops_name_city_key').on(sql`lower(${t.name})`, sql`lower(${t.city})`),
     index('stops_location_idx').using('gist', t.location),
   ],
@@ -138,6 +181,7 @@ export const routeSchedules = pgTable(
 );
 
 export type StopRow = typeof stops.$inferSelect;
+export type OperatingZoneRow = typeof operatingZones.$inferSelect;
 export type RouteRow = typeof routes.$inferSelect;
 export type RouteStopRow = typeof routeStops.$inferSelect;
 export type RouteFareRow = typeof routeFares.$inferSelect;

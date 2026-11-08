@@ -440,3 +440,28 @@ necesita credenciales ni costos.
 verifica en 6 horas deja vencer el apartado y, si el dinero llegó, se reembolsa. Las cuentas que
 ve el pasajero son de la plataforma: la revisión legal de cobrar por cuenta de terceros (ADR-018)
 sigue pendiente antes de operar con dinero real.
+
+## ADR-028: Varias ciudades con zonas operativas en una sola base de datos
+
+**Decisión.** Una **zona operativa** (`operating_zones`) es una ciudad o región (por ejemplo, «Eje
+Casacoima – San Félix», «Maturín»). Cada parada pertenece a una zona o a ninguna; las rutas,
+tarifas, horarios, reservas y taxis siguen colgando de las paradas, así que no cambian. La zona
+tiene un **estado** que se cambia con un clic en `/admin/zones`: `active` (vende), `coming_soon`
+(se muestra pero no vende) o `paused` (oculta). Además guarda la **moneda propuesta** para las
+tarifas, una **comisión** opcional para los viajes que suben en ella y un centro con radio: las
+paradas nuevas dentro de ese radio entran solas en la zona. Las paradas sin zona venden como
+antes. La comisión se resuelve así: la de la empresa, si tiene; si no, la de la zona donde sube
+el pasajero; si no, la de la plataforma. Ver [network.md](network.md#zonas-operativas).
+
+**Por qué.** Abrir Maturín, Ciudad Bolívar o Puerto Ordaz es cargar sus paradas y activar la
+zona, sin tocar código ni separar bases de datos. La geografía ya está en PostGIS (ubicación de
+las paradas), así que «paradas cerca de mí» (`GET /stops/nearby`) es una consulta con índice. Una
+sola base con una columna de zona es lo más simple de mantener para una persona y permite buscar
+viajes entre zonas (Caracas – San Félix).
+
+**Compromisos.** Una zona es un círculo, no un polígono; basta para ciudades y se puede cambiar
+después sin migrar datos de las paradas. No hay microservicios ni réplicas automáticas: una sola
+API con PostgreSQL atiende con holgura el volumen de varias ciudades en un VPS; cuando las
+mediciones lo pidan, la API ya puede correr varias copias detrás de Caddy (el límite de
+peticiones pasaría a Redis) y la búsqueda de salidas se puede cachear. Las zonas no reemplazan a
+las tasas de cambio de cada empresa ni a sus cuentas de cobro.

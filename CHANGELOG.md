@@ -13,6 +13,10 @@ pull request.
 
 ### Agregado
 
+- **Varias ciudades: zonas operativas** (ADR-028). Cada ciudad o región se crea en
+  `/admin/zones` y se activa, se marca como próxima o se pausa con un clic; solo las zonas activas
+  venden pasajes y taxis. Cada zona puede tener su comisión y su moneda, y las paradas nuevas
+  entran solas en su zona por la ubicación. Nuevo `GET /stops/nearby` para «paradas cerca de mí».
 - **Copias de seguridad cifradas** con `infrastructure/backup/backup.sh` (base de datos y
   documentos KYC, 7 diarias, 4 semanales, 6 mensuales, copia opcional a otro proveedor) y
   `restore-check.sh` para probar la restauración ([guía](docs/deployment/backups.md)).

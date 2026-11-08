@@ -40,6 +40,8 @@ export interface Stop {
   operatorOrganizationId: string | null;
   /** Inactive stops are hidden from search and cannot be added to routes. */
   active: boolean;
+  /** Operating zone (city or region) the stop belongs to; null = not assigned yet. */
+  zoneId: string | null;
 }
 
 /** `POST /api/v1/admin/stops` and `PATCH /api/v1/admin/stops/:stopId` (all optional on PATCH). */
@@ -54,6 +56,8 @@ export interface StopInput {
   longitude?: number | null;
   operatorOrganizationId?: string | null;
   active?: boolean;
+  /** Omitted on create: assigned to the zone whose area contains the location, if any. */
+  zoneId?: string | null;
 }
 
 /** Compact stop shown inside routes and departures. */
@@ -274,4 +278,61 @@ export function formatMoney(
     maximumFractionDigits: 2,
   }).format(Number(amount));
   return currency === 'USD' ? `US$ ${value}` : `Bs. ${value}`;
+}
+
+// --- Operating zones -------------------------------------------------------------------------
+
+/**
+ * `active`: sells trips and taxis. `coming_soon`: listed so passengers know it is coming, but
+ * nothing in it can be booked. `paused`: hidden (e.g. a strike or a regulatory stop).
+ */
+export const ZONE_STATUSES = ['active', 'coming_soon', 'paused'] as const;
+export type ZoneStatus = (typeof ZONE_STATUSES)[number];
+
+export const ZONE_STATUS_LABELS: Record<ZoneStatus, string> = {
+  active: 'Activa',
+  coming_soon: 'Próximamente',
+  paused: 'Pausada',
+};
+
+/**
+ * A city or region the platform operates in (e.g. «Eje Casacoima – San Félix», «Maturín»).
+ * Stops belong to a zone; a route's zone is the zone of its first stop. One database for all.
+ */
+export interface OperatingZone {
+  id: string;
+  name: string;
+  /** Lower-case, for URLs: `san-felix`. */
+  slug: string;
+  status: ZoneStatus;
+  /** Suggested currency for new fares in this zone. */
+  defaultCurrency: Currency;
+  /**
+   * Platform commission (percentage, e.g. "15.00") for trips that start in this zone; null uses
+   * the platform rate. A company's own override still wins.
+   */
+  commissionRate: string | null;
+  /** Centre and radius of the area; new stops inside it are assigned to the zone. */
+  latitude: number | null;
+  longitude: number | null;
+  radiusKm: number | null;
+  /** Stops assigned to the zone (admin listing only). */
+  stopCount?: number;
+}
+
+/** `POST /api/v1/admin/zones` and `PATCH /api/v1/admin/zones/:zoneId` (all optional on PATCH). */
+export interface OperatingZoneInput {
+  name: string;
+  slug: string;
+  status?: ZoneStatus;
+  defaultCurrency?: Currency;
+  commissionRate?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  radiusKm?: number | null;
+}
+
+/** `GET /api/v1/stops/nearby?latitude=&longitude=&radiusKm=`: stops of active zones, nearest first. */
+export interface NearbyStop extends Stop {
+  distanceKm: number;
 }

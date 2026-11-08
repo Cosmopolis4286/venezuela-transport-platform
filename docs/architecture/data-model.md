@@ -24,7 +24,8 @@ PostgreSQL generados desde las listas de `@vtp/shared-types`.
 |                 | `organization_invitations`       | Invitaciones por correo o teléfono, con vencimiento                                                                                                |
 | `onboarding`    | `provider_applications`          | Solicitudes KYC de conductores y personal                                                                                                          |
 |                 | `provider_application_documents` | Documentos de cada solicitud (archivo en `FileStorage`, veredicto)                                                                                 |
-| `network`       | `stops`                          | Catálogo de terminales y paradas (con ubicación PostGIS)                                                                                           |
+| `network`       | `operating_zones`                | Ciudades o regiones: estado (vende o no), moneda propuesta, comisión opcional, centro y radio (ADR-028)                                            |
+|                 | `stops`                          | Catálogo de terminales y paradas (con ubicación PostGIS y su zona, `zone_id`)                                                                      |
 |                 | `routes`, `route_stops`          | Rutas de cada empresa y sus paradas en orden, con el tiempo desde el origen                                                                        |
 |                 | `route_fares`                    | Tarifa por par de paradas (USD o VES)                                                                                                              |
 |                 | `route_schedules`                | Horarios semanales con su vigencia, clase de servicio y mapa de puestos                                                                            |
