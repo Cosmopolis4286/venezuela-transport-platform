@@ -486,3 +486,23 @@ verse siempre antes de pagar (ley de precios justos) y figurar en los Términos 
 2026-11-08). La plataforma debe facturar su cargo por separado; la revisión legal debe confirmarlo
 junto con el cobro por cuenta de terceros (ADR-018). Las reservas anteriores conservan la comisión
 dentro de la tarifa.
+
+## ADR-030: Las tarifas se le pagan a la línea o al conductor, según la ruta
+
+**Decisión** (del dueño del producto). Cada ruta es interurbana o urbana/suburbana y elige quién
+cobra sus tarifas: por defecto, la línea en las interurbanas y el conductor de cada viaje en las
+urbanas y suburbanas; la empresa puede cambiarlo en cada ruta. El libro anota a quién corresponde
+cada venta (`settlement_entries.payee`) y el conductor se resuelve por el viaje, de modo que una
+venta hecha antes de asignar conductor le llega al que se asigne. La plataforma les paga a los
+conductores (`payouts.driver_user_id`) a la cuenta que cada uno registra en la app. Si cobra la
+empresa (ADR-027), todo se le acredita a ella y ella paga a sus conductores. Ver
+[settlements.md](settlements.md#pago-a-la-línea-o-al-conductor-adr-030).
+
+**Por qué.** En el transporte urbano y suburbano venezolano el conductor suele ser dueño de su
+unidad y cobra su pasaje; en el interurbano cobra la línea. Un solo modelo configurable por ruta
+cubre ambos sin duplicar el libro.
+
+**Compromisos.** Pagarle a un conductor es pagar por cuenta de la empresa: la revisión legal debe
+confirmarlo junto con el cobro por cuenta de terceros (ADR-018), y las obligaciones laborales y
+fiscales entre la empresa y sus conductores siguen siendo de la empresa. Los pagos a conductores
+son manuales, como los de las empresas, hasta que haya proveedores de pago con dispersión.

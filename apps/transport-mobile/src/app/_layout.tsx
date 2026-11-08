@@ -33,6 +33,7 @@ function RootNavigator() {
         <Stack.Screen name="scan" options={{ title: 'Validar boletos' }} />
         <Stack.Screen name="trip/[tripId]" options={{ title: 'Mi viaje' }} />
         <Stack.Screen name="taxi" options={{ title: 'Taxis' }} />
+        <Stack.Screen name="earnings" options={{ title: 'Mis cobros' }} />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />

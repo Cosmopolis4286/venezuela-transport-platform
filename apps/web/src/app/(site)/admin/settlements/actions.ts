@@ -71,6 +71,7 @@ export async function createPayout(_: FormState, form: FormData): Promise<FormSt
         method: 'POST',
         body: {
           direction: text(form, 'direction') === 'from_operator' ? 'from_operator' : 'to_operator',
+          driverUserId: text(form, 'driverUserId') || undefined,
           currency: text(form, 'currency'),
           amount: decimal(form, 'amount'),
           method: text(form, 'method'),

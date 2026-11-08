@@ -88,6 +88,11 @@ export interface SettlementBalance {
   /** What the operator paid the platform (its commission on what it collected). */
   received: string;
   /**
+   * Fares of routes paid to their drivers (ADR-030): not part of `earned` or `balance`; see
+   * `OrganizationSettlement.drivers`.
+   */
+  forDrivers: string;
+  /**
    * `earned - collected - paidOut + received`: still owed to the operator, or, when negative,
    * what the operator owes the platform.
    */
@@ -107,6 +112,42 @@ export interface OrganizationSettlement {
   paymentCollection: PaymentCollection;
   /** One per currency with activity, USD first. */
   balances: SettlementBalance[];
+  /** What drivers of this organization earned on routes paid to drivers (ADR-030). */
+  drivers: DriverBalance[];
+}
+
+/**
+ * A driver's earnings with one organization in one currency. `driver` is null for sales whose
+ * trip has no driver assigned yet: they are paid once dispatch assigns one.
+ */
+export interface DriverBalance {
+  driver: { id: string; name: string } | null;
+  currency: Currency;
+  earned: string;
+  paidOut: string;
+  balance: string;
+  /** Where the driver wants to be paid; null if the driver has not set it. */
+  payoutAccount: DriverPayoutAccount | null;
+}
+
+/** `PUT /me/payout-account`: where a driver is paid (ADR-030). */
+export interface DriverPayoutAccount {
+  method: PayoutMethod;
+  /** Bank (pago móvil, transfer) or network (USDT). */
+  bank: string;
+  /** Phone (pago móvil), account number (transfer) or wallet address (USDT). */
+  account: string;
+  /** Holder's ID document, e.g. V-12345678. */
+  holderId: string;
+  holderName: string;
+}
+
+/** `GET /me/earnings`: a driver's balances with each organization. */
+export interface DriverEarnings {
+  balances: (Omit<DriverBalance, 'driver' | 'payoutAccount'> & {
+    organization: { id: string; name: string };
+  })[];
+  payoutAccount: DriverPayoutAccount | null;
 }
 
 /** One paid booking in an operator's ledger; its amounts are frozen at confirmation. */
@@ -136,6 +177,8 @@ export type PayoutDirection = (typeof PAYOUT_DIRECTIONS)[number];
 export interface Payout {
   id: string;
   organizationId: string;
+  /** Set when the payout went to one of the organization's drivers. */
+  driver: { id: string; name: string } | null;
   direction: PayoutDirection;
   currency: Currency;
   amount: string;
@@ -178,6 +221,8 @@ export interface SetOrganizationPolicyRequest {
  */
 export interface CreatePayoutRequest {
   direction?: PayoutDirection;
+  /** Pay one of the organization's drivers instead of the organization (ADR-030). */
+  driverUserId?: string;
   currency: Currency;
   amount: string;
   method: PayoutMethod;

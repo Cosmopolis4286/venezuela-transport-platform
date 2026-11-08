@@ -17,6 +17,9 @@ import {
   type RefundDuePayment,
   type SettlementBalance,
   type SettlementEntry,
+  type DriverBalance,
+  type DriverEarnings,
+  type DriverPayoutAccount,
 } from '@vtp/shared-types';
 import { and, desc, eq, gte, inArray, isNull, lt, or, sql, type AnyColumn } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
@@ -34,6 +37,7 @@ import { collectedBy } from '../payments/payments.service.js';
 import { normalizeRate } from './ledger.js';
 import {
   organizationPolicies,
+  driverPayoutAccounts,
   payouts,
   platformSettings,
   settlementEntries,
@@ -49,8 +53,12 @@ const total = (column: AnyColumn) => sql<string>`coalesce(sum(${column}), 0)::nu
 
 /** Fares the operator received itself (net of its refunds). */
 const collectedTotal = sql<string>`coalesce(sum(${settlementEntries.gross}) filter (where ${settlementEntries.collectedBy} = 'operator'), 0)::numeric(14, 2)::text`;
-const paidOutTotal = sql<string>`coalesce(sum(${payouts.amount}) filter (where ${payouts.direction} = 'to_operator'), 0)::numeric(14, 2)::text`;
+const paidOutTotal = sql<string>`coalesce(sum(${payouts.amount}) filter (where ${payouts.direction} = 'to_operator' and ${payouts.driverUserId} is null), 0)::numeric(14, 2)::text`;
 const receivedTotal = sql<string>`coalesce(sum(${payouts.amount}) filter (where ${payouts.direction} = 'from_operator'), 0)::numeric(14, 2)::text`;
+/** What the organization itself earned; fares of routes paid to drivers are theirs (ADR-030). */
+const earnedTotal = sql<string>`coalesce(sum(${settlementEntries.earned}) filter (where ${settlementEntries.payee} = 'organization'), 0)::numeric(14, 2)::text`;
+const forDriversTotal = sql<string>`coalesce(sum(${settlementEntries.earned}) filter (where ${settlementEntries.payee} = 'driver'), 0)::numeric(14, 2)::text`;
+const fullName = sql<string>`trim(coalesce(${users.firstName}, '') || ' ' || coalesce(${users.lastName}, ''))`;
 
 const organizationColumns = {
   id: organizations.id,
@@ -67,6 +75,7 @@ interface Totals {
   collected?: string;
   paidOut?: string;
   received?: string;
+  forDrivers?: string;
 }
 
 @Injectable()
@@ -126,11 +135,167 @@ export class SettlementsService {
 
   async payouts(organizationId: string): Promise<Payout[]> {
     const rows = await this.database.db
-      .select()
+      .select({ payout: payouts, driverName: fullName })
       .from(payouts)
+      .leftJoin(users, eq(users.id, payouts.driverUserId))
       .where(eq(payouts.organizationId, organizationId))
       .orderBy(desc(payouts.createdAt));
-    return rows.map(toPayout);
+    return rows.map(({ payout, driverName }) => toPayout(payout, driverName));
+  }
+
+  // --- Drivers (ADR-030) ----------------------------------------------------------------------
+
+  /**
+   * What each driver earned on routes paid to drivers, per organization and currency, minus what
+   * the platform paid them. Sales on trips with no driver yet appear with `driver: null`.
+   */
+  async driverBalances(
+    organizationIds: string[],
+    db: Pick<DatabaseService['db'], 'select'> = this.database.db,
+    driverUserId?: string,
+  ): Promise<Map<string, DriverBalance[]>> {
+    const result = new Map<string, DriverBalance[]>();
+    if (!organizationIds.length && !driverUserId) return result;
+    const scope = driverUserId
+      ? eq(trips.driverUserId, driverUserId)
+      : inArray(settlementEntries.organizationId, organizationIds);
+    const earned = await db
+      .select({
+        organizationId: settlementEntries.organizationId,
+        driverId: trips.driverUserId,
+        currency: settlementEntries.currency,
+        earned: total(settlementEntries.earned),
+      })
+      .from(settlementEntries)
+      .innerJoin(bookings, eq(bookings.id, settlementEntries.bookingId))
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .where(and(eq(settlementEntries.payee, 'driver'), scope))
+      .groupBy(settlementEntries.organizationId, trips.driverUserId, settlementEntries.currency);
+    const paid = await db
+      .select({
+        organizationId: payouts.organizationId,
+        driverId: payouts.driverUserId,
+        currency: payouts.currency,
+        paidOut: total(payouts.amount),
+      })
+      .from(payouts)
+      .where(
+        and(
+          isNull(payouts.voidedAt),
+          driverUserId
+            ? eq(payouts.driverUserId, driverUserId)
+            : and(
+                inArray(payouts.organizationId, organizationIds),
+                sql`${payouts.driverUserId} is not null`,
+              ),
+        ),
+      )
+      .groupBy(payouts.organizationId, payouts.driverUserId, payouts.currency);
+    const driverIds = [
+      ...new Set([...earned, ...paid].map((r) => r.driverId).filter((id): id is string => !!id)),
+    ];
+    const people = driverIds.length
+      ? await db
+          .select({ id: users.id, name: fullName, account: driverPayoutAccounts })
+          .from(users)
+          .leftJoin(driverPayoutAccounts, eq(driverPayoutAccounts.userId, users.id))
+          .where(inArray(users.id, driverIds))
+      : [];
+    const keyOf = (r: { organizationId: string; driverId: string | null; currency: Currency }) =>
+      `${r.organizationId}|${r.driverId ?? ''}|${r.currency}`;
+    const rows = new Map<
+      string,
+      {
+        organizationId: string;
+        driverId: string | null;
+        currency: Currency;
+        earned: string;
+        paidOut: string;
+      }
+    >();
+    for (const r of earned) rows.set(keyOf(r), { ...r, paidOut: '0.00' });
+    for (const r of paid) {
+      const current = rows.get(keyOf(r));
+      rows.set(keyOf(r), { ...r, earned: current?.earned ?? '0.00', paidOut: r.paidOut });
+    }
+    for (const r of rows.values()) {
+      const person = people.find((p) => p.id === r.driverId);
+      const balance: DriverBalance = {
+        driver: r.driverId ? { id: r.driverId, name: person?.name || '—' } : null,
+        currency: r.currency,
+        earned: r.earned,
+        paidOut: r.paidOut,
+        balance: fromScaled(toScaled(r.earned, 2) - toScaled(r.paidOut, 2), 2),
+        payoutAccount: person?.account ? toPayoutAccount(person.account) : null,
+      };
+      result.set(r.organizationId, [...(result.get(r.organizationId) ?? []), balance]);
+    }
+    for (const list of result.values()) {
+      list.sort((a, b) => (a.driver?.name ?? '~').localeCompare(b.driver?.name ?? '~', 'es'));
+    }
+    return result;
+  }
+
+  /** `GET /me/earnings`: the signed-in driver's balances with each organization. */
+  async driverEarnings(userId: string): Promise<DriverEarnings> {
+    const byOrganization = await this.driverBalances([], this.database.db, userId);
+    const ids = [...byOrganization.keys()];
+    const names = ids.length
+      ? await this.database.db
+          .select({
+            id: organizations.id,
+            name: sql<string>`coalesce(${organizations.tradeName}, ${organizations.legalName})`,
+          })
+          .from(organizations)
+          .where(inArray(organizations.id, ids))
+      : [];
+    const [account] = await this.database.db
+      .select()
+      .from(driverPayoutAccounts)
+      .where(eq(driverPayoutAccounts.userId, userId));
+    return {
+      balances: [...byOrganization.entries()].flatMap(([organizationId, list]) =>
+        list.map(({ driver: _driver, payoutAccount: _account, ...rest }) => ({
+          ...rest,
+          organization: {
+            id: organizationId,
+            name: names.find((n) => n.id === organizationId)?.name ?? '—',
+          },
+        })),
+      ),
+      payoutAccount: account ? toPayoutAccount(account) : null,
+    };
+  }
+
+  async setPayoutAccount(
+    userId: string,
+    input: DriverPayoutAccount,
+    meta: RequestMeta,
+  ): Promise<DriverPayoutAccount> {
+    const values = {
+      method: input.method,
+      bank: input.bank.trim(),
+      account: input.account.trim(),
+      holderId: input.holderId.trim().toUpperCase(),
+      holderName: input.holderName.trim(),
+    };
+    const [row] = await this.database.db
+      .insert(driverPayoutAccounts)
+      .values({ userId, ...values })
+      .onConflictDoUpdate({
+        target: driverPayoutAccounts.userId,
+        set: { ...values, updatedAt: new Date() },
+      })
+      .returning();
+    await this.audit.record({
+      action: 'settlement.payout_account_set',
+      actorUserId: userId,
+      targetType: 'user',
+      targetId: userId,
+      ip: meta.ip,
+      metadata: { method: values.method },
+    });
+    return toPayoutAccount(row!);
   }
 
   // --- Platform staff -------------------------------------------------------------------------
@@ -266,9 +431,39 @@ export class SettlementsService {
         .where(eq(organizations.id, organizationId))
         .for('update');
       if (!organization) throw notFound('Organization not found');
+      const direction = input.direction ?? 'to_operator';
+      if (input.driverUserId) {
+        if (direction !== 'to_operator') throw invalid('Drivers are only paid, never charged');
+        const [owed] = (await this.driverBalances([organizationId], tx))
+          .get(organizationId)
+          ?.filter((d) => d.driver?.id === input.driverUserId && d.currency === input.currency) ?? [
+          undefined,
+        ];
+        if (!owed || toScaled(input.amount, 2) > toScaled(owed.balance, 2)) {
+          throw ApiException.conflict(
+            'The payout is larger than what this driver is owed in this currency',
+            'PAYOUT_EXCEEDS_BALANCE',
+          );
+        }
+        const [row] = await tx
+          .insert(payouts)
+          .values({
+            organizationId,
+            driverUserId: input.driverUserId,
+            direction,
+            currency: input.currency,
+            amount: fromScaled(toScaled(input.amount, 2), 2),
+            method: input.method,
+            reference: input.reference.trim(),
+            note: input.note?.trim() || null,
+            createdByUserId: auth.user.id,
+          })
+          .returning();
+        return row!;
+      }
       const [ledger] = await tx
         .select({
-          earned: total(settlementEntries.earned),
+          earned: earnedTotal,
           collected: collectedTotal,
         })
         .from(settlementEntries)
@@ -292,7 +487,6 @@ export class SettlementsService {
         balanceOf({ ...ledger!, ...moved! } as Totals, input.currency).balance,
         2,
       );
-      const direction = input.direction ?? 'to_operator';
       if (direction === 'to_operator' && toScaled(input.amount, 2) > balance) {
         throw ApiException.conflict(
           'The payout is larger than the balance owed in this currency',
@@ -332,9 +526,10 @@ export class SettlementsService {
         currency: payout.currency,
         amount: payout.amount,
         method: payout.method,
+        ...(payout.driverUserId ? { driverUserId: payout.driverUserId } : {}),
       },
     });
-    return toPayout(payout);
+    return (await this.payouts(organizationId)).find((p) => p.id === payout.id)!;
   }
 
   async voidPayout(
@@ -364,7 +559,7 @@ export class SettlementsService {
       ip: meta.ip,
       metadata: { organizationId: row.organizationId, reason: row.voidReason },
     });
-    return toPayout(row);
+    return (await this.payouts(row.organizationId)).find((p) => p.id === row.id)!;
   }
 
   /**
@@ -496,7 +691,8 @@ export class SettlementsService {
         currency: settlementEntries.currency,
         gross: total(settlementEntries.gross),
         commission: total(settlementEntries.commission),
-        earned: total(settlementEntries.earned),
+        earned: earnedTotal,
+        forDrivers: forDriversTotal,
         collected: collectedTotal,
       })
       .from(settlementEntries)
@@ -518,6 +714,7 @@ export class SettlementsService {
       .from(organizationPolicies)
       .where(inArray(organizationPolicies.organizationId, organizationIds));
 
+    const drivers = await this.driverBalances(organizationIds);
     const totals = new Map<string, Totals>();
     for (const row of [...earned, ...paid] as Totals[]) {
       const key = `${row.organizationId}:${row.currency}`;
@@ -536,6 +733,7 @@ export class SettlementsService {
           const t = totals.get(`${organizationId}:${currency}`);
           return t ? [balanceOf(t, currency)] : [];
         }),
+        drivers: drivers.get(organizationId) ?? [],
       };
     });
   }
@@ -562,14 +760,26 @@ function balanceOf(t: Totals, currency: Currency): SettlementBalance {
     collected,
     paidOut,
     received,
+    forDrivers: t.forDrivers ?? '0.00',
     balance: fromScaled(s(earned) - s(collected) - s(paidOut) + s(received), 2),
   };
 }
 
-function toPayout(row: PayoutRow): Payout {
+function toPayoutAccount(row: typeof driverPayoutAccounts.$inferSelect): DriverPayoutAccount {
+  return {
+    method: row.method,
+    bank: row.bank,
+    account: row.account,
+    holderId: row.holderId,
+    holderName: row.holderName,
+  };
+}
+
+function toPayout(row: PayoutRow, driverName?: string | null): Payout {
   return {
     id: row.id,
     organizationId: row.organizationId,
+    driver: row.driverUserId ? { id: row.driverUserId, name: driverName || '—' } : null,
     direction: row.direction,
     currency: row.currency,
     amount: row.amount,

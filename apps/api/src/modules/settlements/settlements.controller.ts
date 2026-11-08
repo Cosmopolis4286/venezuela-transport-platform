@@ -13,6 +13,8 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type {
   AdminSettlementSummary,
+  DriverEarnings,
+  DriverPayoutAccount,
   OrganizationSettlement,
   Payout,
   RefundDuePayment,
@@ -29,6 +31,7 @@ import {
 } from '../organizations/organization-access.js';
 import {
   CreatePayoutDto,
+  DriverPayoutAccountDto,
   MarkRefundedDto,
   SetOrganizationPolicyDto,
   SettlementEntriesQueryDto,
@@ -189,5 +192,27 @@ export class OrganizationRefundsController {
       auth,
       meta,
     );
+  }
+}
+
+/** A driver's earnings on routes paid to drivers, and where to pay them (ADR-030). */
+@ApiTags('settlements')
+@ApiBearerAuth()
+@Controller({ path: 'me', version: '1' })
+export class DriverEarningsController {
+  constructor(private readonly settlements: SettlementsService) {}
+
+  @Get('earnings')
+  earnings(@CurrentAuth() auth: Authenticated): Promise<DriverEarnings> {
+    return this.settlements.driverEarnings(auth.user.id);
+  }
+
+  @Put('payout-account')
+  setPayoutAccount(
+    @Body() body: DriverPayoutAccountDto,
+    @CurrentAuth() auth: Authenticated,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<DriverPayoutAccount> {
+    return this.settlements.setPayoutAccount(auth.user.id, body, meta);
   }
 }

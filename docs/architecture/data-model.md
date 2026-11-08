@@ -41,7 +41,8 @@ PostgreSQL generados desde las listas de `@vtp/shared-types`.
 | `settlements`   | `platform_settings`              | La política general (una sola fila): comisión y tramos de reembolso                                                                                |
 |                 | `organization_policies`          | La política propia de una empresa (lo que deja vacío usa la general)                                                                               |
 |                 | `settlement_entries`             | Libro de cada empresa: una fila al pagarse una reserva y otra (negativa) si se cancela                                                             |
-|                 | `payouts`                        | Pagos de la plataforma a las empresas (se anulan, no se borran)                                                                                    |
+|                 | `payouts`                        | Pagos de la plataforma a las empresas o a sus conductores (`driver_user_id`); se anulan, no se borran                                              |
+|                 | `driver_payout_accounts`         | Dónde cobra cada conductor (ADR-030): medio, banco, cuenta o teléfono, titular                                                                     |
 | `taxi`          | `taxi_service_areas`             | Terminales donde opera cada línea de taxis                                                                                                         |
 |                 | `taxi_rides`                     | Solicitudes y viajes de taxi; índices parciales únicos: un taxi abierto por pasajero, un viaje por conductor                                       |
 | `reports`       | —                                | No tiene tablas: lee el libro, las salidas y la actividad ([reports.md](reports.md))                                                               |

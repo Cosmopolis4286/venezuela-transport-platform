@@ -224,6 +224,7 @@ export default function Home() {
         <Banner tone="error">{application.error.userMessage}</Banner>
       ) : null}
 
+      <Button variant="secondary" title="Mis cobros" onPress={() => router.push('/earnings')} />
       <Button variant="secondary" title="Cerrar sesión" onPress={() => void signOut()} />
       <DeleteAccount />
     </Screen>

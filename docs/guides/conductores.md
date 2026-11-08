@@ -57,3 +57,11 @@ el código de reserva y el número de puesto. El resultado sale al instante:
 4. El pasajero te paga directamente.
 
 Solo puedes tener un viaje de taxi activo a la vez.
+
+## 6. Mis cobros
+
+En las rutas que les pagan a sus conductores (por defecto, las urbanas y suburbanas), lo que pagan
+los pasajeros de tus viajes es tuyo. En **Mis cobros** ves cuánto te deben por cada empresa y
+registras dónde cobrar: pago móvil, transferencia o USDT, con banco o red, teléfono, cuenta o
+billetera, cédula y nombre del titular. La plataforma te transfiere lo que te corresponde y lo
+registra; tu saldo baja al mismo tiempo. Si tu empresa cobra con sus propias cuentas, te paga ella.

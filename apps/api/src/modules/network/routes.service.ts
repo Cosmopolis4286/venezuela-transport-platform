@@ -8,6 +8,7 @@ import {
   type RouteSummary,
   type Schedule,
   type ScheduleInput,
+  defaultPayee,
 } from '@vtp/shared-types';
 import { and, asc, count, eq, inArray } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
@@ -108,6 +109,8 @@ export class RoutesService {
         .values({
           organizationId: access.organization.id,
           name: input.name.trim(),
+          scope: input.scope ?? 'interurban',
+          payeeOverride: input.payeeOverride ?? null,
           createdBy: actor.user.id,
         })
         .returning();
@@ -130,8 +133,15 @@ export class RoutesService {
     if (input.stops) await this.assertStops(input.stops);
     let droppedFares = 0;
     await this.database.db.transaction(async (tx) => {
-      if (input.name) {
-        await tx.update(routes).set({ name: input.name.trim() }).where(eq(routes.id, route.id));
+      if (input.name || input.scope || input.payeeOverride !== undefined) {
+        await tx
+          .update(routes)
+          .set({
+            ...(input.name ? { name: input.name.trim() } : {}),
+            ...(input.scope ? { scope: input.scope } : {}),
+            ...(input.payeeOverride !== undefined ? { payeeOverride: input.payeeOverride } : {}),
+          })
+          .where(eq(routes.id, route.id));
       }
       if (input.stops) {
         await tx.delete(routeStops).where(eq(routeStops.routeId, route.id));
@@ -158,6 +168,8 @@ export class RoutesService {
     });
     await this.record('route.updated', route, actor, meta, {
       stopsReplaced: Boolean(input.stops),
+      ...(input.scope ? { scope: input.scope } : {}),
+      ...(input.payeeOverride !== undefined ? { payeeOverride: input.payeeOverride } : {}),
       droppedFares,
     });
     return this.load(route);
@@ -439,6 +451,9 @@ export class RoutesService {
       organizationId: row.organizationId,
       name: row.name,
       status: row.status,
+      scope: row.scope,
+      payeeOverride: row.payeeOverride,
+      payee: row.payeeOverride ?? defaultPayee(row.scope),
       stops: stopRows.map(({ routeStop, stop }) => ({
         stop: toSummary(stop),
         sequence: routeStop.sequence,

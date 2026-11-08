@@ -362,6 +362,7 @@ describe.runIf(expectDatabase)('Cancelling paid bookings (e2e)', () => {
           collected: '0.00',
           paidOut: '0.00',
           received: '0.00',
+          forDrivers: '0.00',
           balance: '87.50',
         },
       ]);

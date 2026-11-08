@@ -6,6 +6,10 @@ import {
   STOP_KINDS,
   ZONE_STATUSES,
   COMMISSION_PATTERN,
+  PAYEES,
+  ROUTE_SCOPES,
+  type Payee,
+  type RouteScope,
   type ChangeRouteStatusRequest,
   type OperatingZoneInput,
   type ZoneStatus,
@@ -142,6 +146,16 @@ export class RouteDto implements RouteInput {
   @ValidateNested({ each: true })
   @Type(() => RouteStopDto)
   stops!: RouteStopDto[];
+
+  @ApiPropertyOptional({ enum: ROUTE_SCOPES, default: 'interurban' })
+  @IsOptional()
+  @IsIn(ROUTE_SCOPES)
+  scope?: RouteScope;
+
+  @ApiPropertyOptional({ enum: PAYEES, nullable: true, description: 'Null: default for the scope' })
+  @IsOptional()
+  @IsIn([...PAYEES, null])
+  payeeOverride?: Payee | null;
 }
 
 export class UpdateRouteDto extends PartialType(RouteDto) {}

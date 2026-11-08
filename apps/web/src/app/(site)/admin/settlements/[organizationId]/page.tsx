@@ -13,6 +13,7 @@ import { ActionForm, SubmitButton } from '@/components/portal/action-form';
 import { RefundTierFields } from '@/components/portal/refund-policy';
 import {
   PayoutLine,
+  DriverBalances,
   SettlementBalances,
   SettlementEntries,
 } from '@/components/portal/settlement-summary';
@@ -70,6 +71,54 @@ async function OrganizationSettlementView({
       <Card>
         <CardTitle>Saldo</CardTitle>
         <SettlementBalances settlement={settlement} />
+      </Card>
+
+      <Card>
+        <div className="flex flex-col gap-1">
+          <CardTitle>Conductores</CardTitle>
+          <CardDescription>
+            Rutas que les pagan a sus conductores (ADR-030). Haz la transferencia a la cuenta que
+            indicó cada conductor y regístrala aquí; no se le puede pagar más que su saldo.
+          </CardDescription>
+        </div>
+        <DriverBalances
+          drivers={settlement.drivers}
+          pay={(row) => (
+            <ActionForm
+              action={createPayout}
+              hidden={{
+                ...hidden,
+                driverUserId: row.driver!.id,
+                currency: row.currency,
+                direction: 'to_operator',
+              }}
+              resetOnSuccess
+            >
+              <div className="grid gap-2 sm:grid-cols-4">
+                <Input
+                  name="amount"
+                  inputMode="decimal"
+                  required
+                  defaultValue={row.balance}
+                  aria-label={`Monto para ${row.driver!.name}`}
+                />
+                <Select
+                  name="method"
+                  defaultValue={row.payoutAccount?.method ?? 'pago_movil'}
+                  aria-label="Medio"
+                >
+                  {PAYOUT_METHODS.map((method) => (
+                    <option key={method} value={method}>
+                      {PAYOUT_METHOD_LABELS[method]}
+                    </option>
+                  ))}
+                </Select>
+                <Input name="reference" required maxLength={120} placeholder="Referencia" />
+                <SubmitButton size="sm">Registrar pago al conductor</SubmitButton>
+              </div>
+            </ActionForm>
+          )}
+        />
       </Card>
 
       <Card>
