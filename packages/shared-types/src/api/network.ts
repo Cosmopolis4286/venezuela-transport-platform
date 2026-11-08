@@ -144,11 +144,42 @@ export interface ScheduleInput {
   active?: boolean;
 }
 
+/**
+ * `interurban`: between cities (bus terminals). `suburban`: urban and suburban service (buses,
+ * por puesto). Decides who is paid by default (ADR-030).
+ */
+export const ROUTE_SCOPES = ['interurban', 'suburban'] as const;
+export type RouteScope = (typeof ROUTE_SCOPES)[number];
+
+export const ROUTE_SCOPE_LABELS: Record<RouteScope, string> = {
+  interurban: 'Interurbana',
+  suburban: 'Urbana o suburbana',
+};
+
+/** Who receives the fares of a route: the line/company, or the driver of each trip (ADR-030). */
+export const PAYEES = ['organization', 'driver'] as const;
+export type Payee = (typeof PAYEES)[number];
+
+export const PAYEE_LABELS: Record<Payee, string> = {
+  organization: 'La empresa o línea',
+  driver: 'El conductor de cada viaje',
+};
+
+/** Interurban routes pay the line; suburban ones the driver, unless the route says otherwise. */
+export function defaultPayee(scope: RouteScope): Payee {
+  return scope === 'suburban' ? 'driver' : 'organization';
+}
+
 export interface Route {
   id: string;
   organizationId: string;
   name: string;
   status: RouteStatus;
+  scope: RouteScope;
+  /** The route's own choice; null uses `defaultPayee(scope)`. */
+  payeeOverride: Payee | null;
+  /** Who is paid for this route's sales. */
+  payee: Payee;
   stops: RouteStop[];
   fares: Fare[];
   schedules: Schedule[];
@@ -174,6 +205,10 @@ export interface RouteSummary {
 export interface RouteInput {
   name: string;
   stops: { stopId: string; minutesFromOrigin: number }[];
+  /** Default `interurban`. */
+  scope?: RouteScope;
+  /** Null (or omitted) uses the default for the scope. */
+  payeeOverride?: Payee | null;
 }
 
 /** `PUT …/routes/:routeId/fares` replaces every fare of the route. */

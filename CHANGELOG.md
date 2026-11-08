@@ -13,6 +13,10 @@ pull request.
 
 ### Cambiado
 
+- **Pago a la línea o al conductor** (ADR-030): cada ruta es interurbana o urbana/suburbana y
+  elige quién cobra (por defecto, la línea en las interurbanas y el conductor en las urbanas y
+  suburbanas). Los conductores ven su saldo y registran dónde cobrar en **Mis cobros** (app de
+  transportistas); la plataforma les paga desde la liquidación de la empresa.
 - **El cargo de la plataforma ahora lo paga el pasajero encima de la tarifa** (ADR-029, 15 %
   por defecto): la empresa recibe su tarifa completa. Se muestra en la búsqueda (web y app) y
   desglosado al elegir puestos, al apartar y en la reserva. Si cancela el pasajero, se reembolsa

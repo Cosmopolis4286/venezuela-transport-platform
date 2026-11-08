@@ -20,7 +20,7 @@ import {
 } from '@vtp/shared-types';
 import { bookings } from '../bookings/bookings.schema.js';
 import { timestamps, users } from '../identity/identity.schema.js';
-import { currency } from '../network/network.schema.js';
+import { currency, payee } from '../network/network.schema.js';
 import { organizations } from '../organizations/organizations.schema.js';
 
 export const payoutMethod = pgEnum('payout_method', PAYOUT_METHODS);
@@ -73,6 +73,11 @@ export const settlementEntries = pgTable(
     kind: settlementEntryKind().notNull().default('booking'),
     /** Who received the passenger's money: with `operator`, the operator owes the commission. */
     collectedBy: paymentCollection().notNull().default('platform'),
+    /**
+     * Who earns `earned` (ADR-030): the organization, or the driver of the booking's trip (found
+     * through the trip, so a driver assigned after the sale still gets it).
+     */
+    payee: payee().notNull().default('organization'),
     seats: integer().notNull(),
     currency: currency().notNull(),
     gross: numeric({ precision: 12, scale: 2 }).notNull(),
@@ -98,6 +103,8 @@ export const payouts = pgTable(
       .references(() => organizations.id, { onDelete: 'restrict' }),
     /** `from_operator`: the operator paid the platform its commission. */
     direction: payoutDirection().notNull().default('to_operator'),
+    /** Set when the platform paid one of the organization's drivers (ADR-030). */
+    driverUserId: uuid().references(() => users.id, { onDelete: 'restrict' }),
     currency: currency().notNull(),
     amount: numeric({ precision: 12, scale: 2 }).notNull(),
     method: payoutMethod().notNull(),
@@ -111,6 +118,19 @@ export const payouts = pgTable(
   },
   (t) => [index('payouts_organization_idx').on(t.organizationId, t.createdAt)],
 );
+
+/** Where each driver wants to be paid (ADR-030); entered by the driver in the transport app. */
+export const driverPayoutAccounts = pgTable('driver_payout_accounts', {
+  userId: uuid()
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  method: payoutMethod().notNull(),
+  bank: text().notNull(),
+  account: text().notNull(),
+  holderId: text().notNull(),
+  holderName: text().notNull(),
+  ...timestamps,
+});
 
 export type SettlementEntryRow = typeof settlementEntries.$inferSelect;
 export type PayoutRow = typeof payouts.$inferSelect;

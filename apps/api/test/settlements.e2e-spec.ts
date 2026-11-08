@@ -236,6 +236,7 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
         refundTiersOverride: null,
         paymentCollection: 'platform',
         balances: [],
+        drivers: [],
       });
       // Active bus companies are listed for the admins before their first sale.
       expect(
@@ -304,6 +305,7 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
           collected: '0.00',
           paidOut: '0.00',
           received: '0.00',
+          forDrivers: '0.00',
           balance: '75.00',
         },
       ]);

@@ -1,8 +1,13 @@
-import type { PaymentCollection, RefundTier, SettlementPolicy } from '@vtp/shared-types';
+import {
+  defaultPayee,
+  type PaymentCollection,
+  type RefundTier,
+  type SettlementPolicy,
+} from '@vtp/shared-types';
 import { and, count, eq } from 'drizzle-orm';
 import type { Database, Transaction } from '../../database/database.service.js';
 import { bookingPassengers, bookings, trips } from '../bookings/bookings.schema.js';
-import { operatingZones, stops } from '../network/network.schema.js';
+import { operatingZones, routes, stops } from '../network/network.schema.js';
 import { fromScaled, toScaled } from '../payments/money.js';
 import { organizationPolicies, platformSettings, settlementEntries } from './settlements.schema.js';
 
@@ -124,9 +129,12 @@ export async function recordEarning(
       fromStopId: bookings.fromStopId,
       serviceFee: bookings.serviceFee,
       serviceFeeRate: bookings.serviceFeeRate,
+      scope: routes.scope,
+      payeeOverride: routes.payeeOverride,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(routes, eq(routes.id, trips.routeId))
     .where(eq(bookings.id, bookingId));
   if (!row) throw new Error(`Booking ${bookingId} not found`);
   const [seats] = await tx
@@ -152,6 +160,12 @@ export async function recordEarning(
       organizationId: row.organizationId,
       bookingId,
       collectedBy,
+      // A route paid to drivers (ADR-030) owes its fares to the trip's driver, when the platform
+      // holds the money; when the operator collects, it pays its own drivers.
+      payee:
+        collectedBy === 'platform' && (row.payeeOverride ?? defaultPayee(row.scope)) === 'driver'
+          ? 'driver'
+          : 'organization',
       seats: seats?.n ?? 0,
       currency: row.currency,
       gross: row.gross,
@@ -193,6 +207,7 @@ export async function recordCancellation(
       bookingId,
       kind: 'cancellation',
       collectedBy: earning.collectedBy,
+      payee: earning.payee,
       seats: -earning.seats,
       currency: earning.currency,
       gross: negative(fareRefund),

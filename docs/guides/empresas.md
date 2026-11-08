@@ -29,8 +29,11 @@ En la página de la organización:
    salen del catálogo de VTP; si falta un terminal, pídeselo a la administración.
 3. **Tarifas** por tramo (US$ o Bs.).
 4. **Horarios**: hora de salida, días de la semana, vigencia, clase de servicio y mapa de puestos.
-5. **Publicar** la ruta: desde ese momento aparece en las búsquedas.
-6. **Tasas de cambio**: bolívares y reales por dólar. Sin una tasa, ese medio de pago no se ofrece
+5. **Tipo de servicio y cobro**: interurbana o urbana/suburbana, y quién cobra. Por defecto, las
+   interurbanas le pagan a la empresa y las urbanas o suburbanas al conductor de cada viaje; puedes
+   cambiarlo en cada ruta (vale para las ventas desde ese momento).
+6. **Publicar** la ruta: desde ese momento aparece en las búsquedas.
+7. **Tasas de cambio**: bolívares y reales por dólar. Sin una tasa, ese medio de pago no se ofrece
    para tarifas en dólares.
 
 ## 4. El día de la salida

@@ -65,6 +65,21 @@ export async function updateRoute(_: FormState, form: FormData): Promise<FormSta
   return { success: 'Recorrido guardado.' };
 }
 
+/** Interurban or suburban, and who is paid (ADR-030); empty payee = the default for the scope. */
+export async function setRoutePayee(_: FormState, form: FormData): Promise<FormState> {
+  const payee = text(form, 'payeeOverride');
+  try {
+    await apiRequest(routePath(form), {
+      method: 'PATCH',
+      body: { scope: text(form, 'scope'), payeeOverride: payee || null },
+    });
+  } catch (error) {
+    return failure(error, ROUTE_RULES);
+  }
+  refresh();
+  return { success: 'Cobro guardado. Se aplica a las ventas desde ahora.' };
+}
+
 export async function changeRouteStatus(_: FormState, form: FormData): Promise<FormState> {
   const status = text(form, 'status');
   try {

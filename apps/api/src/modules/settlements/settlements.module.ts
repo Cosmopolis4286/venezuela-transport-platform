@@ -4,6 +4,7 @@ import { IdentityModule } from '../identity/identity.module.js';
 import { OrganizationsModule } from '../organizations/organizations.module.js';
 import {
   AdminSettlementsController,
+  DriverEarningsController,
   OrganizationRefundsController,
   OrganizationSettlementsController,
 } from './settlements.controller.js';
@@ -19,6 +20,7 @@ import { SettlementsService } from './settlements.service.js';
     OrganizationSettlementsController,
     OrganizationRefundsController,
     AdminSettlementsController,
+    DriverEarningsController,
   ],
   providers: [SettlementsService],
 })

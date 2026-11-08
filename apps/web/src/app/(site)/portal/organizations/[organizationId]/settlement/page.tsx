@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import {
   PayoutLine,
+  DriverBalances,
   SettlementBalances,
   SettlementEntries,
 } from '@/components/portal/settlement-summary';
@@ -65,6 +66,17 @@ async function Settlement({
       <Card>
         <CardTitle>Saldo</CardTitle>
         <SettlementBalances settlement={settlement} />
+      </Card>
+
+      <Card>
+        <div className="flex flex-col gap-1">
+          <CardTitle>Conductores</CardTitle>
+          <CardDescription>
+            Lo que ganaron tus conductores en las rutas que les pagan a ellos. La plataforma les
+            paga directamente a la cuenta que indican en la app de transportistas.
+          </CardDescription>
+        </div>
+        <DriverBalances drivers={settlement.drivers} />
       </Card>
 
       <Card>

@@ -18,6 +18,8 @@ import {
 } from 'drizzle-orm/pg-core';
 import {
   CURRENCIES,
+  PAYEES,
+  ROUTE_SCOPES,
   ROUTE_STATUSES,
   SERVICE_CLASSES,
   STOP_KINDS,
@@ -32,6 +34,8 @@ export const routeStatus = pgEnum('route_status', ROUTE_STATUSES);
 export const currency = pgEnum('currency', CURRENCIES);
 export const serviceClass = pgEnum('service_class', SERVICE_CLASSES);
 export const zoneStatus = pgEnum('zone_status', ZONE_STATUSES);
+export const routeScope = pgEnum('route_scope', ROUTE_SCOPES);
+export const payee = pgEnum('payee', PAYEES);
 
 /**
  * Cities or regions the platform operates in (ADR-028). Everything stays in one database; a zone
@@ -101,6 +105,9 @@ export const routes = pgTable(
       .references(() => organizations.id, { onDelete: 'cascade' }),
     name: text().notNull(),
     status: routeStatus().notNull().default('draft'),
+    /** Interurban routes pay the line, suburban ones the driver, unless `payee_override` (ADR-030). */
+    scope: routeScope().notNull().default('interurban'),
+    payeeOverride: payee(),
     createdBy: uuid().references(() => users.id, { onDelete: 'set null' }),
     ...timestamps,
   },

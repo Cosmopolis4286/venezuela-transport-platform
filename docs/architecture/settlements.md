@@ -65,6 +65,25 @@ reserva el saldo baja en la comisión, y un saldo **negativo** es lo que la empr
 plataforma. Cada entrada del libro anota quién cobró (`collected_by`); una cancelación copia el de
 su reserva.
 
+### Pago a la línea o al conductor (ADR-030)
+
+Cada ruta es **interurbana** o **urbana/suburbana** (`routes.scope`) y dice quién cobra sus
+tarifas (`routes.payee_override`; vacío = el valor por defecto): las interurbanas, la empresa; las
+urbanas y suburbanas, el **conductor de cada viaje**. Al pagarse la reserva, la entrada del libro
+anota `payee` (`organization` o `driver`); si cobra la empresa (ADR-027) siempre es
+`organization`, porque ella les paga a sus conductores.
+
+- El conductor se busca por el viaje (`trips.driver_user_id`) al calcular el saldo, así que una
+  venta hecha antes de asignar conductor se le acredita al que el despacho asigne. Mientras no hay
+  conductor, aparece como «viajes sin conductor asignado».
+- Las tarifas de rutas pagadas a conductores no cuentan en el saldo de la empresa
+  (`SettlementBalance.forDrivers` las muestra aparte) y la empresa ve el saldo de cada conductor.
+- El conductor indica en la app de transportistas (**Mis cobros**) dónde cobrar
+  (`driver_payout_accounts`: medio, banco, cuenta o teléfono, cédula y nombre del titular) y ve su
+  saldo (`GET /me/earnings`).
+- Un administrador le paga desde la liquidación de la empresa (`payouts.driver_user_id`); nunca
+  más que su saldo (`409 PAYOUT_EXCEEDS_BALANCE`). Se anula igual que cualquier pago.
+
 Un administrador registra cada transferencia que hace a una empresa (`payouts`): moneda, monto,
 medio (transferencia, pago móvil, USDT), referencia y una nota. Reglas:
 

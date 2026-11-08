@@ -7,6 +7,7 @@ import {
   PAYOUT_DIRECTIONS,
   PAYOUT_METHODS,
   type CreatePayoutRequest,
+  type DriverPayoutAccount,
   type Currency,
   type MarkRefundedRequest,
   type PaymentCollection,
@@ -27,6 +28,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   Length,
   Matches,
   Max,
@@ -111,6 +113,11 @@ export class CreatePayoutDto implements CreatePayoutRequest {
   @IsIn(PAYOUT_DIRECTIONS)
   direction?: PayoutDirection;
 
+  @ApiPropertyOptional({ description: 'Pay this driver of the organization (ADR-030)' })
+  @IsOptional()
+  @IsUUID()
+  driverUserId?: string;
+
   @ApiProperty({ enum: CURRENCIES })
   @IsIn(CURRENCIES)
   currency!: Currency;
@@ -147,4 +154,30 @@ export class MarkRefundedDto implements MarkRefundedRequest {
   @IsString()
   @Length(2, 120)
   reference!: string;
+}
+
+export class DriverPayoutAccountDto implements DriverPayoutAccount {
+  @ApiProperty({ enum: PAYOUT_METHODS })
+  @IsIn(PAYOUT_METHODS)
+  method!: PayoutMethod;
+
+  @ApiProperty({ example: '0102 – Banco de Venezuela' })
+  @IsString()
+  @Length(2, 80)
+  bank!: string;
+
+  @ApiProperty({ example: '0414-1234567', description: 'Phone, account number or wallet' })
+  @IsString()
+  @Length(4, 120)
+  account!: string;
+
+  @ApiProperty({ example: 'V-12345678' })
+  @IsString()
+  @Length(4, 20)
+  holderId!: string;
+
+  @ApiProperty({ example: 'Carlos Pérez' })
+  @IsString()
+  @Length(2, 120)
+  holderName!: string;
 }

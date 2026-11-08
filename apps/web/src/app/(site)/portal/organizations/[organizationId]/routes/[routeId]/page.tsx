@@ -1,4 +1,8 @@
 import {
+  PAYEE_LABELS,
+  PAYEES,
+  ROUTE_SCOPE_LABELS,
+  ROUTE_SCOPES,
   CURRENCIES,
   DAY_OF_WEEK_LABELS,
   ROUTE_STATUS_LABELS,
@@ -29,6 +33,7 @@ import {
   setScheduleActive,
   setScheduleLayout,
   updateRoute,
+  setRoutePayee,
 } from '../actions';
 
 export default function RoutePage({
@@ -92,6 +97,51 @@ async function RouteDetail({
       </div>
 
       {canManage ? <Publish route={route} hidden={hidden} /> : null}
+
+      <Card>
+        <div className="flex flex-col gap-1">
+          <CardTitle>Tipo de servicio y cobro</CardTitle>
+          <CardDescription>
+            {ROUTE_SCOPE_LABELS[route.scope]} · cobra: <strong>{PAYEE_LABELS[route.payee]}</strong>
+            {route.payeeOverride ? ' (elegido para esta ruta)' : ' (por defecto)'}. Por defecto, las
+            rutas interurbanas le pagan a la empresa o línea y las urbanas o suburbanas al conductor
+            asignado a cada viaje. Si tu empresa cobra con sus propias cuentas, les pagas tú a tus
+            conductores. El cambio vale para las ventas desde ahora.
+          </CardDescription>
+        </div>
+        {canManage ? (
+          <ActionForm action={setRoutePayee} hidden={hidden}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Tipo de servicio" htmlFor="scope">
+                <Select id="scope" name="scope" defaultValue={route.scope}>
+                  {ROUTE_SCOPES.map((scope) => (
+                    <option key={scope} value={scope}>
+                      {ROUTE_SCOPE_LABELS[scope]}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Quién cobra" htmlFor="payeeOverride">
+                <Select
+                  id="payeeOverride"
+                  name="payeeOverride"
+                  defaultValue={route.payeeOverride ?? ''}
+                >
+                  <option value="">Según el tipo de servicio</option>
+                  {PAYEES.map((payee) => (
+                    <option key={payee} value={payee}>
+                      {PAYEE_LABELS[payee]}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+            <div>
+              <SubmitButton variant="outline">Guardar cobro</SubmitButton>
+            </div>
+          </ActionForm>
+        ) : null}
+      </Card>
 
       <Card>
         <CardTitle>Recorrido</CardTitle>

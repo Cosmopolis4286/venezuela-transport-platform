@@ -72,6 +72,15 @@ hechas después.
   {{nombre_comercial}} el cargo por servicio de cada reserva pagada en el plazo acordado (en su defecto,
   dentro de los 15 días siguientes al cierre de cada mes).
 
+4.2.1. **Pago a la línea o al conductor.** En cada ruta, la Empresa elige quién recibe las
+tarifas que cobra la plataforma: la propia Empresa o línea, o el conductor que el despacho asigna
+a cada viaje. Salvo que la Empresa elija otra cosa, las rutas **interurbanas** se le pagan a la
+Empresa y las **urbanas o suburbanas** al conductor. Cuando se le paga al conductor,
+{{nombre_comercial}} le transfiere lo ganado en sus viajes a la cuenta que él mismo indica, y ese
+pago cancela, por esas tarifas, lo que {{nombre_comercial}} le debía a la Empresa; la relación
+entre la Empresa y sus conductores (remuneración, aportes, retenciones) sigue siendo de la Empresa.
+Si cobra la Empresa, ella les paga a sus conductores.
+
 4.3. **Estado de cuenta.** El portal muestra en todo momento lo pagado por los pasajeros, el cargo por servicio, lo ganado,
 lo cobrado por la Empresa, los pagos en cada sentido y el saldo. Las diferencias deben
 reportarse dentro de los 30 días siguientes al cierre del mes; después, el estado de cuenta se

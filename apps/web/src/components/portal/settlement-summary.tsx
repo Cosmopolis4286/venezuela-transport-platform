@@ -1,6 +1,7 @@
 import {
   formatPaymentAmount,
   PAYOUT_METHOD_LABELS,
+  type DriverBalance,
   type OrganizationSettlement,
   type Payout,
   type SettlementEntry,
@@ -96,6 +97,60 @@ export function SettlementBalances({ settlement }: { settlement: OrganizationSet
   );
 }
 
+/**
+ * Fares of routes paid to drivers (ADR-030), per driver and currency. `pay` renders the admin's
+ * payout form for one row (platform staff only).
+ */
+export function DriverBalances({
+  drivers,
+  pay,
+}: {
+  drivers: DriverBalance[];
+  pay?: (row: DriverBalance) => React.ReactNode;
+}) {
+  if (drivers.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Ninguna ruta le paga a sus conductores todavía (se elige en cada ruta: las urbanas y
+        suburbanas les pagan por defecto).
+      </p>
+    );
+  }
+  return (
+    <ul className="flex flex-col divide-y">
+      {drivers.map((row) => (
+        <li
+          key={`${row.driver?.id ?? 'none'}:${row.currency}`}
+          className="flex flex-col gap-2 py-3 text-sm"
+        >
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <span className="font-medium">
+              {row.driver ? row.driver.name : 'Viajes sin conductor asignado'}
+            </span>
+            <span className="tabular-nums">
+              Ganado {formatPaymentAmount(row.earned, row.currency)} · pagado{' '}
+              {formatPaymentAmount(row.paidOut, row.currency)} · saldo{' '}
+              <strong>{formatPaymentAmount(row.balance, row.currency)}</strong>
+            </span>
+          </div>
+          {row.driver ? (
+            <p className="text-muted-foreground">
+              {row.payoutAccount
+                ? `Cobra por ${PAYOUT_METHOD_LABELS[row.payoutAccount.method]}: ${row.payoutAccount.bank} · ${row.payoutAccount.account} · ${row.payoutAccount.holderId} · ${row.payoutAccount.holderName}`
+                : 'Aún no indicó dónde cobrar (lo hace en la app de transportistas).'}
+            </p>
+          ) : (
+            <p className="text-muted-foreground">
+              Se le pagan al conductor que el despacho asigne a cada viaje.
+            </p>
+          )}
+          {row.driver && pay && Number(row.balance) > 0 ? pay(row) : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** Paid bookings of a month, newest first. */
 export function SettlementEntries({ entries }: { entries: SettlementEntry[] }) {
   if (entries.length === 0) {
@@ -157,6 +212,7 @@ export function PayoutLine({ payout, children }: { payout: Payout; children?: Re
         </span>
         <span className="text-sm text-muted-foreground">
           {payout.direction === 'from_operator' ? 'De la empresa a la plataforma · ' : ''}
+          {payout.driver ? `Al conductor ${payout.driver.name} · ` : ''}
           {PAYOUT_METHOD_LABELS[payout.method]} · ref. {payout.reference} ·{' '}
           {formatDate(payout.createdAt)}
         </span>
