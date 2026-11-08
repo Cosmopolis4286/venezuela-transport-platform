@@ -13,6 +13,11 @@ pull request.
 
 ### Agregado
 
+- **Paquetes de viajes (API)**: catálogo de la plataforma por corredor y tramo
+  (`/admin/trip-pack-products`), productos en venta (`GET /trip-pack-products`), compra
+  (`POST /me/trip-packs`) y pago con las tasas de la plataforma (`/admin/exchange-rates`). Un pago
+  es ahora de una reserva o de un paquete; al pagarse, el paquete se activa por su vigencia (60
+  días por defecto) y el pasajero recibe un aviso. Los paquetes sin pagar se anulan a las 24 horas.
 - **Reembolsos suburbanos**: las rutas suburbanas usan su propia política (100 % con 24 h, 75 %
   con 2 h, 50 % con 30 min, nada en los últimos 30 minutos), editable en Administración →
   Liquidaciones. Los tramos admiten cuartos de hora y se muestran como "30 min".

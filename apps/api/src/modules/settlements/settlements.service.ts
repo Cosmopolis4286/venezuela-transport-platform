@@ -25,6 +25,7 @@ import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService } from '../../database/database.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { bookings, trips } from '../bookings/bookings.schema.js';
+import { tripPacks } from '../trip-packs/trip-packs.schema.js';
 import { users } from '../identity/identity.schema.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import { routes } from '../network/network.schema.js';
@@ -394,6 +395,7 @@ export class SettlementsService {
       .select({
         payment: payments,
         bookingCode: bookings.code,
+        packCode: tripPacks.code,
         organization: { id: organizations.id, name: organizationColumns.name },
         payer: {
           firstName: users.firstName,
@@ -403,17 +405,20 @@ export class SettlementsService {
         },
       })
       .from(payments)
-      .innerJoin(bookings, eq(bookings.id, payments.bookingId))
-      .innerJoin(trips, eq(trips.id, bookings.tripId))
-      .innerJoin(organizations, eq(organizations.id, trips.organizationId))
+      .leftJoin(bookings, eq(bookings.id, payments.bookingId))
+      .leftJoin(trips, eq(trips.id, bookings.tripId))
+      .leftJoin(organizations, eq(organizations.id, trips.organizationId))
+      .leftJoin(tripPacks, eq(tripPacks.id, payments.tripPackId))
       .innerJoin(users, eq(users.id, payments.userId))
       .where(and(eq(payments.status, 'refund_due'), collectedBy(collector)))
       .orderBy(payments.updatedAt);
     return rows.map(({ payment, payer, ...rest }) => ({
       paymentId: payment.id,
       bookingId: payment.bookingId,
-      bookingCode: rest.bookingCode,
-      organization: rest.organization,
+      tripPackId: payment.tripPackId,
+      bookingCode: rest.bookingCode ?? rest.packCode ?? '',
+      // Trip packs are the platform's own sales.
+      organization: rest.organization?.id ? rest.organization : null,
       payer: {
         name: [payer.firstName, payer.lastName].filter(Boolean).join(' ') || null,
         email: payer.email,
@@ -449,7 +454,11 @@ export class SettlementsService {
       .where(
         and(eq(payments.id, paymentId), eq(payments.status, 'refund_due'), collectedBy(collector)),
       )
-      .returning({ id: payments.id, bookingId: payments.bookingId });
+      .returning({
+        id: payments.id,
+        bookingId: payments.bookingId,
+        tripPackId: payments.tripPackId,
+      });
     if (!row) {
       const [existing] = await this.database.db
         .select({ id: payments.id })
@@ -467,23 +476,36 @@ export class SettlementsService {
       targetType: 'payment',
       targetId: row.id,
       ip: meta.ip,
-      metadata: { bookingId: row.bookingId, reference: reference.trim() },
+      metadata: {
+        bookingId: row.bookingId,
+        tripPackId: row.tripPackId,
+        reference: reference.trim(),
+      },
     });
     this.notifications.later(async () => {
       const [payment] = await this.database.db
         .select()
         .from(payments)
         .where(eq(payments.id, row.id));
-      const booking = await this.notifications.booking(row.bookingId);
+      const code = row.bookingId
+        ? (await this.notifications.booking(row.bookingId)).code
+        : ((
+            await this.database.db
+              .select({ code: tripPacks.code })
+              .from(tripPacks)
+              .where(eq(tripPacks.id, row.tripPackId!))
+          )[0]?.code ?? '');
       return {
         kind: 'refund_sent',
         userIds: [payment!.userId],
         app: 'passenger',
         email: true,
-        reference: { key: 'bookingId', id: row.bookingId },
+        reference: row.bookingId
+          ? { key: 'bookingId', id: row.bookingId }
+          : { key: 'tripPackId', id: row.tripPackId! },
         text: (m, locale) =>
           m.refundSent(
-            booking.code,
+            code,
             formatPaymentAmount(
               payment!.refundAmount ?? payment!.receivedAmount ?? payment!.amount,
               payment!.currency,

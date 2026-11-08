@@ -190,6 +190,13 @@
       "when": 1794173530233,
       "tag": "0026_suburban_refund_tiers",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1794174289582,
+      "tag": "0027_trip_packs",
+      "breakpoints": true
     }
   ]
 }

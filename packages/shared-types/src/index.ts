@@ -6,6 +6,7 @@ export * from './api/organizations.js';
 export * from './api/onboarding.js';
 export * from './api/network.js';
 export * from './api/services.js';
+export * from './api/trip-packs.js';
 export * from './api/fleet.js';
 export * from './api/bookings.js';
 export * from './api/payments.js';

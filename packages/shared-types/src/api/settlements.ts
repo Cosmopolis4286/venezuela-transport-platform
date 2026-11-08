@@ -231,9 +231,13 @@ export interface VoidPayoutRequest {
 /** A payment whose money must go back to the payer (`GET /admin/refunds`). */
 export interface RefundDuePayment {
   paymentId: string;
-  bookingId: string;
+  /** Exactly one of the two is set. */
+  bookingId: string | null;
+  tripPackId: string | null;
+  /** The booking's or the trip pack's code. */
   bookingCode: string;
-  organization: { id: string; name: string };
+  /** Null for trip packs: the platform sold them. */
+  organization: { id: string; name: string } | null;
   payer: { name: string | null; email: string | null; phone: string | null };
   method: PaymentMethod;
   currency: PaymentCurrency;

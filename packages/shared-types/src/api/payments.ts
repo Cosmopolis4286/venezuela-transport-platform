@@ -1,3 +1,4 @@
+import type { TripPackStatus } from './trip-packs.js';
 import { DEFAULT_LOCALE, INTL_LOCALES, type Locale } from '../i18n/locales.js';
 import { SHARED_MESSAGES } from '../i18n/shared-messages.js';
 import type { Currency, StopSummary } from './network.js';
@@ -84,7 +85,9 @@ export interface CreatePaymentRequest {
 
 export interface Payment {
   id: string;
-  bookingId: string;
+  /** What is being paid: a booking, or a trip pack (exactly one is set). */
+  bookingId: string | null;
+  tripPackId: string | null;
   method: PaymentMethod;
   status: PaymentStatus;
   amount: string;
@@ -181,6 +184,7 @@ export function paymentAccountProblem(
 /** `GET /admin/payments/review` — a reported payment waiting for staff. */
 export interface PaymentReview {
   payment: Payment;
+  /** Null for a trip pack payment (`tripPack`). */
   booking: {
     id: string;
     code: string;
@@ -189,8 +193,11 @@ export interface PaymentReview {
     departsAt: string;
     /** Until when the seats stay held. */
     expiresAt: string | null;
-  };
-  operator: { id: string; name: string };
+  } | null;
+  /** A trip pack the platform sells; null for a booking. */
+  tripPack: { id: string; code: string; description: string; status: TripPackStatus } | null;
+  /** Null for trip packs: the platform sells them. */
+  operator: { id: string; name: string } | null;
   payer: { name: string; email: string | null; phone: string | null };
 }
 

@@ -37,7 +37,10 @@ PostgreSQL generados desde las listas de `@vtp/shared-types`.
 |                 | `bookings`                            | Reservas: tramo, montos congelados, estado (`held`, `confirmed`, `cancelled`, `expired`), recordatorio enviado                                     |
 |                 | `booking_passengers`                  | Un puesto por fila; un índice parcial único impide vender un puesto dos veces; abordaje                                                            |
 | `payments`      | `exchange_rates`                      | Tasas de cambio de cada empresa                                                                                                                    |
-|                 | `payments`                            | Intentos de pago con monto y tasa congelados, referencia, estado, número de operación informado y reembolso                                        |
+|                 | `payments`                            | Intentos de pago de una reserva o de un paquete, con monto y tasa congelados, referencia, estado, número de operación informado y reembolso        |
+|                 | `platform_exchange_rates`             | Tasas de cambio de la plataforma, para lo que vende ella (paquetes)                                                                                |
+| `trip-packs`    | `trip_pack_products`                  | Catálogo de paquetes de la plataforma: corredor, tramo, tipo de vehículo, viajes, precio, vigencia                                                 |
+|                 | `trip_packs`                          | Paquetes comprados, con las condiciones copiadas, viajes restantes, estado y vencimiento                                                           |
 |                 | `payment_accounts`                    | Cuentas de cobro por método: de la plataforma, o de una empresa que cobra ella misma (ADR-027)                                                     |
 | `settlements`   | `platform_settings`                   | La política general (una sola fila): comisión y tramos de reembolso                                                                                |
 |                 | `organization_policies`               | La política propia de una empresa (lo que deja vacío usa la general)                                                                               |
