@@ -16,6 +16,7 @@ import {
   PAYMENT_COLLECTIONS,
   PAYOUT_DIRECTIONS,
   PAYOUT_METHODS,
+  DEFAULT_SUBURBAN_REFUND_TIERS,
   type RefundTier,
 } from '@vtp/shared-types';
 import { bookings } from '../bookings/bookings.schema.js';
@@ -36,6 +37,11 @@ export const platformSettings = pgTable(
     /** Percentage, e.g. 8.00. */
     commissionRate: numeric({ precision: 5, scale: 2 }).notNull(),
     refundTiers: jsonb().$type<RefundTier[]>().notNull(),
+    /** Suburban routes (ADR-028); operators have no suburban override. */
+    suburbanRefundTiers: jsonb()
+      .$type<RefundTier[]>()
+      .notNull()
+      .default([...DEFAULT_SUBURBAN_REFUND_TIERS]),
     updatedByUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
     ...timestamps,
   },

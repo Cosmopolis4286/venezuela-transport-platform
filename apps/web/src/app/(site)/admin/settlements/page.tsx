@@ -37,7 +37,8 @@ export default async function AdminSettlementsPage() {
           <CardDescription>
             Para las empresas sin política propia. Hoy: comisión{' '}
             {policy.commissionRate.replace('.', ',')} % · reembolso{' '}
-            {describeRefundTiers(policy.refundTiers)}. Los cambios se aplican desde ahora.
+            {describeRefundTiers(policy.refundTiers)}; en rutas suburbanas,{' '}
+            {describeRefundTiers(policy.suburbanRefundTiers)}. Los cambios se aplican desde ahora.
           </CardDescription>
         </div>
         <ActionForm action={setPlatformPolicy}>
@@ -51,7 +52,10 @@ export default async function AdminSettlementsPage() {
               defaultValue={policy.commissionRate}
             />
           </Field>
+          <p className="text-sm font-medium">Reembolso en rutas entre ciudades</p>
           <RefundTierFields tiers={policy.refundTiers} />
+          <p className="text-sm font-medium">Reembolso en rutas suburbanas (todas las empresas)</p>
+          <RefundTierFields tiers={policy.suburbanRefundTiers} prefix="suburban" />
           <div>
             <SubmitButton variant="outline">Guardar política general</SubmitButton>
           </div>

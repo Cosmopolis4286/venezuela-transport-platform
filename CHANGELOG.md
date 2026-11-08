@@ -13,6 +13,9 @@ pull request.
 
 ### Agregado
 
+- **Reembolsos suburbanos**: las rutas suburbanas usan su propia política (100 % con 24 h, 75 %
+  con 2 h, 50 % con 30 min, nada en los últimos 30 minutos), editable en Administración →
+  Liquidaciones. Los tramos admiten cuartos de hora y se muestran como "30 min".
 - **Salidas frecuentes**: "de 05:00 a 20:00 cada 15 minutos" crea un horario por salida agrupados
   en una serie (`POST …/schedule-series`), que el portal muestra en una línea y se pausa o elimina
   entera. Hasta 300 horarios por ruta.

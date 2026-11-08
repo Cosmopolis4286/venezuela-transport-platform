@@ -64,6 +64,7 @@ export async function policyFor(
   return {
     commissionRate: own?.commissionRate ?? platform.commissionRate,
     refundTiers: own?.refundTiers ?? platform.refundTiers,
+    suburbanRefundTiers: platform.suburbanRefundTiers,
     commissionOverride: own?.commissionRate ?? null,
     refundTiersOverride: own?.refundTiers ?? null,
     paymentCollection: own?.paymentCollection ?? 'platform',

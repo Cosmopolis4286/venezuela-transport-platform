@@ -29,8 +29,9 @@ export function SettlementBalances({ settlement }: { settlement: OrganizationSet
       </p>
       <p className="text-sm text-muted-foreground">
         Reembolso si el pasajero cancela: {describeRefundTiers(settlement.refundTiers)}
-        {settlement.refundTiersOverride ? ' (acordado con la empresa)' : ' (por defecto)'}. La
-        plataforma conserva su comisión; el reembolso se descuenta de lo ganado por la empresa.
+        {settlement.refundTiersOverride ? ' (acordado con la empresa)' : ' (por defecto)'}; en rutas
+        suburbanas, {describeRefundTiers(settlement.suburbanRefundTiers)}. La plataforma conserva su
+        comisión; el reembolso se descuenta de lo ganado por la empresa.
       </p>
       <p className="text-sm text-muted-foreground">
         {settlement.paymentCollection === 'operator'

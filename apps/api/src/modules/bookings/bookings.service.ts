@@ -10,7 +10,7 @@ import {
   type CancelDepartureResult,
   type CancellationQuote,
   type CreateBookingRequest,
-  type RefundTier,
+  refundTiersForService,
   type TripManifest,
   type TripSummary,
 } from '@vtp/shared-types';
@@ -419,10 +419,19 @@ export class BookingsService {
     booking: BookingRow,
   ): Promise<{ quote: CancellationQuote; payment: PaymentRow | undefined; fareRefund: string }> {
     const [trip] = await db
-      .select({ organizationId: trips.organizationId, departedAt: trips.departedAt })
+      .select({
+        organizationId: trips.organizationId,
+        departedAt: trips.departedAt,
+        service: routes.service,
+      })
       .from(trips)
+      .innerJoin(routes, eq(routes.id, trips.routeId))
       .where(eq(trips.id, booking.tripId));
-    const { refundTiers } = await policyFor(db, trip!.organizationId);
+    // Suburban routes use the suburban tiers: nothing back in the last 30 minutes (ADR-028).
+    const refundTiers = refundTiersForService(
+      await policyFor(db, trip!.organizationId),
+      trip!.service,
+    );
     const [boarded] = await db
       .select({ n: count() })
       .from(bookingPassengers)
@@ -565,6 +574,7 @@ export class BookingsService {
       .select({
         trip: trips,
         route: { id: routes.id, name: routes.name },
+        service: routes.service,
         serviceClass: routeSchedules.serviceClass,
         operator: {
           id: organizations.id,
@@ -599,9 +609,9 @@ export class BookingsService {
     const stops = await this.stops.summaries([
       ...new Set(rows.flatMap((b) => [b.fromStopId, b.toStopId])),
     ]);
-    const refundPolicies = new Map<string, RefundTier[]>();
+    const policies = new Map<string, Awaited<ReturnType<typeof policyFor>>>();
     for (const operatorId of new Set(tripRows.map((t) => t.operator.id))) {
-      refundPolicies.set(operatorId, (await policyFor(this.database.db, operatorId)).refundTiers);
+      policies.set(operatorId, await policyFor(this.database.db, operatorId));
     }
     return rows.map((booking) => {
       const payment = currentPayment(
@@ -651,7 +661,9 @@ export class BookingsService {
         expiresAt:
           booking.status === 'held' && booking.expiresAt ? booking.expiresAt.toISOString() : null,
         payment: payment ? toPayment(payment) : null,
-        refundPolicy: refundPolicies.get(trip.operator.id) ?? [],
+        refundPolicy: policies.has(trip.operator.id)
+          ? refundTiersForService(policies.get(trip.operator.id)!, trip.service)
+          : [],
         createdAt: booking.createdAt.toISOString(),
       };
     });

@@ -247,8 +247,11 @@ abordaje. Después de eso, o si el pasajero no se presenta, no hay devolución.
 Antes de esos 30 minutos la devolución es **escalonada** y depende de cómo se pagó:
 
 1. **Reserva pagada directamente** (sin paquete): usa los tramos de reembolso existentes
-   (ADR-025), que pasan a medirse **en minutos** (hoy son horas enteras) para poder expresar los 30
-   minutos. Tramos por defecto para rutas suburbanas (por confirmar):
+   (ADR-025), que ahora admiten **cuartos de hora** (0,5 h = 30 minutos) y se muestran como
+   "30 min". Las rutas suburbanas tienen **su propia política**, la misma para todas las empresas
+   (`platform_settings.suburban_refund_tiers`, editable en Administración → Liquidaciones); las
+   rutas entre ciudades siguen con la de siempre y las políticas propias de cada empresa.
+   Tramos suburbanos (decididos):
 
    | Cancela con al menos… | Se devuelve |
    | --------------------- | ----------- |
@@ -335,11 +338,12 @@ de paquetes por tramo y tipo de vehículo. Nada de esto queda en el código.
    web y la app.
 3. ✅ **Líneas de mototaxis**: `moto_line`, roles, KYC (licencia de moto).
 4. ✅ **Horarios por frecuencia.**
-5. **Tramos de reembolso en minutos** y regla de los 30 minutos.
+5. ✅ **Tramos de reembolso suburbanos** con cuartos de hora y la regla de los 30 minutos.
 6. **Paquetes: catálogo y compra** (`trip_pack_products`, `trip_packs`, `payments` con
    `trip_pack_id`, empresas adheridas), con las pantallas de compra.
 7. **Paquetes: usarlos al reservar**, cancelaciones, libro de liquidaciones, avisos.
 8. **Devolver un paquete** (tramos escalonados) y reportes de paquetes.
 9. **Bajo demanda por tramo**: taxis y motos con tarifa fija, para ahora o para una hora, pagados
    con paquete.
-10. **Legal**: condiciones de los paquetes y nueva versión de los documentos.
+10. **Legal**: condiciones de los paquetes, los tramos suburbanos en la política de cancelación y
+    reembolsos, y nueva versión de los documentos (una sola vez, para todo el suburbano).

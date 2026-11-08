@@ -36,14 +36,17 @@ plataforma en **Liquidaciones**. Empieza con:
 
 - **comisión del 8 %** sobre cada boleto (porcentaje de 0 a 100 con hasta dos decimales);
 - **tramos de reembolso**: 100 % si el pasajero cancela con al menos 48 h de anticipación, 50 %
-  con al menos 2 h, nada después.
+  con al menos 2 h, nada después;
+- **tramos de reembolso suburbanos** (rutas suburbanas de todas las empresas, ADR-028): 100 % con
+  24 h o más, 75 % con 2 h o más, 50 % con 30 minutos o más, nada en los últimos 30 minutos.
 
-Cada empresa puede tener **su propia comisión, sus propios tramos o ambos**
+Cada empresa puede tener **su propia comisión, sus propios tramos (de sus rutas entre ciudades) o
+ambos**
 (`organization_policies`); lo que deja vacío usa la política general. Los cambios se aplican desde
 ese momento: la comisión de una reserva queda fija al pagarse, y los tramos se leen al cancelar.
 
-Los tramos (1 a 4) van del que pide más horas al que pide menos, con horas enteras de 0 a 720 y
-porcentajes enteros. Las horas se cuentan hasta la hora en que el pasajero aborda en su parada.
+Los tramos (1 a 4) van del que pide más horas al que pide menos, con horas de 0 a 720 en cuartos
+de hora (0,5 = 30 minutos) y porcentajes enteros. Las horas se cuentan hasta la hora en que el pasajero aborda en su parada.
 
 ## Saldo y pagos a las empresas
 

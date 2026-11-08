@@ -1,21 +1,25 @@
 import { randomInt, randomUUID } from 'node:crypto';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import type {
-  AuthResponse,
-  Departure,
-  OrganizationMembershipSummary,
-  OtpChallengeResponse,
-  Route,
-  ServiceArea,
-  ServicesSettings,
-  ServicesStatus,
-  Stop,
-  TripAvailability,
+import {
+  DEFAULT_SUBURBAN_REFUND_TIERS,
+  type AuthResponse,
+  type Booking,
+  type CancellationQuote,
+  type Departure,
+  type OrganizationMembershipSummary,
+  type OtpChallengeResponse,
+  type Route,
+  type ServiceArea,
+  type ServicesSettings,
+  type ServicesStatus,
+  type Stop,
+  type TripAvailability,
 } from '@vtp/shared-types';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import request from 'supertest';
 import { DatabaseService } from '../src/database/database.service.js';
+import { bookings } from '../src/modules/bookings/bookings.schema.js';
 import { users } from '../src/modules/identity/identity.schema.js';
 import type { OtpMessage, OtpSender } from '../src/modules/identity/otp/otp-sender.js';
 import { addDays, todayInVenezuela } from '../src/modules/network/departures.js';
@@ -307,7 +311,38 @@ describe.runIf(expectDatabase)('Services and corridors (e2e)', () => {
     expect(reason(await hold().expect(409))).toBe('SERVICE_DISABLED');
     await http().get(routesUrl).set('Authorization', owner.auth).expect(200);
     await switchArea(true).expect(200);
-    await hold().expect(201);
+    const held = (await hold().expect(201)).body as Booking;
+
+    // --- Suburban refunds: 100 % from 24 h, 75 % from 2 h, 50 % from 30 min, nothing after.
+    const payment = (
+      await http()
+        .post(`/api/v1/me/bookings/${held.id}/payments`)
+        .set('Authorization', passenger.auth)
+        .send({ method: 'usdt' })
+        .expect(201)
+    ).body as { id: string };
+    await http()
+      .post(`/api/v1/me/payments/${payment.id}/simulate`)
+      .set('Authorization', passenger.auth)
+      .send({})
+      .expect(200);
+    const quoteIn = async (interval: string) => {
+      await app
+        .get(DatabaseService)
+        .db.update(bookings)
+        .set({ departsAt: sql`now() + ${interval}::interval` })
+        .where(eq(bookings.id, held.id));
+      return (
+        await http()
+          .get(`/api/v1/me/bookings/${held.id}/cancellation`)
+          .set('Authorization', passenger.auth)
+          .expect(200)
+      ).body as CancellationQuote;
+    };
+    expect((await quoteIn('3 hours')).policy).toEqual(DEFAULT_SUBURBAN_REFUND_TIERS);
+    expect((await quoteIn('3 hours')).refundPercent).toBe(75);
+    expect((await quoteIn('45 minutes')).refundPercent).toBe(50);
+    expect(await quoteIn('20 minutes')).toMatchObject({ cancellable: true, refundPercent: 0 });
 
     // --- Intercity: closing a city hides departures boarding or arriving there.
     const intercityUrl = '/api/v1/admin/services/intercity';
