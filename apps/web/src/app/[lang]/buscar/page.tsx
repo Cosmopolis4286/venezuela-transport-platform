@@ -122,9 +122,12 @@ async function ModeTabs({
   href: (mode: TransportMode | null) => string;
 }) {
   const { t, shared } = await getMessages();
+  // Only the modes this search has: no "Moto (0)" on an intercity search, no tabs for one mode.
+  const present = TRANSPORT_MODES.filter((value) => modes.includes(value));
+  if (present.length < 2 && !current) return null;
   const tabs: { value: TransportMode | null; label: string; count: number }[] = [
     { value: null, label: t.results.allModes, count: modes.length },
-    ...TRANSPORT_MODES.map((value) => ({
+    ...present.map((value) => ({
       value,
       label: shared.transportMode[value],
       count: modes.filter((m) => m === value).length,

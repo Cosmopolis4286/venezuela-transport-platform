@@ -41,10 +41,14 @@ export default function Results() {
   useRefreshOnFocus(departures.reload);
   if (!from || !to) return <Redirect href="/" />;
   // Filtered here: one request gives every mode and the count of each.
-  const shown = departures.data?.filter((d) => mode === 'all' || d.mode === mode);
   const count = (value: TransportMode | 'all') =>
     departures.data?.filter((d) => value === 'all' || d.mode === value).length ?? 0;
-  const modeOptions = (['all', ...TRANSPORT_MODES] as const).map((value) => ({
+  // Only the modes this search has; no chips at all for a single mode.
+  const present = TRANSPORT_MODES.filter((value) => count(value) > 0);
+  // A refresh can leave the chosen mode without departures: fall back to all of them.
+  const selected = mode !== 'all' && present.includes(mode) ? mode : 'all';
+  const shown = departures.data?.filter((d) => selected === 'all' || d.mode === selected);
+  const modeOptions = (['all', ...present] as const).map((value) => ({
     value,
     label: `${value === 'all' ? t.results.allModes : shared.transportMode[value]} (${count(value)})`,
   }));
@@ -72,8 +76,13 @@ export default function Results() {
         </Banner>
       ) : null}
       {departures.loading && !departures.data ? <ActivityIndicator color={colors.text} /> : null}
-      {departures.data?.length ? (
-        <Segmented label={t.results.modes} options={modeOptions} value={mode} onChange={setMode} />
+      {present.length > 1 ? (
+        <Segmented
+          label={t.results.modes}
+          options={modeOptions}
+          value={selected}
+          onChange={setMode}
+        />
       ) : null}
       {shown?.length === 0 ? <Banner tone="info">{t.results.none}</Banner> : null}
       {shown?.map((departure) => (
