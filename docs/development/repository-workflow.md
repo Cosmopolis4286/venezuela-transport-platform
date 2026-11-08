@@ -109,9 +109,13 @@ Actions en la computadora del mantenedor (ADR-022). Con el repositorio público 
 
 ## Actualización de dependencias
 
-- Dependabot (`.github/dependabot.yml`) abre PRs agrupados cada semana para npm y cada mes para
-  las imágenes Docker y las acciones de GitHub. Las imágenes de `.circleci/config.yml` se fijan a
-  mano: sube la imagen de Node junto con `.nvmrc` y los Dockerfiles de producción.
+- **Dependabot no abre PRs de actualización** (decisión del dueño: `open-pull-requests-limit: 0`
+  en `.github/dependabot.yml`). Las dependencias se actualizan a mano, en un solo PR, cuando el
+  mantenedor lo decide: `pnpm outdated -r`, sube las versiones, `pnpm install`, y verifica con
+  `pnpm check`, `pnpm build` y las pruebas e2e. Las alertas de seguridad de GitHub (Settings →
+  Code security) siguen activas aparte: atiéndelas cuando lleguen. Para volver a recibir PRs,
+  sube los límites. Las imágenes de `.circleci/config.yml` se fijan a mano: sube la imagen de
+  Node junto con `.nvmrc` y los Dockerfiles de producción.
 - **Tipos de Node:** `@types/node` se queda en la versión mayor del runtime (24). Dependabot ignora
   sus versiones mayores; súbelas en el mismo PR que cambie `.nvmrc`, los Dockerfiles y la CI.
 - **Expo:** actualiza un SDK a la vez con `npx expo install expo@^<siguiente> --fix` en cada app;

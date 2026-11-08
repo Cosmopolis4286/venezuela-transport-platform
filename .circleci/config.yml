@@ -109,11 +109,21 @@ jobs:
           name: Validate production Compose file
           working_directory: infrastructure/docker/production
           command: |
-            touch /tmp/api.env /tmp/pg.env
-            VTP_WEB_DOMAIN=app.example.invalid VTP_API_DOMAIN=api.example.invalid \
-            VTP_ACME_EMAIL=ci@example.invalid VTP_API_IMAGE=vtp-api:ci VTP_WEB_IMAGE=vtp-web:ci \
-            VTP_API_ENV_FILE=/tmp/api.env VTP_POSTGRES_ENV_FILE=/tmp/pg.env \
-              docker compose -f compose.yml --profile migrate config --quiet
+            touch /tmp/api.env /tmp/migrate.env
+            printf '%s\n' POSTGRES_DB=vtp_ci POSTGRES_USER=vtp_owner \
+              POSTGRES_PASSWORD=ci-owner-password-only VTP_APP_DB_USER=vtp_app \
+              VTP_APP_DB_PASSWORD=ci-app-password-only > /tmp/pg.env
+            export VTP_WEB_DOMAIN=app.example.invalid VTP_API_DOMAIN=api.example.invalid
+            export VTP_ACME_EMAIL=ci@example.invalid VTP_API_IMAGE=vtp-api:ci VTP_WEB_IMAGE=vtp-web:ci
+            export VTP_API_ENV_FILE=/tmp/api.env VTP_MIGRATE_ENV_FILE=/tmp/migrate.env
+            export VTP_POSTGRES_ENV_FILE=/tmp/pg.env
+            docker compose -f compose.yml --profile migrate config --quiet
+            # The api's least-privilege role is created on the first start.
+            docker compose -f compose.yml up -d --wait postgres
+            docker compose -f compose.yml exec -T postgres \
+              psql -U vtp_owner -d vtp_ci -tAc "SELECT rolname FROM pg_roles WHERE rolname = 'vtp_app'" |
+              grep -qx vtp_app
+            docker compose -f compose.yml down --volumes
       - run:
           name: Build API image
           command: docker build -f infrastructure/docker/production/api.Dockerfile -t vtp-api:ci .
