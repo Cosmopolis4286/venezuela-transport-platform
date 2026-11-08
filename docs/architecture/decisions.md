@@ -440,3 +440,35 @@ necesita credenciales ni costos.
 verifica en 6 horas deja vencer el apartado y, si el dinero llegó, se reembolsa. Las cuentas que
 ve el pasajero son de la plataforma: la revisión legal de cobrar por cuenta de terceros (ADR-018)
 sigue pendiente antes de operar con dinero real.
+
+## ADR-028: Transporte suburbano por tipo de vehículo y paquetes de viajes vendidos por la plataforma
+
+**Decisión.** La plataforma atiende también el transporte suburbano, empezando por el corredor
+Casacoima – San Félix – Puerto Ordaz. Decidido por el dueño del producto (2026-11-08):
+
+- Cada ruta y cada vehículo tienen un **tipo** (`bus`, `car`, `motorcycle`), así cada tipo tiene
+  sus propias tarifas por tramo. Las motos las operan **líneas de mototaxis** (`moto_line`), un
+  tipo de organización nuevo.
+- Los horarios pueden ser **por frecuencia** (cada N minutos entre dos horas).
+- Taxis y motos son **híbridos**: salidas con horario que se reservan como un bus, y viajes **bajo
+  demanda** por tramo, para ahora o para una hora, con tarifa fija por tramo.
+- La **plataforma vende paquetes de viajes** de un **tramo fijo** y un tipo de vehículo, que
+  **vencen** a los días que fije cada paquete (**60 por defecto**) y sirven con cualquier empresa
+  adherida. Al reservar con un paquete se descuenta un viaje por puesto y la reserva queda pagada.
+- Se cancela con devolución hasta **30 minutos antes** del abordaje; antes de eso la devolución es
+  **escalonada** (tramos de reembolso en minutos para las reservas pagadas directo; el viaje vuelve
+  al paquete; tramos por vigencia restante para devolver un paquete).
+- La empresa **gana cada viaje cuando se usa** (precio por viaje menos su comisión, en el libro
+  del ADR-024); los viajes vencidos se los queda la plataforma.
+
+Diseño completo en [suburban.md](suburban.md).
+
+**Por qué.** En los corredores suburbanos la gente viaja todos los días el mismo tramo: un paquete
+le asegura el puesto y el precio, y a la plataforma le da ingresos por adelantado. Vender desde la
+plataforma deja usar el mismo paquete con varias empresas del tramo, que es lo que espera el
+pasajero. Un tipo por ruta reutiliza las tarifas por tramo sin cambiar su modelo.
+
+**Compromisos.** La plataforma recibe dinero por viajes que prestan otros (más peso para la
+revisión legal del ADR-018) y debe llevar la cuenta de los viajes vendidos sin usar. Un viaje no se
+devuelve a medias, así que con paquete el escalonado de la cancelación tiene solo dos tramos. Los
+pagos dejan de pertenecer siempre a una reserva (`payments.trip_pack_id`).
