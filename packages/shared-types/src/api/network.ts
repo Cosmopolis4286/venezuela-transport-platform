@@ -207,6 +207,24 @@ export interface Departure {
   seatsAvailable: number;
   /** Null when the operator has not priced this pair of stops. */
   fare: Pick<Fare, 'amount' | 'currency'> | null;
+  /** Platform service fee (percentage, e.g. "15.00") charged on top of the fare (ADR-029). */
+  serviceFeeRate: string;
+}
+
+/**
+ * The service fee on `fares` at `rate` percent and the total the passenger pays, rounded half up
+ * to cents exactly as the API does (ADR-029). For showing prices; the API's booking is the truth.
+ */
+export function withServiceFee(fares: string, rate: string): { fee: string; total: string } {
+  const scaled = (value: string) => {
+    const [whole = '0', fraction = ''] = value.split('.');
+    return BigInt(whole) * 100n + BigInt((fraction + '00').slice(0, 2));
+  };
+  const cents = scaled(fares);
+  const product = cents * scaled(rate);
+  const fee = (product * 2n + 10_000n) / 20_000n;
+  const show = (value: bigint) => `${value / 100n}.${(value % 100n).toString().padStart(2, '0')}`;
+  return { fee: show(fee), total: show(cents + fee) };
 }
 
 /** `HH:MM` on a 24-hour clock. */

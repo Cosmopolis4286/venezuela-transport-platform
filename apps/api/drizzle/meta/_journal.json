@@ -162,6 +162,13 @@
       "when": 1794135699699,
       "tag": "0022_operating_zones",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794137480894,
+      "tag": "0023_service_fee",
+      "breakpoints": true
     }
   ]
 }

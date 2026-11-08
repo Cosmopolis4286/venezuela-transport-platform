@@ -20,9 +20,12 @@ general:
 
 | Si cancela…                            | Se devuelve                                     |
 | -------------------------------------- | ----------------------------------------------- |
-| Con **48 horas o más** de anticipación | **100 %** de lo pagado                          |
-| Entre 48 y 2 horas antes               | **50 %** de lo pagado                           |
+| Con **48 horas o más** de anticipación | **100 %** del precio de los pasajes             |
+| Entre 48 y 2 horas antes               | **50 %** del precio de los pasajes              |
 | Con menos de 2 horas                   | Nada (el puesto queda libre para otro pasajero) |
+
+El **cargo por servicio** de {{nombre_comercial}}, que se paga además del pasaje, no se reembolsa
+cuando cancela el pasajero.
 
 2.3. La política aplicable se muestra en la reserva **antes de pagar**, y antes de confirmar la
 cancelación la aplicación indica el monto exacto que se devolverá.
@@ -33,7 +36,8 @@ cancela la reserva con el reembolso que corresponda y se compra otra.
 ## 3. Si la empresa cancela la salida
 
 Si la empresa de transporte cancela la salida, cada pasajero recibe un aviso con el motivo y el
-**reembolso completo** de lo que pagó, sin importar con cuánta anticipación ocurra.
+**reembolso completo** de lo que pagó (pasajes y cargo por servicio), sin importar con cuánta
+anticipación ocurra.
 
 ## 4. Pagos que no confirmaron una reserva
 

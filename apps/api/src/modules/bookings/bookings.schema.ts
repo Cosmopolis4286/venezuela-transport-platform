@@ -89,9 +89,18 @@ export const bookings = pgTable(
     /** Boarding and arrival times of this passenger's segment, frozen at booking. */
     departsAt: timestamp({ withTimezone: true }).notNull(),
     arrivesAt: timestamp({ withTimezone: true }).notNull(),
-    /** Fare per passenger and total, frozen when the seats were held. */
+    /**
+     * Fare per passenger and what the passenger pays in total (fares + service fee), frozen when
+     * the seats were held.
+     */
     fareAmount: numeric({ precision: 12, scale: 2 }).notNull(),
     totalAmount: numeric({ precision: 12, scale: 2 }).notNull(),
+    /**
+     * The platform's service fee, charged on top of the fares (ADR-029), and its rate. Null on
+     * bookings made before the fee existed: their commission came out of the fare.
+     */
+    serviceFee: numeric({ precision: 12, scale: 2 }),
+    serviceFeeRate: numeric({ precision: 5, scale: 2 }),
     currency: currency().notNull(),
     expiresAt: timestamp({ withTimezone: true }),
     confirmedAt: timestamp({ withTimezone: true }),

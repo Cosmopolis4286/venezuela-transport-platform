@@ -23,18 +23,20 @@ export function SettlementBalances({ settlement }: { settlement: OrganizationSet
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-muted-foreground">
-        Comisión de la plataforma: <strong>{percent(settlement.commissionRate)}</strong>
-        {settlement.commissionOverride ? ' (acordada con la empresa)' : ' (por defecto)'}. Se aplica
-        a las reservas pagadas desde que se fija.
+        Cargo por servicio de la plataforma: <strong>{percent(settlement.commissionRate)}</strong>
+        {settlement.commissionOverride ? ' (acordado con la empresa)' : ' (por defecto)'}, que paga
+        el pasajero además de la tarifa: la empresa recibe su tarifa completa. Se aplica a las
+        reservas hechas desde que se fija.
       </p>
       <p className="text-sm text-muted-foreground">
         Reembolso si el pasajero cancela: {describeRefundTiers(settlement.refundTiers)}
-        {settlement.refundTiersOverride ? ' (acordado con la empresa)' : ' (por defecto)'}. La
-        plataforma conserva su comisión; el reembolso se descuenta de lo ganado por la empresa.
+        {settlement.refundTiersOverride ? ' (acordado con la empresa)' : ' (por defecto)'}, sobre la
+        tarifa; el cargo por servicio no se reembolsa. Si la empresa cancela la salida, el pasajero
+        recibe todo y la empresa asume el cargo por servicio.
       </p>
       <p className="text-sm text-muted-foreground">
         {settlement.paymentCollection === 'operator'
-          ? 'Cobros: la empresa recibe los pagos en sus propias cuentas, los verifica, hace sus reembolsos y le paga la comisión a la plataforma.'
+          ? 'Cobros: la empresa recibe los pagos en sus propias cuentas (tarifa y cargo por servicio), los verifica, hace sus reembolsos y le paga a la plataforma el cargo por servicio.'
           : 'Cobros: la plataforma recibe los pagos de los pasajeros y le paga a la empresa lo que gana.'}
       </p>
       {settlement.balances.length === 0 ? (
@@ -45,8 +47,8 @@ export function SettlementBalances({ settlement }: { settlement: OrganizationSet
             <thead className="text-left text-muted-foreground">
               <tr>
                 <th className="py-2 pr-4 font-normal">Moneda</th>
-                <th className="py-2 pr-4 text-right font-normal">Boletos vendidos</th>
-                <th className="py-2 pr-4 text-right font-normal">Comisión</th>
+                <th className="py-2 pr-4 text-right font-normal">Pagado por pasajeros</th>
+                <th className="py-2 pr-4 text-right font-normal">Cargo por servicio</th>
                 <th className="py-2 pr-4 text-right font-normal">Para la empresa</th>
                 <th className="py-2 pr-4 text-right font-normal">Cobrado por la empresa</th>
                 <th className="py-2 pr-4 text-right font-normal">Pagado a la empresa</th>
@@ -85,7 +87,8 @@ export function SettlementBalances({ settlement }: { settlement: OrganizationSet
           </table>
           <p className="pt-2 text-xs text-muted-foreground">
             Saldo = para la empresa − cobrado por la empresa − pagado a la empresa + pagado por la
-            empresa. «Debe» es lo que la empresa le debe a la plataforma (su comisión).
+            empresa. «Debe» es lo que la empresa le debe a la plataforma (el cargo por servicio que
+            cobró).
           </p>
         </div>
       )}
@@ -107,8 +110,8 @@ export function SettlementEntries({ entries }: { entries: SettlementEntry[] }) {
             <th className="py-2 pr-4 font-normal">Reserva</th>
             <th className="py-2 pr-4 font-normal">Ruta y fecha</th>
             <th className="py-2 pr-4 text-right font-normal">Puestos</th>
-            <th className="py-2 pr-4 text-right font-normal">Total</th>
-            <th className="py-2 pr-4 text-right font-normal">Comisión</th>
+            <th className="py-2 pr-4 text-right font-normal">Pagado</th>
+            <th className="py-2 pr-4 text-right font-normal">Cargo por servicio</th>
             <th className="py-2 text-right font-normal">Para la empresa</th>
           </tr>
         </thead>

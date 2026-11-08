@@ -20,6 +20,7 @@ import {
 } from '@vtp/shared-types';
 import { Redirect, router } from 'expo-router';
 import { ActivityIndicator, RefreshControl, Text } from 'react-native';
+import { useRateText } from '@/components/price-breakdown';
 import { useT } from '@/i18n/use-t';
 import { useSearch } from '@/lib/search-context';
 import { useRefreshOnFocus } from '@/lib/use-refresh-on-focus';
@@ -73,6 +74,7 @@ export default function Results() {
 function DepartureCard({ departure }: { departure: Departure }) {
   const colors = useColors();
   const { t, shared, locale } = useT();
+  const rateText = useRateText();
   const extraDays = daysBetween(departure.departsAt, departure.arrivesAt);
   return (
     <Card>
@@ -103,6 +105,9 @@ function DepartureCard({ departure }: { departure: Departure }) {
           ? formatMoney(departure.fare.amount, departure.fare.currency, locale)
           : t.results.priceAtCounter}
       </Text>
+      {departure.fare && Number(departure.serviceFeeRate) > 0 ? (
+        <Body muted>{t.fees.plus(rateText(departure.serviceFeeRate))}</Body>
+      ) : null}
       {departure.fare && departure.seatsAvailable > 0 ? (
         <Button
           variant="secondary"

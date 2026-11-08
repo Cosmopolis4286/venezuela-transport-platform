@@ -276,7 +276,8 @@ describe.runIf(expectDatabase)('Manual payments (e2e)', () => {
       expect(first).toMatchObject({
         manual: true,
         simulated: false,
-        amount: '730.00',
+        // 2 × 20.00 + the 15 % service fee on top (ADR-029) = 46.00 at 18.25 Bs/US$.
+        amount: '839.50',
         currency: 'VES',
       });
       expect(first.instructions).toEqual([
@@ -474,14 +475,15 @@ describe.runIf(expectDatabase)('Manual payments (e2e)', () => {
         .where(eq(settlementEntries.bookingId, own.id));
       expect(entry).toMatchObject({
         collectedBy: 'operator',
-        gross: '20.00',
+        // The passenger paid the company 20.00 + the 2.00 service fee (ADR-029).
+        gross: '22.00',
         commission: '2.00',
-        earned: '18.00',
+        earned: '20.00',
       });
 
       // It now owes the commission: no payout; it pays the platform back at most what it owes.
       const owing = await balanceUsd();
-      expect(Number(owing.collected) - Number(before.collected)).toBeCloseTo(20);
+      expect(Number(owing.collected) - Number(before.collected)).toBeCloseTo(22);
       expect(Number(owing.balance) - Number(before.balance)).toBeCloseTo(-2);
       const settle = (body: object) =>
         asAdmin(http().post(`/api/v1/admin/organizations/${organization.id}/payouts`)).send({

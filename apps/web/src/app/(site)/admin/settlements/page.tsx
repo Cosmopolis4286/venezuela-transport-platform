@@ -27,21 +27,26 @@ export default async function AdminSettlementsPage() {
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold">Liquidaciones</h1>
         <p className="text-sm text-muted-foreground">
-          Lo que la plataforma le debe a cada empresa por los boletos pagados (tarifa menos
-          comisión). Abre una empresa para fijar su comisión o registrar un pago.
+          Lo que la plataforma le debe a cada empresa por los boletos pagados (la tarifa completa;
+          el cargo por servicio que paga el pasajero es de la plataforma). Abre una empresa para
+          fijar su cargo o registrar un pago.
         </p>
       </div>
       <Card>
         <div className="flex flex-col gap-1">
           <CardTitle>Política general</CardTitle>
           <CardDescription>
-            Para las empresas sin política propia. Hoy: comisión{' '}
+            Para las empresas sin política propia. Hoy: cargo por servicio{' '}
             {policy.commissionRate.replace('.', ',')} % · reembolso{' '}
             {describeRefundTiers(policy.refundTiers)}. Los cambios se aplican desde ahora.
           </CardDescription>
         </div>
         <ActionForm action={setPlatformPolicy}>
-          <Field label="Comisión (%)" htmlFor="commissionRate">
+          <Field
+            label="Cargo por servicio (%)"
+            htmlFor="commissionRate"
+            hint="Lo paga el pasajero además de la tarifa"
+          >
             <Input
               id="commissionRate"
               name="commissionRate"

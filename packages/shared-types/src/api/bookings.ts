@@ -44,6 +44,8 @@ export interface TripAvailability {
   takenSeats: string[];
   /** Price per passenger for this pair of stops; null means it cannot be booked online. */
   fare: { amount: string; currency: Currency } | null;
+  /** Platform service fee (percentage) added on top of the fares (ADR-029). */
+  serviceFeeRate: string;
   /** False once the departure has left or the hold window cannot fit. */
   bookable: boolean;
 }
@@ -92,7 +94,15 @@ export interface Booking {
   from: StopSummary;
   to: StopSummary;
   passengers: BookingPassenger[];
+  /** What the passenger pays: the fares plus the service fee. */
   total: { amount: string; currency: Currency };
+  /** The fares alone (what the operator earns), in the fare's currency. */
+  fares: string;
+  /**
+   * The platform's service fee, on top of the fares and not refunded when the passenger cancels
+   * (ADR-029). Null on bookings made before the fee existed.
+   */
+  serviceFee: { amount: string; rate: string } | null;
   /** Only for `held`. */
   expiresAt: string | null;
   /** The payment in progress, or the one that confirmed (or must be refunded for) the booking. */

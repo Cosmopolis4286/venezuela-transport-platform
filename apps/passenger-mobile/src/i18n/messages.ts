@@ -145,6 +145,12 @@ const es = {
     rejected: (reason: string) =>
       `No encontramos tu pago: ${reason} Revisa los datos y paga de nuevo.`,
   },
+  fees: {
+    plus: (rate: string) => `+ ${rate} % de cargo por servicio`,
+    fares: 'Pasajes',
+    serviceFee: (rate: string) => `Cargo por servicio (${rate} %)`,
+    notRefunded: 'El cargo por servicio no se reembolsa si cancelas.',
+  },
   bookings: {
     none: 'Aún no tienes reservas.',
     a11y: (code: string) => `Reserva ${code}`,
@@ -333,6 +339,12 @@ const en: Messages = {
     rejected: (reason) =>
       `We could not find your payment: ${reason} Check the details and pay again.`,
   },
+  fees: {
+    plus: (rate) => `+ ${rate}% service fee`,
+    fares: 'Fares',
+    serviceFee: (rate) => `Service fee (${rate}%)`,
+    notRefunded: 'The service fee is not refunded if you cancel.',
+  },
   bookings: {
     none: 'You have no bookings yet.',
     a11y: (code) => `Booking ${code}`,
@@ -520,6 +532,12 @@ const ptBR: Messages = {
       `Estamos verificando seu pagamento (operação ${operation}). Avisaremos quando for confirmado; enquanto isso seus assentos continuam reservados.`,
     rejected: (reason) =>
       `Não encontramos seu pagamento: ${reason} Confira os dados e pague de novo.`,
+  },
+  fees: {
+    plus: (rate) => `+ ${rate}% de taxa de serviço`,
+    fares: 'Passagens',
+    serviceFee: (rate) => `Taxa de serviço (${rate}%)`,
+    notRefunded: 'A taxa de serviço não é reembolsada se você cancelar.',
   },
   bookings: {
     none: 'Você ainda não tem reservas.',

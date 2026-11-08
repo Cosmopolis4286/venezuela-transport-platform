@@ -2,6 +2,7 @@ import { randomInt, randomUUID } from 'node:crypto';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import {
+  withServiceFee,
   presetLayout,
   type AuthResponse,
   type Booking,
@@ -225,11 +226,16 @@ describe.runIf(expectDatabase)('Bookings (e2e)', () => {
       await book(ana.auth, ['1'], { toStopId: valencia.id }).expect(409);
 
       const held = (await book(ana.auth, ['1', '2']).expect(201)).body as Booking;
+      // The fares, plus the platform's service fee on top (ADR-029).
+      const fee = withServiceFee('40.00', held.serviceFee!.rate);
       expect(held).toMatchObject({
         status: 'held',
-        total: { amount: '40.00', currency: 'USD' },
+        fares: '40.00',
+        serviceFee: { amount: fee.fee },
+        total: { amount: fee.total, currency: 'USD' },
         trip: { serviceDate: date, departsAt: `${date}T23:00:00-04:00`, serviceClass: 'sleeper' },
       });
+      expect(Number(held.serviceFee!.amount)).toBeGreaterThan(0);
       expect(held.code).toMatch(/^VTP-[A-Z2-9]{6}$/);
       expect(held.passengers.map((p) => [p.seatNumber, p.fare])).toEqual([
         ['1', '20.00'],

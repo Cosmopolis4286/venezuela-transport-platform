@@ -73,6 +73,12 @@ fija la Empresa, y ese monto queda congelado en el pago. Los precios incluyen lo
 correspondan según la Empresa, que es responsable de emitir la factura o documento fiscal
 conforme a la normativa del SENIAT.
 
+3.3.1. **Cargo por servicio.** Al precio del pasaje se suma un **cargo por servicio** de
+{{nombre_comercial}}, un porcentaje del precio que la Plataforma muestra en la búsqueda y,
+desglosado con el total, **antes de apartar y antes de pagar** (hoy, 15 % en general; puede
+variar por ciudad o empresa). Es la remuneración de {{nombre_comercial}} por la intermediación y
+el procesamiento de la compra, y {{nombre_comercial}} emite su propio documento fiscal por él.
+
 3.4. **Confirmación y boleto.** La reserva queda **confirmada** cuando se confirma el pago. Cada
 pasajero recibe un **boleto electrónico** con un código QR único que debe mostrar al abordar. El
 boleto es personal: el código solo puede usarse una vez.
@@ -121,8 +127,11 @@ Empresa puede negar el abordaje si no se cumplen esos requisitos.
 autobús salga o algún pasajero de la reserva aborde, con el reembolso que fija la política de la
 Empresa y que la Plataforma muestra **antes de pagar y antes de confirmar la cancelación**.
 
+5.1.1. El reembolso por cancelación del pasajero se calcula sobre el precio de los pasajes; el
+**cargo por servicio no se reembolsa**, porque el servicio de intermediación ya se prestó.
+
 5.2. Si la **Empresa cancela** la salida, cada pasajero recibe el **reembolso completo** de lo que
-pagó.
+pagó, incluido el cargo por servicio.
 
 5.3. Los detalles, plazos y medios están en la [Política de Cancelación y
 Reembolsos](cancelacion-y-reembolsos), que forma parte de estos Términos.

@@ -12,12 +12,18 @@ pagadas y la cola de los pagos por reembolsar. Decisiones: ADR-024 (libro y comi
 Cuando un pago confirma una reserva (`PaymentsService.receive`), la **misma transacción** escribe
 una fila en `settlement_entries` (`recordEarning`, en `ledger.ts`):
 
-| Campo             | Valor                                                                 |
-| ----------------- | --------------------------------------------------------------------- |
-| `gross`           | El total de la reserva, en la moneda de la tarifa (USD o VES)         |
-| `commission_rate` | La comisión vigente en ese momento (ver abajo)                        |
-| `commission`      | `gross × rate / 100`, redondeado hacia arriba en la mitad, a céntimos |
-| `earned`          | `gross − commission`: lo que gana la empresa                          |
+| Campo             | Valor                                                                                          |
+| ----------------- | ---------------------------------------------------------------------------------------------- |
+| `gross`           | Lo que pagó el pasajero (tarifas + cargo por servicio), en la moneda de la tarifa              |
+| `commission_rate` | El cargo por servicio de la reserva (ver abajo)                                                |
+| `commission`      | El cargo por servicio: `tarifas × rate / 100`, redondeado hacia arriba en la mitad, a céntimos |
+| `earned`          | `gross − commission`: las tarifas completas, lo que gana la empresa                            |
+
+**Cargo por servicio encima de la tarifa (ADR-029, decisión del dueño del producto).** El
+pasajero paga la tarifa **más** el cargo por servicio de la plataforma; la empresa gana su tarifa
+completa. El porcentaje se fija al **apartar** los puestos (`bookings.service_fee` y
+`service_fee_rate`) y se le muestra al pasajero antes de pagar. Las reservas hechas antes de este
+cambio no tienen esas columnas y conservan el modelo anterior (la comisión salía de la tarifa).
 
 - **En la moneda de la tarifa**, no en la del pago. Una tarifa en dólares pagada por pago móvil en
   bolívares o por PIX en reales le da a la empresa dólares: la tasa la fijó la propia empresa
@@ -34,13 +40,17 @@ una fila en `settlement_entries` (`recordEarning`, en `ledger.ts`):
 La **política general** (`platform_settings`, una sola fila) la editan los administradores de la
 plataforma en **Liquidaciones**. Empieza con:
 
-- **comisión del 8 %** sobre cada boleto (porcentaje de 0 a 100 con hasta dos decimales);
+- **cargo por servicio del 15 %** sobre la tarifa, pagado por el pasajero además de ella
+  (porcentaje de 0 a 100 con hasta dos decimales; antes de ADR-029 era una comisión del 8 % dentro
+  de la tarifa);
 - **tramos de reembolso**: 100 % si el pasajero cancela con al menos 48 h de anticipación, 50 %
   con al menos 2 h, nada después.
 
-Cada empresa puede tener **su propia comisión, sus propios tramos o ambos**
-(`organization_policies`); lo que deja vacío usa la política general. Los cambios se aplican desde
-ese momento: la comisión de una reserva queda fija al pagarse, y los tramos se leen al cancelar.
+Cada empresa puede tener **su propio cargo, sus propios tramos o ambos**
+(`organization_policies`); lo que deja vacío usa el de la **zona donde sube el pasajero**
+([ADR-028](network.md#zonas-operativas)) y, si tampoco hay, la política general. Los cambios se
+aplican desde ese momento: el cargo de una reserva queda fijo al apartarse, y los tramos se leen
+al cancelar.
 
 Los tramos (1 a 4) van del que pide más horas al que pide menos, con horas enteras de 0 a 720 y
 porcentajes enteros. Las horas se cuentan hasta la hora en que el pasajero aborda en su parada.
@@ -91,15 +101,16 @@ endpoint que libera un apartado. En una sola transacción, con la reserva bloque
 
 1. se calcula el porcentaje con los tramos de la empresa y las horas que faltan;
 2. la reserva pasa a `cancelled` y sus puestos quedan libres para otros pasajeros;
-3. si hay reembolso, el pago pasa a `refund_due` con `refund_amount` (el porcentaje de lo que
-   pagó, en su moneda) y entra en la cola de **Reembolsos**;
+3. si hay reembolso, el pago pasa a `refund_due` con `refund_amount` (el porcentaje de la parte
+   del pago que corresponde a las tarifas, en su moneda) y entra en la cola de **Reembolsos**;
 4. el libro de la empresa recibe una fila `cancellation` negativa.
 
-**La plataforma conserva su comisión** (decisión del dueño del producto): el reembolso se descuenta
-de lo que ganó la empresa. Solo si el reembolso es mayor que eso (un reembolso cercano al 100 %),
-la diferencia sale de la comisión, para que la empresa nunca quede debiendo por una reserva.
-Ejemplo con US$ 100 al 8 %: con 50 % de reembolso el pasajero recibe US$ 50, la plataforma se
-queda US$ 8 y la empresa US$ 42; con 100 %, el pasajero recibe US$ 100 y nadie se queda nada.
+**Los tramos se aplican a las tarifas; el cargo por servicio no se reembolsa** (ADR-029): el
+reembolso sale entero de lo que ganó la empresa y la plataforma conserva su cargo. Ejemplo con una
+tarifa de US$ 100 y 15 %: el pasajero paga US$ 115; con 50 % de reembolso recibe US$ 50, la
+empresa se queda US$ 50 y la plataforma US$ 15; con 100 %, recibe US$ 100, la empresa nada y la
+plataforma US$ 15. Las reservas anteriores al cargo siguen la regla anterior (el reembolso sale
+de lo ganado y, si no alcanza, de la comisión).
 
 No se puede cancelar (`409 BOOKING_NOT_CANCELLABLE`) cuando ya salió el autobús o un pasajero de la
 reserva abordó. A menos horas que el último tramo se puede cancelar, sin reembolso: el puesto se
@@ -109,8 +120,9 @@ Si la empresa ya cobró y luego un pasajero cancela, su saldo puede quedar **neg
 le debe ese monto a la plataforma, que lo descuenta de los pagos siguientes.
 
 Si la **empresa** cancela la salida completa ([dispatch.md](dispatch.md#cancelar-una-salida)), cada
-pasajero recibe el reembolso completo y la plataforma conserva su comisión: la entrada de
-cancelación lleva `commission = 0` y descuenta todo el reembolso de lo ganado.
+pasajero recibe el reembolso completo (tarifas **y** cargo por servicio) y la plataforma conserva
+su cargo, que asume la empresa: la entrada de cancelación lleva `commission = 0` y descuenta todo
+lo pagado de lo ganado.
 
 ## Quién ve qué
 

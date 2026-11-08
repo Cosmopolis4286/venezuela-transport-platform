@@ -8,6 +8,7 @@ import { trips } from '../bookings/bookings.schema.js';
 import { takenSeatCounts } from '../bookings/occupancy.js';
 import { organizations } from '../organizations/organizations.schema.js';
 import { addDays, isCalendarDate, occurrencesOn, todayInVenezuela } from './departures.js';
+import { commissionFor } from '../settlements/ledger.js';
 import { routeFares, routes, routeSchedules, routeStops } from './network.schema.js';
 import { StopsService } from './stops.service.js';
 
@@ -99,6 +100,11 @@ export class SearchService {
           )
       ).map((t) => `${t.scheduleId}:${t.serviceDate}`),
     );
+    // The service fee each operator's passengers pay on top of the fare here (ADR-029).
+    const feeRates = new Map<string, string>();
+    for (const operatorId of new Set(rows.map((row) => row.operator.id))) {
+      feeRates.set(operatorId, await commissionFor(this.database.db, operatorId, from));
+    }
     const departures: Departure[] = rows.flatMap((row) =>
       occurrencesOn(date, row.schedule, row.fromOffset, row.toOffset)
         .filter((trip) => !cancelled.has(`${row.schedule.id}:${trip.serviceDate}`))
@@ -119,6 +125,7 @@ export class SearchService {
             row.schedule.seats - (taken.get(`${row.schedule.id}:${trip.serviceDate}`) ?? 0),
           ),
           fare: row.fare?.amount && row.fare.currency ? (row.fare as Departure['fare']) : null,
+          serviceFeeRate: feeRates.get(row.operator.id)!,
         })),
     );
     // Same offset everywhere, so the ISO strings sort chronologically.

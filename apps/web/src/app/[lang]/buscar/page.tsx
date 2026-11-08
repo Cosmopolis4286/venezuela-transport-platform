@@ -119,7 +119,14 @@ async function DepartureCard({ departure }: { departure: Departure }) {
       </div>
       <p className="text-lg font-semibold sm:text-right">
         {departure.fare ? (
-          formatMoney(departure.fare.amount, departure.fare.currency, locale)
+          <>
+            {formatMoney(departure.fare.amount, departure.fare.currency, locale)}
+            {Number(departure.serviceFeeRate) > 0 ? (
+              <span className="block text-xs font-normal text-muted-foreground">
+                {t.results.serviceFee(Number(departure.serviceFeeRate).toLocaleString(locale))}
+              </span>
+            ) : null}
+          </>
         ) : (
           <span className="text-sm font-normal text-muted-foreground">
             {t.results.priceAtCounter}
