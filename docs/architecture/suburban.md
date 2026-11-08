@@ -18,19 +18,24 @@ que compran por adelantado. Cada tipo de vehículo tiene precios distintos.
 
 ## Decisiones del dueño del producto (2026-11-08)
 
-| Pregunta                                    | Decisión                                                                                    |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| ¿Quién vende los paquetes?                  | **La plataforma.** Sirven con cualquier empresa adherida que haga ese tramo en ese vehículo |
-| ¿Qué cubre un paquete?                      | **Un tramo fijo** (par de paradas) en un tipo de vehículo                                   |
-| ¿Vencen?                                    | **Sí**, a los días que fije cada paquete; **60 por defecto**                                |
-| Taxis y motos: ¿con horario o bajo demanda? | **Híbrido:** salidas con horario y también viajes bajo demanda                              |
-| Cancelar una reserva                        | Hasta **30 minutos antes** de la hora de viaje; después, no hay devolución                  |
-| Devoluciones                                | **Escalonadas** según el tiempo que falta y el momento en que se cancela (ver abajo)        |
-| Motos                                       | **Un tipo de organización nuevo**: línea de mototaxis (`moto_line`)                         |
-| ¿Cómo se sabe si una ruta es suburbana?     | **La empresa lo elige** al crear la ruta (Interurbano o Suburbano)                          |
-| Apagar un servicio                          | Interruptores **por corredor o ciudad**, no solo uno general                                |
-| ¿Y lo ya vendido si se apaga?               | **Se respeta:** solo deja de venderse; boletos y paquetes siguen válidos                    |
-| Pasajeros por moto                          | **Uno**                                                                                     |
+| Pregunta                                     | Decisión                                                                                    |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| ¿Quién vende los paquetes?                   | **La plataforma.** Sirven con cualquier empresa adherida que haga ese tramo en ese vehículo |
+| ¿Qué cubre un paquete?                       | **Un tramo fijo** (par de paradas) en un tipo de vehículo                                   |
+| ¿Vencen?                                     | **Sí**, a los días que fije cada paquete; **60 por defecto**                                |
+| Taxis y motos: ¿con horario o bajo demanda?  | **Híbrido:** salidas con horario y también viajes bajo demanda                              |
+| Cancelar una reserva                         | Hasta **30 minutos antes** de la hora de viaje; después, no hay devolución                  |
+| Devoluciones                                 | **Escalonadas** según el tiempo que falta y el momento en que se cancela (ver abajo)        |
+| Motos                                        | **Un tipo de organización nuevo**: línea de mototaxis (`moto_line`)                         |
+| ¿Cómo se sabe si una ruta es suburbana?      | **La empresa lo elige** al crear la ruta (Interurbano o Suburbano)                          |
+| Apagar un servicio                           | Interruptores **por corredor o ciudad**, no solo uno general                                |
+| ¿Y lo ya vendido si se apaga?                | **Se respeta:** solo deja de venderse; boletos y paquetes siguen válidos                    |
+| Pasajeros por moto                           | **Uno**                                                                                     |
+| Sentido de un paquete                        | **Ida y vuelta** (A → B y B → A)                                                            |
+| Límites por paquete                          | **4 reservas futuras** sin usar, **una por salida**                                         |
+| Devolver un paquete                          | **No se devuelve**; los viajes sin usar se pierden al vencer                                |
+| Cuánto gana la empresa por viaje con paquete | **Su tarifa normal del tramo** menos comisión; la plataforma pone o gana la diferencia      |
+| Tramos de reembolso suburbanos               | 100 % desde 24 h, 75 % desde 2 h, 50 % desde 30 min, nada después; interurbano sin cambios  |
 
 Las supuestas en este documento, que conviene confirmar, están marcadas con **(por confirmar)**.
 
@@ -198,7 +203,7 @@ reservó y pausa las reservadas). Una serie tiene hasta 150 salidas y una ruta h
 `trip_pack_products`: tipo de vehículo, **tramo** (parada A y parada B), cantidad de viajes (por
 ejemplo 5, 10, 20), precio y moneda (US$ o Bs.), días de vigencia (por defecto
 `DEFAULT_TRIP_PACK_VALIDITY_DAYS = 60`), activo o no. Un paquete del tramo A–B sirve **en los dos
-sentidos** (A → B y B → A), para ir y volver (por confirmar). El precio por viaje es
+sentidos** (A → B y B → A), para ir y volver (decidido). El precio por viaje es
 `precio ÷ viajes` y queda congelado en cada compra.
 
 ### Empresas adheridas
@@ -231,7 +236,7 @@ reserva.
   minutos.
 - Debe coincidir con el paquete: mismo tipo de vehículo, tramo A–B o B–A exacto, empresa adherida,
   y la salida antes de que venza el paquete.
-- Límites contra el acaparamiento (por confirmar): hasta 6 puestos por reserva, hasta 4 reservas
+- Límites contra el acaparamiento (decididos): hasta 6 puestos por reserva, hasta 4 reservas
   futuras sin usar por paquete, una reserva por salida.
 - El paquete es de quien lo compró, pero puede reservar para otras personas (con sus nombres, como
   hoy).
@@ -267,20 +272,9 @@ Antes de esos 30 minutos la devolución es **escalonada** y depende de cómo se 
    (si el paquete ya venció, se pierde); con menos, se pierde. La empresa pierde lo que había
    ganado por ese viaje.
 
-3. **Devolver un paquete** (el dinero de los viajes sin usar): el pasajero lo pide en la app; se
-   devuelve `viajes sin usar × precio por viaje × porcentaje`, escalonado según el momento en que
-   lo pide y la vigencia que le queda (por confirmar):
-
-   | Cuándo lo pide                             | Se devuelve |
-   | ------------------------------------------ | ----------- |
-   | En los primeros 7 días y sin haberlo usado | 100 %       |
-   | Le quedan 30 días o más de vigencia        | 75 %        |
-   | Le quedan entre 10 y 29 días               | 50 %        |
-   | Le quedan menos de 10 días, o ya venció    | 0 %         |
-
-   Las reservas futuras hechas con ese paquete se cancelan antes de calcular (con la regla del
-   punto 2). El reembolso entra en la cola de **Reembolsos** existente. Los tramos son editables
-   por un administrador, como la política de reembolsos.
+3. **Devolver un paquete:** **no se devuelve** (decidido por el dueño del producto). Los viajes
+   se pueden usar hasta que vence; los que quedan sin usar se pierden. Solo se devuelve el dinero
+   de un pago que llegó cuando el paquete ya no podía activarse (como con las reservas).
 
 Al cancelar se muestra antes cuánto se devuelve, como hoy (`GET /me/bookings/:id/cancellation`,
 y uno nuevo para paquetes).
@@ -289,10 +283,15 @@ y uno nuevo para paquetes).
 
 - El dinero del paquete llega a la plataforma al comprarlo, pero **la empresa lo gana cuando se usa
   cada viaje**: al reservar con el paquete se anota en el libro una entrada `booking` con bruto =
-  precio por viaje × puestos, menos la comisión de esa empresa (ADR-024). Si la reserva se cancela
-  a tiempo, la entrada `cancellation` lo revierte.
-- Los viajes que vencen sin usarse, y la parte no devuelta de un paquete, **se los queda la
-  plataforma** (ella vendió el paquete).
+  **la tarifa normal de la empresa para ese tramo** × puestos, menos su comisión (ADR-024;
+  decidido por el dueño del producto). Si la reserva se cancela a tiempo, la entrada
+  `cancellation` lo revierte.
+- La diferencia entre el precio por viaje del paquete y la tarifa de la empresa la **pone o la gana
+  la plataforma** (si el paquete tiene descuento, la plataforma lo subsidia). Los viajes que vencen
+  sin usarse se los queda la plataforma.
+- **Moneda y tasas:** el paquete tiene precio en US$ o Bs. Como lo vende la plataforma, se paga con
+  las **tasas de cambio de la plataforma**, que fija el administrador (las de cada empresa siguen
+  sirviendo para sus boletos).
 - Reportes de la administración: paquetes vendidos, viajes usados, **viajes vendidos sin usar**
   (lo que la plataforma debe en servicio) y vencidos. Las empresas ven en sus reportes cuántas
   reservas llegaron por paquete.
@@ -342,7 +341,7 @@ de paquetes por tramo y tipo de vehículo. Nada de esto queda en el código.
 6. **Paquetes: catálogo y compra** (`trip_pack_products`, `trip_packs`, `payments` con
    `trip_pack_id`, empresas adheridas), con las pantallas de compra.
 7. **Paquetes: usarlos al reservar**, cancelaciones, libro de liquidaciones, avisos.
-8. **Devolver un paquete** (tramos escalonados) y reportes de paquetes.
+8. **Reportes de paquetes** (sin devoluciones de paquetes: decidido).
 9. **Bajo demanda por tramo**: taxis y motos con tarifa fija, para ahora o para una hora, pagados
    con paquete.
 10. **Legal**: condiciones de los paquetes, los tramos suburbanos en la política de cancelación y
