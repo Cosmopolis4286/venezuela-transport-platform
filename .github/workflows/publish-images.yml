@@ -51,7 +51,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and publish API
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: infrastructure/docker/production/api.Dockerfile
@@ -59,7 +59,7 @@ jobs:
           tags: ghcr.io/${{ steps.image.outputs.owner }}/vtp-api:${{ github.event.workflow_run.head_sha }}
 
       - name: Build and publish web
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: infrastructure/docker/production/web.Dockerfile
