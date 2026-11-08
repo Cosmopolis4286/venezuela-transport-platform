@@ -29,6 +29,8 @@ import {
 import { FleetService } from './fleet.service.js';
 
 const notFound = () => new ApiException('NOT_FOUND', 'Vehicle not found', HttpStatus.NOT_FOUND);
+const motorcycleWithLayout = () =>
+  ApiException.conflict('A motorcycle has no seat map', 'MOTORCYCLE_ONE_PASSENGER');
 
 const isUniqueViolation = (error: unknown) => {
   const cause = (error as { cause?: { code?: string } }).cause ?? error;
@@ -128,7 +130,7 @@ export class VehiclesService {
   ): Promise<FleetVehicle> {
     if (!runsRoutes(access.organization.type)) {
       throw ApiException.conflict(
-        'Only bus companies and taxi lines have vehicles',
+        'Only bus companies, taxi lines and motorcycle taxi lines have vehicles',
         'ORGANIZATION_TYPE_NOT_ALLOWED',
       );
     }
@@ -140,6 +142,7 @@ export class VehiclesService {
         'TRANSPORT_MODE_NOT_ALLOWED',
       );
     }
+    if (mode === 'motorcycle' && input.seatLayoutId) throw motorcycleWithLayout();
     const values = await this.values(access.organization.id, input);
     const row = await this.save(() =>
       this.database.db
@@ -158,7 +161,8 @@ export class VehiclesService {
     actor: Authenticated,
     meta: RequestMeta,
   ): Promise<FleetVehicle> {
-    await this.require(access.organization.id, vehicleId);
+    const current = await this.require(access.organization.id, vehicleId);
+    if (current.mode === 'motorcycle' && input.seatLayoutId) throw motorcycleWithLayout();
     const values = await this.values(access.organization.id, input);
     const row = await this.save(() =>
       this.database.db

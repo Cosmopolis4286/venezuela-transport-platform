@@ -1,4 +1,9 @@
-import type { OrganizationMembershipSummary, ServiceArea, Stop } from '@vtp/shared-types';
+import {
+  servicesFor,
+  type OrganizationMembershipSummary,
+  type ServiceArea,
+  type Stop,
+} from '@vtp/shared-types';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { RouteEditor } from '@/components/portal/route-editor';
@@ -47,6 +52,7 @@ async function NewRoute({ params }: { params: Promise<{ organizationId: string }
           hidden={{ organizationId: organization.id }}
           stops={stops}
           submitLabel="Crear ruta"
+          services={servicesFor(organization.type)}
           areas={areas.map((a) => ({ id: a.id, name: a.name, stopIds: a.stops.map((s) => s.id) }))}
         />
       </Card>

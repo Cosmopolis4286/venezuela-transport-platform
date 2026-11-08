@@ -42,6 +42,8 @@ async function Vehicles({ params }: { params: Promise<{ organizationId: string }
     apiFetch<SeatLayout[]>(`${base}/seat-layouts`),
   ]);
   const canManage = permissions.includes('fleet.manage');
+  // A motorcycle carries one passenger and has no seat map.
+  const motorcycles = organization.type === 'moto_line';
   const hidden = { organizationId: organization.id };
 
   const layoutSelect = (id: string, value: string | null) => (
@@ -66,8 +68,9 @@ async function Vehicles({ params }: { params: Promise<{ organizationId: string }
         </Link>
         <h1 className="text-2xl font-semibold">Vehículos</h1>
         <p className="text-sm text-muted-foreground">
-          Las unidades que se asignan a cada salida. Un vehículo con mapa de puestos solo se asigna
-          a salidas vendidas con ese mapa.
+          {motorcycles
+            ? 'Las motos que se asignan a cada salida. Cada moto lleva un pasajero.'
+            : 'Las unidades que se asignan a cada salida. Un vehículo con mapa de puestos solo se asigna a salidas vendidas con ese mapa.'}
         </p>
       </div>
 
@@ -82,9 +85,11 @@ async function Vehicles({ params }: { params: Promise<{ organizationId: string }
               <Field label="Nombre interno (opcional)" htmlFor="label">
                 <Input id="label" name="label" maxLength={80} placeholder="Unidad 12" />
               </Field>
-              <Field label="Mapa de puestos" htmlFor="seatLayoutId">
-                {layoutSelect('seatLayoutId', null)}
-              </Field>
+              {motorcycles ? null : (
+                <Field label="Mapa de puestos" htmlFor="seatLayoutId">
+                  {layoutSelect('seatLayoutId', null)}
+                </Field>
+              )}
             </div>
             <div>
               <SubmitButton>Agregar</SubmitButton>
@@ -108,7 +113,7 @@ async function Vehicles({ params }: { params: Promise<{ organizationId: string }
                     <span className="text-sm text-muted-foreground">{vehicle.label}</span>
                   ) : null}
                   {vehicle.active ? null : <Badge variant="secondary">Inactivo</Badge>}
-                  {canManage ? null : (
+                  {canManage || motorcycles ? null : (
                     <span className="text-sm text-muted-foreground">
                       · {vehicle.seatLayout?.name ?? 'Sin mapa de puestos'}
                     </span>
@@ -125,9 +130,13 @@ async function Vehicles({ params }: { params: Promise<{ organizationId: string }
                           defaultValue={vehicle.label ?? ''}
                         />
                       </Field>
-                      <Field label="Mapa de puestos" htmlFor={`layout-${vehicle.id}`}>
-                        {layoutSelect(`layout-${vehicle.id}`, vehicle.seatLayout?.id ?? null)}
-                      </Field>
+                      {motorcycles ? (
+                        <span />
+                      ) : (
+                        <Field label="Mapa de puestos" htmlFor={`layout-${vehicle.id}`}>
+                          {layoutSelect(`layout-${vehicle.id}`, vehicle.seatLayout?.id ?? null)}
+                        </Field>
+                      )}
                       <label className="flex h-9 items-center gap-2 text-sm">
                         <input type="checkbox" name="active" defaultChecked={vehicle.active} />
                         Activo

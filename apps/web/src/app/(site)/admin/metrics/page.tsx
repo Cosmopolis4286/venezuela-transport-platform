@@ -94,10 +94,8 @@ async function Metrics({
           {tile('Usuarios nuevos', m.newUsers)}
           {tile(
             'Organizaciones activas',
-            m.activeOrganizations.bus_company +
-              m.activeOrganizations.taxi_line +
-              m.activeOrganizations.terminal,
-            `${m.activeOrganizations.bus_company} de autobuses · ${m.activeOrganizations.taxi_line} de taxis · ${m.activeOrganizations.terminal} terminales`,
+            Object.values(m.activeOrganizations).reduce((a, b) => a + b, 0),
+            `${m.activeOrganizations.bus_company} de autobuses · ${m.activeOrganizations.taxi_line} de taxis · ${m.activeOrganizations.moto_line} de mototaxis · ${m.activeOrganizations.terminal} terminales`,
           )}
           {tile(
             'Taxis pedidos',

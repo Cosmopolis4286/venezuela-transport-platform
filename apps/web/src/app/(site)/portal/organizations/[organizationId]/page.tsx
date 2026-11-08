@@ -113,7 +113,7 @@ async function Organization({ params }: { params: Promise<{ organizationId: stri
           </div>
         </Card>
       ) : null}
-      {organization.type === 'bus_company' &&
+      {runsRoutes(organization.type) &&
       (permissions.includes('finance.view') || permissions.includes('bookings.view')) ? (
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -186,7 +186,8 @@ async function Organization({ params }: { params: Promise<{ organizationId: stri
           canManage={permissions.includes('routes.manage')}
         />
       ) : null}
-      {runsRoutes(organization.type) ? (
+      {/* Motorcycles carry one passenger: no seat maps. */}
+      {runsRoutes(organization.type) && organization.type !== 'moto_line' ? (
         <SeatLayouts
           organizationId={organization.id}
           canManage={permissions.includes('fleet.manage')}
@@ -197,7 +198,11 @@ async function Organization({ params }: { params: Promise<{ organizationId: stri
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-col gap-1">
               <CardTitle>Vehículos</CardTitle>
-              <CardDescription>Placas de las unidades y su mapa de puestos.</CardDescription>
+              <CardDescription>
+                {organization.type === 'moto_line'
+                  ? 'Placas de las motos y sus documentos.'
+                  : 'Placas de las unidades y su mapa de puestos.'}
+              </CardDescription>
             </div>
             <Button asChild size="sm" variant="outline">
               <Link href={`/portal/organizations/${organization.id}/vehicles`}>Ver vehículos</Link>

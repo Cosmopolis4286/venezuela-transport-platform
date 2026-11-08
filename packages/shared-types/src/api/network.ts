@@ -14,6 +14,7 @@ export const NETWORK_UTC_OFFSET = '-04:00';
 export const ROUTE_OPERATOR_TYPES = [
   'bus_company',
   'taxi_line',
+  'moto_line',
 ] as const satisfies readonly OrganizationType[];
 
 export function runsRoutes(type: OrganizationType): boolean {
@@ -30,6 +31,19 @@ export const SERVICES = ['intercity', 'suburban'] as const;
 export type Service = (typeof SERVICES)[number];
 
 export const SERVICE_LABELS: Record<Service, string> = SHARED_MESSAGES.es.service;
+
+/** Services each organization type publishes routes in; the first is the default. */
+export const SERVICES_BY_ORGANIZATION_TYPE: Record<OrganizationType, readonly Service[]> = {
+  bus_company: ['intercity', 'suburban'],
+  taxi_line: ['intercity', 'suburban'],
+  // Motorcycle taxis only run short trips inside a corridor (ADR-028).
+  moto_line: ['suburban'],
+  terminal: [],
+};
+
+export function servicesFor(type: OrganizationType): readonly Service[] {
+  return SERVICES_BY_ORGANIZATION_TYPE[type];
+}
 
 // --- Transport modes -------------------------------------------------------------------------
 
@@ -50,12 +64,19 @@ export const TRANSPORT_MODES_BY_ORGANIZATION_TYPE: Record<
 > = {
   bus_company: ['bus'],
   taxi_line: ['car'],
+  moto_line: ['motorcycle'],
   terminal: [],
 };
 
 export function modesFor(type: OrganizationType): readonly TransportMode[] {
   return TRANSPORT_MODES_BY_ORGANIZATION_TYPE[type];
 }
+
+/**
+ * A motorcycle carries one passenger (decided by the product owner): its departures have one
+ * seat and no seat map, and its vehicles have no seat map either.
+ */
+export const MOTORCYCLE_SEATS = 1;
 
 // --- Stops -------------------------------------------------------------------------------------
 

@@ -151,10 +151,11 @@ en la base de datos y textos en los cuatro diccionarios.
 
 Organización nueva en `ORGANIZATION_TYPES`, con los mismos roles que una línea de taxis (dueño,
 administrador, despachador, conductor) en `ROLES_BY_ORGANIZATION_TYPE`. Pasa por la misma
-revisión de la plataforma y el mismo KYC; sus conductores necesitan licencia para moto (tipo de
-documento nuevo en `onboarding`) y sus motos, los mismos documentos de vehículo (certificado de
-circulación, RCV, permiso). Opera igual que una línea de taxis: rutas con horario y viajes bajo
-demanda.
+revisión de la plataforma y el mismo KYC; sus conductores presentan la misma licencia de
+conducir, y el revisor verifica que su grado permita conducir motos (no hizo falta un tipo de
+documento nuevo). Sus motos llevan los mismos documentos de vehículo (certificado de
+circulación, RCV, permiso). Solo publica **rutas suburbanas** de moto: cada salida es una moto
+con un pasajero, sin mapa de puestos. Los viajes bajo demanda llegan en el PR 9.
 
 ## 3. Horarios por frecuencia
 
@@ -328,7 +329,7 @@ de paquetes por tramo y tipo de vehículo. Nada de esto queda en el código.
 2. ✅ **Servicios y corredores**: `routes.service`, `service_areas`, interruptores en el panel,
    `GET /platform/services`, `SERVICE_DISABLED`, y el selector Entre ciudades · Suburbano en la
    web y la app.
-3. **Líneas de mototaxis**: `moto_line`, roles, KYC (licencia de moto).
+3. ✅ **Líneas de mototaxis**: `moto_line`, roles, KYC (licencia de moto).
 4. **Horarios por frecuencia.**
 5. **Tramos de reembolso en minutos** y regla de los 30 minutos.
 6. **Paquetes: catálogo y compra** (`trip_pack_products`, `trip_packs`, `payments` con

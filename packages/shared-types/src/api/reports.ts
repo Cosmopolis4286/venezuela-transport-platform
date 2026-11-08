@@ -1,3 +1,4 @@
+import type { OrganizationType } from './organizations.js';
 import type { Currency } from './network.js';
 
 /**
@@ -82,6 +83,6 @@ export interface PlatformMetrics {
   refundsPending: number;
   newUsers: number;
   /** Organizations approved and active now, by type. */
-  activeOrganizations: { bus_company: number; taxi_line: number; terminal: number };
+  activeOrganizations: Record<OrganizationType, number>;
   taxiRides: { requested: number; completed: number; cancelledOrExpired: number };
 }

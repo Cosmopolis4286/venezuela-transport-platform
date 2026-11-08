@@ -40,6 +40,7 @@ const es: SharedMessages = {
   organizationType: {
     bus_company: 'Empresa de autobuses',
     taxi_line: 'Línea de taxis',
+    moto_line: 'Línea de mototaxis',
     terminal: 'Terminal',
   },
   bookingStatus: {
@@ -109,6 +110,8 @@ const es: SharedMessages = {
     ORGANIZATION_NOT_APPROVED: 'La organización debe estar aprobada para publicar rutas.',
     ORGANIZATION_TYPE_NOT_ALLOWED: 'Este tipo de organización no puede hacer eso.',
     TRANSPORT_MODE_NOT_ALLOWED: 'Tu organización no opera ese tipo de vehículo.',
+    SERVICE_NOT_ALLOWED: 'Tu organización no puede publicar rutas de ese servicio.',
+    MOTORCYCLE_ONE_PASSENGER: 'Una moto lleva un solo pasajero y no usa mapa de puestos.',
     SERVICE_DISABLED: 'Este servicio no está disponible en este momento.',
     SERVICE_AREA_REQUIRED: 'Elige el corredor de la ruta suburbana.',
     ROUTE_OUTSIDE_SERVICE_AREA: 'Todas las paradas de una ruta suburbana deben ser de su corredor.',
@@ -179,6 +182,7 @@ const en: SharedMessages = {
   organizationType: {
     bus_company: 'Bus company',
     taxi_line: 'Taxi company',
+    moto_line: 'Motorcycle taxi company',
     terminal: 'Terminal',
   },
   bookingStatus: {
@@ -248,6 +252,8 @@ const en: SharedMessages = {
     ORGANIZATION_NOT_APPROVED: 'The organization must be approved to publish routes.',
     ORGANIZATION_TYPE_NOT_ALLOWED: 'This kind of organization cannot do that.',
     TRANSPORT_MODE_NOT_ALLOWED: 'Your organization does not run that kind of vehicle.',
+    SERVICE_NOT_ALLOWED: 'Your organization cannot publish routes of that service.',
+    MOTORCYCLE_ONE_PASSENGER: 'A motorcycle carries a single passenger and has no seat map.',
     SERVICE_DISABLED: 'This service is not available right now.',
     SERVICE_AREA_REQUIRED: 'Choose the corridor of the suburban route.',
     ROUTE_OUTSIDE_SERVICE_AREA: 'Every stop of a suburban route must belong to its corridor.',
@@ -319,6 +325,7 @@ const ptBR: SharedMessages = {
   organizationType: {
     bus_company: 'Empresa de ônibus',
     taxi_line: 'Cooperativa de táxi',
+    moto_line: 'Cooperativa de mototáxi',
     terminal: 'Terminal',
   },
   bookingStatus: {
@@ -388,6 +395,8 @@ const ptBR: SharedMessages = {
     ORGANIZATION_NOT_APPROVED: 'A organização deve estar aprovada para publicar rotas.',
     ORGANIZATION_TYPE_NOT_ALLOWED: 'Este tipo de organização não pode fazer isso.',
     TRANSPORT_MODE_NOT_ALLOWED: 'Sua organização não opera esse tipo de veículo.',
+    SERVICE_NOT_ALLOWED: 'Sua organização não pode publicar rotas desse serviço.',
+    MOTORCYCLE_ONE_PASSENGER: 'Uma moto leva um único passageiro e não usa mapa de assentos.',
     SERVICE_DISABLED: 'Este serviço não está disponível no momento.',
     SERVICE_AREA_REQUIRED: 'Escolha o corredor da rota suburbana.',
     ROUTE_OUTSIDE_SERVICE_AREA: 'Todas as paradas de uma rota suburbana devem ser do seu corredor.',

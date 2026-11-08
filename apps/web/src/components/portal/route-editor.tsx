@@ -34,6 +34,7 @@ export function RouteEditor({
   initial,
   submitLabel,
   areas = [],
+  services = ['intercity'],
   areaStopIds,
 }: {
   action: (state: FormState, form: FormData) => Promise<FormState>;
@@ -47,10 +48,14 @@ export function RouteEditor({
    * choice and the route is intercity.
    */
   areas?: { id: string; name: string; stopIds: string[] }[];
+  /** New routes only: services the organization publishes in (`servicesFor`). */
+  services?: readonly ('intercity' | 'suburban')[];
   /** Editing a suburban route: only the stops of its corridor. */
   areaStopIds?: string[];
 }) {
-  const [service, setService] = useState<'intercity' | 'suburban'>('intercity');
+  // Suburban needs a corridor: without any, only intercity can be chosen.
+  const choosable = services.filter((s) => s === 'intercity' || areas.length > 0);
+  const [service, setService] = useState<'intercity' | 'suburban'>(choosable[0] ?? 'suburban');
   const [areaId, setAreaId] = useState(areas[0]?.id ?? '');
   const area = service === 'suburban' ? areas.find((a) => a.id === areaId) : undefined;
   const allowed = area?.stopIds ?? areaStopIds;
@@ -73,23 +78,33 @@ export function RouteEditor({
 
   return (
     <ActionForm action={action} hidden={hidden}>
-      {areas.length ? (
+      {choosable.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Tus rutas son suburbanas y todavía no hay corredores. Pídele a la administración de la
+          plataforma que cree el de tu zona.
+        </p>
+      ) : null}
+      {areas.length && choosable.includes('suburban') ? (
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field
-            label="Servicio"
-            htmlFor="route-service"
-            hint="Suburbano: viajes cortos y frecuentes dentro de un corredor. No cambia después."
-          >
-            <Select
-              id="route-service"
-              name="service"
-              value={service}
-              onChange={(e) => setService(e.target.value as 'intercity' | 'suburban')}
+          {choosable.length > 1 ? (
+            <Field
+              label="Servicio"
+              htmlFor="route-service"
+              hint="Suburbano: viajes cortos y frecuentes dentro de un corredor. No cambia después."
             >
-              <option value="intercity">Entre ciudades</option>
-              <option value="suburban">Suburbano</option>
-            </Select>
-          </Field>
+              <Select
+                id="route-service"
+                name="service"
+                value={service}
+                onChange={(e) => setService(e.target.value as 'intercity' | 'suburban')}
+              >
+                <option value="intercity">Entre ciudades</option>
+                <option value="suburban">Suburbano</option>
+              </Select>
+            </Field>
+          ) : (
+            <input type="hidden" name="service" value="suburban" />
+          )}
           {service === 'suburban' ? (
             <Field label="Corredor" htmlFor="route-area" hint="Solo puedes usar sus paradas.">
               <Select

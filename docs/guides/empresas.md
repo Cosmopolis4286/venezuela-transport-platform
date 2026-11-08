@@ -52,6 +52,13 @@ En la página de la organización:
   "Llegó…".
 - Los inspectores escanean los boletos con la app de transportistas ([guía](conductores.md)).
 
+## Líneas de mototaxis
+
+Publican **rutas suburbanas** dentro de un corredor de VTP, igual que en el paso 3, con dos
+diferencias: cada salida es **una moto con un pasajero** (no hay mapas de puestos ni cantidad de
+puestos que elegir) y no hay taxis de terminal. En **Vehículos** registras las placas de las motos
+y sus documentos; en el despacho asignas moto y conductor a cada salida.
+
 ## 5. Taxis (líneas de taxis)
 
 1. **Taxis → Terminales**: elige en qué terminales opera tu línea.

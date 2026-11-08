@@ -334,4 +334,81 @@ describe.runIf(expectDatabase)('Services and corridors (e2e)', () => {
       .expect(200);
     expect(await search(caracas, puertoOrdaz)).toHaveLength(1);
   });
+  it('lets motorcycle taxi lines run suburban routes with one passenger per motorcycle', async () => {
+    const reviewer = await signIn('reviewer');
+    const owner = await signIn();
+    const stop = async (name: string) =>
+      (
+        await http()
+          .post('/api/v1/admin/stops')
+          .set('Authorization', reviewer.auth)
+          .send({ kind: 'stop', name: `${name} ${run}`, city: `${name} ${run}`, state: 'Bolívar' })
+          .expect(201)
+      ).body as Stop;
+    const sanFelix = await stop('Moto San Félix');
+    const puertoOrdaz = await stop('Moto Puerto Ordaz');
+    const area = (
+      await http()
+        .post('/api/v1/admin/service-areas')
+        .set('Authorization', reviewer.auth)
+        .send({ name: `Mototaxis ${run}`, stopIds: [sanFelix.id, puertoOrdaz.id] })
+        .expect(201)
+    ).body as ServiceArea;
+
+    const { organization } = (
+      await http()
+        .post('/api/v1/organizations')
+        .set('Authorization', owner.auth)
+        .send({ type: 'moto_line', legalName: `Mototaxis Caroní ${run}`, rif: uniqueRif() })
+        .expect(201)
+    ).body as OrganizationMembershipSummary;
+    expect(organization.type).toBe('moto_line');
+    const org = `/api/v1/organizations/${organization.id}`;
+    const stops = [
+      { stopId: sanFelix.id, minutesFromOrigin: 0 },
+      { stopId: puertoOrdaz.id, minutesFromOrigin: 25 },
+    ];
+    const createRoute = (extra: object) =>
+      http()
+        .post(`${org}/routes`)
+        .set('Authorization', owner.auth)
+        .send({ name: 'San Félix – Puerto Ordaz', stops, ...extra });
+    // Suburban only, and the corridor is required.
+    expect(reason(await createRoute({ service: 'intercity' }).expect(409))).toBe(
+      'SERVICE_NOT_ALLOWED',
+    );
+    expect(reason(await createRoute({}).expect(409))).toBe('SERVICE_AREA_REQUIRED');
+    expect(reason(await createRoute({ serviceAreaId: area.id, mode: 'car' }).expect(409))).toBe(
+      'TRANSPORT_MODE_NOT_ALLOWED',
+    );
+    const route = (await createRoute({ serviceAreaId: area.id }).expect(201)).body as Route;
+    expect(route).toMatchObject({ mode: 'motorcycle', service: 'suburban' });
+
+    // One passenger per motorcycle: one seat, no seat map.
+    const schedule = (body: object) =>
+      http()
+        .post(`${org}/routes/${route.id}/schedules`)
+        .set('Authorization', owner.auth)
+        .send({
+          departureTime: '06:00',
+          daysOfWeek: [1, 2, 3, 4, 5],
+          validFrom: addDays(todayInVenezuela(), 1),
+          serviceClass: 'standard',
+          ...body,
+        });
+    expect(reason(await schedule({ seats: 2 }).expect(409))).toBe('MOTORCYCLE_ONE_PASSENGER');
+    const withSchedule = (await schedule({}).expect(201)).body as Route;
+    expect(withSchedule.schedules[0]).toMatchObject({ seats: 1, seatLayoutId: null });
+
+    const moto = (
+      await http()
+        .post(`${org}/vehicles`)
+        .set('Authorization', owner.auth)
+        .send({ plate: `MT${randomInt(100, 999)}AB` })
+        .expect(201)
+    ).body as { mode: string; seatLayout: unknown };
+    expect(moto).toMatchObject({ mode: 'motorcycle', seatLayout: null });
+    // Motorcycle taxi lines have no terminal taxi board.
+    await http().get(`${org}/taxi`).set('Authorization', owner.auth).expect(409);
+  });
 });

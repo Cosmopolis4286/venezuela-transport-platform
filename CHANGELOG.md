@@ -13,6 +13,10 @@ pull request.
 
 ### Agregado
 
+- **Líneas de mototaxis** (`moto_line`, ADR-028): un tipo de organización nuevo con los roles de
+  una línea de taxis. Publican solo rutas suburbanas de moto; cada salida lleva un pasajero y no
+  usa mapa de puestos (`MOTORCYCLE_ONE_PASSENGER`). El portal les oculta los mapas de puestos, y
+  los reportes y las liquidaciones incluyen a todas las empresas que publican rutas.
 - **Servicios entre ciudades y suburbano** (ADR-029): cada ruta es de uno u otro (lo elige la
   empresa); las suburbanas pertenecen a un **corredor**. En **Administración → Servicios** se
   crean los corredores y se encienden o apagan por separado, y el servicio entre ciudades en

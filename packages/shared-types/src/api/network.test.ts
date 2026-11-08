@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDuration, isTimeOfDay, modesFor, runsRoutes } from './network.js';
+import { formatDuration, isTimeOfDay, modesFor, runsRoutes, servicesFor } from './network.js';
 import { roleHasPermission } from './organizations.js';
 
 describe('network helpers', () => {
@@ -30,5 +30,14 @@ describe('modesFor', () => {
     expect(modesFor('bus_company')).toEqual(['bus']);
     expect(modesFor('taxi_line')).toEqual(['car']);
     expect(modesFor('terminal')).toEqual([]);
+  });
+});
+
+describe('servicesFor', () => {
+  it('lets motorcycle taxi lines publish only suburban routes, with motorcycles', () => {
+    expect(servicesFor('moto_line')).toEqual(['suburban']);
+    expect(modesFor('moto_line')).toEqual(['motorcycle']);
+    expect(servicesFor('bus_company')).toEqual(['intercity', 'suburban']);
+    expect(servicesFor('terminal')).toEqual([]);
   });
 });

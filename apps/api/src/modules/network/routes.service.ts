@@ -1,7 +1,9 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   modesFor,
+  MOTORCYCLE_SEATS,
   runsRoutes,
+  servicesFor,
   type Fare,
   type Route,
   type RouteInput,
@@ -102,7 +104,7 @@ export class RoutesService {
   ): Promise<Route> {
     if (!runsRoutes(access.organization.type)) {
       throw conflict(
-        'Only bus companies and taxi lines publish routes',
+        'Only bus companies, taxi lines and motorcycle taxi lines publish routes',
         'ORGANIZATION_TYPE_NOT_ALLOWED',
       );
     }
@@ -114,7 +116,14 @@ export class RoutesService {
         'TRANSPORT_MODE_NOT_ALLOWED',
       );
     }
-    const service = input.service ?? 'intercity';
+    const services = servicesFor(access.organization.type);
+    const service = input.service ?? services[0]!;
+    if (!services.includes(service)) {
+      throw conflict(
+        'This organization cannot publish routes of that service',
+        'SERVICE_NOT_ALLOWED',
+      );
+    }
     const serviceAreaId = service === 'suburban' ? (input.serviceAreaId ?? null) : null;
     if (service === 'suburban' && !serviceAreaId) {
       throw conflict('Choose the corridor of the suburban route', 'SERVICE_AREA_REQUIRED');
@@ -303,7 +312,7 @@ export class RoutesService {
       .where(eq(routeSchedules.routeId, route.id))) as [{ total: number }];
     if (total >= MAX_SCHEDULES_PER_ROUTE)
       throw conflict('This route has too many schedules', 'TOO_MANY_SCHEDULES');
-    const seating = await this.seating(access, input.seatLayoutId ?? null, input.seats);
+    const seating = await this.seating(access, route, input.seatLayoutId ?? null, input.seats);
     const [schedule] = await this.database.db
       .insert(routeSchedules)
       .values({
@@ -336,6 +345,7 @@ export class RoutesService {
     assertWindow(validFrom, validUntil);
     const seating = await this.seating(
       access,
+      route,
       input.seatLayoutId === undefined ? current.seatLayoutId : input.seatLayoutId,
       input.seats ?? current.seats,
     );
@@ -379,12 +389,25 @@ export class RoutesService {
     return this.load(route);
   }
 
-  /** With a seat layout the schedule takes its capacity; without one, `seats` is required. */
+  /**
+   * With a seat layout the schedule takes its capacity; without one, `seats` is required. A
+   * motorcycle departure carries one passenger, without a seat map.
+   */
   private async seating(
     access: OrganizationAccess,
+    route: RouteRow,
     seatLayoutId: string | null,
     seats: number | undefined,
   ): Promise<{ seatLayoutId: string | null; seats: number }> {
+    if (route.mode === 'motorcycle') {
+      if (seatLayoutId || (seats !== undefined && seats !== MOTORCYCLE_SEATS)) {
+        throw conflict(
+          'A motorcycle carries one passenger and has no seat map',
+          'MOTORCYCLE_ONE_PASSENGER',
+        );
+      }
+      return { seatLayoutId: null, seats: MOTORCYCLE_SEATS };
+    }
     if (seatLayoutId) {
       const layout = await this.fleet.require(access.organization.id, seatLayoutId);
       return { seatLayoutId: layout.id, seats: layout.capacity };
