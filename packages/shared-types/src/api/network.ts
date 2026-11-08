@@ -183,6 +183,8 @@ export interface Schedule {
   /** Seat map passengers choose from; `seats` then equals its capacity. */
   seatLayoutId: string | null;
   active: boolean;
+  /** Set when it was created as part of a frequency series (`ScheduleSeriesInput`). */
+  seriesId: string | null;
 }
 
 /** `POST …/routes/:routeId/schedules` and `PATCH …/schedules/:scheduleId` (all optional on PATCH). */
@@ -196,6 +198,41 @@ export interface ScheduleInput {
   seats?: number;
   seatLayoutId?: string | null;
   active?: boolean;
+}
+
+/**
+ * `POST …/routes/:routeId/schedule-series`: frequent departures, e.g. from 05:00 to 20:00 every
+ * 15 minutes. Each departure becomes its own schedule (so trips, bookings and dispatch work as
+ * for any other), grouped by `seriesId` to pause or delete them together.
+ */
+export interface ScheduleSeriesInput extends Omit<ScheduleInput, 'departureTime' | 'active'> {
+  /** `HH:MM`, the first departure. */
+  firstDeparture: string;
+  /** `HH:MM`, the last departure is at or before this time, the same day. */
+  lastDeparture: string;
+  everyMinutes: number;
+}
+
+/** `PATCH …/schedule-series/:seriesId` */
+export interface ScheduleSeriesUpdate {
+  active: boolean;
+}
+
+export const SCHEDULE_SERIES_LIMITS = {
+  minEveryMinutes: 5,
+  maxEveryMinutes: 240,
+  maxDepartures: 150,
+} as const;
+
+/** The departure times of a series: `["05:00", "05:15", …]` (empty if `last` is before `first`). */
+export function seriesTimes(first: string, last: string, everyMinutes: number): string[] {
+  const minutes = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+  const times: string[] = [];
+  if (everyMinutes <= 0) return times;
+  for (let m = minutes(first); m <= minutes(last); m += everyMinutes) {
+    times.push(`${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`);
+  }
+  return times;
 }
 
 export interface Route {

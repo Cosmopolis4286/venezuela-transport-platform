@@ -159,14 +159,18 @@ con un pasajero, sin mapa de puestos. Los viajes bajo demanda llegan en el PR 9.
 
 ## 3. Horarios por frecuencia
 
-El servicio suburbano sale cada pocos minutos, no a unas cuantas horas fijas. Un horario puede ser:
+El servicio suburbano sale cada pocos minutos, no a unas cuantas horas fijas. La empresa agrega
+**salidas frecuentes**: primera salida, "repetir cada N minutos" (5 a 240) y "hasta las" (por
+ejemplo, de 05:00 a 20:00 cada 15 minutos), con los mismos días, vigencia y capacidad que un
+horario.
 
-- **fijo** (como hoy): `departureTime`;
-- **por frecuencia** (nuevo): `startTime`, `endTime` y `headwayMinutes` (por ejemplo, de 05:00 a
-  20:00 cada 15 minutos), con los mismos días, vigencia y capacidad.
-
-Las salidas se siguen calculando sin guardarse (`departures.ts`): un horario por frecuencia
-genera una salida por intervalo. El viaje se crea con la primera reserva, como hoy.
+**Cómo se guarda (decisión técnica):** cada salida de la serie es un **horario normal**
+(`route_schedules`), agrupado con los demás por `series_id`
+(`POST …/routes/:routeId/schedule-series`). Así los viajes, las reservas, el despacho, las
+cancelaciones y los reportes, que identifican un viaje por horario y fecha, no cambian. El
+portal muestra la serie como una sola línea ("05:00 a 20:00 · cada 15 min · 61 salidas"), que se
+pausa (`PATCH …/schedule-series/:id`) o se elimina entera (`DELETE`: borra las salidas que nadie
+reservó y pausa las reservadas). Una serie tiene hasta 150 salidas y una ruta hasta 300 horarios.
 
 ## 4. Híbrido: con horario y bajo demanda
 
@@ -330,7 +334,7 @@ de paquetes por tramo y tipo de vehículo. Nada de esto queda en el código.
    `GET /platform/services`, `SERVICE_DISABLED`, y el selector Entre ciudades · Suburbano en la
    web y la app.
 3. ✅ **Líneas de mototaxis**: `moto_line`, roles, KYC (licencia de moto).
-4. **Horarios por frecuencia.**
+4. ✅ **Horarios por frecuencia.**
 5. **Tramos de reembolso en minutos** y regla de los 30 minutos.
 6. **Paquetes: catálogo y compra** (`trip_pack_products`, `trip_packs`, `payments` con
    `trip_pack_id`, empresas adheridas), con las pantallas de compra.

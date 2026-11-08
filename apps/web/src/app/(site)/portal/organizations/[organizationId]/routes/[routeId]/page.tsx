@@ -9,6 +9,7 @@ import {
   formatDuration,
   type OrganizationMembershipSummary,
   type Route,
+  type Schedule,
   type SeatLayout,
   type ServiceArea,
   type Stop,
@@ -28,8 +29,10 @@ import {
   changeRouteStatus,
   deleteRoute,
   deleteSchedule,
+  deleteSeries,
   saveFares,
   setScheduleActive,
+  setSeriesActive,
   setScheduleLayout,
   updateRoute,
 } from '../actions';
@@ -312,77 +315,156 @@ function Schedules({
         <p className="text-sm text-muted-foreground">Aún no hay horarios.</p>
       ) : (
         <ul className="flex flex-col divide-y">
-          {route.schedules.map((schedule) => (
-            <li
-              key={schedule.id}
-              className="flex flex-wrap items-center justify-between gap-3 py-3"
-            >
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-medium">
-                    {schedule.departureTime} → {arrivalTime(schedule.departureTime)}
+          {seriesOf(route.schedules).map((group) => (
+            <SeriesItem key={group.seriesId} group={group} hidden={hidden} canManage={canManage} />
+          ))}
+          {route.schedules
+            .filter((s) => !s.seriesId)
+            .map((schedule) => (
+              <li
+                key={schedule.id}
+                className="flex flex-wrap items-center justify-between gap-3 py-3"
+              >
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium">
+                      {schedule.departureTime} → {arrivalTime(schedule.departureTime)}
+                    </p>
+                    <Badge variant="outline">{SERVICE_CLASS_LABELS[schedule.serviceClass]}</Badge>
+                    {schedule.active ? null : <Badge variant="secondary">Inactivo</Badge>}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {daysLabel(schedule.daysOfWeek)} · {schedule.seats} puestos
+                    {schedule.seatLayoutId ? ` (${layoutName(schedule.seatLayoutId)})` : ''} · desde{' '}
+                    {schedule.validFrom}
+                    {schedule.validUntil ? ` hasta ${schedule.validUntil}` : ''}
                   </p>
-                  <Badge variant="outline">{SERVICE_CLASS_LABELS[schedule.serviceClass]}</Badge>
-                  {schedule.active ? null : <Badge variant="secondary">Inactivo</Badge>}
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {daysLabel(schedule.daysOfWeek)} · {schedule.seats} puestos
-                  {schedule.seatLayoutId ? ` (${layoutName(schedule.seatLayoutId)})` : ''} · desde{' '}
-                  {schedule.validFrom}
-                  {schedule.validUntil ? ` hasta ${schedule.validUntil}` : ''}
-                </p>
-              </div>
-              {canManage ? (
-                <div className="flex gap-2">
-                  {layouts.length ? (
-                    <ActionForm
-                      action={setScheduleLayout}
-                      hidden={{ ...hidden, scheduleId: schedule.id }}
-                      className="flex-row"
-                    >
-                      <Select
-                        name="seatLayoutId"
-                        defaultValue={schedule.seatLayoutId ?? ''}
-                        aria-label={`Mapa de puestos de las ${schedule.departureTime}`}
-                        className="w-56"
+                {canManage ? (
+                  <div className="flex gap-2">
+                    {layouts.length ? (
+                      <ActionForm
+                        action={setScheduleLayout}
+                        hidden={{ ...hidden, scheduleId: schedule.id }}
+                        className="flex-row"
                       >
-                        <LayoutOptions layouts={layouts} />
-                      </Select>
+                        <Select
+                          name="seatLayoutId"
+                          defaultValue={schedule.seatLayoutId ?? ''}
+                          aria-label={`Mapa de puestos de las ${schedule.departureTime}`}
+                          className="w-56"
+                        >
+                          <LayoutOptions layouts={layouts} />
+                        </Select>
+                        <SubmitButton size="sm" variant="outline">
+                          Asignar
+                        </SubmitButton>
+                      </ActionForm>
+                    ) : null}
+                    <ActionForm
+                      action={setScheduleActive}
+                      hidden={{
+                        ...hidden,
+                        scheduleId: schedule.id,
+                        active: String(!schedule.active),
+                      }}
+                    >
                       <SubmitButton size="sm" variant="outline">
-                        Asignar
+                        {schedule.active ? 'Pausar' : 'Activar'}
                       </SubmitButton>
                     </ActionForm>
-                  ) : null}
-                  <ActionForm
-                    action={setScheduleActive}
-                    hidden={{
-                      ...hidden,
-                      scheduleId: schedule.id,
-                      active: String(!schedule.active),
-                    }}
-                  >
-                    <SubmitButton size="sm" variant="outline">
-                      {schedule.active ? 'Pausar' : 'Activar'}
-                    </SubmitButton>
-                  </ActionForm>
-                  <ActionForm
-                    action={deleteSchedule}
-                    hidden={{ ...hidden, scheduleId: schedule.id }}
-                  >
-                    <SubmitButton size="sm" variant="ghost">
-                      Eliminar
-                    </SubmitButton>
-                  </ActionForm>
-                </div>
-              ) : null}
-            </li>
-          ))}
+                    <ActionForm
+                      action={deleteSchedule}
+                      hidden={{ ...hidden, scheduleId: schedule.id }}
+                    >
+                      <SubmitButton size="sm" variant="ghost">
+                        Eliminar
+                      </SubmitButton>
+                    </ActionForm>
+                  </div>
+                ) : null}
+              </li>
+            ))}
         </ul>
       )}
       {canManage ? (
         <AddSchedule hidden={hidden} layouts={layouts} motorcycle={route.mode === 'motorcycle'} />
       ) : null}
     </Card>
+  );
+}
+
+interface SeriesGroup {
+  seriesId: string;
+  schedules: Schedule[];
+}
+
+/** Frequency series, each shown as one line instead of dozens of departures. */
+function seriesOf(schedules: Schedule[]): SeriesGroup[] {
+  const groups = new Map<string, Schedule[]>();
+  for (const schedule of schedules) {
+    if (!schedule.seriesId) continue;
+    groups.set(schedule.seriesId, [...(groups.get(schedule.seriesId) ?? []), schedule]);
+  }
+  return [...groups].map(([seriesId, list]) => ({
+    seriesId,
+    schedules: list.sort((a, b) => a.departureTime.localeCompare(b.departureTime)),
+  }));
+}
+
+function SeriesItem({
+  group,
+  hidden,
+  canManage,
+}: {
+  group: SeriesGroup;
+  hidden: Record<string, string>;
+  canManage: boolean;
+}) {
+  const first = group.schedules[0]!;
+  const last = group.schedules.at(-1)!;
+  const [h1, m1] = first.departureTime.split(':').map(Number);
+  const [h2, m2] = (group.schedules[1] ?? first).departureTime.split(':').map(Number);
+  const every = h2! * 60 + m2! - (h1! * 60 + m1!);
+  const active = group.schedules.filter((s) => s.active).length;
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-3 py-3">
+      <div>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="font-medium">
+            {first.departureTime} a {last.departureTime} · cada {every} min
+          </p>
+          <Badge variant="outline">{group.schedules.length} salidas</Badge>
+          {active === 0 ? (
+            <Badge variant="secondary">Pausadas</Badge>
+          ) : active < group.schedules.length ? (
+            <Badge variant="secondary">{group.schedules.length - active} pausadas</Badge>
+          ) : null}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {daysLabel(first.daysOfWeek)} · {first.seats} {first.seats === 1 ? 'puesto' : 'puestos'}{' '}
+          por salida · desde {first.validFrom}
+          {first.validUntil ? ` hasta ${first.validUntil}` : ''}
+        </p>
+      </div>
+      {canManage ? (
+        <div className="flex gap-2">
+          <ActionForm
+            action={setSeriesActive}
+            hidden={{ ...hidden, seriesId: group.seriesId, active: String(active === 0) }}
+          >
+            <SubmitButton size="sm" variant="outline">
+              {active === 0 ? 'Activar todas' : 'Pausar todas'}
+            </SubmitButton>
+          </ActionForm>
+          <ActionForm action={deleteSeries} hidden={{ ...hidden, seriesId: group.seriesId }}>
+            <SubmitButton size="sm" variant="ghost">
+              Eliminar
+            </SubmitButton>
+          </ActionForm>
+        </div>
+      ) : null}
+    </li>
   );
 }
 
@@ -414,8 +496,18 @@ function AddSchedule({
       <summary className="cursor-pointer text-sm font-medium">Agregar horario</summary>
       <ActionForm action={addSchedule} hidden={hidden} className="mt-3" resetOnSuccess>
         <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Hora de salida" htmlFor="departureTime">
+          <Field label="Hora de salida" htmlFor="departureTime" hint="La primera, si se repite.">
             <Input id="departureTime" name="departureTime" type="time" required />
+          </Field>
+          <Field
+            label="Repetir cada (min, opcional)"
+            htmlFor="everyMinutes"
+            hint="Para salidas frecuentes, p. ej. 15."
+          >
+            <Input id="everyMinutes" name="everyMinutes" type="number" min={5} max={240} />
+          </Field>
+          <Field label="Hasta las (opcional)" htmlFor="lastDeparture" hint="Última salida posible.">
+            <Input id="lastDeparture" name="lastDeparture" type="time" />
           </Field>
           {motorcycle ? (
             <>

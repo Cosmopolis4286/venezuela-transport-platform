@@ -25,6 +25,8 @@ import {
   RouteDto,
   RouteStatusDto,
   ScheduleDto,
+  ScheduleSeriesDto,
+  ScheduleSeriesUpdateDto,
   UpdateRouteDto,
   UpdateScheduleDto,
 } from './network.dto.js';
@@ -149,5 +151,42 @@ export class RoutesController {
     @ReqMeta() meta: RequestMeta,
   ): Promise<Route> {
     return this.routes.removeSchedule(access, routeId, scheduleId, auth, meta);
+  }
+
+  @Post(':routeId/schedule-series')
+  @RequireOrganizationAccess('routes.manage')
+  addSeries(
+    @CurrentOrganization() access: OrganizationAccess,
+    @Param('routeId', ParseUUIDPipe) routeId: string,
+    @Body() body: ScheduleSeriesDto,
+    @CurrentAuth() auth: Authenticated,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<Route> {
+    return this.routes.addSeries(access, routeId, body, auth, meta);
+  }
+
+  @Patch(':routeId/schedule-series/:seriesId')
+  @RequireOrganizationAccess('routes.manage')
+  updateSeries(
+    @CurrentOrganization() access: OrganizationAccess,
+    @Param('routeId', ParseUUIDPipe) routeId: string,
+    @Param('seriesId', ParseUUIDPipe) seriesId: string,
+    @Body() body: ScheduleSeriesUpdateDto,
+    @CurrentAuth() auth: Authenticated,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<Route> {
+    return this.routes.setSeriesActive(access, routeId, seriesId, body.active, auth, meta);
+  }
+
+  @Delete(':routeId/schedule-series/:seriesId')
+  @RequireOrganizationAccess('routes.manage')
+  removeSeries(
+    @CurrentOrganization() access: OrganizationAccess,
+    @Param('routeId', ParseUUIDPipe) routeId: string,
+    @Param('seriesId', ParseUUIDPipe) seriesId: string,
+    @CurrentAuth() auth: Authenticated,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<Route> {
+    return this.routes.removeSeries(access, routeId, seriesId, auth, meta);
   }
 }

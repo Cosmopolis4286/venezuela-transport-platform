@@ -19,6 +19,10 @@ const STATUS_RULES = {};
 const FARE_RULES = {
   VALIDATION_FAILED: 'Revisa los precios: usa números mayores que cero, con hasta dos decimales.',
 };
+const SERIES_RULES = {
+  VALIDATION_FAILED:
+    'Revisa las salidas frecuentes: cada 5 a 240 minutos, al menos dos salidas antes de la hora final, al menos un día, y los puestos o el mapa.',
+};
 const SCHEDULE_RULES = {
   VALIDATION_FAILED:
     'Revisa el horario: indica la hora, al menos un día, un mapa de puestos o entre 1 y 100 puestos, y que la fecha final no sea anterior a la inicial.',
@@ -113,25 +117,69 @@ export async function saveFares(_: FormState, form: FormData): Promise<FormState
   return { success: 'Precios guardados.' };
 }
 
+/** One departure, or a frequency series when "repeat every" and "until" are filled in. */
 export async function addSchedule(_: FormState, form: FormData): Promise<FormState> {
+  const every = Number(text(form, 'everyMinutes'));
+  const until = text(form, 'lastDeparture');
+  const common = {
+    daysOfWeek: form.getAll('day').map(Number),
+    validFrom: text(form, 'validFrom'),
+    validUntil: text(form, 'validUntil') || null,
+    serviceClass: text(form, 'serviceClass'),
+    seats: Number(text(form, 'seats')) || undefined,
+    seatLayoutId: text(form, 'seatLayoutId') || null,
+  };
+  const series = Boolean(every || until);
   try {
-    await apiRequest(`${routePath(form)}/schedules`, {
-      method: 'POST',
-      body: {
-        departureTime: text(form, 'departureTime'),
-        daysOfWeek: form.getAll('day').map(Number),
-        validFrom: text(form, 'validFrom'),
-        validUntil: text(form, 'validUntil') || null,
-        serviceClass: text(form, 'serviceClass'),
-        seats: Number(text(form, 'seats')) || undefined,
-        seatLayoutId: text(form, 'seatLayoutId') || null,
-      },
-    });
+    if (series) {
+      if (!every || !until)
+        return { error: 'Para repetir, indica cada cuántos minutos y hasta qué hora.' };
+      await apiRequest(`${routePath(form)}/schedule-series`, {
+        method: 'POST',
+        body: {
+          ...common,
+          firstDeparture: text(form, 'departureTime'),
+          lastDeparture: until,
+          everyMinutes: every,
+        },
+      });
+    } else {
+      await apiRequest(`${routePath(form)}/schedules`, {
+        method: 'POST',
+        body: { ...common, departureTime: text(form, 'departureTime') },
+      });
+    }
   } catch (error) {
-    return failure(error, SCHEDULE_RULES);
+    return failure(error, series ? SERIES_RULES : SCHEDULE_RULES);
   }
   refresh();
-  return { success: 'Horario agregado.' };
+  return { success: series ? 'Salidas frecuentes agregadas.' : 'Horario agregado.' };
+}
+
+export async function setSeriesActive(_: FormState, form: FormData): Promise<FormState> {
+  try {
+    await apiRequest(
+      `${routePath(form)}/schedule-series/${encodeURIComponent(text(form, 'seriesId'))}`,
+      { method: 'PATCH', body: { active: text(form, 'active') === 'true' } },
+    );
+  } catch (error) {
+    return failure(error);
+  }
+  refresh();
+  return {};
+}
+
+export async function deleteSeries(_: FormState, form: FormData): Promise<FormState> {
+  try {
+    await apiRequest(
+      `${routePath(form)}/schedule-series/${encodeURIComponent(text(form, 'seriesId'))}`,
+      { method: 'DELETE' },
+    );
+  } catch (error) {
+    return failure(error);
+  }
+  refresh();
+  return {};
 }
 
 export async function setScheduleLayout(_: FormState, form: FormData): Promise<FormState> {

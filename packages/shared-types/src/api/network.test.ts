@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { formatDuration, isTimeOfDay, modesFor, runsRoutes, servicesFor } from './network.js';
+import {
+  formatDuration,
+  isTimeOfDay,
+  modesFor,
+  runsRoutes,
+  seriesTimes,
+  servicesFor,
+} from './network.js';
 import { roleHasPermission } from './organizations.js';
 
 describe('network helpers', () => {
@@ -39,5 +46,13 @@ describe('servicesFor', () => {
     expect(modesFor('moto_line')).toEqual(['motorcycle']);
     expect(servicesFor('bus_company')).toEqual(['intercity', 'suburban']);
     expect(servicesFor('terminal')).toEqual([]);
+  });
+});
+
+describe('seriesTimes', () => {
+  it('lists every departure from the first to the last allowed time', () => {
+    expect(seriesTimes('05:00', '06:00', 20)).toEqual(['05:00', '05:20', '05:40', '06:00']);
+    expect(seriesTimes('05:00', '05:50', 20)).toEqual(['05:00', '05:20', '05:40']);
+    expect(seriesTimes('22:00', '21:00', 15)).toEqual([]);
   });
 });

@@ -185,10 +185,13 @@ export const routeSchedules = pgTable(
     /** When set, `seats` mirrors the layout's capacity. */
     seatLayoutId: uuid().references(() => seatLayouts.id, { onDelete: 'restrict' }),
     active: boolean().notNull().default(true),
+    /** Groups the departures of a frequency series (`ScheduleSeriesInput`). */
+    seriesId: uuid(),
     ...timestamps,
   },
   (t) => [
     index('route_schedules_route_idx').on(t.routeId),
+    index('route_schedules_series_idx').on(t.seriesId),
     check('route_schedules_seats_check', sql`${t.seats} between 1 and 100`),
     check(
       'route_schedules_validity_check',

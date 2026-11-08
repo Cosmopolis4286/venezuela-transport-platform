@@ -176,6 +176,13 @@
       "when": 1794154354792,
       "tag": "0024_moto_lines",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1794171120432,
+      "tag": "0025_schedule_series",
+      "breakpoints": true
     }
   ]
 }

@@ -13,6 +13,9 @@ pull request.
 
 ### Agregado
 
+- **Salidas frecuentes**: "de 05:00 a 20:00 cada 15 minutos" crea un horario por salida agrupados
+  en una serie (`POST …/schedule-series`), que el portal muestra en una línea y se pausa o elimina
+  entera. Hasta 300 horarios por ruta.
 - **Líneas de mototaxis** (`moto_line`, ADR-028): un tipo de organización nuevo con los roles de
   una línea de taxis. Publican solo rutas suburbanas de moto; cada salida lleva un pasajero y no
   usa mapa de puestos (`MOTORCYCLE_ONE_PASSENGER`). El portal les oculta los mapas de puestos, y

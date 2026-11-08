@@ -3,6 +3,7 @@ import {
   CURRENCIES,
   ROUTE_STATUSES,
   SERVICE_CLASSES,
+  SCHEDULE_SERIES_LIMITS,
   SERVICES,
   STOP_KINDS,
   TRANSPORT_MODES,
@@ -10,6 +11,8 @@ import {
   type CityRef,
   type IntercitySettingsInput,
   type Service,
+  type ScheduleSeriesInput,
+  type ScheduleSeriesUpdate,
   type ServiceAreaInput,
   type Currency,
   type Fare,
@@ -313,3 +316,28 @@ export class ServiceAreaDto implements ServiceAreaInput {
 }
 
 export class UpdateServiceAreaDto extends PartialType(ServiceAreaDto) {}
+
+export class ScheduleSeriesDto
+  extends OmitType(ScheduleDto, ['departureTime', 'active'] as const)
+  implements ScheduleSeriesInput
+{
+  @ApiProperty({ example: '05:00', description: 'First departure (America/Caracas)' })
+  @Matches(TIME_OF_DAY, { message: 'firstDeparture must be HH:MM' })
+  firstDeparture!: string;
+
+  @ApiProperty({ example: '20:00', description: 'No departure after this time' })
+  @Matches(TIME_OF_DAY, { message: 'lastDeparture must be HH:MM' })
+  lastDeparture!: string;
+
+  @ApiProperty({ example: 15 })
+  @IsInt()
+  @Min(SCHEDULE_SERIES_LIMITS.minEveryMinutes)
+  @Max(SCHEDULE_SERIES_LIMITS.maxEveryMinutes)
+  everyMinutes!: number;
+}
+
+export class ScheduleSeriesUpdateDto implements ScheduleSeriesUpdate {
+  @ApiProperty()
+  @IsBoolean()
+  active!: boolean;
+}

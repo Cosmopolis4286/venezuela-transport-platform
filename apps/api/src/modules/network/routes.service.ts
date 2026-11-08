@@ -1,6 +1,10 @@
+import { randomUUID } from 'node:crypto';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   modesFor,
+  SCHEDULE_SERIES_LIMITS,
+  seriesTimes,
+  type ScheduleSeriesInput,
   MOTORCYCLE_SEATS,
   runsRoutes,
   servicesFor,
@@ -33,7 +37,8 @@ import { isCalendarDate } from './departures.js';
 import { ServicesService } from './services.service.js';
 import { toSummary } from './stops.service.js';
 
-const MAX_SCHEDULES_PER_ROUTE = 100;
+/** Frequency series add one schedule per departure, so suburban routes need room for many. */
+const MAX_SCHEDULES_PER_ROUTE = 300;
 
 /** Allowed status changes. A route never goes back to draft once published. */
 const STATUS_TRANSITIONS: Record<RouteStatus, RouteStatus[]> = {
@@ -330,6 +335,115 @@ export class RoutesService {
     return this.load(route);
   }
 
+  /**
+   * Adds one schedule per departure of a frequency series (e.g. 05:00 to 20:00 every 15 minutes),
+   * all with the same `seriesId`.
+   */
+  async addSeries(
+    access: OrganizationAccess,
+    routeId: string,
+    input: ScheduleSeriesInput,
+    actor: Authenticated,
+    meta: RequestMeta,
+  ): Promise<Route> {
+    const route = await this.requireRoute(access, routeId);
+    assertWindow(input.validFrom, input.validUntil ?? null);
+    const times = seriesTimes(input.firstDeparture, input.lastDeparture, input.everyMinutes);
+    if (times.length < 2) {
+      throw invalid('The last departure must allow at least two departures after the first');
+    }
+    if (times.length > SCHEDULE_SERIES_LIMITS.maxDepartures) {
+      throw conflict('This series has too many departures', 'TOO_MANY_SCHEDULES');
+    }
+    const [{ total }] = (await this.database.db
+      .select({ total: count() })
+      .from(routeSchedules)
+      .where(eq(routeSchedules.routeId, route.id))) as [{ total: number }];
+    if (total + times.length > MAX_SCHEDULES_PER_ROUTE)
+      throw conflict('This route has too many schedules', 'TOO_MANY_SCHEDULES');
+    const seating = await this.seating(access, route, input.seatLayoutId ?? null, input.seats);
+    const seriesId = randomUUID();
+    await this.database.db.insert(routeSchedules).values(
+      times.map((departureTime) => ({
+        routeId: route.id,
+        departureTime,
+        daysOfWeek: normalizeDays(input.daysOfWeek),
+        validFrom: input.validFrom,
+        validUntil: input.validUntil ?? null,
+        serviceClass: input.serviceClass,
+        ...seating,
+        seriesId,
+      })),
+    );
+    await this.record('route.schedule_series_created', route, actor, meta, {
+      seriesId,
+      departures: times.length,
+      everyMinutes: input.everyMinutes,
+    });
+    return this.load(route);
+  }
+
+  /** Pauses or resumes every departure of a series. */
+  async setSeriesActive(
+    access: OrganizationAccess,
+    routeId: string,
+    seriesId: string,
+    active: boolean,
+    actor: Authenticated,
+    meta: RequestMeta,
+  ): Promise<Route> {
+    const route = await this.requireRoute(access, routeId);
+    const updated = await this.database.db
+      .update(routeSchedules)
+      .set({ active, updatedAt: new Date() })
+      .where(and(eq(routeSchedules.routeId, route.id), eq(routeSchedules.seriesId, seriesId)))
+      .returning({ id: routeSchedules.id });
+    if (!updated.length) throw notFound('Schedule series not found');
+    await this.record('route.schedule_series_updated', route, actor, meta, { seriesId, active });
+    return this.load(route);
+  }
+
+  /** Deletes the departures of a series nobody booked; the booked ones are paused instead. */
+  async removeSeries(
+    access: OrganizationAccess,
+    routeId: string,
+    seriesId: string,
+    actor: Authenticated,
+    meta: RequestMeta,
+  ): Promise<Route> {
+    const route = await this.requireRoute(access, routeId);
+    const members = await this.database.db
+      .select({ id: routeSchedules.id })
+      .from(routeSchedules)
+      .where(and(eq(routeSchedules.routeId, route.id), eq(routeSchedules.seriesId, seriesId)));
+    if (!members.length) throw notFound('Schedule series not found');
+    const ids = members.map((m) => m.id);
+    const booked = new Set(
+      (
+        await this.database.db
+          .selectDistinct({ scheduleId: trips.scheduleId })
+          .from(trips)
+          .where(inArray(trips.scheduleId, ids))
+      ).map((t) => t.scheduleId),
+    );
+    const free = ids.filter((id) => !booked.has(id));
+    await this.database.db.transaction(async (tx) => {
+      if (free.length) await tx.delete(routeSchedules).where(inArray(routeSchedules.id, free));
+      if (booked.size) {
+        await tx
+          .update(routeSchedules)
+          .set({ active: false, updatedAt: new Date() })
+          .where(inArray(routeSchedules.id, [...booked]));
+      }
+    });
+    await this.record('route.schedule_series_deleted', route, actor, meta, {
+      seriesId,
+      deleted: free.length,
+      paused: booked.size,
+    });
+    return this.load(route);
+  }
+
   async updateSchedule(
     access: OrganizationAccess,
     routeId: string,
@@ -565,5 +679,6 @@ export function toSchedule(row: RouteScheduleRow): Schedule {
     seats: row.seats,
     seatLayoutId: row.seatLayoutId,
     active: row.active,
+    seriesId: row.seriesId,
   };
 }

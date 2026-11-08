@@ -333,6 +333,46 @@ describe.runIf(expectDatabase)('Services and corridors (e2e)', () => {
       .send({ enabled: true, closedCities: [] })
       .expect(200);
     expect(await search(caracas, puertoOrdaz)).toHaveLength(1);
+
+    // --- Frequent departures: one schedule per departure, grouped in a series.
+    const seriesUrl = `${routesUrl}/${suburban.id}/schedule-series`;
+    const series = (body: object) =>
+      http()
+        .post(seriesUrl)
+        .set('Authorization', owner.auth)
+        .send({
+          daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
+          validFrom: tomorrow,
+          serviceClass: 'standard',
+          seats: 30,
+          ...body,
+        });
+    await series({ firstDeparture: '05:00', lastDeparture: '05:10', everyMinutes: 15 }).expect(400);
+    await series({ firstDeparture: '05:00', lastDeparture: '20:00', everyMinutes: 2 }).expect(400);
+    const withSeries = (
+      await series({ firstDeparture: '05:00', lastDeparture: '06:00', everyMinutes: 20 }).expect(
+        201,
+      )
+    ).body as Route;
+    const seriesId = withSeries.schedules.find((s) => s.seriesId)!.seriesId!;
+    expect(
+      withSeries.schedules.filter((s) => s.seriesId === seriesId).map((s) => s.departureTime),
+    ).toEqual(['05:00', '05:20', '05:40', '06:00']);
+    const times = async () =>
+      (await search(casacoima, puertoOrdaz)).map((d) => d.departsAt.slice(11, 16));
+    expect(await times()).toEqual(['05:00', '05:20', '05:40', '06:00', '06:30']);
+    await http()
+      .patch(`${seriesUrl}/${seriesId}`)
+      .set('Authorization', owner.auth)
+      .send({ active: false })
+      .expect(200);
+    expect(await times()).toEqual(['06:30']);
+    // Deleting keeps nothing that was not booked.
+    const afterDelete = (
+      await http().delete(`${seriesUrl}/${seriesId}`).set('Authorization', owner.auth).expect(200)
+    ).body as Route;
+    expect(afterDelete.schedules.some((s) => s.seriesId === seriesId)).toBe(false);
+    await http().delete(`${seriesUrl}/${seriesId}`).set('Authorization', owner.auth).expect(404);
   });
   it('lets motorcycle taxi lines run suburban routes with one passenger per motorcycle', async () => {
     const reviewer = await signIn('reviewer');

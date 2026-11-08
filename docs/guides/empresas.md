@@ -31,6 +31,9 @@ En la página de la organización:
    caso el corredor (solo puedes usar sus paradas). El servicio no cambia después.
 3. **Tarifas** por tramo (US$ o Bs.).
 4. **Horarios**: hora de salida, días de la semana, vigencia, clase de servicio y mapa de puestos.
+   Para **salidas frecuentes**, llena también "Repetir cada" y "Hasta las" (por ejemplo, cada 15
+   minutos hasta las 20:00): se crean todas de una vez y se ven como una sola línea, que puedes
+   pausar o eliminar entera.
 5. **Publicar** la ruta: desde ese momento aparece en las búsquedas.
 6. **Tasas de cambio**: bolívares y reales por dólar. Sin una tasa, ese medio de pago no se ofrece
    para tarifas en dólares.
