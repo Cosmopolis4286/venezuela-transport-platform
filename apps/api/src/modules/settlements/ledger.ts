@@ -20,6 +20,22 @@ export function splitFare(gross: string, rate: string): { commission: string; ea
   return { commission: fromScaled(commission, 2), earned: fromScaled(cents - commission, 2) };
 }
 
+/**
+ * The service fee the passenger pays on top of `fares` at `rate` percent (ADR-029), rounded half
+ * up to cents, and the total charged.
+ */
+export function withServiceFee(fares: string, rate: string): { fee: string; total: string } {
+  const { commission } = splitFare(fares, rate);
+  return { fee: commission, total: fromScaled(toScaled(fares, 2) + toScaled(commission, 2), 2) };
+}
+
+/** `amount × part / whole`, rounded half up to cents (e.g. the fare share of a payment). */
+export function shareOf(amount: string, part: string, whole: string): string {
+  const total = toScaled(whole, 2);
+  if (total === 0n) return fromScaled(0n, 2);
+  return fromScaled(divideRounded(toScaled(amount, 2) * toScaled(part, 2), total), 2);
+}
+
 /** `percent` (whole number) of `amount`, rounded half up to cents. */
 export function percentOf(amount: string, percent: number): string {
   return fromScaled(divideRounded(toScaled(amount, 2) * BigInt(percent), 100n), 2);
@@ -106,6 +122,8 @@ export async function recordEarning(
       gross: bookings.totalAmount,
       currency: bookings.currency,
       fromStopId: bookings.fromStopId,
+      serviceFee: bookings.serviceFee,
+      serviceFeeRate: bookings.serviceFeeRate,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -115,7 +133,19 @@ export async function recordEarning(
     .select({ n: count() })
     .from(bookingPassengers)
     .where(and(eq(bookingPassengers.bookingId, bookingId), eq(bookingPassengers.active, true)));
-  const commissionRate = normalizeRate(await commissionFor(tx, row.organizationId, row.fromStopId));
+  // Since ADR-029 the commission is the service fee the passenger paid on top of the fares:
+  // the operator earns its fares in full. Older bookings had it taken out of the fare.
+  const surcharge =
+    row.serviceFee !== null && row.serviceFeeRate !== null
+      ? {
+          commissionRate: row.serviceFeeRate,
+          commission: row.serviceFee,
+          earned: fromScaled(toScaled(row.gross, 2) - toScaled(row.serviceFee, 2), 2),
+        }
+      : null;
+  const commissionRate =
+    surcharge?.commissionRate ??
+    normalizeRate(await commissionFor(tx, row.organizationId, row.fromStopId));
   await tx
     .insert(settlementEntries)
     .values({
@@ -126,7 +156,9 @@ export async function recordEarning(
       currency: row.currency,
       gross: row.gross,
       commissionRate,
-      ...splitFare(row.gross, commissionRate),
+      ...(surcharge
+        ? { commission: surcharge.commission, earned: surcharge.earned }
+        : splitFare(row.gross, commissionRate)),
     })
     .onConflictDoNothing({ target: [settlementEntries.bookingId, settlementEntries.kind] });
 }

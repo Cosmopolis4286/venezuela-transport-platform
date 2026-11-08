@@ -52,26 +52,27 @@ documentos (KYC) hecha por {{nombre_comercial}}; la Empresa decide si los incorp
 verificación de {{nombre_comercial}} no sustituye la responsabilidad de la Empresa sobre la
 idoneidad de su personal.
 
-## 4. Ventas, comisión y liquidación
+## 4. Ventas, cargo por servicio y liquidación
 
-4.1. **Comisión.** Por cada reserva pagada, {{nombre_comercial}} cobra una comisión sobre la
-tarifa, del porcentaje acordado con la Empresa o, en su defecto, del porcentaje general vigente
-que se muestra en el portal (hoy, 8 %). La comisión vigente al confirmar el pago queda fija para
-esa reserva. Los cambios de comisión se avisan con al menos 30 días de anticipación y aplican
-solo a las reservas pagadas después.
+4.1. **Cargo por servicio.** La Empresa recibe su **tarifa completa**. {{nombre_comercial}} cobra al
+pasajero, **además de la tarifa**, un cargo por servicio: un porcentaje de la tarifa acordado con
+la Empresa o, en su defecto, el fijado para la ciudad o zona, o el porcentaje general vigente que
+se muestra en el portal (hoy, 15 %). El cargo vigente al apartar los puestos queda fijo para esa
+reserva. Los cambios se avisan con al menos 30 días de anticipación y aplican solo a las reservas
+hechas después.
 
 4.2. **Quién cobra.** Según lo acordado con cada Empresa:
 
 - **Cobra la plataforma (por defecto):** los pasajeros pagan a las cuentas de
-  {{nombre_comercial}}, que recibe el dinero **por cuenta de la Empresa** y le paga lo ganado
-  (tarifa menos comisión) en la moneda de la tarifa, con la frecuencia y por el medio acordados.
+  {{nombre_comercial}}, que recibe la tarifa **por cuenta de la Empresa** y le paga lo ganado
+  (la tarifa completa) en la moneda de la tarifa, con la frecuencia y por el medio acordados.
   Cada pago a la Empresa queda registrado con su referencia.
 - **Cobra la Empresa:** los pasajeros pagan a las cuentas que la Empresa registra en la
   Plataforma; la Empresa verifica los pagos, hace los reembolsos que correspondan y paga a
-  {{nombre_comercial}} la comisión de cada reserva pagada en el plazo acordado (en su defecto,
+  {{nombre_comercial}} el cargo por servicio de cada reserva pagada en el plazo acordado (en su defecto,
   dentro de los 15 días siguientes al cierre de cada mes).
 
-4.3. **Estado de cuenta.** El portal muestra en todo momento lo vendido, la comisión, lo ganado,
+4.3. **Estado de cuenta.** El portal muestra en todo momento lo pagado por los pasajeros, el cargo por servicio, lo ganado,
 lo cobrado por la Empresa, los pagos en cada sentido y el saldo. Las diferencias deben
 reportarse dentro de los 30 días siguientes al cierre del mes; después, el estado de cuenta se
 tiene por aceptado, salvo error material.
@@ -85,11 +86,12 @@ monedas y responde por ellas.
 que acepta la Plataforma; mientras no fije una propia, aplica la general. La política se muestra
 al pasajero antes de pagar.
 
-5.2. Cuando un pasajero cancela, el reembolso se descuenta de lo ganado por la Empresa y
-{{nombre_comercial}} conserva su comisión.
+5.2. Cuando un pasajero cancela, el reembolso (sobre la tarifa) se descuenta de lo ganado por la
+Empresa; el cargo por servicio no se reembolsa y lo conserva {{nombre_comercial}}.
 
-5.3. Si la **Empresa cancela una salida**, todos sus pasajeros reciben el **reembolso completo**,
-{{nombre_comercial}} conserva su comisión y la Empresa debe informar el motivo. La Empresa debe
+5.3. Si la **Empresa cancela una salida**, todos sus pasajeros reciben el **reembolso completo**
+(tarifa y cargo por servicio); {{nombre_comercial}} conserva su cargo por servicio, que asume la
+Empresa, y la Empresa debe informar el motivo. La Empresa debe
 cancelar con la mayor anticipación posible y avisar por la Plataforma.
 
 5.4. Los reembolsos los hace quien recibió el dinero (sección 4.2), por el mismo medio, en un

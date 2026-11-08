@@ -34,7 +34,14 @@ import { currentPayment, toPayment } from '../payments/payment-view.js';
 import { departureText } from '../notifications/format.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { payments, type PaymentRow } from '../payments/payments.schema.js';
-import { percentOf, policyFor, recordCancellation } from '../settlements/ledger.js';
+import {
+  commissionFor,
+  percentOf,
+  policyFor,
+  recordCancellation,
+  shareOf,
+  withServiceFee,
+} from '../settlements/ledger.js';
 import {
   bookingPassengers,
   bookings,
@@ -77,6 +84,12 @@ function bookingCode(): string {
 }
 
 const cents = (amount: string) => Math.round(Number(amount) * 100);
+
+/** What the passenger paid for the fares alone, without the service fee (ADR-029). */
+const faresOf = (booking: Pick<BookingRow, 'totalAmount' | 'serviceFee'>) =>
+  booking.serviceFee === null
+    ? booking.totalAmount
+    : fromCents(cents(booking.totalAmount) - cents(booking.serviceFee));
 const fromCents = (value: number) => (value / 100).toFixed(2);
 
 @Injectable()
@@ -133,7 +146,14 @@ export class BookingsService {
     }
 
     const holdMinutes = this.config.get('BOOKING_HOLD_MINUTES');
-    const total = fromCents(cents(fare.amount) * seats.length);
+    const fares = fromCents(cents(fare.amount) * seats.length);
+    // The platform's service fee goes on top of the fares (ADR-029), frozen with the hold.
+    const serviceFeeRate = await commissionFor(
+      this.database.db,
+      context.operator.id,
+      input.fromStopId,
+    );
+    const { fee: serviceFee, total } = withServiceFee(fares, serviceFeeRate);
     let booking: BookingRow | undefined;
     for (let attempt = 0; !booking && attempt < 3; attempt++) {
       try {
@@ -158,6 +178,8 @@ export class BookingsService {
               arrivesAt: new Date(context.occurrence.arrivesAt),
               fareAmount: fare.amount,
               totalAmount: total,
+              serviceFee,
+              serviceFeeRate,
               currency: fare.currency,
               expiresAt: sql`now() + make_interval(mins => ${holdMinutes})`,
             })
@@ -439,7 +461,12 @@ export class BookingsService {
     const hoursLeft = (booking.departsAt.getTime() - Date.now()) / 3_600_000;
     const cancellable = hoursLeft > 0 && (boarded?.n ?? 0) === 0 && !trip!.departedAt;
     const refundPercent = cancellable ? refundPercentFor(refundTiers, hoursLeft) : 0;
-    const refundAmount = payment ? percentOf(payment.amount, refundPercent) : '0.00';
+    // The refund tiers apply to the fares; the service fee is not refunded when the passenger
+    // cancels (ADR-029). `faresOf` is the whole total for bookings made before the fee existed.
+    const fares = faresOf(booking);
+    const refundAmount = payment
+      ? percentOf(shareOf(payment.amount, fares, booking.totalAmount), refundPercent)
+      : '0.00';
     return {
       quote: {
         cancellable,
@@ -452,7 +479,7 @@ export class BookingsService {
         policy: refundTiers,
       },
       payment,
-      fareRefund: percentOf(booking.totalAmount, refundPercent),
+      fareRefund: percentOf(fares, refundPercent),
     };
   }
 
@@ -648,6 +675,11 @@ export class BookingsService {
                 : null,
           })),
         total: { amount: booking.totalAmount, currency: booking.currency },
+        fares: faresOf(booking),
+        serviceFee:
+          booking.serviceFee !== null && booking.serviceFeeRate !== null
+            ? { amount: booking.serviceFee, rate: booking.serviceFeeRate }
+            : null,
         expiresAt:
           booking.status === 'held' && booking.expiresAt ? booking.expiresAt.toISOString() : null,
         payment: payment ? toPayment(payment) : null,

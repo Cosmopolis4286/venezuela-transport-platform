@@ -465,3 +465,24 @@ API con PostgreSQL atiende con holgura el volumen de varias ciudades en un VPS; 
 mediciones lo pidan, la API ya puede correr varias copias detrás de Caddy (el límite de
 peticiones pasaría a Redis) y la búsqueda de salidas se puede cachear. Las zonas no reemplazan a
 las tasas de cambio de cada empresa ni a sus cuentas de cobro.
+
+## ADR-029: El cargo de la plataforma es un recargo que paga el pasajero
+
+**Decisión** (del dueño del producto). La plataforma cobra un **cargo por servicio encima de la
+tarifa**: el pasajero paga la tarifa más el cargo, y la empresa gana su tarifa completa. Es un
+porcentaje (15 % por defecto) que se resuelve igual que la antigua comisión: el de la empresa, si
+tiene; si no, el de la zona donde sube el pasajero; si no, el general. Se fija al apartar los
+puestos (`bookings.service_fee`, `service_fee_rate`) y se muestra antes de apartar y de pagar
+(búsqueda, puestos, pasajeros y reserva). Si cancela el pasajero, los tramos de reembolso se
+aplican a la tarifa y el cargo no se devuelve; si cancela la empresa, el pasajero recibe todo y
+la empresa asume el cargo. El libro de liquidaciones conserva su forma: `gross` es lo pagado,
+`commission` el cargo y `earned` la tarifa. Ver [settlements.md](settlements.md).
+
+**Por qué.** Así la empresa cobra lo mismo que en taquilla, lo que facilita sumar empresas, y la
+plataforma se financia con un cargo visible para el pasajero.
+
+**Compromisos.** El precio que paga el pasajero sube respecto de la taquilla, así que el cargo debe
+verse siempre antes de pagar (ley de precios justos) y figurar en los Términos (versión
+2026-11-08). La plataforma debe facturar su cargo por separado; la revisión legal debe confirmarlo
+junto con el cobro por cuenta de terceros (ADR-018). Las reservas anteriores conservan la comisión
+dentro de la tarifa.

@@ -56,9 +56,9 @@ async function Settlement({
         </Link>
         <h1 className="text-2xl font-semibold">Liquidaciones</h1>
         <p className="text-sm text-muted-foreground">
-          Por cada reserva pagada, la empresa gana la tarifa menos la comisión, en la moneda de la
-          tarifa. Si cobra la plataforma, le transfiere ese saldo; si cobra la empresa, la empresa
-          le paga la comisión a la plataforma.
+          Por cada reserva pagada, la empresa gana su tarifa completa, en la moneda de la tarifa; el
+          pasajero paga además el cargo por servicio de la plataforma. Si cobra la plataforma, le
+          transfiere ese saldo; si cobra la empresa, la empresa le paga el cargo por servicio.
         </p>
       </div>
 

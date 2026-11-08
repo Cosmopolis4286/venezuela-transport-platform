@@ -26,6 +26,7 @@ import {
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
+import { PriceBreakdown } from '@/components/price-breakdown';
 import { PaymentPanel } from '@/components/payment-panel';
 import { QrCode } from '@/components/qr-code';
 import { useT } from '@/i18n/use-t';
@@ -179,9 +180,23 @@ export default function BookingScreen() {
           </Row>
         ),
       )}
-      <Body>
-        {t.booking.total}: {formatMoney(data.total.amount, data.total.currency, locale)}
-      </Body>
+      {data.serviceFee ? (
+        <>
+          <PriceBreakdown
+            label={t.booking.total}
+            fares={data.fares}
+            rate={data.serviceFee.rate}
+            fee={data.serviceFee.amount}
+            total={data.total.amount}
+            currency={data.total.currency}
+          />
+          {Number(data.serviceFee.amount) > 0 ? <Body muted>{t.fees.notRefunded}</Body> : null}
+        </>
+      ) : (
+        <Body>
+          {t.booking.total}: {formatMoney(data.total.amount, data.total.currency, locale)}
+        </Body>
+      )}
       {data.payment?.status === 'confirmed' ? (
         <Body muted>
           {t.booking.paidWith(

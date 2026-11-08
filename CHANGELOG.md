@@ -11,6 +11,15 @@ pull request.
 
 ## Sin publicar
 
+### Cambiado
+
+- **El cargo de la plataforma ahora lo paga el pasajero encima de la tarifa** (ADR-029, 15 %
+  por defecto): la empresa recibe su tarifa completa. Se muestra en la búsqueda (web y app) y
+  desglosado al elegir puestos, al apartar y en la reserva. Si cancela el pasajero, se reembolsa
+  según los tramos sobre la tarifa y el cargo no se devuelve; si cancela la empresa, se devuelve
+  todo y la empresa asume el cargo. Términos, política de reembolsos y condiciones para empresas
+  actualizados (versión 2026-11-08: los usuarios aceptan de nuevo).
+
 ### Agregado
 
 - **Despliegue listo para usar** (rescatado del borrador #54): imágenes publicadas en GHCR tras

@@ -21,6 +21,7 @@ import {
   type TripLayout,
   type TripRow,
 } from './bookings.schema.js';
+import { commissionFor } from '../settlements/ledger.js';
 import { occupiesSeat } from './occupancy.js';
 
 /** Everything needed to show or book one departure between two stops. */
@@ -173,6 +174,7 @@ export class TripsService {
       capacity: trip ? trip.capacity : context.schedule.seats,
       takenSeats: taken.map((t) => t.seatNumber).sort(compareSeats),
       fare: context.fare,
+      serviceFeeRate: await commissionFor(this.database.db, context.operator.id, fromStopId),
       bookable: isBookable(context) && trip?.status !== 'cancelled',
     };
   }

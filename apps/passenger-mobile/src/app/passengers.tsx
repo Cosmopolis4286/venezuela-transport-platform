@@ -14,7 +14,6 @@ import {
   userMessage,
 } from '@vtp/mobile-core';
 import {
-  formatMoney,
   IDENTITY_DOCUMENT_TYPES,
   type Booking,
   type IdentityDocumentType,
@@ -22,6 +21,7 @@ import {
 } from '@vtp/shared-types';
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
+import { PriceBreakdown } from '@/components/price-breakdown';
 import { useT } from '@/i18n/use-t';
 import { useBookingDraft } from '@/lib/booking-draft';
 
@@ -30,7 +30,7 @@ export default function PassengersScreen() {
   const user = useCurrentUser();
   const { api } = useAuth();
   const { trip, seats, clear } = useBookingDraft();
-  const { t, locale } = useT();
+  const { t } = useT();
   const documentLabels: Record<IdentityDocumentType, string> = {
     V: 'V',
     E: 'E',
@@ -120,14 +120,12 @@ export default function PassengersScreen() {
           />
         </Card>
       ))}
-      <Body>
-        {t.passengers.total}:{' '}
-        {formatMoney(
-          (Number(trip.fare!.amount) * passengers.length).toFixed(2),
-          trip.fare!.currency,
-          locale,
-        )}
-      </Body>
+      <PriceBreakdown
+        label={t.passengers.total}
+        fares={(Number(trip.fare!.amount) * passengers.length).toFixed(2)}
+        rate={trip.serviceFeeRate}
+        currency={trip.fare!.currency}
+      />
       {error ? <Banner tone="error">{error}</Banner> : null}
       <Button
         title={t.passengers.hold}

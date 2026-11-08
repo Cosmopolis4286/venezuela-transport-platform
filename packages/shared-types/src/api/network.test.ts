@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDuration, isTimeOfDay, runsRoutes } from './network.js';
+import { formatDuration, isTimeOfDay, runsRoutes, withServiceFee } from './network.js';
 import { roleHasPermission } from './organizations.js';
 
 describe('network helpers', () => {
@@ -22,5 +22,14 @@ describe('network helpers', () => {
     expect(runsRoutes('terminal')).toBe(false);
     expect(roleHasPermission('admin', 'routes.manage')).toBe(true);
     expect(roleHasPermission('dispatcher', 'routes.manage')).toBe(false);
+  });
+});
+
+describe('withServiceFee', () => {
+  it('adds the fee on top, rounded half up to cents', () => {
+    expect(withServiceFee('0.75', '15.00')).toEqual({ fee: '0.11', total: '0.86' });
+    expect(withServiceFee('25.00', '15.00')).toEqual({ fee: '3.75', total: '28.75' });
+    expect(withServiceFee('10.10', '0.00')).toEqual({ fee: '0.00', total: '10.10' });
+    expect(withServiceFee('0.10', '5.00')).toEqual({ fee: '0.01', total: '0.11' });
   });
 });

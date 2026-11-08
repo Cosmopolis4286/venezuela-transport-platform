@@ -11,7 +11,6 @@ import {
 } from '@vtp/mobile-core';
 import {
   daysBetween,
-  formatMoney,
   localTime,
   longDate,
   MAX_SEATS_PER_BOOKING,
@@ -20,6 +19,7 @@ import {
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator } from 'react-native';
+import { PriceBreakdown } from '@/components/price-breakdown';
 import { SeatMap } from '@/components/seat-map';
 import { useT } from '@/i18n/use-t';
 import { useBookingDraft } from '@/lib/booking-draft';
@@ -97,14 +97,12 @@ export default function TripScreen() {
           <Body muted>{t.trip.seatsHelp(free, MAX_SEATS_PER_BOOKING)}</Body>
           <SeatMap trip={data} selected={selected} onToggle={toggle} />
           {selected.length ? (
-            <Body>
-              {t.seats(selected.length)} ·{' '}
-              {formatMoney(
-                (Number(data.fare!.amount) * selected.length).toFixed(2),
-                data.fare!.currency,
-                locale,
-              )}
-            </Body>
+            <PriceBreakdown
+              label={t.seats(selected.length)}
+              fares={(Number(data.fare!.amount) * selected.length).toFixed(2)}
+              rate={data.serviceFeeRate}
+              currency={data.fare!.currency}
+            />
           ) : null}
           {state.status === 'signedIn' ? (
             <Button
