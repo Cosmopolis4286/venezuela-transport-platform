@@ -58,12 +58,13 @@ services:
         condition: service_healthy
     logging: *logging
 
-  # One-off: docker compose run --rm migrate   (run BEFORE starting a new api image)
+  # One-off, BEFORE starting a new api image: docker compose --profile migrate run --rm migrate
+  # (deploy.sh does it). Runs as the owner role; the api runs as the least-privilege role.
   migrate:
     image: ${VTP_API_IMAGE:?Set VTP_API_IMAGE}
     profiles: ['migrate']
     restart: 'no'
-    env_file: ${VTP_API_ENV_FILE:-/etc/vtp/api.env}
+    env_file: ${VTP_MIGRATE_ENV_FILE:-/etc/vtp/migrate.env}
     environment:
       NODE_ENV: production
       DATABASE_HOST: postgres
@@ -89,6 +90,8 @@ services:
     # No published ports: reachable only from this Compose network.
     volumes:
       - postgres-data:/var/lib/postgresql
+      # Creates the api's least-privilege role on the first start (empty volume only).
+      - ./postgres/init-app-role.sh:/docker-entrypoint-initdb.d/20-init-app-role.sh:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
       interval: 10s

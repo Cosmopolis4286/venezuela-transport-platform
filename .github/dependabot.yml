@@ -31,6 +31,10 @@ updates:
       - dependency-name: react-dom
         update-types: [version-update:semver-major, version-update:semver-minor]
       - dependency-name: react-native
+      # ESLint 10 breaks eslint-plugin-react (used by eslint-config-next and eslint-config-expo):
+      # "contextOrFilename.getFilename is not a function". Retry when both configs support it.
+      - dependency-name: eslint
+        update-types: [version-update:semver-major]
       # Node types follow the runtime (Node 24, see .nvmrc); bump the major with the runtime.
       - dependency-name: '@types/node'
         update-types: [version-update:semver-major]

@@ -13,6 +13,10 @@ pull request.
 
 ### Agregado
 
+- **Despliegue listo para usar** (rescatado del borrador #54): imágenes publicadas en GHCR tras
+  cada CI verde en `main` (se activa con la variable `VTP_API_DOMAIN`), `deploy.sh`, y la API con
+  un rol de base de datos de mínimos privilegios (`vtp_app`) separado del dueño que migra. Prueba
+  de dos confirmaciones simultáneas del mismo pago.
 - **Varias ciudades: zonas operativas** (ADR-028). Cada ciudad o región se crea en
   `/admin/zones` y se activa, se marca como próxima o se pausa con un clic; solo las zonas activas
   venden pasajes y taxis. Cada zona puede tener su comisión y su moneda, y las paradas nuevas

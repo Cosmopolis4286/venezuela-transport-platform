@@ -54,8 +54,10 @@ es una alternativa válida si incluye copias de seguridad y PostGIS.
       (`https://app.example.ve`), `SWAGGER_ENABLED=false` salvo que sea público a propósito,
       `APP_VERSION=<sha de git>`.
 - [ ] `DATABASE_PASSWORD` única y fuerte (la API rechaza en producción las débiles o de ejemplo).
-      Usa un rol de la aplicación con los mínimos privilegios, separado del rol dueño que corre las
-      migraciones.
+      Hecho: la API usa `vtp_app` (solo leer y escribir datos), creado por
+      `infrastructure/docker/production/postgres/init-app-role.sh` al iniciar la base por primera
+      vez; las migraciones corren con el rol dueño (`/etc/vtp/migrate.env`). Plantillas en
+      `infrastructure/docker/production/env.example`.
 - [ ] `PAYMENT_PROVIDER=manual` (por defecto) con las cuentas de cobro cargadas en **Pagos** del
       panel, hasta integrar proveedores reales; `disabled` apaga los pagos. La API rechaza
       `simulated` en producción.
@@ -90,11 +92,12 @@ docker build -f infrastructure/docker/production/web.Dockerfile \
   se construye una imagen por entorno.
 - Detrás de un proxy que intercepta TLS, pasa su CA como secreto de compilación:
   `--secret id=ca_bundle,src=/ruta/a/ca.crt` (nunca se copia en una capa).
-- [ ] Publica en un registro (GitHub Container Registry es gratis para repositorios privados
-      dentro de ciertos límites), con el sha de git como etiqueta. Requiere un workflow de
-      despliegue y credenciales del registro — todavía no está configurado.
-- [ ] Desplegar = `pull` → `run --rm migrate` → `up -d` → comprobar
-      `https://<api>/api/v1/health/ready` (los comandos están al inicio de `compose.yml`).
+- [x] Publicación en GitHub Container Registry (gratis en repositorios públicos) con el sha de git
+      como etiqueta: `.github/workflows/publish-images.yml`, después de cada CI verde en `main`.
+      Se activa al definir la variable de Actions `VTP_API_DOMAIN`.
+- [x] Desplegar: `sudo bash infrastructure/docker/production/deploy.sh` (valida, descarga,
+      migra, actualiza y comprueba la API y la web por HTTPS). Ver
+      [infrastructure/docker/production/README.md](../../infrastructure/docker/production/README.md).
 
 ## 5. Migraciones de la base de datos
 

@@ -1,0 +1,69 @@
+# Publish immutable production images only after the main-branch CI workflow succeeds.
+name: Publish production images
+
+on:
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: publish-production-images
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    # Never grant package-write credentials to CI runs originating from pull requests or forks.
+    # Until the API domain exists (Settings → Variables → VTP_API_DOMAIN) there is nothing to
+    # publish: the web image bakes that URL in. The job is skipped, not failed.
+    if: >-
+      vars.VTP_API_DOMAIN != '' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Check out the exact commit tested by CI
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Set lowercase image namespace
+        id: image
+        shell: bash
+        run: |
+          echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish API
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/docker/production/api.Dockerfile
+          push: true
+          tags: ghcr.io/${{ steps.image.outputs.owner }}/vtp-api:${{ github.event.workflow_run.head_sha }}
+
+      - name: Build and publish web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/docker/production/web.Dockerfile
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=https://${{ vars.VTP_API_DOMAIN }}/api/v1
+          push: true
+          tags: ghcr.io/${{ steps.image.outputs.owner }}/vtp-web:${{ github.event.workflow_run.head_sha }}
