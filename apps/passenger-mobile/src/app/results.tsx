@@ -7,6 +7,7 @@ import {
   Heading,
   Row,
   Screen,
+  Segmented,
   useApi,
   useColors,
 } from '@vtp/mobile-core';
@@ -16,9 +17,12 @@ import {
   formatMoney,
   localTime,
   longDate,
+  TRANSPORT_MODES,
   type Departure,
+  type TransportMode,
 } from '@vtp/shared-types';
 import { Redirect, router } from 'expo-router';
+import { useState } from 'react';
 import { ActivityIndicator, RefreshControl, Text } from 'react-native';
 import { useT } from '@/i18n/use-t';
 import { useSearch } from '@/lib/search-context';
@@ -27,7 +31,8 @@ import { useRefreshOnFocus } from '@/lib/use-refresh-on-focus';
 export default function Results() {
   const { from, to, date } = useSearch();
   const colors = useColors();
-  const { t, locale } = useT();
+  const { t, shared, locale } = useT();
+  const [mode, setMode] = useState<TransportMode | 'all'>('all');
   const query =
     from && to
       ? `/search/departures?${new URLSearchParams({ from: from.id, to: to.id, date })}`
@@ -35,6 +40,14 @@ export default function Results() {
   const departures = useApi<Departure[]>(query, { auth: false });
   useRefreshOnFocus(departures.reload);
   if (!from || !to) return <Redirect href="/" />;
+  // Filtered here: one request gives every mode and the count of each.
+  const shown = departures.data?.filter((d) => mode === 'all' || d.mode === mode);
+  const count = (value: TransportMode | 'all') =>
+    departures.data?.filter((d) => value === 'all' || d.mode === value).length ?? 0;
+  const modeOptions = (['all', ...TRANSPORT_MODES] as const).map((value) => ({
+    value,
+    label: `${value === 'all' ? t.results.allModes : shared.transportMode[value]} (${count(value)})`,
+  }));
 
   return (
     <Screen
@@ -59,8 +72,11 @@ export default function Results() {
         </Banner>
       ) : null}
       {departures.loading && !departures.data ? <ActivityIndicator color={colors.text} /> : null}
-      {departures.data?.length === 0 ? <Banner tone="info">{t.results.none}</Banner> : null}
-      {departures.data?.map((departure) => (
+      {departures.data?.length ? (
+        <Segmented label={t.results.modes} options={modeOptions} value={mode} onChange={setMode} />
+      ) : null}
+      {shown?.length === 0 ? <Banner tone="info">{t.results.none}</Banner> : null}
+      {shown?.map((departure) => (
         <DepartureCard
           key={`${departure.scheduleId}:${departure.serviceDate}`}
           departure={departure}
@@ -89,10 +105,8 @@ function DepartureCard({ departure }: { departure: Departure }) {
         {departure.operator.tradeName ?? departure.operator.legalName}
       </Text>
       <Row>
+        <Badge label={shared.transportMode[departure.mode]} />
         <Badge label={shared.serviceClass[departure.serviceClass]} />
-        {departure.operator.type === 'taxi_line' ? (
-          <Badge label={shared.organizationType.taxi_line} />
-        ) : null}
         <Body muted>{t.results.seatsFree(departure.seatsAvailable, departure.seats)}</Body>
       </Row>
       <Body muted>

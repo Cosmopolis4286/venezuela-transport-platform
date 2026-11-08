@@ -52,6 +52,8 @@ const es = {
     seatsFree: (free: number, total: number) => `${free} de ${total} libres`,
     priceAtCounter: 'Precio en taquilla',
     chooseSeats: 'Elegir puestos',
+    modes: 'Tipo de vehículo',
+    allModes: 'Todos',
   },
   trip: {
     departed: 'Esta salida ya partió.',
@@ -244,6 +246,8 @@ const en: Messages = {
     seatsFree: (free, total) => `${free} of ${total} available`,
     priceAtCounter: 'Price at the ticket office',
     chooseSeats: 'Choose seats',
+    modes: 'Kind of vehicle',
+    allModes: 'All',
   },
   trip: {
     departed: 'This departure has already left.',
@@ -430,6 +434,8 @@ const ptBR: Messages = {
     seatsFree: (free, total) => `${free} de ${total} livres`,
     priceAtCounter: 'Preço no guichê',
     chooseSeats: 'Escolher assentos',
+    modes: 'Tipo de veículo',
+    allModes: 'Todos',
   },
   trip: {
     departed: 'Esta partida já saiu.',

@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import type { Departure } from '@vtp/shared-types';
+import type { Departure, TransportMode } from '@vtp/shared-types';
 import { and, eq, gt, inArray } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { ApiException } from '../../common/errors/api.exception.js';
@@ -25,7 +25,12 @@ export class SearchService {
    * Departures from `from` to `to` on `date` (local), computed from the published schedules of
    * active routes of active organizations. Nothing is stored per trip yet.
    */
-  async departures(from: string, to: string, date: string): Promise<Departure[]> {
+  async departures(
+    from: string,
+    to: string,
+    date: string,
+    mode?: TransportMode,
+  ): Promise<Departure[]> {
     if (from === to) throw invalid('Choose different stops for origin and destination');
     if (!isCalendarDate(date)) throw invalid('date is not a valid date');
     const today = todayInVenezuela();
@@ -39,6 +44,7 @@ export class SearchService {
       .select({
         schedule: routeSchedules,
         route: { id: routes.id, name: routes.name },
+        mode: routes.mode,
         operator: {
           id: organizations.id,
           type: organizations.type,
@@ -54,7 +60,14 @@ export class SearchService {
         alighting,
         and(eq(alighting.routeId, boarding.routeId), gt(alighting.sequence, boarding.sequence)),
       )
-      .innerJoin(routes, and(eq(routes.id, boarding.routeId), eq(routes.status, 'active')))
+      .innerJoin(
+        routes,
+        and(
+          eq(routes.id, boarding.routeId),
+          eq(routes.status, 'active'),
+          mode ? eq(routes.mode, mode) : undefined,
+        ),
+      )
       .innerJoin(
         organizations,
         and(eq(organizations.id, routes.organizationId), eq(organizations.status, 'active')),
@@ -101,6 +114,7 @@ export class SearchService {
         .filter((trip) => !cancelled.has(`${row.schedule.id}:${trip.serviceDate}`))
         .map((trip) => ({
           scheduleId: row.schedule.id,
+          mode: row.mode,
           serviceDate: trip.serviceDate,
           operator: row.operator,
           route: row.route,

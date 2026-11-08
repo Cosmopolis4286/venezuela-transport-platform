@@ -2,6 +2,7 @@ import {
   CURRENCIES,
   DAY_OF_WEEK_LABELS,
   ROUTE_STATUS_LABELS,
+  TRANSPORT_MODE_LABELS,
   SERVICE_CLASS_LABELS,
   SERVICE_CLASSES,
   formatDuration,
@@ -84,6 +85,7 @@ async function RouteDetail({
           <Badge variant={statusVariant(route.status === 'draft' ? 'pending' : route.status)}>
             {ROUTE_STATUS_LABELS[route.status]}
           </Badge>
+          <Badge variant="outline">{TRANSPORT_MODE_LABELS[route.mode]}</Badge>
         </div>
         <p className="text-sm text-muted-foreground">
           {origin.stop.city} → {destination.stop.city} · {route.stops.length} paradas ·{' '}

@@ -14,6 +14,6 @@ export class SearchController {
   @Public()
   @Get('departures')
   departures(@Query() query: DepartureSearchQueryDto): Promise<Departure[]> {
-    return this.search.departures(query.from, query.to, query.date);
+    return this.search.departures(query.from, query.to, query.date, query.mode);
   }
 }

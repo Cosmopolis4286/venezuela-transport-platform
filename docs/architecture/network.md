@@ -20,6 +20,10 @@ reservas, los puestos y el despacho se construyen sobre ella.
   nombres son únicos por ciudad (sin distinguir mayúsculas).
 - **Las líneas de taxis también publican rutas** (servicios por puesto entre ciudades); los
   terminales no.
+- **Cada ruta tiene un tipo de vehículo** (`mode`: `bus`, `car` o `motorcycle`, ADR-028), fijado
+  al crearla: las empresas de autobuses publican rutas de bus y las líneas de taxis, de carro
+  (`TRANSPORT_MODES_BY_ORGANIZATION_TYPE`). Así el mismo tramo puede tener una tarifa en bus y
+  otra en taxi. Pedir otro tipo da `409 TRANSPORT_MODE_NOT_ALLOWED`.
 - **Las horas son hora de Venezuela** (America/Caracas, UTC−4, sin horario de verano). Las
   respuestas llevan el desfase `-04:00`.
 - **Tiempos de viaje, no itinerarios por parada.** Cada parada guarda los minutos desde el origen,
@@ -42,7 +46,10 @@ reservas, los puestos y el despacho se construyen sobre ella.
 
 ## Búsqueda de salidas
 
-`GET /api/v1/search/departures?from=<stopId>&to=<stopId>&date=YYYY-MM-DD` es **pública**.
+`GET /api/v1/search/departures?from=<stopId>&to=<stopId>&date=YYYY-MM-DD[&mode=bus]` es
+**pública**; `mode` limita a un tipo de vehículo y cada salida trae su `mode`. La web y la app
+piden todas y filtran con pestañas **Todos · Bus · Taxi · Moto**, con cuántas salidas tiene cada
+una.
 Devuelve las salidas de horarios activos, en rutas activas de organizaciones activas, en las que
 `from` va antes que `to`, ordenadas por hora, con la tarifa de ese par (o `null`) y los puestos
 libres (`seatsAvailable`).

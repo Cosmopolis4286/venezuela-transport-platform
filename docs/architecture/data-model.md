@@ -25,11 +25,11 @@ PostgreSQL generados desde las listas de `@vtp/shared-types`.
 | `onboarding`    | `provider_applications`          | Solicitudes KYC de conductores y personal                                                                                                          |
 |                 | `provider_application_documents` | Documentos de cada solicitud (archivo en `FileStorage`, veredicto)                                                                                 |
 | `network`       | `stops`                          | Catálogo de terminales y paradas (con ubicación PostGIS)                                                                                           |
-|                 | `routes`, `route_stops`          | Rutas de cada empresa y sus paradas en orden, con el tiempo desde el origen                                                                        |
+|                 | `routes`, `route_stops`          | Rutas de cada empresa (con su tipo de vehículo) y sus paradas en orden                                                                             |
 |                 | `route_fares`                    | Tarifa por par de paradas (USD o VES)                                                                                                              |
 |                 | `route_schedules`                | Horarios semanales con su vigencia, clase de servicio y mapa de puestos                                                                            |
 | `fleet`         | `seat_layouts`                   | Mapas de puestos por tipo de vehículo                                                                                                              |
-|                 | `vehicles`                       | Vehículos de cada empresa (placa, mapa de puestos, activo)                                                                                         |
+|                 | `vehicles`                       | Vehículos de cada empresa (placa, tipo, mapa de puestos, activo)                                                                                   |
 |                 | `vehicle_documents`              | Certificado de circulación, póliza y permiso de cada vehículo, con su vencimiento                                                                  |
 | `bookings`      | `trips`                          | Un horario en una fecha; se crea con la primera reserva, al asignar o al cancelarla (motivo)                                                       |
 |                 | `bookings`                       | Reservas: tramo, montos congelados, estado (`held`, `confirmed`, `cancelled`, `expired`), recordatorio enviado                                     |

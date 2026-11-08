@@ -1,5 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
+  modesFor,
   normalizePlate,
   plateProblem,
   runsRoutes,
@@ -131,11 +132,19 @@ export class VehiclesService {
         'ORGANIZATION_TYPE_NOT_ALLOWED',
       );
     }
+    const allowed = modesFor(access.organization.type);
+    const mode = input.mode ?? allowed[0]!;
+    if (!allowed.includes(mode)) {
+      throw ApiException.conflict(
+        'This organization does not run that kind of vehicle',
+        'TRANSPORT_MODE_NOT_ALLOWED',
+      );
+    }
     const values = await this.values(access.organization.id, input);
     const row = await this.save(() =>
       this.database.db
         .insert(vehicles)
-        .values({ plate: values.plate!, ...values, organizationId: access.organization.id })
+        .values({ plate: values.plate!, ...values, mode, organizationId: access.organization.id })
         .returning(),
     );
     await this.record('vehicle.created', row, actor, meta);
@@ -145,7 +154,7 @@ export class VehiclesService {
   async update(
     access: OrganizationAccess,
     vehicleId: string,
-    input: Partial<VehicleInput>,
+    input: Partial<Omit<VehicleInput, 'mode'>>,
     actor: Authenticated,
     meta: RequestMeta,
   ): Promise<FleetVehicle> {
@@ -179,7 +188,7 @@ export class VehiclesService {
   }
 
   /** Validated column values for the fields present in `input`. */
-  private async values(organizationId: string, input: Partial<VehicleInput>) {
+  private async values(organizationId: string, input: Partial<Omit<VehicleInput, 'mode'>>) {
     const values: Partial<Pick<VehicleRow, 'plate' | 'label' | 'seatLayoutId' | 'active'>> = {};
     if (input.plate !== undefined) {
       const problem = plateProblem(input.plate);
@@ -255,6 +264,7 @@ function toVehicle(
     organizationId: row.organizationId,
     plate: row.plate,
     label: row.label,
+    mode: row.mode,
     seatLayout: layout,
     active: row.active,
     documents,

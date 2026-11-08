@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDuration, isTimeOfDay, runsRoutes } from './network.js';
+import { formatDuration, isTimeOfDay, modesFor, runsRoutes } from './network.js';
 import { roleHasPermission } from './organizations.js';
 
 describe('network helpers', () => {
@@ -22,5 +22,13 @@ describe('network helpers', () => {
     expect(runsRoutes('terminal')).toBe(false);
     expect(roleHasPermission('admin', 'routes.manage')).toBe(true);
     expect(roleHasPermission('dispatcher', 'routes.manage')).toBe(false);
+  });
+});
+
+describe('modesFor', () => {
+  it('gives each route operator at least one mode and terminals none', () => {
+    expect(modesFor('bus_company')).toEqual(['bus']);
+    expect(modesFor('taxi_line')).toEqual(['car']);
+    expect(modesFor('terminal')).toEqual([]);
   });
 });

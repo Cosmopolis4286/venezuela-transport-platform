@@ -13,6 +13,10 @@ pull request.
 
 ### Agregado
 
+- **Tipo de vehículo** (bus, taxi o moto) en cada ruta y cada vehículo (ADR-028): cada tipo
+  tiene sus propias tarifas; la búsqueda se filtra por tipo (`mode`) en la web y la app de
+  pasajeros; el despacho solo asigna vehículos del tipo de la ruta (`VEHICLE_MODE_MISMATCH`).
+  Primer paso del [transporte suburbano](docs/architecture/suburban.md).
 - **Copias de seguridad cifradas** con `infrastructure/backup/backup.sh` (base de datos y
   documentos KYC, 7 diarias, 4 semanales, 6 mensuales, copia opcional a otro proveedor) y
   `restore-check.sh` para probar la restauración ([guía](docs/deployment/backups.md)).

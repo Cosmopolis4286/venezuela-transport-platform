@@ -117,9 +117,10 @@ async function Dispatch({
             {board.departures.map((departure) => {
               const fitting = board.vehicles.filter(
                 (v) =>
-                  !v.seatLayoutId ||
-                  !departure.seatLayoutId ||
-                  v.seatLayoutId === departure.seatLayoutId,
+                  v.mode === departure.mode &&
+                  (!v.seatLayoutId ||
+                    !departure.seatLayoutId ||
+                    v.seatLayoutId === departure.seatLayoutId),
               );
               // Keep the current vehicle selectable even if it no longer fits or is inactive.
               const vehicles =

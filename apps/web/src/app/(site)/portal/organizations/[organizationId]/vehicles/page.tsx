@@ -1,4 +1,5 @@
 import {
+  TRANSPORT_MODE_LABELS,
   VEHICLE_DOCUMENT_KINDS,
   VEHICLE_DOCUMENT_LABELS,
   type FleetVehicle,
@@ -102,6 +103,7 @@ async function Vehicles({ params }: { params: Promise<{ organizationId: string }
               <li key={vehicle.id} className="flex flex-col gap-3 py-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium tabular-nums">{vehicle.plate}</span>
+                  <Badge variant="outline">{TRANSPORT_MODE_LABELS[vehicle.mode]}</Badge>
                   {vehicle.label ? (
                     <span className="text-sm text-muted-foreground">{vehicle.label}</span>
                   ) : null}

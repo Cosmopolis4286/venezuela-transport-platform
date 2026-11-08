@@ -18,7 +18,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { CURRENCIES, ROUTE_STATUSES, SERVICE_CLASSES, STOP_KINDS } from '@vtp/shared-types';
 import { timestamps, users } from '../identity/identity.schema.js';
-import { seatLayouts } from '../fleet/fleet.schema.js';
+import { seatLayouts, transportMode } from '../fleet/fleet.schema.js';
 import { organizations } from '../organizations/organizations.schema.js';
 
 export const stopKind = pgEnum('stop_kind', STOP_KINDS);
@@ -57,6 +57,8 @@ export const routes = pgTable(
       .notNull()
       .references(() => organizations.id, { onDelete: 'cascade' }),
     name: text().notNull(),
+    /** Bus, car or motorcycle (ADR-028); fixed when the route is created. */
+    mode: transportMode().notNull(),
     status: routeStatus().notNull().default('draft'),
     createdBy: uuid().references(() => users.id, { onDelete: 'set null' }),
     ...timestamps,

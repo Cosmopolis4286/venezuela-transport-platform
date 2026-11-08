@@ -3,6 +3,7 @@ import {
   ORGANIZATION_TYPE_LABELS,
   ROLES_BY_ORGANIZATION_TYPE,
   ROUTE_STATUS_LABELS,
+  TRANSPORT_MODE_LABELS,
   RATE_CURRENCIES,
   runsRoutes,
   type ExchangeRate,
@@ -272,6 +273,7 @@ async function Routes({
                   >
                     {ROUTE_STATUS_LABELS[route.status]}
                   </Badge>
+                  <Badge variant="outline">{TRANSPORT_MODE_LABELS[route.mode]}</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {route.origin.city} → {route.destination.city} · {route.stopCount} paradas ·{' '}

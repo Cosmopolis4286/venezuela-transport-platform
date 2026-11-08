@@ -1,5 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
+  modesFor,
   runsRoutes,
   type Fare,
   type Route,
@@ -76,6 +77,7 @@ export class RoutesService {
       return {
         id: route.id,
         name: route.name,
+        mode: route.mode,
         status: route.status,
         origin: toSummary(own[0]!.stop),
         destination: toSummary(own.at(-1)!.stop),
@@ -101,6 +103,14 @@ export class RoutesService {
         'ORGANIZATION_TYPE_NOT_ALLOWED',
       );
     }
+    const allowed = modesFor(access.organization.type);
+    const mode = input.mode ?? allowed[0]!;
+    if (!allowed.includes(mode)) {
+      throw conflict(
+        'This organization does not run that kind of vehicle',
+        'TRANSPORT_MODE_NOT_ALLOWED',
+      );
+    }
     await this.assertStops(input.stops);
     const route = await this.database.db.transaction(async (tx) => {
       const [row] = await tx
@@ -108,6 +118,7 @@ export class RoutesService {
         .values({
           organizationId: access.organization.id,
           name: input.name.trim(),
+          mode,
           createdBy: actor.user.id,
         })
         .returning();
@@ -122,7 +133,7 @@ export class RoutesService {
   async update(
     access: OrganizationAccess,
     routeId: string,
-    input: Partial<RouteInput>,
+    input: Partial<Omit<RouteInput, 'mode'>>,
     actor: Authenticated,
     meta: RequestMeta,
   ): Promise<Route> {
@@ -438,6 +449,7 @@ export class RoutesService {
       id: row.id,
       organizationId: row.organizationId,
       name: row.name,
+      mode: row.mode,
       status: row.status,
       stops: stopRows.map(({ routeStop, stop }) => ({
         stop: toSummary(stop),

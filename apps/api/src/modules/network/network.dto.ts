@@ -1,9 +1,10 @@
-import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
 import {
   CURRENCIES,
   ROUTE_STATUSES,
   SERVICE_CLASSES,
   STOP_KINDS,
+  TRANSPORT_MODES,
   type ChangeRouteStatusRequest,
   type Currency,
   type Fare,
@@ -14,6 +15,7 @@ import {
   type ServiceClass,
   type StopInput,
   type StopKind,
+  type TransportMode,
 } from '@vtp/shared-types';
 import { Type } from 'class-transformer';
 import {
@@ -130,9 +132,18 @@ export class RouteDto implements RouteInput {
   @ValidateNested({ each: true })
   @Type(() => RouteStopDto)
   stops!: RouteStopDto[];
+
+  @ApiPropertyOptional({
+    enum: TRANSPORT_MODES,
+    description: "Only on creation; defaults to the organization's first mode",
+  })
+  @IsOptional()
+  @IsIn(TRANSPORT_MODES)
+  mode?: TransportMode;
 }
 
-export class UpdateRouteDto extends PartialType(RouteDto) {}
+/** The mode is fixed once the route exists. */
+export class UpdateRouteDto extends PartialType(OmitType(RouteDto, ['mode'] as const)) {}
 
 export class RouteStatusDto implements ChangeRouteStatusRequest {
   @ApiProperty({ enum: ROUTE_STATUSES })
@@ -228,4 +239,9 @@ export class DepartureSearchQueryDto {
   @ApiProperty({ example: '2026-11-20', description: 'Local date of departure from `from`' })
   @Matches(ISO_DATE, { message: 'date must be YYYY-MM-DD' })
   date!: string;
+
+  @ApiPropertyOptional({ enum: TRANSPORT_MODES, description: 'Only this kind of vehicle' })
+  @IsOptional()
+  @IsIn(TRANSPORT_MODES)
+  mode?: TransportMode;
 }
