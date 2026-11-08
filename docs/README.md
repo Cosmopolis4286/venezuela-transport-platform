@@ -47,4 +47,6 @@ Por dónde empezar según lo que necesites.
 
 ## Despliegue
 
-- [Preparación del VPS](deployment/vps-preparation.md) · [Monitoreo](deployment/monitoring.md)
+- [Preparación del VPS](deployment/vps-preparation.md) · [Monitoreo](deployment/monitoring.md) ·
+  [Copias de seguridad](deployment/backups.md) ·
+  [Revisión de seguridad](deployment/security-review.md)

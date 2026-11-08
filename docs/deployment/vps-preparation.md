@@ -107,6 +107,8 @@ docker build -f infrastructure/docker/production/web.Dockerfile \
 
 ## 6. Copias de seguridad
 
+Scripts listos y probados: [copias de seguridad](backups.md).
+
 - [ ] `pg_dump -Fc` cada noche a otro proveedor o bucket (cifrado, por ejemplo con `age`), con
       retención de 7 diarias + 4 semanales + 6 mensuales. Considera archivar el WAL
       (pgBackRest/WAL-G) cuando la tolerancia a la pérdida de datos baje de 24 h.

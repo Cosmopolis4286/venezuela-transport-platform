@@ -5,9 +5,6 @@
 
 (common) {
 	encode zstd gzip
-	request_body {
-		max_size 1MB
-	}
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
@@ -23,11 +20,18 @@
 
 {$VTP_WEB_DOMAIN} {
 	import common
+	request_body {
+		max_size 1MB
+	}
 	reverse_proxy web:3000
 }
 
 {$VTP_API_DOMAIN} {
 	import common
+	# KYC documents are up to FILE_UPLOAD_MAX_BYTES (10 MiB); the API rejects bigger ones itself.
+	request_body {
+		max_size 11MB
+	}
 	reverse_proxy api:4000 {
 		health_uri /api/v1/health/ready
 		health_interval 15s

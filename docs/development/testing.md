@@ -54,7 +54,11 @@ cd apps/api && E2E_EXPECT_DATABASE=true pnpm exec vitest run --config ./vitest.c
 
 **Batería automática (CI).** `apps/web/e2e/*.pw.ts` prueba en Chromium, en escritorio y en un
 teléfono, la portada en dos idiomas, las cinco páginas legales (sin marcadores `{{…}}` sin
-completar) y el registro con contraseña, cerrar sesión y volver a entrar. El trabajo
+completar), las cabeceras de seguridad, el registro con contraseña, cerrar sesión y volver a
+entrar, y el flujo de compra: `e2e/support/seed.ts` crea por la API una empresa aprobada con
+una salida diaria y una reserva pagada (proveedor simulado), y las pruebas comprueban que la
+búsqueda pública muestra la salida con su precio y puestos libres y que la empresa ve al
+pasajero en su lista. El trabajo
 «Web browser tests» de la CI levanta PostgreSQL, la API y la web y la ejecuta; si falla, sube el
 informe de Playwright como artefacto. En local: `pnpm build`, arranca la API y la web, y
 `pnpm --filter @vtp/web test:browser` (`WEB_BASE_URL` cambia la dirección). Agrega aquí los flujos

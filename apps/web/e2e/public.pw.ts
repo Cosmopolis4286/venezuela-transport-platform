@@ -35,3 +35,12 @@ test('every legal page renders', async ({ page }) => {
     await expect(page.locator('main')).not.toContainText('{{');
   }
 });
+
+test('pages send the security headers', async ({ page }) => {
+  const response = await page.goto('/es');
+  const headers = response!.headers();
+  expect(headers['content-security-policy']).toContain("frame-ancestors 'none'");
+  expect(headers['x-frame-options']).toBe('DENY');
+  expect(headers['x-content-type-options']).toBe('nosniff');
+  expect(headers['x-powered-by']).toBeUndefined();
+});

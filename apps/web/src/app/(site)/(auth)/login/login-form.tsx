@@ -62,11 +62,21 @@ export function LoginForm() {
 
 function PasswordForm({ next }: { next: string }) {
   const [state, action, pending] = useActionState(loginWithPassword, initialFormState);
+  // Controlled, so the e-mail survives the form reset after a wrong password.
+  const [email, setEmail] = useState('');
   return (
     <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="next" value={next} />
       <Field label="Correo" htmlFor="email">
-        <Input id="email" name="email" type="email" autoComplete="email" required />
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          required
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+        />
       </Field>
       <Field label="Contraseña" htmlFor="password">
         <Input
