@@ -472,3 +472,22 @@ pasajero. Un tipo por ruta reutiliza las tarifas por tramo sin cambiar su modelo
 revisión legal del ADR-018) y debe llevar la cuenta de los viajes vendidos sin usar. Un viaje no se
 devuelve a medias, así que con paquete el escalonado de la cancelación tiene solo dos tramos. Los
 pagos dejan de pertenecer siempre a una reserva (`payments.trip_pack_id`).
+
+## ADR-029: Servicios interurbano y suburbano que se encienden y apagan por corredor
+
+**Decisión.** Decidido por el dueño del producto (2026-11-08): cada ruta pertenece a un
+**servicio**, interurbano o suburbano, que **elige la empresa** al crearla; una ruta suburbana
+pertenece a un **corredor** (grupo de paradas que define la plataforma). Un administrador enciende
+y apaga el interurbano (en general o por ciudad) y cada corredor suburbano. Apagar **solo detiene
+la venta**: lo vendido (boletos y paquetes) se respeta. La API aplica el estado en la búsqueda, las
+reservas y las compras (`SERVICE_DISABLED`), y las apps lo leen de `GET /platform/services` para
+mostrar un selector **Entre ciudades · Suburbano** solo cuando los dos existen. Ver
+[suburban.md](suburban.md#0-dos-servicios-que-se-encienden-y-apagan-interurbano-y-suburbano).
+
+**Por qué.** Lanzar el suburbano en un corredor sin tocar lo interurbano, y poder abrir otras
+ciudades o cerrar una que no funcione, sin desplegar código. Con un solo servicio encendido la
+interfaz queda igual de simple que hoy.
+
+**Compromisos.** Un interruptor más que mirar en cada consulta de venta. Que la empresa elija el
+servicio depende de que lo marque bien; el personal de la plataforma lo revisa al aprobar sus
+rutas suburbanas (el corredor ya limita las paradas posibles).

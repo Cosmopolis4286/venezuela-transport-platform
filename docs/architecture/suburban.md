@@ -27,8 +27,110 @@ que compran por adelantado. Cada tipo de vehículo tiene precios distintos.
 | Cancelar una reserva                        | Hasta **30 minutos antes** de la hora de viaje; después, no hay devolución                  |
 | Devoluciones                                | **Escalonadas** según el tiempo que falta y el momento en que se cancela (ver abajo)        |
 | Motos                                       | **Un tipo de organización nuevo**: línea de mototaxis (`moto_line`)                         |
+| ¿Cómo se sabe si una ruta es suburbana?     | **La empresa lo elige** al crear la ruta (Interurbano o Suburbano)                          |
+| Apagar un servicio                          | Interruptores **por corredor o ciudad**, no solo uno general                                |
+| ¿Y lo ya vendido si se apaga?               | **Se respeta:** solo deja de venderse; boletos y paquetes siguen válidos                    |
+| Pasajeros por moto                          | **Uno**                                                                                     |
 
 Las supuestas en este documento, que conviene confirmar, están marcadas con **(por confirmar)**.
+
+## 0. Dos servicios que se encienden y apagan: interurbano y suburbano
+
+La plataforma tiene dos **servicios** (`SERVICES = ['intercity', 'suburban']`):
+
+- **Interurbano**: lo que existe hoy, buses y taxis por puesto entre ciudades, y los taxis de los
+  terminales.
+- **Suburbano**: rutas cortas y frecuentes dentro de un **corredor**, con paquetes de viajes y
+  taxis y motos bajo demanda.
+
+### Cómo se clasifica una ruta
+
+`routes.service` lo elige **la empresa al crear la ruta** (Interurbano o Suburbano) y no cambia
+después. Una ruta suburbana además elige su **corredor**, y todas sus paradas deben pertenecer a
+él. Las líneas de mototaxis solo publican rutas suburbanas. Las rutas existentes quedan como
+interurbanas en la migración.
+
+### Corredores (`service_areas`)
+
+Un **corredor** es un grupo de paradas del catálogo con nombre (por ejemplo "Ciudad Guayana:
+Casacoima – San Félix – Puerto Ordaz"). Lo crea el personal de la plataforma, que elige sus
+paradas. Sirve para tres cosas:
+
+1. el **interruptor** de ese corredor,
+2. limitar la búsqueda suburbana a las paradas del corredor, y
+3. agrupar los paquetes de viajes y los reportes.
+
+### Los interruptores
+
+En el panel de administración, **Servicios**:
+
+- **Interurbano**: un interruptor general. También se puede apagar por ciudad (las paradas de esa
+  ciudad dejan de ofrecer salidas interurbanas).
+- **Suburbano**: un interruptor por corredor. El servicio suburbano está "encendido" si al menos un
+  corredor lo está.
+- Siempre debe quedar algo encendido; el panel no deja apagarlo todo.
+
+Apagar **solo detiene la venta**: la búsqueda deja de mostrar esas salidas, no se pueden apartar
+puestos ni comprar paquetes de ese corredor, y la web y la app esconden sus pantallas. **Lo ya
+vendido se respeta**: los boletos pagados siguen válidos y se pueden abordar; los paquetes vigentes
+se siguen viendo en "Mis paquetes" y se usan en las reservas que ya existían, o se devuelven con
+los tramos de siempre. Las empresas siguen viendo sus rutas, despacho, listas de pasajeros y
+liquidaciones, y pueden preparar rutas en borrador.
+
+Los clientes leen el estado de `GET /platform/services` (público, en caché unos minutos): qué
+servicios y corredores están encendidos, con sus paradas. La API también lo aplica en la búsqueda,
+las reservas y las compras, así que un cliente viejo no puede saltárselo
+(`409 SERVICE_DISABLED`). Cada cambio queda en la auditoría.
+
+### Cómo se ve: los dos servicios sin recargar la interfaz
+
+Principio: **con un solo servicio encendido, la app se ve como hoy**. El segundo servicio aparece
+solo cuando existe, y siempre como **una elección al principio**, no como más botones en cada
+pantalla.
+
+**Página principal (web) y pantalla de inicio (app)**
+
+- El buscador sigue siendo lo principal. Encima, un selector de dos opciones:
+  **Entre ciudades** · **Suburbano**. Si solo hay un servicio, el selector no aparece.
+- **Entre ciudades** muestra el formulario de hoy: origen, destino y fecha.
+- **Suburbano** muestra un formulario más corto, pensado para el viaje diario: el corredor (si hay
+  uno solo, no se pregunta), desde y hasta (solo paradas del corredor), y **hoy** por defecto, con
+  "mañana" a un toque. Debajo, una sola línea: "Paquetes de viajes desde US$ X →".
+- Se recuerda la última elección de cada persona (web: en la dirección `?servicio=` y en el
+  navegador; app: en el teléfono), así quien viaja todos los días en el suburbano entra directo a
+  su buscador.
+- Los textos de presentación de la página principal se adaptan a los servicios encendidos (por
+  ejemplo, sin mencionar mototaxis si el suburbano está apagado).
+
+**Resultados**
+
+- Interurbano: como hoy (tarjetas con hora de salida y llegada, clase, puestos libres, precio).
+- Suburbano: lista compacta de **las próximas salidas** ("sale en 12 min", precio, cupos), con las
+  pestañas Bus · Taxi · Moto, que ya solo aparecen si hay más de un tipo. Si la persona tiene un
+  paquete de ese tramo, cada salida dice "Con tu paquete" en vez del precio.
+- Las salidas de un servicio nunca se mezclan con las del otro.
+
+**Mis viajes y paquetes (app)**
+
+- No se agregan pestañas al menú de abajo. "Mis viajes" sigue siendo una sola lista; los paquetes
+  son una sección arriba de esa lista ("Tus paquetes: San Félix ↔ Puerto Ordaz · quedan 7"), que
+  solo aparece si la persona tiene alguno o si el suburbano está encendido.
+- Pedir taxi: con el interurbano es "Taxi desde o hacia el terminal"; con el suburbano, "Pedir taxi
+  o moto". Si los dos están encendidos, es una sola entrada que pregunta primero cuál.
+
+**Portal de las empresas**
+
+- Cada empresa ve solo lo que usa: una línea de mototaxis no ve mapas de puestos; una empresa que
+  solo tiene rutas interurbanas no ve frecuencias, paquetes ni zonas de servicio.
+- En la lista de rutas, un filtro Interurbano · Suburbano solo si la empresa tiene de los dos.
+- Los reportes se pueden filtrar por servicio.
+
+**Panel de administración**
+
+- Una página **Servicios** con los interruptores y los corredores.
+- **Paquetes** (catálogo, empresas adheridas, devoluciones) en el menú solo si hay algún corredor
+  creado.
+- Las métricas de la plataforma se separan por servicio.
 
 ## 1. Tipo de vehículo (`TransportMode`)
 
@@ -39,7 +141,7 @@ en la base de datos y textos en los cuatro diccionarios.
   tarifa por tramo sin cambiar `route_fares`. Las rutas existentes quedan como `bus` (o `car` las
   de las líneas de taxis) en la migración.
 - **`vehicles.mode`**: el despacho solo asigna vehículos del mismo tipo que la ruta. Una moto
-  lleva **un pasajero** (por confirmar); un carro por puesto, hasta 4 (plantilla existente).
+  lleva **un pasajero**; un carro por puesto, hasta 4 (plantilla existente).
 - Qué tipos puede usar cada organización: `bus_company` → bus; `taxi_line` → carro;
   `moto_line` → moto.
 - La búsqueda acepta `mode` (`GET /search/departures?from=&to=&date=&mode=`) y cada salida trae su
@@ -82,7 +184,7 @@ genera una salida por intervalo. El viaje se crea con la primera reserva, como h
 - **Para una hora** (`scheduledFor`): la solicitud se ofrece a las líneas desde
   `TAXI_SCHEDULED_LEAD_MINUTES` antes (por confirmar: 30) y se puede tomar desde que se pide.
 - Se paga con un paquete del tramo y tipo, o directo al conductor como hoy.
-- Las líneas de mototaxis usan el mismo flujo, con un pasajero por moto.
+- Las líneas de mototaxis usan el mismo flujo, con un pasajero por moto (decidido).
 
 ## 5. Paquetes de viajes (módulo nuevo `trip-packs`)
 
@@ -221,15 +323,18 @@ de paquetes por tramo y tipo de vehículo. Nada de esto queda en el código.
 
 ## Plan por pull requests
 
-1. **Tipo de vehículo**: `TransportMode` en rutas, vehículos, despacho y búsqueda; pestañas en la
+1. ✅ **Tipo de vehículo**: `TransportMode` en rutas, vehículos, despacho y búsqueda; pestañas
+   en la web y la app.
+2. **Servicios y corredores**: `routes.service`, `service_areas`, interruptores en el panel,
+   `GET /platform/services`, `SERVICE_DISABLED`, y el selector Entre ciudades · Suburbano en la
    web y la app.
-2. **Líneas de mototaxis**: `moto_line`, roles, KYC (licencia de moto).
-3. **Horarios por frecuencia.**
-4. **Tramos de reembolso en minutos** y regla de los 30 minutos.
-5. **Paquetes: catálogo y compra** (`trip_pack_products`, `trip_packs`, `payments` con
+3. **Líneas de mototaxis**: `moto_line`, roles, KYC (licencia de moto).
+4. **Horarios por frecuencia.**
+5. **Tramos de reembolso en minutos** y regla de los 30 minutos.
+6. **Paquetes: catálogo y compra** (`trip_pack_products`, `trip_packs`, `payments` con
    `trip_pack_id`, empresas adheridas), con las pantallas de compra.
-6. **Paquetes: usarlos al reservar**, cancelaciones, libro de liquidaciones, avisos.
-7. **Devolver un paquete** (tramos escalonados) y reportes de paquetes.
-8. **Bajo demanda por tramo**: taxis y motos con tarifa fija, para ahora o para una hora, pagados
+7. **Paquetes: usarlos al reservar**, cancelaciones, libro de liquidaciones, avisos.
+8. **Devolver un paquete** (tramos escalonados) y reportes de paquetes.
+9. **Bajo demanda por tramo**: taxis y motos con tarifa fija, para ahora o para una hora, pagados
    con paquete.
-9. **Legal**: condiciones de los paquetes y nueva versión de los documentos.
+10. **Legal**: condiciones de los paquetes y nueva versión de los documentos.

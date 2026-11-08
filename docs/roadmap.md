@@ -62,7 +62,8 @@ En orden; cada uno es un pull request.
    Necesita las decisiones de la tabla de abajo (tiene costo).
 2. **Transporte suburbano y paquetes de viajes** (Casacoima – San Félix – Puerto Ordaz; ADR-028),
    en los pull requests del [plan](architecture/suburban.md#plan-por-pull-requests): tipo de
-   vehículo, líneas de mototaxis, horarios por frecuencia, tramos de reembolso en minutos,
+   vehículo (listo), servicios interurbano y suburbano que se encienden por corredor (ADR-029),
+   líneas de mototaxis, horarios por frecuencia, tramos de reembolso en minutos,
    paquetes (compra, uso, devolución), taxis y motos bajo demanda por tramo con tarifa fija, y los
    textos legales.
 3. **Cobro de los taxis en la app**, si se decide (los paquetes ya lo cubren para el suburbano).
