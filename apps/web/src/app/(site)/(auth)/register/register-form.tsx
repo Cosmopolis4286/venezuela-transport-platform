@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
+import { useActionState, useState, type ChangeEvent } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
@@ -12,6 +12,14 @@ import { register } from '../actions';
 
 export function RegisterForm() {
   const [state, action, pending] = useActionState(register, initialFormState);
+  // Controlled, so what was typed survives the form reset after an error.
+  const [values, setValues] = useState({ firstName: '', lastName: '', email: '' });
+  const bind = (name: keyof typeof values) => ({
+    name,
+    value: values[name],
+    onChange: (event: ChangeEvent<HTMLInputElement>) =>
+      setValues((current) => ({ ...current, [name]: event.target.value })),
+  });
   return (
     <Card>
       <div className="flex flex-col gap-1">
@@ -21,14 +29,14 @@ export function RegisterForm() {
       <form action={action} className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-3">
           <Field label="Nombre" htmlFor="firstName">
-            <Input id="firstName" name="firstName" autoComplete="given-name" required />
+            <Input id="firstName" {...bind('firstName')} autoComplete="given-name" required />
           </Field>
           <Field label="Apellido" htmlFor="lastName">
-            <Input id="lastName" name="lastName" autoComplete="family-name" required />
+            <Input id="lastName" {...bind('lastName')} autoComplete="family-name" required />
           </Field>
         </div>
         <Field label="Correo" htmlFor="email">
-          <Input id="email" name="email" type="email" autoComplete="email" required />
+          <Input id="email" {...bind('email')} type="email" autoComplete="email" required />
         </Field>
         <Field
           label="Contraseña"

@@ -13,6 +13,20 @@ pull request.
 
 ### Agregado
 
+- **Copias de seguridad cifradas** con `infrastructure/backup/backup.sh` (base de datos y
+  documentos KYC, 7 diarias, 4 semanales, 6 mensuales, copia opcional a otro proveedor) y
+  `restore-check.sh` para probar la restauración ([guía](docs/deployment/backups.md)).
+- **Pruebas del flujo de compra en el navegador**: búsqueda con precio y puestos libres, y la
+  reserva pagada en la lista de pasajeros de la empresa.
+- **Cabeceras de seguridad en la web** (contra _clickjacking_) y
+  [revisión de seguridad](docs/deployment/security-review.md).
+
+### Corregido
+
+- Los formularios de inicio de sesión y de registro conservan lo escrito tras un error.
+- Caddy permitía solo 1 MB por petición a la API: los documentos KYC no se podrían subir.
+- `nodemailer` actualizado a 10.3.1 (avisos de seguridad).
+
 - **Pruebas en el navegador en la CI.** Playwright prueba en Chromium (escritorio y teléfono) la
   portada, las páginas legales y el registro e inicio de sesión contra la API y la web reales.
 - **Purga diaria de datos vencidos.** La API borra o anonimiza lo que superó su plazo de

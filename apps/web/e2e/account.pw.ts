@@ -26,8 +26,8 @@ test('register with e-mail and password, sign out and sign in again', async ({ p
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page.getByText('Correo o contraseña incorrectos.')).toBeVisible();
 
-  // React resets the form after a failed submission.
-  await page.getByLabel('Correo').fill(email);
+  // The e-mail stays after a wrong password; only the password is typed again.
+  await expect(page.getByLabel('Correo')).toHaveValue(email);
   await page.getByLabel('Contraseña').fill(password);
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page).toHaveURL(/\/portal/);

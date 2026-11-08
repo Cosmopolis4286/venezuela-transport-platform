@@ -127,9 +127,10 @@ las nuevas se fusionan una por una cuando su CI pasa en verde.
 
 Lo que hoy funciona pero conviene corregir antes de crecer:
 
-- **Pocas pruebas de navegador en la CI.** La CI ya corre una batería mínima con Playwright
-  (portada, páginas legales, registro e inicio de sesión); los flujos de reservas, del portal y de
-  las apps siguen probándose con guiones manuales. Ampliarla con cada pantalla importante.
+- **Pruebas de navegador parciales.** La CI corre con Playwright la portada, las páginas legales,
+  el registro e inicio de sesión, la búsqueda y la lista de pasajeros de una reserva pagada; la
+  compra dentro de la app, el despacho y los pagos manuales siguen probándose con guiones
+  manuales. Ampliarla con cada pantalla importante.
 - **Consultas periódicas.** Las apps consultan cada 5 segundos (pagos y taxis) y el tablero de
   taxis cada 10; los push avisan de los cambios importantes, pero las pantallas abiertas siguen
   consultando. Con muchos usuarios conviene WebSockets.
@@ -167,8 +168,10 @@ Lo que falta (y lo ya resuelto):
 - [x] Comisión de la plataforma y política de reembolsos (ADR-025), editables en la web.
 - [x] Reportes para las empresas y métricas de la plataforma.
 - [ ] Servidor, HTTPS, copias de seguridad con restauración probada, monitoreo
-      ([preparación del VPS](deployment/vps-preparation.md)); alertas de errores por correo y guía
-      de [monitoreo gratuito](deployment/monitoring.md) listas.
+      ([preparación del VPS](deployment/vps-preparation.md)); alertas de errores por correo, guía
+      de [monitoreo gratuito](deployment/monitoring.md), scripts de
+      [copias de seguridad](deployment/backups.md) probados y
+      [revisión de seguridad](deployment/security-review.md) listos.
 - [ ] Apps móviles firmadas y publicadas (EAS) con la URL de la API de producción.
 - [x] Borradores de términos, privacidad, reembolsos, condiciones para empresas y cookies, con su
       aceptación y el borrado de la cuenta ([docs/legal](legal/README.md)).
