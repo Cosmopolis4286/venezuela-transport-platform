@@ -158,6 +158,14 @@ const es: SharedMessages = {
       'Todavía es temprano: la salida se marca desde 2 horas antes de la hora programada.',
     TRIP_WRONG_STEP:
       'Ese paso no corresponde: primero se marca la salida y luego la llegada, una sola vez.',
+    FISCAL_SETTINGS_INCOMPLETE:
+      'Completa los datos fiscales (razón social, RIF y domicilio) antes de emitir.',
+    BCV_RATE_MISSING: 'Falta la tasa BCV de esa fecha (o de un día anterior).',
+    INVOICE_NOT_DRAFT: 'Este documento ya fue emitido o anulado.',
+    INVOICE_ALREADY_VOIDED: 'Este documento ya fue anulado.',
+    INVOICE_RELATED_NOT_ISSUED: 'Primero emite la factura que esta nota de crédito corrige.',
+    INVOICE_NUMBER_TAKEN: 'Ya existe un documento con ese número o número de control.',
+    PURCHASE_TAKEN: 'Esa factura de compra ya está registrada.',
   },
 };
 
@@ -289,6 +297,14 @@ const en: SharedMessages = {
       'Too early: the departure can be marked from 2 hours before the scheduled time.',
     TRIP_WRONG_STEP:
       'That step does not apply: mark the departure first, then the arrival, once each.',
+    FISCAL_SETTINGS_INCOMPLETE:
+      'Fill in the fiscal details (legal name, RIF and address) before issuing.',
+    BCV_RATE_MISSING: 'The BCV rate for that date (or an earlier day) is missing.',
+    INVOICE_NOT_DRAFT: 'This document was already issued or voided.',
+    INVOICE_ALREADY_VOIDED: 'This document was already voided.',
+    INVOICE_RELATED_NOT_ISSUED: 'Issue the invoice this credit note corrects first.',
+    INVOICE_NUMBER_TAKEN: 'A document with that number or control number already exists.',
+    PURCHASE_TAKEN: 'That purchase invoice is already recorded.',
   },
 };
 
@@ -420,6 +436,14 @@ const ptBR: SharedMessages = {
       'Ainda é cedo: a partida pode ser marcada a partir de 2 horas antes do horário.',
     TRIP_WRONG_STEP:
       'Essa etapa não se aplica: marque primeiro a partida e depois a chegada, uma vez cada.',
+    FISCAL_SETTINGS_INCOMPLETE:
+      'Preencha os dados fiscais (razão social, RIF e endereço) antes de emitir.',
+    BCV_RATE_MISSING: 'Falta a taxa BCV dessa data (ou de um dia anterior).',
+    INVOICE_NOT_DRAFT: 'Este documento já foi emitido ou anulado.',
+    INVOICE_ALREADY_VOIDED: 'Este documento já foi anulado.',
+    INVOICE_RELATED_NOT_ISSUED: 'Emita primeiro a fatura que esta nota de crédito corrige.',
+    INVOICE_NUMBER_TAKEN: 'Já existe um documento com esse número ou número de controle.',
+    PURCHASE_TAKEN: 'Essa fatura de compra já está registrada.',
   },
 };
 

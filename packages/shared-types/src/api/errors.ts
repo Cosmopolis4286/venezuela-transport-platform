@@ -93,6 +93,14 @@ export const API_ERROR_REASONS = [
   // Trips
   'TRIP_TOO_EARLY',
   'TRIP_WRONG_STEP',
+  // Fiscal (ADR-031)
+  'FISCAL_SETTINGS_INCOMPLETE',
+  'BCV_RATE_MISSING',
+  'INVOICE_NOT_DRAFT',
+  'INVOICE_ALREADY_VOIDED',
+  'INVOICE_RELATED_NOT_ISSUED',
+  'INVOICE_NUMBER_TAKEN',
+  'PURCHASE_TAKEN',
 ] as const;
 
 export type ApiErrorReason = (typeof API_ERROR_REASONS)[number];

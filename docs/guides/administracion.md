@@ -107,14 +107,32 @@ Para un rango de días: ventas y comisión de la plataforma por moneda, reembols
 que esperan en la cola, usuarios nuevos, organizaciones activas por tipo y taxis pedidos,
 terminados y cancelados o vencidos.
 
+## Facturación (`/admin/fiscal`, solo administradores)
+
+La plataforma factura su tarifa por servicio (IVA incluido); el pasaje lo factura cada empresa.
+Ver [fiscal.md](../architecture/fiscal.md).
+
+1. **Datos fiscales**: razón social, RIF, domicilio, tipo de contribuyente (ordinario o formal) e
+   IVA. Sin ellos no se puede emitir.
+2. **Tasa BCV**: carga la tasa oficial de cada día hábil (bolívares por dólar).
+3. **Facturas** (`/admin/fiscal/invoices`): cada pago deja un borrador. Créalo en el portal del
+   SENIAT con esos datos y anota el número de factura, el número de control y la fecha: el sistema
+   calcula base, IVA y total en bolívares. Si el comprador pide la factura a otro nombre, cámbialo
+   antes de emitir. Las notas de crédito (salida cancelada por la empresa) se emiten después de su
+   factura. Si el SENIAT anula un documento, anúlalo también aquí.
+4. **Libros** (`/admin/fiscal/books`): libro de ventas y de compras del mes, con descarga en CSV
+   para el contador. Las facturas de compra (hosting, servicios, etc.) se registran a mano.
+
 ## Tareas periódicas sugeridas
 
 | Cada…  | Tarea                                                                         |
 | ------ | ----------------------------------------------------------------------------- |
 | Día    | Verificar los pagos informados (varias veces al día)                          |
 | Día    | Atender la cola de reembolsos y las revisiones pendientes                     |
+| Día    | Cargar la tasa BCV y emitir las facturas en borrador                          |
 | Semana | Pagar los saldos de las empresas (la frecuencia es una decisión de operación) |
 | Mes    | Revisar las reservas pagadas de cada empresa y la política general            |
+| Mes    | Descargar los libros de ventas y compras para la declaración de IVA           |
 
 ## Si algo falla
 

@@ -43,6 +43,10 @@ PostgreSQL generados desde las listas de `@vtp/shared-types`.
 |                 | `settlement_entries`             | Libro de cada empresa: una fila al pagarse una reserva y otra (negativa) si se cancela                                                             |
 |                 | `payouts`                        | Pagos de la plataforma a las empresas o a sus conductores (`driver_user_id`); se anulan, no se borran                                              |
 |                 | `driver_payout_accounts`         | Dónde cobra cada conductor (ADR-030): medio, banco, cuenta o teléfono, titular                                                                     |
+| `fiscal`        | `fiscal_settings`                | Datos del emisor (una sola fila): razón social, RIF, domicilio, tipo de contribuyente, IVA (ADR-031)                                               |
+|                 | `bcv_rates`                      | Tasa oficial BCV por día, para pasar a bolívares al emitir                                                                                         |
+|                 | `invoices`                       | Facturas y notas de crédito de la tarifa por servicio: borrador, emitida o anulada; montos en Bs fijados al emitir                                 |
+|                 | `purchases`                      | Facturas de compra recibidas, para el libro de compras                                                                                             |
 | `taxi`          | `taxi_service_areas`             | Terminales donde opera cada línea de taxis                                                                                                         |
 |                 | `taxi_rides`                     | Solicitudes y viajes de taxi; índices parciales únicos: un taxi abierto por pasajero, un viaje por conductor                                       |
 | `reports`       | —                                | No tiene tablas: lee el libro, las salidas y la actividad ([reports.md](reports.md))                                                               |
@@ -76,7 +80,8 @@ Las reglas que no pueden fallar con solicitudes simultáneas las impone PostgreS
 - un pago pendiente por reserva (`payments_booking_pending_key`) y referencias de pago únicas;
 - un taxi abierto por pasajero, un viaje activo por conductor y por vehículo;
 - una fila del libro por reserva y tipo (`settlement_entries_booking_kind_key`);
-- una sola fila de política general (`platform_settings_single_row`);
+- una sola fila de política general (`platform_settings_single_row`) y de datos fiscales;
+- un documento fiscal por reserva y motivo, y números de factura y de control únicos;
 - un token de push por dispositivo (`push_devices_token_key`).
 
 Las demás carreras (asignar el mismo conductor a dos viajes, pagar más que el saldo) se ordenan con

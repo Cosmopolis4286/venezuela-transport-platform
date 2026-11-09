@@ -506,3 +506,27 @@ cubre ambos sin duplicar el libro.
 confirmarlo junto con el cobro por cuenta de terceros (ADR-018), y las obligaciones laborales y
 fiscales entre la empresa y sus conductores siguen siendo de la empresa. Los pagos a conductores
 son manuales, como los de las empresas, hasta que haya proveedores de pago con dispersión.
+
+## ADR-031: La plataforma factura su tarifa por servicio; en modo borrador hasta tener imprenta digital
+
+**Decisión** (del dueño del producto). La plataforma emite facturas solo por su tarifa por
+servicio (el recargo de ADR-029), con el IVA incluido en ese monto; el pasaje lo factura cada
+empresa. Cada pago crea un **borrador** de factura al primer pasajero (`invoices`), en la misma
+transacción que el libro de liquidaciones. Mientras no haya una imprenta digital autorizada
+contratada (`INVOICE_ISSUER=draft`), el personal emite cada documento en el portal gratuito del
+SENIAT y anota su número y número de control; el día de emisión fija la tasa BCV (`bcv_rates`) y
+los montos en bolívares, que no cambian después. Si la empresa cancela la salida, el borrador se
+anula o, si ya se emitió, se crea una nota de crédito, y la empresa recibe una factura por el cargo
+que asume. El tipo de contribuyente (ordinario o formal) y la alícuota se configuran; un
+contribuyente formal registra sus ventas como no gravadas. Los libros de ventas y compras se
+generan por mes y se descargan en CSV. Ver [fiscal.md](fiscal.md).
+
+**Por qué.** El dueño opera como firma personal con cuenta jurídica emprendedor. La Providencia
+SNAT/2026/00093 permite emitir por el portal del SENIAT, por imprenta digital o por máquina fiscal;
+el portal no cuesta nada y alcanza para el volumen inicial. Una interfaz (`InvoiceIssuer`) deja
+lista la imprenta digital sin cambiar el resto.
+
+**Compromisos.** El contador debe validar la alícuota, que el pasaje esté exento o fuera del
+alcance de la plataforma, el formato de los libros y si aplica el IGTF. Las retenciones de IVA
+que hagan compradores que sean contribuyentes especiales todavía no se registran (columna en
+cero). En modo borrador emitir es trabajo manual: con más volumen conviene contratar la imprenta.
