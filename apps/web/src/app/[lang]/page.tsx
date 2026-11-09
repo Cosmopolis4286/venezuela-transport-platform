@@ -57,7 +57,11 @@ async function ServiceSearch({
           {suburban ? t.home.suburbanHeading : t.home.heading}
         </h1>
         <p className="max-w-2xl text-muted-foreground">
-          {suburban ? t.home.suburbanIntro(areas.map((a) => a.name).join(', ')) : t.home.intro}
+          {suburban
+            ? areas.length <= 2
+              ? t.home.suburbanIntro(areas.map((a) => a.name).join(', '))
+              : t.home.suburbanIntroGeneric
+            : t.home.intro}
         </p>
       </div>
       <div className="flex flex-col gap-3">

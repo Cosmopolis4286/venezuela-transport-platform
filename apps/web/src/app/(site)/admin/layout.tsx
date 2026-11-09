@@ -63,6 +63,9 @@ async function MoneyLinks() {
       <Link href="/admin/refunds" className="text-sm opacity-90 hover:underline">
         Reembolsos
       </Link>
+      <Link href="/admin/trip-packs" className="text-sm opacity-90 hover:underline">
+        Paquetes
+      </Link>
       <Link href="/admin/metrics" className="text-sm opacity-90 hover:underline">
         Métricas
       </Link>

@@ -15,6 +15,8 @@ const es = {
     bookings: 'Mis viajes',
     taxiRequest: 'Pedir un taxi',
     taxiRide: 'Tu taxi',
+    tripPacks: 'Paquetes de viajes',
+    tripPack: 'Tu paquete',
   },
   signIn: {
     title: 'VTP Pasajeros',
@@ -37,6 +39,8 @@ const es = {
     suburbanHeading: 'Tus viajes diarios',
     suburbanIntro: (areas: string) =>
       `Reserva con anticipación tu puesto en bus, taxi o moto en ${areas}.`,
+    suburbanIntroGeneric:
+      'Reserva con anticipación tu puesto en bus, taxi o moto para tus viajes cortos.',
     taxiTitle: 'Taxi en el terminal',
     taxiIntro: 'Pide un taxi para salir del terminal o para llegar a tiempo a tu autobús.',
     taxiButton: 'Pedir un taxi',
@@ -153,6 +157,32 @@ const es = {
     rejected: (reason: string) =>
       `No encontramos tu pago: ${reason} Revisa los datos y paga de nuevo.`,
   },
+  packs: {
+    title: 'Paquetes de viajes',
+    intro:
+      'Compra viajes por adelantado para tu tramo de todos los días. Sirven en los dos sentidos y vencen; no se devuelven.',
+    homeTitle: 'Paquetes de viajes',
+    homeIntro: 'Viaja todos los días pagando menos: compra varios viajes de una vez.',
+    homeButton: 'Ver paquetes',
+    forSale: 'A la venta',
+    none: 'No hay paquetes a la venta en este momento.',
+    mine: 'Tus paquetes',
+    product: (trips: number, a: string, b: string) => `${trips} viajes · ${a} ↔ ${b}`,
+    perTrip: (price: string) => `${price} por viaje`,
+    validity: (days: number) => `Vence ${days} días después de pagarlo`,
+    buy: 'Comprar',
+    remaining: (left: number, total: number) => `Quedan ${left} de ${total} viajes`,
+    expires: (date: string) => `Vence el ${date}`,
+    payBy: (date: string) => `Págalo antes del ${date}`,
+    status: {
+      pending_payment: 'Esperando el pago',
+      active: 'Activo',
+      exhausted: 'Usado',
+      expired: 'Vencido',
+      cancelled: 'Anulado',
+    },
+    a11y: (code: string) => `Paquete ${code}`,
+  },
   bookings: {
     none: 'Aún no tienes reservas.',
     a11y: (code: string) => `Reserva ${code}`,
@@ -215,6 +245,8 @@ const en: Messages = {
     bookings: 'My trips',
     taxiRequest: 'Request a taxi',
     taxiRide: 'Your taxi',
+    tripPacks: 'Trip packs',
+    tripPack: 'Your trip pack',
   },
   signIn: {
     title: 'VTP Passengers',
@@ -236,6 +268,8 @@ const en: Messages = {
     services: 'Kind of trip',
     suburbanHeading: 'Your daily trips',
     suburbanIntro: (areas) => `Book your seat by bus, taxi or motorcycle in advance in ${areas}.`,
+    suburbanIntroGeneric:
+      'Book your seat by bus, taxi or motorcycle in advance for your short trips.',
     taxiTitle: 'Taxi at the terminal',
     taxiIntro: 'Get a taxi out of the terminal, or to catch your bus on time.',
     taxiButton: 'Request a taxi',
@@ -348,6 +382,32 @@ const en: Messages = {
     rejected: (reason) =>
       `We could not find your payment: ${reason} Check the details and pay again.`,
   },
+  packs: {
+    title: 'Trip packs',
+    intro:
+      'Buy trips in advance for your daily stretch. They work both ways and expire; they are not refunded.',
+    homeTitle: 'Trip packs',
+    homeIntro: 'Travel every day for less: buy several trips at once.',
+    homeButton: 'See trip packs',
+    forSale: 'For sale',
+    none: 'No trip packs are for sale right now.',
+    mine: 'Your trip packs',
+    product: (trips, a, b) => `${trips} trips · ${a} ↔ ${b}`,
+    perTrip: (price) => `${price} per trip`,
+    validity: (days) => `Expires ${days} days after you pay`,
+    buy: 'Buy',
+    remaining: (left, total) => `${left} of ${total} trips left`,
+    expires: (date) => `Expires on ${date}`,
+    payBy: (date) => `Pay before ${date}`,
+    status: {
+      pending_payment: 'Waiting for payment',
+      active: 'Active',
+      exhausted: 'Used up',
+      expired: 'Expired',
+      cancelled: 'Voided',
+    },
+    a11y: (code) => `Trip pack ${code}`,
+  },
   bookings: {
     none: 'You have no bookings yet.',
     a11y: (code) => `Booking ${code}`,
@@ -408,6 +468,8 @@ const ptBR: Messages = {
     bookings: 'Minhas viagens',
     taxiRequest: 'Pedir um táxi',
     taxiRide: 'Seu táxi',
+    tripPacks: 'Pacotes de viagens',
+    tripPack: 'Seu pacote',
   },
   signIn: {
     title: 'VTP Passageiros',
@@ -430,6 +492,8 @@ const ptBR: Messages = {
     suburbanHeading: 'Suas viagens diárias',
     suburbanIntro: (areas) =>
       `Reserve com antecedência seu lugar de ônibus, táxi ou moto em ${areas}.`,
+    suburbanIntroGeneric:
+      'Reserve com antecedência seu lugar de ônibus, táxi ou moto para suas viagens curtas.',
     taxiTitle: 'Táxi no terminal',
     taxiIntro: 'Peça um táxi para sair do terminal ou para chegar a tempo ao seu ônibus.',
     taxiButton: 'Pedir um táxi',
@@ -543,6 +607,32 @@ const ptBR: Messages = {
       `Estamos verificando seu pagamento (operação ${operation}). Avisaremos quando for confirmado; enquanto isso seus assentos continuam reservados.`,
     rejected: (reason) =>
       `Não encontramos seu pagamento: ${reason} Confira os dados e pague de novo.`,
+  },
+  packs: {
+    title: 'Pacotes de viagens',
+    intro:
+      'Compre viagens antecipadas para o seu trecho diário. Valem nos dois sentidos e vencem; não são reembolsadas.',
+    homeTitle: 'Pacotes de viagens',
+    homeIntro: 'Viaje todos os dias pagando menos: compre várias viagens de uma vez.',
+    homeButton: 'Ver pacotes',
+    forSale: 'À venda',
+    none: 'Não há pacotes à venda no momento.',
+    mine: 'Seus pacotes',
+    product: (trips, a, b) => `${trips} viagens · ${a} ↔ ${b}`,
+    perTrip: (price) => `${price} por viagem`,
+    validity: (days) => `Vence ${days} dias depois do pagamento`,
+    buy: 'Comprar',
+    remaining: (left, total) => `Restam ${left} de ${total} viagens`,
+    expires: (date) => `Vence em ${date}`,
+    payBy: (date) => `Pague antes de ${date}`,
+    status: {
+      pending_payment: 'Aguardando pagamento',
+      active: 'Ativo',
+      exhausted: 'Usado',
+      expired: 'Vencido',
+      cancelled: 'Anulado',
+    },
+    a11y: (code) => `Pacote ${code}`,
   },
   bookings: {
     none: 'Você ainda não tem reservas.',

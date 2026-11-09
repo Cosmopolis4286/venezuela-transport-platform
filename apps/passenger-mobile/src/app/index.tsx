@@ -80,7 +80,11 @@ export default function SearchScreen() {
       ) : null}
       <Heading>{suburban ? t.home.suburbanHeading : t.home.heading}</Heading>
       <Body muted>
-        {suburban ? t.home.suburbanIntro(areas.map((a) => a.name).join(', ')) : t.home.intro}
+        {suburban
+          ? areas.length <= 2
+            ? t.home.suburbanIntro(areas.map((a) => a.name).join(', '))
+            : t.home.suburbanIntroGeneric
+          : t.home.intro}
       </Body>
       {state.status === 'signedOut' && state.notice ? (
         <Banner tone="info">{state.notice}</Banner>
@@ -110,6 +114,18 @@ export default function SearchScreen() {
         <Button title={t.home.search} disabled={!ready} onPress={() => router.push('/results')} />
       </Card>
 
+      {/* Trip packs belong to the suburban service (ADR-028). */}
+      {suburban ? (
+        <Card>
+          <Subheading>{t.packs.homeTitle}</Subheading>
+          <Body muted>{t.packs.homeIntro}</Body>
+          <Button
+            variant="secondary"
+            title={t.packs.homeButton}
+            onPress={() => router.push(state.status === 'signedIn' ? '/trip-packs' : '/sign-in')}
+          />
+        </Card>
+      ) : null}
       {/* Terminal taxis belong to the intercity service. */}
       {suburban || !openServices.includes('intercity') ? null : (
         <Card>

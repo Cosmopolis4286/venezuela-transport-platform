@@ -17,6 +17,7 @@ const es = {
     services: 'Tipo de viaje',
     suburbanHeading: 'Tus viajes diarios en bus, taxi o moto',
     suburbanIntro: (areas: string) => `Reserva tu puesto con anticipación en ${areas}.`,
+    suburbanIntroGeneric: 'Reserva tu puesto con anticipación para tus viajes cortos.',
   },
   legal: {
     footer: 'Información legal',
@@ -74,6 +75,7 @@ const en: Messages = {
     services: 'Kind of trip',
     suburbanHeading: 'Your daily trips by bus, taxi or motorcycle',
     suburbanIntro: (areas) => `Book your seat in advance in ${areas}.`,
+    suburbanIntroGeneric: 'Book your seat in advance for your short trips.',
   },
   legal: {
     footer: 'Legal',
@@ -131,6 +133,7 @@ const ptBR: Messages = {
     services: 'Tipo de viagem',
     suburbanHeading: 'Suas viagens diárias de ônibus, táxi ou moto',
     suburbanIntro: (areas) => `Reserve seu lugar com antecedência em ${areas}.`,
+    suburbanIntroGeneric: 'Reserve seu lugar com antecedência para suas viagens curtas.',
   },
   legal: {
     footer: 'Informações legais',

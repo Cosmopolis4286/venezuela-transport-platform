@@ -149,7 +149,15 @@ export default function BookingScreen() {
       ) : null}
 
       {status === 'held' ? (
-        <PaymentPanel booking={data} onBooking={booking.mutate} reload={booking.reload} />
+        <PaymentPanel<Booking>
+          subject={{
+            path: `/me/bookings/${data.id}`,
+            payment: data.payment,
+            currency: data.total.currency,
+          }}
+          onUpdate={booking.mutate}
+          reload={booking.reload}
+        />
       ) : null}
 
       <Subheading>{status === 'confirmed' ? t.booking.tickets : t.booking.passengers}</Subheading>

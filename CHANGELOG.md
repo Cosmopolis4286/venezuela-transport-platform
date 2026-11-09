@@ -13,6 +13,11 @@ pull request.
 
 ### Agregado
 
+- **Paquetes de viajes (pantallas)**: en la app de pasajeros, **Paquetes de viajes** (desde el
+  inicio suburbano y desde Mis viajes) para comprar, pagar y ver los paquetes; en el panel,
+  **Paquetes** con el catálogo y las tasas de cambio de la plataforma. El panel de pago de la app
+  sirve ahora para reservas y paquetes. Con más de dos corredores, el inicio suburbano no los
+  enumera.
 - **Paquetes de viajes (API)**: catálogo de la plataforma por corredor y tramo
   (`/admin/trip-pack-products`), productos en venta (`GET /trip-pack-products`), compra
   (`POST /me/trip-packs`) y pago con las tasas de la plataforma (`/admin/exchange-rates`). Un pago

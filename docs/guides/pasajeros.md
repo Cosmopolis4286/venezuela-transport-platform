@@ -64,6 +64,20 @@ El reembolso se hace por el mismo medio con el que pagaste. Te avisamos cuando s
 cancelación y cuando se envía el dinero. No se puede cancelar después de abordar ni cuando el
 autobús ya salió.
 
+## Viajes suburbanos y paquetes de viajes
+
+Si VTP opera viajes suburbanos (por ejemplo, Casacoima – San Félix – Puerto Ordaz), arriba de la
+pantalla de inicio puedes elegir **Entre ciudades** o **Suburbano**. La app recuerda tu elección.
+
+En **Suburbano** también puedes comprar **paquetes de viajes** (**Ver paquetes**, o **Mis viajes →
+Tus paquetes**): varios viajes de un tramo, en bus, taxi o moto, por un precio fijo.
+
+- Sirven en los **dos sentidos** del tramo (ida y vuelta).
+- Se pagan como una reserva (pago móvil, transferencia, PIX o USDT) y se activan cuando llega el
+  pago. Si no lo pagas en 24 horas, se anula.
+- **Vencen** (por defecto, 60 días después de pagarlos) y **no se devuelven**: los viajes que no
+  uses se pierden.
+
 ## 6. Pedir un taxi en el terminal
 
 1. **Pedir un taxi**: elige el terminal, si vas **desde** o **hacia** él, la dirección, cuántos

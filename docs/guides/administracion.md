@@ -92,6 +92,19 @@ Abre la empresa en la lista para:
 
 La empresa ve cada pago en su portal.
 
+## Paquetes de viajes (`/admin/trip-packs`, solo administradores)
+
+- **Catálogo**: cada paquete es un tramo de un corredor (dos paradas; sirve en los dos sentidos), un
+  tipo de vehículo, una cantidad de viajes, un precio en US$ o Bs. y una vigencia (60 días por
+  defecto). **Dejar de vender** lo saca de la venta; los paquetes ya comprados siguen valiendo.
+  Cambiar un producto no cambia los paquetes ya comprados.
+- **Tasas de cambio de la plataforma**: convierten el precio de los paquetes al cobrar (las
+  empresas tienen las suyas para sus boletos). Sin tasa de bolívares no se ofrece pago móvil ni
+  transferencia para paquetes en dólares.
+- Los pagos de paquetes llegan a las cuentas de la plataforma y aparecen en **Pagos** como "paquete
+  …"; se confirman o rechazan como los de las reservas. El dinero que llega para un paquete ya
+  anulado aparece en **Reembolsos**.
+
 ## Reembolsos (`/admin/refunds`, solo administradores)
 
 La cola muestra, de lo más antiguo a lo más nuevo, el dinero que debe volver a los pasajeros:
