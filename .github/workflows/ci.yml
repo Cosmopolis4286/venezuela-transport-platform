@@ -126,7 +126,17 @@ jobs:
           corepack enable
           pnpm install --frozen-lockfile
       - name: Install Chromium
-        run: pnpm --filter @vtp/web exec playwright install --with-deps chromium
+        # The system packages come from Ubuntu's mirrors, which sometimes fail to resolve on the
+        # runner. Retry, then fall back to the browser alone: the runner image already has the
+        # libraries Chromium needs (only optional fonts would be missing).
+        run: |
+          for attempt in 1 2 3; do
+            pnpm --filter @vtp/web exec playwright install --with-deps chromium && exit 0
+            echo "playwright install --with-deps failed (attempt $attempt); retrying in 20s"
+            sleep 20
+          done
+          echo "::warning::Ubuntu mirrors unreachable; installing Chromium without system packages"
+          pnpm --filter @vtp/web exec playwright install chromium
       - run: pnpm db:migrate
       - name: Build API and web
         run: pnpm turbo run build --filter=@vtp/api --filter=@vtp/web
