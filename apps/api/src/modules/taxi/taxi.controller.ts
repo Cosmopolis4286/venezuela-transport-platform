@@ -8,9 +8,12 @@ import {
   ParseUUIDPipe,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type {
+  OnDemandFare,
+  StretchOption,
   DriverTaxiBoard,
   OperatorTaxiRide,
   StopSummary,
@@ -30,6 +33,8 @@ import {
   AssignTaxiRideDto,
   ReplaceTaxiTerminalsDto,
   RequestTaxiDto,
+  ReplaceOnDemandFaresDto,
+  StretchOptionsQueryDto,
 } from './taxi.dto.js';
 import { TaxiService } from './taxi.service.js';
 
@@ -38,6 +43,13 @@ import { TaxiService } from './taxi.service.js';
 @Controller({ version: '1' })
 export class TaxiController {
   constructor(private readonly taxi: TaxiService) {}
+
+  /** Public: per vehicle, the lines that ride a stretch on demand and their fares. */
+  @Public()
+  @Get('taxi/stretch-options')
+  stretchOptions(@Query() query: StretchOptionsQueryDto): Promise<StretchOption[]> {
+    return this.taxi.stretchOptions(query.from, query.to);
+  }
 
   @Public()
   @Get('taxi/terminals')
@@ -142,6 +154,24 @@ export class TaxiDriverController {
 @Controller({ path: 'organizations/:organizationId/taxi', version: '1' })
 export class TaxiLineController {
   constructor(private readonly taxi: TaxiService) {}
+
+  /** Taxi and motorcycle taxi lines: fixed fares to ride stretches on demand (ADR-028). */
+  @Get('stretch-fares')
+  @RequireOrganizationAccess()
+  stretchFares(@CurrentOrganization() access: OrganizationAccess): Promise<OnDemandFare[]> {
+    return this.taxi.faresOf(access);
+  }
+
+  @Put('stretch-fares')
+  @RequireOrganizationAccess('routes.manage')
+  replaceStretchFares(
+    @CurrentOrganization() access: OrganizationAccess,
+    @Body() body: ReplaceOnDemandFaresDto,
+    @CurrentAuth() auth: Authenticated,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<OnDemandFare[]> {
+    return this.taxi.replaceFares(access, body, auth, meta);
+  }
 
   @Get('terminals')
   @RequireOrganizationAccess()

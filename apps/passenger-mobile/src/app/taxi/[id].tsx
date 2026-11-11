@@ -11,12 +11,20 @@ import {
   useAuth,
   userMessage,
 } from '@vtp/mobile-core';
-import { formatMoney, taxiRideHint, vehicleName, type TaxiRide } from '@vtp/shared-types';
+import {
+  formatMoney,
+  longDate,
+  networkClock,
+  taxiRideHint,
+  toNetworkIso,
+  vehicleName,
+  type TaxiRide,
+} from '@vtp/shared-types';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { RefreshControl } from 'react-native';
 import { useT } from '@/i18n/use-t';
-import { driverLine, isOpenRide } from '@/lib/taxi';
+import { driverLine, isOpenRide, ridePlace } from '@/lib/taxi';
 import { formatClock, useSecondsLeft } from '@/lib/use-countdown';
 
 /** While the ride is open, it is reloaded this often to show the taxi as soon as one takes it. */
@@ -68,10 +76,18 @@ export default function TaxiRideScreen() {
       {ride.error ? <Banner tone="error">{ride.error.userMessage}</Banner> : null}
       {data ? (
         <>
-          <Heading>{shared.taxiDirection[data.direction]}</Heading>
+          <Heading>{ridePlace(data, t, shared)}</Heading>
+          {data.scheduledFor ? (
+            <Body>
+              {t.ride.scheduled(
+                `${longDate(toNetworkIso(data.scheduledFor), locale)}, ${networkClock(data.scheduledFor)}`,
+              )}
+            </Body>
+          ) : null}
           <Badge label={shared.taxiRideStatus[data.status]} tone={TONES[data.status]} />
           <Body>{taxiRideHint(data, locale)}</Body>
-          {data.status === 'requested' ? (
+          {/* A ride booked for later has no countdown worth showing. */}
+          {data.status === 'requested' && !data.scheduledFor ? (
             <Body muted>{t.taxi.waitsFor(formatClock(secondsLeft))}</Body>
           ) : null}
 
@@ -92,17 +108,28 @@ export default function TaxiRideScreen() {
           ) : null}
 
           <Card>
-            <Body>
-              {(data.direction === 'from_terminal' ? t.taxi.from : t.taxi.to)(
-                data.terminal.name,
-                data.terminal.city,
-              )}
-            </Body>
-            <Body muted>
-              {(data.direction === 'from_terminal' ? t.taxi.destination : t.taxi.pickup)(
-                data.address,
-              )}
-            </Body>
+            {data.terminal ? (
+              <>
+                <Body>
+                  {(data.direction === 'from_terminal' ? t.taxi.from : t.taxi.to)(
+                    data.terminal.name,
+                    data.terminal.city,
+                  )}
+                </Body>
+                <Body muted>
+                  {(data.direction === 'from_terminal' ? t.taxi.destination : t.taxi.pickup)(
+                    data.address,
+                  )}
+                </Body>
+              </>
+            ) : (
+              <>
+                <Body>
+                  {data.from?.name} → {data.to?.name}
+                </Body>
+                <Body muted>{t.taxi.pickup(data.address)}</Body>
+              </>
+            )}
             <Body muted>
               {t.taxi.people(data.passengers)}
               {data.notes ? ` · ${data.notes}` : ''}

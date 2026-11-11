@@ -1,21 +1,47 @@
-import { TAXI_DIRECTION_LABELS, type TaxiRequest } from '@vtp/shared-types';
+import {
+  networkClock,
+  TAXI_DIRECTION_LABELS,
+  TRANSPORT_MODE_LABELS,
+  toNetworkIso,
+  type TaxiRequest,
+} from '@vtp/shared-types';
 
-/** "Desde Terminal La Bandera → Av. Bolívar…" or "Av. Bolívar… → Terminal La Bandera". */
-export function rideRoute(ride: Pick<TaxiRequest, 'direction' | 'terminal' | 'address'>): string {
+/**
+ * Terminal rides: "Terminal La Bandera → Av. Bolívar…" (or the other way). Stretch rides (ADR-028):
+ * "San Félix → Puerto Ordaz · buscar en Calle 3…".
+ */
+export function rideRoute(
+  ride: Pick<TaxiRequest, 'kind' | 'direction' | 'terminal' | 'from' | 'to' | 'address'>,
+): string {
+  if (ride.kind === 'stretch' || !ride.terminal) {
+    return `${ride.from?.city ?? '?'} → ${ride.to?.city ?? '?'} · buscar en ${ride.address}`;
+  }
   return ride.direction === 'from_terminal'
     ? `${ride.terminal.name} → ${ride.address}`
     : `${ride.address} → ${ride.terminal.name}`;
 }
 
-/** "Desde el terminal · 2 pasajeros · hace 3 min". */
+/** "Desde el terminal · 2 pasajeros · hace 3 min", or "Moto · para el 12/11 06:30 · 1 pasajero". */
 export function requestSummary(
-  ride: Pick<TaxiRequest, 'direction' | 'passengers' | 'requestedAt'>,
+  ride: Pick<
+    TaxiRequest,
+    'kind' | 'direction' | 'mode' | 'scheduledFor' | 'passengers' | 'requestedAt'
+  >,
   now = Date.now(),
 ): string {
+  const people = `${ride.passengers} ${ride.passengers === 1 ? 'pasajero' : 'pasajeros'}`;
+  if (ride.scheduledFor) {
+    const day = toNetworkIso(ride.scheduledFor);
+    const when = `para el ${day.slice(8, 10)}/${day.slice(5, 7)} ${networkClock(ride.scheduledFor)}`;
+    return `${TRANSPORT_MODE_LABELS[ride.mode]} · ${when} · ${people}`;
+  }
   const minutes = Math.max(0, Math.floor((now - Date.parse(ride.requestedAt)) / 60_000));
   const ago = minutes < 1 ? 'recién pedido' : `hace ${minutes} min`;
-  const people = `${ride.passengers} ${ride.passengers === 1 ? 'pasajero' : 'pasajeros'}`;
-  return `${TAXI_DIRECTION_LABELS[ride.direction]} · ${people} · ${ago}`;
+  const what =
+    ride.kind === 'stretch' || !ride.direction
+      ? `${TRANSPORT_MODE_LABELS[ride.mode]} ahora`
+      : TAXI_DIRECTION_LABELS[ride.direction];
+  return `${what} · ${people} · ${ago}`;
 }
 
 /** Accepts `8`, `8.5`, `8,50`; returns the API's decimal string, or null when invalid or zero. */

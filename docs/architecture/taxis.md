@@ -78,9 +78,35 @@ solo si está verificado.
 Eventos de auditoría: `taxi_ride.requested`, `.accepted`, `.picked_up`, `.completed`,
 `.cancelled`, `.released`, `taxi_terminals.replaced`.
 
+## Viajes por tramo, bajo demanda (ADR-028)
+
+Además de los taxis de terminal, un pasajero del servicio suburbano pide un **taxi o una moto entre
+dos paradas de un corredor** (`taxi_rides.kind = 'stretch'`), **ahora o para una hora** (hasta 7
+días adelante):
+
+- Escribe la dirección de recogida **cerca de la parada de origen** (sin mapa ni GPS: la línea
+  decide si llega). Una moto lleva un pasajero.
+- Cada línea de taxis o de mototaxis publica sus **tarifas fijas por tramo** (`on_demand_fares`,
+  en los dos sentidos, en su propio tipo de vehículo; portal → Taxis o Mototaxis). El pasajero ve
+  antes de pedir el rango de tarifas por vehículo (`GET /taxi/stretch-options`), y la línea que
+  toma el viaje cobra la suya: el conductor no escribe la tarifa.
+- Solo las líneas con tarifa para ese tramo y vehículo ven la solicitud (y reciben el aviso). Un
+  viaje programado se ofrece **desde que se pide** y vence 20 minutos después de la hora pedida si
+  nadie lo toma.
+- Un viaje **programado y aceptado no ocupa** al conductor ni al vehículo hasta que recoge al
+  pasajero: el conductor sigue tomando viajes para ahora, y en su app aparece en "Viajes
+  programados". El tablero lo muestra como su viaje actual desde 30 minutos antes.
+- Si el corredor se apaga (ADR-029), no se piden viajes nuevos y no se muestran las tarifas.
+- Por ahora se le paga al conductor; el pago con un paquete de viajes viene en la segunda parte.
+
+| Método y ruta                                     | Quién                          |
+| ------------------------------------------------- | ------------------------------ |
+| `GET /taxi/stretch-options?from=&to=`             | Público — tarifas por vehículo |
+| `GET`/`PUT /organizations/:id/taxi/stretch-fares` | Miembros / `routes.manage`     |
+
 ## Todavía no
 
-Cobro del taxi dentro de la plataforma, tarifas fijas por zona, ubicación en vivo del taxi y del
-pasajero en un mapa, avisos push de cada cambio de estado (hoy: solicitud nueva y aceptada),
-calificaciones y viajes
-que no pasan por un terminal.
+Cobro del taxi dentro de la plataforma, tarifas fijas por zona para los taxis de terminal,
+ubicación en vivo del taxi y del pasajero en un mapa, avisos push de cada cambio de estado (hoy:
+solicitud nueva y aceptada), recordatorio al conductor antes de un viaje programado y
+calificaciones.

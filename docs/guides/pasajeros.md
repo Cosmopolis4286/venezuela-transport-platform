@@ -82,6 +82,13 @@ Tus paquetes**): varios viajes de un tramo, en bus, taxi o moto, por un precio f
   reservas futuras con un paquete, y una por salida.
 - Si cancelas hasta 30 minutos antes de abordar, el viaje vuelve a tu paquete; después, se pierde.
 
+### Taxi o moto por tramo
+
+En **Suburbano**, **Pedir taxi o moto**: elige desde qué parada y hasta cuál, el vehículo (ves
+el precio antes de pedir), **ahora** o **para más tarde** (día y hora), y dónde te buscan cerca de
+la parada de origen. La primera línea que lo toma cobra su tarifa del tramo; le pagas al
+conductor. Una moto lleva un solo pasajero.
+
 ## 6. Pedir un taxi en el terminal
 
 1. **Pedir un taxi**: elige el terminal, si vas **desde** o **hacia** él, la dirección, cuántos

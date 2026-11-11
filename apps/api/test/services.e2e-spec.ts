@@ -483,7 +483,8 @@ describe.runIf(expectDatabase)('Services and corridors (e2e)', () => {
         .expect(201)
     ).body as { mode: string; seatLayout: unknown };
     expect(moto).toMatchObject({ mode: 'motorcycle', seatLayout: null });
-    // Motorcycle taxi lines have no terminal taxi board.
-    await http().get(`${org}/taxi`).set('Authorization', owner.auth).expect(409);
+    // Motorcycle taxi lines have a dispatch board (for on-demand stretch rides), not terminals.
+    await http().get(`${org}/taxi`).set('Authorization', owner.auth).expect(200);
+    await http().get(`${org}/taxi/terminals`).set('Authorization', owner.auth).expect(409);
   });
 });

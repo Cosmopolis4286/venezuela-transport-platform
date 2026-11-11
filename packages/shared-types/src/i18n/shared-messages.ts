@@ -26,6 +26,8 @@ export interface SharedMessages {
   taxiRideHint: Record<Exclude<TaxiRideStatus, 'accepted'>, string> & {
     acceptedFromTerminal: string;
     acceptedToTerminal: string;
+    acceptedStretch: string;
+    requestedStretch: string;
   };
   /** Messages for error codes whose meaning does not depend on the request. */
   errors: Partial<Record<ApiErrorCode, string>> & { INTERNAL_ERROR: string; network: string };
@@ -79,6 +81,10 @@ const es: SharedMessages = {
       'Tu taxi va a la parada de taxis del terminal. Verifica la placa antes de subir.',
     acceptedToTerminal:
       'Tu taxi va a buscarte a la dirección que indicaste. Verifica la placa antes de subir.',
+    acceptedStretch:
+      'Tu conductor va a buscarte a la dirección que indicaste. Verifica la placa antes de subir.',
+    requestedStretch:
+      'Las líneas que hacen este tramo ya ven tu solicitud y pueden tomarla desde ahora.',
     in_progress: 'Buen viaje. Paga la tarifa acordada al conductor.',
     completed: 'Viaje terminado.',
     cancelled: 'El viaje se canceló.',
@@ -126,6 +132,8 @@ const es: SharedMessages = {
     TRIP_PACK_TOO_MANY_BOOKINGS:
       'Ya tienes 4 reservas futuras con ese paquete. Usa o cancela alguna antes de reservar otra.',
     TRIP_PACK_ONE_PER_DEPARTURE: 'Ya tienes una reserva con ese paquete en esta salida.',
+    TAXI_STRETCH_NOT_SERVED: 'Ninguna línea hace ese tramo bajo demanda en ese vehículo.',
+    TAXI_NO_FARE: 'Tu línea no tiene tarifa para ese tramo en ese vehículo.',
     APPLICATION_OPEN: 'Ya tienes una solicitud abierta.',
     APPLICATION_UNDER_REVIEW: 'Tu solicitud está en revisión y no se puede cambiar ahora.',
     APPLICATION_WRONG_STATUS: 'La solicitud no está esperando revisión.',
@@ -229,6 +237,10 @@ const en: SharedMessages = {
       'Your taxi is heading to the terminal taxi stand. Check the plate before you get in.',
     acceptedToTerminal:
       'Your taxi is on its way to the address you gave. Check the plate before you get in.',
+    acceptedStretch:
+      'Your driver is on the way to the address you gave. Check the plate before you get in.',
+    requestedStretch:
+      'The lines that ride this stretch already see your request and can take it now.',
     in_progress: 'Have a good trip. Pay the agreed fare to the driver.',
     completed: 'Ride completed.',
     cancelled: 'The ride was cancelled.',
@@ -278,6 +290,8 @@ const en: SharedMessages = {
       'You already have 4 upcoming bookings with that trip pack. Use or cancel one first.',
     TRIP_PACK_ONE_PER_DEPARTURE:
       'You already have a booking with that trip pack on this departure.',
+    TAXI_STRETCH_NOT_SERVED: 'No line rides that stretch on demand with that vehicle.',
+    TAXI_NO_FARE: 'Your line has no fare for that stretch and vehicle.',
     APPLICATION_OPEN: 'You already have an open application.',
     APPLICATION_UNDER_REVIEW: 'Your application is under review and cannot be changed now.',
     APPLICATION_WRONG_STATUS: 'The application is not waiting for review.',
@@ -382,6 +396,9 @@ const ptBR: SharedMessages = {
       'Seu táxi está indo para o ponto de táxi do terminal. Confira a placa antes de entrar.',
     acceptedToTerminal:
       'Seu táxi está indo buscar você no endereço informado. Confira a placa antes de entrar.',
+    acceptedStretch:
+      'Seu motorista está indo buscar você no endereço informado. Confira a placa antes de entrar.',
+    requestedStretch: 'As linhas que fazem este trecho já veem seu pedido e podem aceitá-lo agora.',
     in_progress: 'Boa viagem. Pague a tarifa combinada ao motorista.',
     completed: 'Viagem concluída.',
     cancelled: 'A viagem foi cancelada.',
@@ -429,6 +446,8 @@ const ptBR: SharedMessages = {
     TRIP_PACK_TOO_MANY_BOOKINGS:
       'Você já tem 4 reservas futuras com esse pacote. Use ou cancele alguma antes.',
     TRIP_PACK_ONE_PER_DEPARTURE: 'Você já tem uma reserva com esse pacote nesta partida.',
+    TAXI_STRETCH_NOT_SERVED: 'Nenhuma linha faz esse trecho sob demanda nesse veículo.',
+    TAXI_NO_FARE: 'Sua linha não tem tarifa para esse trecho nesse veículo.',
     APPLICATION_OPEN: 'Você já tem uma solicitação aberta.',
     APPLICATION_UNDER_REVIEW: 'Sua solicitação está em análise e não pode ser alterada agora.',
     APPLICATION_WRONG_STATUS: 'A solicitação não está aguardando análise.',

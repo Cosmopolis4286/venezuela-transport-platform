@@ -126,6 +126,18 @@ export default function SearchScreen() {
           />
         </Card>
       ) : null}
+      {/* On-demand taxis and motorcycles between the corridor's stops (ADR-028). */}
+      {suburban ? (
+        <Card>
+          <Subheading>{t.ride.homeTitle}</Subheading>
+          <Body muted>{t.ride.homeIntro}</Body>
+          <Button
+            variant="secondary"
+            title={t.ride.homeButton}
+            onPress={() => router.push(state.status === 'signedIn' ? '/taxi' : '/sign-in')}
+          />
+        </Card>
+      ) : null}
       {/* Terminal taxis belong to the intercity service. */}
       {suburban || !openServices.includes('intercity') ? null : (
         <Card>

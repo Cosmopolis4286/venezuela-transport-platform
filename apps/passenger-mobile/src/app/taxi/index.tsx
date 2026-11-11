@@ -22,8 +22,10 @@ import {
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, Text } from 'react-native';
+import { StretchRideForm } from '@/components/stretch-ride-form';
 import { useT } from '@/i18n/use-t';
-import { isOpenRide } from '@/lib/taxi';
+import { useSearch } from '@/lib/search-context';
+import { isOpenRide, ridePlace } from '@/lib/taxi';
 import { useRefreshOnFocus } from '@/lib/use-refresh-on-focus';
 
 const PASSENGERS = (['1', '2', '3', '4'] as const).map((value) => ({ value, label: value }));
@@ -33,6 +35,9 @@ export default function RequestTaxiScreen() {
   const { api } = useAuth();
   const colors = useColors();
   const { t, shared } = useT();
+  // Suburban: on demand between the corridor's stops; intercity: to or from a terminal.
+  const { service } = useSearch();
+  const stretch = service === 'suburban';
   const directions = TAXI_DIRECTIONS.map((value) => ({
     value,
     label: shared.taxiDirection[value],
@@ -77,8 +82,8 @@ export default function RequestTaxiScreen() {
 
   return (
     <Screen>
-      <Heading>{t.taxi.heading}</Heading>
-      <Body muted>{t.taxi.intro}</Body>
+      <Heading>{stretch ? t.ride.heading : t.taxi.heading}</Heading>
+      <Body muted>{stretch ? t.ride.intro : t.taxi.intro}</Body>
 
       {open ? (
         <Card>
@@ -88,6 +93,8 @@ export default function RequestTaxiScreen() {
             onPress={() => router.push({ pathname: '/taxi/[id]', params: { id: open.id } })}
           />
         </Card>
+      ) : stretch ? (
+        <StretchRideForm />
       ) : (
         <>
           <Subheading>{t.taxi.terminal}</Subheading>
@@ -180,9 +187,7 @@ export default function RequestTaxiScreen() {
                 onPress={() => router.push({ pathname: '/taxi/[id]', params: { id: ride.id } })}
               >
                 <Card>
-                  <Body>
-                    {shared.taxiDirection[ride.direction]} · {ride.terminal.name}
-                  </Body>
+                  <Body>{ridePlace(ride, t, shared)}</Body>
                   <Body muted>
                     {ride.address} · {shared.taxiRideStatus[ride.status]}
                   </Body>

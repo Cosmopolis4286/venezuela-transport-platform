@@ -2,8 +2,13 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   cityIn,
   formatMoney,
+  MAX_SCHEDULE_AHEAD_DAYS,
   rolesWith,
   TAXI_REQUEST_MINUTES,
+  type OnDemandFare,
+  type OnDemandMode,
+  type ReplaceOnDemandFaresRequest,
+  type StretchOption,
   type AcceptTaxiRideRequest,
   type DriverTaxiBoard,
   type OperatorTaxiRide,
@@ -14,7 +19,7 @@ import {
   type TaxiRide,
   type TaxiTerminal,
 } from '@vtp/shared-types';
-import { and, asc, count, desc, eq, gt, inArray, lte, ne, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, lte, ne, or, sql } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService, type Database } from '../../database/database.service.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -23,7 +28,7 @@ import { VehiclesService } from '../fleet/vehicles.service.js';
 import { normalizePhone } from '../identity/contact.js';
 import { users } from '../identity/identity.schema.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
-import { stops } from '../network/network.schema.js';
+import { serviceAreaStops, stops } from '../network/network.schema.js';
 import { ServicesService } from '../network/services.service.js';
 import { StopsService } from '../network/stops.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
@@ -33,7 +38,7 @@ import {
   organizations,
   type OrganizationRow,
 } from '../organizations/organizations.schema.js';
-import { taxiRides, taxiServiceAreas, type TaxiRideRow } from './taxi.schema.js';
+import { onDemandFares, taxiRides, taxiServiceAreas, type TaxiRideRow } from './taxi.schema.js';
 
 const DRIVING_ROLES = rolesWith('trips.drive');
 const ACTIVE = ['accepted', 'in_progress'] as const;
@@ -63,6 +68,23 @@ export async function expireTaxiRequests(db: Database, now = new Date()) {
 }
 
 type Fare = Pick<AcceptTaxiRideRequest, 'vehicleId' | 'fareAmount' | 'fareCurrency'>;
+
+/** Lines that ride on demand, and the vehicle each kind uses (ADR-028). */
+const ON_DEMAND_LINE: Record<OnDemandMode, 'taxi_line' | 'moto_line'> = {
+  car: 'taxi_line',
+  motorcycle: 'moto_line',
+};
+
+/** A stretch is stored with its stops in id order: the same row serves both directions. */
+const ordered = (a: string, b: string): [string, string] => (a < b ? [a, b] : [b, a]);
+
+/** The fare row of the stretch of a ride (either direction), by vehicle. */
+const fareMatchesRide = () =>
+  and(
+    eq(onDemandFares.stopAId, sql`least(${taxiRides.fromStopId}, ${taxiRides.toStopId})`),
+    eq(onDemandFares.stopBId, sql`greatest(${taxiRides.fromStopId}, ${taxiRides.toStopId})`),
+    eq(onDemandFares.mode, taxiRides.mode),
+  );
 
 @Injectable()
 export class TaxiService {
@@ -109,6 +131,10 @@ export class TaxiService {
     input: RequestTaxiRequest,
     meta: RequestMeta,
   ): Promise<TaxiRide> {
+    if (input.kind === 'stretch') return this.requestStretch(auth, input, meta);
+    if (!input.terminalStopId || !input.direction) {
+      throw invalid('Choose the terminal and whether you leave from it or go to it');
+    }
     const terminal = (await this.terminals()).find((t) => t.id === input.terminalStopId);
     if (!terminal) {
       const [stop] = (await this.stops.summaries([input.terminalStopId])).values();
@@ -158,7 +184,7 @@ export class TaxiService {
         .innerJoin(taxiServiceAreas, eq(taxiServiceAreas.organizationId, organizations.id))
         .where(
           and(
-            eq(taxiServiceAreas.stopId, ride.terminalStopId),
+            eq(taxiServiceAreas.stopId, terminal.id),
             eq(organizations.type, 'taxi_line'),
             eq(organizations.status, 'active'),
             inArray(memberships.role, rolesWith('trips.drive')),
@@ -174,6 +200,228 @@ export class TaxiService {
       };
     });
     return (await this.toRides([row]))[0]!;
+  }
+
+  /**
+   * Per vehicle, the lines that ride a stretch on demand and their fares (public): the passenger
+   * sees the price before asking.
+   */
+  async stretchOptions(fromStopId: string, toStopId: string): Promise<StretchOption[]> {
+    const [a, b] = ordered(fromStopId, toStopId);
+    const rows = await this.database.db
+      .select({
+        mode: onDemandFares.mode,
+        currency: onDemandFares.currency,
+        lines: sql<number>`count(*)::int`,
+        minFare: sql<string>`min(${onDemandFares.amount})::text`,
+        maxFare: sql<string>`max(${onDemandFares.amount})::text`,
+      })
+      .from(onDemandFares)
+      .innerJoin(
+        organizations,
+        and(eq(organizations.id, onDemandFares.organizationId), eq(organizations.status, 'active')),
+      )
+      .where(and(eq(onDemandFares.stopAId, a), eq(onDemandFares.stopBId, b)))
+      .groupBy(onDemandFares.mode, onDemandFares.currency);
+    const open = new Set((await this.services.status()).suburban.areas.map((x) => x.id));
+    const [area] = await this.areaOf(a, b);
+    if (!area || !open.has(area)) return [];
+    return rows
+      .filter((r): r is typeof r & { mode: OnDemandMode } => r.mode !== 'bus')
+      .sort((x, y) => x.mode.localeCompare(y.mode));
+  }
+
+  /** On demand between two stops of a corridor, now or at a set time (ADR-028). */
+  private async requestStretch(
+    auth: Authenticated,
+    input: RequestTaxiRequest,
+    meta: RequestMeta,
+  ): Promise<TaxiRide> {
+    const { fromStopId, toStopId, mode } = input;
+    if (!fromStopId || !toStopId || !mode || fromStopId === toStopId) {
+      throw invalid('Choose two different stops and the kind of vehicle');
+    }
+    if (mode === 'motorcycle' && input.passengers !== 1) {
+      throw conflict('A motorcycle carries one passenger', 'MOTORCYCLE_ONE_PASSENGER');
+    }
+    const now = Date.now();
+    const scheduledFor = input.scheduledFor ? new Date(input.scheduledFor) : null;
+    if (scheduledFor) {
+      const at = scheduledFor.getTime();
+      if (Number.isNaN(at) || at < now || at > now + MAX_SCHEDULE_AHEAD_DAYS * 86_400_000) {
+        throw invalid(`Book between now and ${MAX_SCHEDULE_AHEAD_DAYS} days ahead`);
+      }
+    }
+    const [serviceAreaId] = await this.areaOf(fromStopId, toStopId);
+    if (!serviceAreaId) throw invalid('Both stops must belong to one corridor');
+    const stopsOf = await this.stops.summaries([fromStopId, toStopId]);
+    await this.services.assertOpen({
+      service: 'suburban',
+      serviceAreaId,
+      from: stopsOf.get(fromStopId)!,
+      to: stopsOf.get(toStopId)!,
+    });
+    if (!(await this.stretchOptions(fromStopId, toStopId)).some((o) => o.mode === mode)) {
+      throw conflict(
+        'No line rides this stretch on demand with that vehicle',
+        'TAXI_STRETCH_NOT_SERVED',
+      );
+    }
+    const address = input.address.trim();
+    if (address.length < 5) throw invalid('Describe the address in at least 5 characters');
+    let contactPhone: string | null = auth.user.phoneVerifiedAt ? auth.user.phone : null;
+    if (input.contactPhone?.trim()) {
+      contactPhone = normalizePhone(input.contactPhone);
+      if (!contactPhone) throw invalid('Enter a valid phone number');
+    }
+    await expireTaxiRequests(this.database.db);
+    // Waits until a while after the time asked (or from now when it is for now).
+    const waitFrom = scheduledFor?.getTime() ?? now;
+    let row: TaxiRideRow;
+    try {
+      [row] = (await this.database.db
+        .insert(taxiRides)
+        .values({
+          kind: 'stretch',
+          passengerUserId: auth.user.id,
+          fromStopId,
+          toStopId,
+          serviceAreaId,
+          mode,
+          scheduledFor,
+          address,
+          notes: input.notes?.trim() || null,
+          passengers: input.passengers,
+          contactPhone,
+          expiresAt: new Date(waitFrom + TAXI_REQUEST_MINUTES * MINUTE_MS),
+        })
+        .returning()) as [TaxiRideRow];
+    } catch (error) {
+      if (violated(error) === 'taxi_rides_passenger_open_key') {
+        throw conflict('You already have a taxi ride in progress', 'TAXI_RIDE_OPEN');
+      }
+      throw error;
+    }
+    await this.record('taxi_ride.requested', row, auth, meta, { kind: 'stretch', mode });
+    const ride = row;
+    const place = `${stopsOf.get(fromStopId)!.city} → ${stopsOf.get(toStopId)!.city}`;
+    this.notifications.later(async () => {
+      // Drivers of the active lines with a fare for this stretch and vehicle.
+      const [a, b] = ordered(fromStopId, toStopId);
+      const drivers = await this.database.db
+        .selectDistinct({ userId: memberships.userId })
+        .from(memberships)
+        .innerJoin(organizations, eq(organizations.id, memberships.organizationId))
+        .innerJoin(
+          onDemandFares,
+          and(
+            eq(onDemandFares.organizationId, organizations.id),
+            eq(onDemandFares.stopAId, a),
+            eq(onDemandFares.stopBId, b),
+            eq(onDemandFares.mode, mode),
+          ),
+        )
+        .where(
+          and(
+            eq(organizations.status, 'active'),
+            inArray(memberships.role, rolesWith('trips.drive')),
+            ne(memberships.userId, ride.passengerUserId),
+          ),
+        );
+      return {
+        kind: 'taxi_requested',
+        userIds: drivers.map((d) => d.userId),
+        app: 'transport',
+        reference: { key: 'rideId', id: ride.id },
+        text: (m) => m.taxiRequested(place, ride.passengers),
+      };
+    });
+    return (await this.toRides([row]))[0]!;
+  }
+
+  /** The corridor both stops belong to (the first, if several), or none. */
+  private async areaOf(a: string, b: string): Promise<string[]> {
+    const rows = await this.database.db
+      .select({ areaId: serviceAreaStops.serviceAreaId })
+      .from(serviceAreaStops)
+      .where(inArray(serviceAreaStops.stopId, [a, b]))
+      .groupBy(serviceAreaStops.serviceAreaId)
+      .having(sql`count(*) = 2`);
+    return rows.map((r) => r.areaId);
+  }
+
+  // --- On-demand fares (lines) ------------------------------------------------------------
+
+  async faresOf(access: OrganizationAccess): Promise<OnDemandFare[]> {
+    const line = assertOnDemandLine(access.organization);
+    const rows = await this.database.db
+      .select()
+      .from(onDemandFares)
+      .where(eq(onDemandFares.organizationId, line.id));
+    const summaries = await this.stops.summaries([
+      ...new Set(rows.flatMap((r) => [r.stopAId, r.stopBId])),
+    ]);
+    return rows
+      .map((r) => ({
+        serviceAreaId: r.serviceAreaId,
+        stops: [summaries.get(r.stopAId)!, summaries.get(r.stopBId)!] as [StopSummary, StopSummary],
+        mode: r.mode as OnDemandMode,
+        amount: r.amount,
+        currency: r.currency,
+      }))
+      .sort((x, y) => x.stops[0].city.localeCompare(y.stops[0].city, 'es'));
+  }
+
+  /** Replaces the line's fixed on-demand fares: both stops of one corridor, its own vehicle. */
+  async replaceFares(
+    access: OrganizationAccess,
+    input: ReplaceOnDemandFaresRequest,
+    actor: Authenticated,
+    meta: RequestMeta,
+  ): Promise<OnDemandFare[]> {
+    const line = assertOnDemandLine(access.organization);
+    const values: (typeof onDemandFares.$inferInsert)[] = [];
+    const seen = new Set<string>();
+    for (const fare of input.fares) {
+      if (ON_DEMAND_LINE[fare.mode] !== line.type) {
+        throw conflict(
+          'This organization does not run that kind of vehicle',
+          'TRANSPORT_MODE_NOT_ALLOWED',
+        );
+      }
+      const [a, b] = ordered(fare.stopIds[0], fare.stopIds[1]);
+      if (a === b) throw invalid('The two stops must be different');
+      if (!(Number(fare.amount) > 0)) throw invalid('Fares must be greater than zero');
+      const key = `${a}:${b}:${fare.mode}`;
+      if (seen.has(key)) throw invalid('Each stretch can have only one fare per vehicle');
+      seen.add(key);
+      const [serviceAreaId] = await this.areaOf(a, b);
+      if (!serviceAreaId) {
+        throw conflict('Both stops must belong to one corridor', 'ROUTE_OUTSIDE_SERVICE_AREA');
+      }
+      values.push({
+        organizationId: line.id,
+        serviceAreaId,
+        stopAId: a,
+        stopBId: b,
+        mode: fare.mode,
+        amount: Number(fare.amount).toFixed(2),
+        currency: fare.currency,
+      });
+    }
+    await this.database.db.transaction(async (tx) => {
+      await tx.delete(onDemandFares).where(eq(onDemandFares.organizationId, line.id));
+      if (values.length) await tx.insert(onDemandFares).values(values);
+    });
+    await this.audit.record({
+      action: 'on_demand_fares.replaced',
+      actorUserId: actor.user.id,
+      targetType: 'organization',
+      targetId: line.id,
+      ip: meta.ip,
+      metadata: { count: values.length },
+    });
+    return this.faresOf(access);
   }
 
   async listMine(userId: string): Promise<TaxiRide[]> {
@@ -211,13 +459,22 @@ export class TaxiService {
     const lines = await this.driverLines(userId);
     const lineIds = lines.map((l) => l.id);
     const fleet = await Promise.all(lineIds.map((id) => this.vehicles.list(id)));
-    const [current] = await this.database.db
+    const mine = await this.database.db
       .select()
       .from(taxiRides)
-      .where(and(eq(taxiRides.driverUserId, userId), inArray(taxiRides.status, ACTIVE)));
+      .where(and(eq(taxiRides.driverUserId, userId), inArray(taxiRides.status, ACTIVE)))
+      .orderBy(asc(taxiRides.scheduledFor));
+    // On the road: in progress, for now, or booked within the next half hour; the rest is later.
+    const soon = Date.now() + 30 * MINUTE_MS;
+    const due = (r: TaxiRideRow) =>
+      r.status === 'in_progress' || !r.scheduledFor || r.scheduledFor.getTime() <= soon;
+    const current =
+      mine.find((r) => r.status === 'in_progress') ?? mine.find((r) => due(r)) ?? null;
+    const upcoming = mine.filter((r) => r !== current);
     const requests = lineIds.length ? await this.openRequests(lineIds, userId) : [];
     return {
       current: current ? ((await this.toOperatorRides([current]))[0] ?? null) : null,
+      upcoming: await this.toOperatorRides(upcoming),
       requests,
       lines: lines.map((line, i) => ({
         organization: { id: line.id, legalName: line.legalName, tradeName: line.tradeName },
@@ -290,7 +547,7 @@ export class TaxiService {
   // --- Dispatchers ------------------------------------------------------------------------
 
   async dispatchBoard(access: OrganizationAccess): Promise<TaxiDispatchBoard> {
-    const organizationId = assertTaxiLine(access.organization).id;
+    const organizationId = assertOnDemandLine(access.organization).id;
     await expireTaxiRequests(this.database.db);
     const [terminalIds, requests, rides, drivers, fleet] = await Promise.all([
       this.terminalIdsOf(organizationId),
@@ -340,7 +597,7 @@ export class TaxiService {
     actor: Authenticated,
     meta: RequestMeta,
   ): Promise<OperatorTaxiRide> {
-    const line = assertTaxiLine(access.organization);
+    const line = assertOnDemandLine(access.organization);
     if (!(await this.drivers(line.id)).some((d) => d.userId === input.driverUserId)) {
       throw invalid('The driver must be a member whose role drives');
     }
@@ -412,10 +669,41 @@ export class TaxiService {
   ): Promise<OperatorTaxiRide> {
     if (line.status !== 'active')
       throw conflict('The taxi line is not active', 'TAXI_LINE_INACTIVE');
-    if (Number(input.fareAmount) <= 0) throw invalid('The fare must be greater than zero');
     const vehicle = await this.vehicles.require(line.id, input.vehicleId);
     if (!vehicle.active) throw conflict('This vehicle is inactive', 'VEHICLE_INACTIVE');
     await expireTaxiRequests(this.database.db);
+    const [ride] = await this.database.db.select().from(taxiRides).where(eq(taxiRides.id, rideId));
+    if (!ride) throw notFound();
+    // Terminal rides: the line quotes the fare. Stretch rides: its fixed fare for the stretch.
+    let fare: { amount: string; currency: TaxiRideRow['fareCurrency'] & string };
+    if (ride.kind === 'stretch') {
+      if (vehicle.mode !== ride.mode) {
+        throw conflict(
+          'This vehicle is of a different kind than the ride',
+          'VEHICLE_MODE_MISMATCH',
+        );
+      }
+      const [a, b] = ordered(ride.fromStopId!, ride.toStopId!);
+      const [own] = await this.database.db
+        .select({ amount: onDemandFares.amount, currency: onDemandFares.currency })
+        .from(onDemandFares)
+        .where(
+          and(
+            eq(onDemandFares.organizationId, line.id),
+            eq(onDemandFares.stopAId, a),
+            eq(onDemandFares.stopBId, b),
+            eq(onDemandFares.mode, ride.mode),
+          ),
+        );
+      if (!own) throw conflict('Your line has no fare for this stretch', 'TAXI_NO_FARE');
+      fare = own;
+    } else {
+      if (line.type !== 'taxi_line' || !input.fareAmount || !input.fareCurrency) {
+        throw invalid('Quote the fare of the terminal ride');
+      }
+      if (Number(input.fareAmount) <= 0) throw invalid('The fare must be greater than zero');
+      fare = { amount: input.fareAmount, currency: input.fareCurrency };
+    }
     let row: TaxiRideRow | undefined;
     try {
       [row] = await this.database.db
@@ -425,8 +713,8 @@ export class TaxiService {
           organizationId: line.id,
           driverUserId,
           vehicleId: vehicle.id,
-          fareAmount: input.fareAmount,
-          fareCurrency: input.fareCurrency,
+          fareAmount: fare.amount,
+          fareCurrency: fare.currency,
           acceptedAt: new Date(),
         })
         .where(
@@ -434,13 +722,15 @@ export class TaxiService {
             eq(taxiRides.id, rideId),
             eq(taxiRides.status, 'requested'),
             ne(taxiRides.passengerUserId, driverUserId),
-            inArray(
-              taxiRides.terminalStopId,
-              this.database.db
-                .select({ stopId: taxiServiceAreas.stopId })
-                .from(taxiServiceAreas)
-                .where(eq(taxiServiceAreas.organizationId, line.id)),
-            ),
+            ride.kind === 'stretch'
+              ? undefined
+              : inArray(
+                  taxiRides.terminalStopId,
+                  this.database.db
+                    .select({ stopId: taxiServiceAreas.stopId })
+                    .from(taxiServiceAreas)
+                    .where(eq(taxiServiceAreas.organizationId, line.id)),
+                ),
           ),
         )
         .returning();
@@ -489,7 +779,10 @@ export class TaxiService {
         fareAmount: null,
         fareCurrency: null,
         acceptedAt: null,
-        expiresAt: new Date(Date.now() + TAXI_REQUEST_MINUTES * MINUTE_MS),
+        expiresAt: new Date(
+          Math.max(Date.now(), ride.scheduledFor?.getTime() ?? 0) +
+            TAXI_REQUEST_MINUTES * MINUTE_MS,
+        ),
       })
       .where(and(eq(taxiRides.id, ride.id), eq(taxiRides.status, 'accepted')))
       .returning();
@@ -510,29 +803,43 @@ export class TaxiService {
     rideId?: string,
     anyStatus = false,
   ): Promise<TaxiRequest[]> {
-    const rows = await this.database.db
-      .selectDistinct({ ride: taxiRides, firstName: users.firstName })
-      .from(taxiRides)
-      .innerJoin(users, eq(users.id, taxiRides.passengerUserId))
-      .innerJoin(
-        taxiServiceAreas,
-        and(
-          eq(taxiServiceAreas.stopId, taxiRides.terminalStopId),
-          inArray(taxiServiceAreas.organizationId, organizationIds),
-        ),
-      )
-      .where(
-        and(
-          anyStatus ? undefined : eq(taxiRides.status, 'requested'),
-          rideId ? eq(taxiRides.id, rideId) : undefined,
-          excludePassengerId ? ne(taxiRides.passengerUserId, excludePassengerId) : undefined,
-        ),
-      )
-      .orderBy(asc(taxiRides.createdAt))
-      .limit(100);
-    const terminals = await this.stops.summaries(rows.map((r) => r.ride.terminalStopId));
+    const filters = and(
+      anyStatus ? undefined : eq(taxiRides.status, 'requested'),
+      rideId ? eq(taxiRides.id, rideId) : undefined,
+      excludePassengerId ? ne(taxiRides.passengerUserId, excludePassengerId) : undefined,
+    );
+    // Terminal rides at the lines' terminals, and stretch rides the lines have a fare for.
+    const [atTerminals, onStretches] = await Promise.all([
+      this.database.db
+        .selectDistinct({ ride: taxiRides, firstName: users.firstName })
+        .from(taxiRides)
+        .innerJoin(users, eq(users.id, taxiRides.passengerUserId))
+        .innerJoin(
+          taxiServiceAreas,
+          and(
+            eq(taxiServiceAreas.stopId, taxiRides.terminalStopId),
+            inArray(taxiServiceAreas.organizationId, organizationIds),
+          ),
+        )
+        .where(and(eq(taxiRides.kind, 'terminal'), filters))
+        .limit(100),
+      this.database.db
+        .selectDistinct({ ride: taxiRides, firstName: users.firstName })
+        .from(taxiRides)
+        .innerJoin(users, eq(users.id, taxiRides.passengerUserId))
+        .innerJoin(
+          onDemandFares,
+          and(fareMatchesRide(), inArray(onDemandFares.organizationId, organizationIds)),
+        )
+        .where(and(eq(taxiRides.kind, 'stretch'), filters))
+        .limit(100),
+    ]);
+    // Rides for now first by age; rides booked for later by their time.
+    const when = (r: TaxiRideRow) => (r.scheduledFor ?? r.createdAt).getTime();
+    const rows = [...atTerminals, ...onStretches].sort((x, y) => when(x.ride) - when(y.ride));
+    const { stop } = await this.related(rows.map((r) => r.ride));
     return rows.map(({ ride, firstName }) => ({
-      ...requestFields(ride, terminals.get(ride.terminalStopId)!),
+      ...requestFields(ride, stop),
       passengerFirstName: firstName,
     }));
   }
@@ -546,7 +853,7 @@ export class TaxiService {
         organizations,
         and(
           eq(organizations.id, memberships.organizationId),
-          eq(organizations.type, 'taxi_line'),
+          inArray(organizations.type, ['taxi_line', 'moto_line']),
           eq(organizations.status, 'active'),
         ),
       )
@@ -611,26 +918,31 @@ export class TaxiService {
             .from(vehicles)
             .where(inArray(vehicles.id, ids('vehicleId')))
         : [],
-      this.stops.summaries(ids('terminalStopId')),
+      this.stops.summaries([...ids('terminalStopId'), ...ids('fromStopId'), ...ids('toStopId')]),
     ]);
     return {
       user: new Map(people.map((u) => [u.id, u])),
       line: new Map(lines.map((o) => [o.id, o])),
       vehicle: new Map(fleet.map((v) => [v.id, v])),
-      terminal: terminals,
+      stop: terminals,
     };
   }
 
   /** The passenger's view: the driver's name, verified phone and vehicle once taken. */
   private async toRides(rows: TaxiRideRow[]): Promise<TaxiRide[]> {
-    const { user, line, vehicle, terminal } = await this.related(rows);
+    const { user, line, vehicle, stop } = await this.related(rows);
     return rows.map((ride) => {
       const driver = ride.driverUserId ? user.get(ride.driverUserId) : undefined;
       return {
         id: ride.id,
+        kind: ride.kind,
         status: ride.status,
-        terminal: terminal.get(ride.terminalStopId)!,
+        terminal: ride.terminalStopId ? stop.get(ride.terminalStopId)! : null,
         direction: ride.direction,
+        from: ride.fromStopId ? stop.get(ride.fromStopId)! : null,
+        to: ride.toStopId ? stop.get(ride.toStopId)! : null,
+        mode: ride.mode as OnDemandMode,
+        scheduledFor: ride.scheduledFor?.toISOString() ?? null,
         address: ride.address,
         notes: ride.notes,
         passengers: ride.passengers,
@@ -659,7 +971,7 @@ export class TaxiService {
 
   /** The line's view of rides it took: the passenger's name and contact phone. */
   private async toOperatorRides(rows: TaxiRideRow[]): Promise<OperatorTaxiRide[]> {
-    const { user, vehicle, terminal } = await this.related(rows);
+    const { user, vehicle, stop } = await this.related(rows);
     return rows.flatMap((ride) => {
       if (!ride.organizationId || !ride.driverUserId || !ride.vehicleId || !ride.acceptedAt) {
         return [];
@@ -668,7 +980,7 @@ export class TaxiService {
       const driver = user.get(ride.driverUserId)!;
       return [
         {
-          ...requestFields(ride, terminal.get(ride.terminalStopId)!),
+          ...requestFields(ride, stop),
           passengerFirstName: passenger.firstName,
           status: ride.status,
           organizationId: ride.organizationId,
@@ -717,11 +1029,23 @@ function assertTaxiLine(organization: OrganizationRow): OrganizationRow {
   return organization;
 }
 
-function requestFields(ride: TaxiRideRow, terminal: StopSummary) {
+/** Taxi and motorcycle taxi lines ride on demand (ADR-028). */
+function assertOnDemandLine(organization: OrganizationRow): OrganizationRow {
+  if (organization.type !== 'taxi_line' && organization.type !== 'moto_line')
+    throw conflict('Only taxi and motorcycle taxi lines ride on demand', 'NOT_A_TAXI_LINE');
+  return organization;
+}
+
+function requestFields(ride: TaxiRideRow, stop: Map<string, StopSummary>) {
   return {
     id: ride.id,
-    terminal,
+    kind: ride.kind,
+    terminal: ride.terminalStopId ? stop.get(ride.terminalStopId)! : null,
     direction: ride.direction,
+    from: ride.fromStopId ? stop.get(ride.fromStopId)! : null,
+    to: ride.toStopId ? stop.get(ride.toStopId)! : null,
+    mode: ride.mode as OnDemandMode,
+    scheduledFor: ride.scheduledFor?.toISOString() ?? null,
     address: ride.address,
     notes: ride.notes,
     passengers: ride.passengers,

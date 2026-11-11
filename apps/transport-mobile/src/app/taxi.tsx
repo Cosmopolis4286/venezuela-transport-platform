@@ -123,16 +123,35 @@ export default function TaxiScreen() {
             )}
           </Card>
         </>
-      ) : data ? (
+      ) : null}
+      {data?.upcoming.length ? (
+        <>
+          <Heading>Viajes programados</Heading>
+          {data.upcoming.map((ride) => (
+            <Card key={ride.id}>
+              <Body>{rideRoute(ride)}</Body>
+              <Body muted>{requestSummary(ride)}</Body>
+              <Body muted>
+                {[ride.passenger.firstName, ride.passenger.lastName].filter(Boolean).join(' ') ||
+                  'Pasajero'}
+                {ride.passenger.phone ? ` · ${localPhone(ride.passenger.phone)}` : ''} ·{' '}
+                {formatMoney(ride.fare.amount, ride.fare.currency)}
+              </Body>
+            </Card>
+          ))}
+        </>
+      ) : null}
+      {!current && data ? (
         <>
           <Heading>Solicitudes de taxi</Heading>
           {data.lines.length === 0 ? (
             <Body muted>
-              Solo los conductores de una línea de taxi activa ven las solicitudes de los
-              terminales.
+              Solo los conductores de una línea de taxis o de mototaxis activa ven las solicitudes.
             </Body>
           ) : data.requests.length === 0 ? (
-            <Body muted>No hay solicitudes en tus terminales. Esta lista se actualiza sola.</Body>
+            <Body muted>
+              No hay solicitudes en tus terminales ni en tus tramos. Esta lista se actualiza sola.
+            </Body>
           ) : (
             data.requests.map((request) => (
               <RequestCard
@@ -177,8 +196,8 @@ function RequestCard({
   onAccept: (body: {
     organizationId: string;
     vehicleId: string;
-    fareAmount: string;
-    fareCurrency: Currency;
+    fareAmount?: string;
+    fareCurrency?: Currency;
   }) => Promise<void>;
 }) {
   const [lineId, setLineId] = useState(board.lines[0]?.organization.id ?? '');
@@ -187,6 +206,8 @@ function RequestCard({
   const [fare, setFare] = useState('');
   const [currency, setCurrency] = useState<Currency>('USD');
   const amount = parseFare(fare);
+  // Stretch rides cost the line's fixed fare for the stretch: nothing to type (ADR-028).
+  const fixedFare = request.kind === 'stretch';
   const vehicle = line?.vehicles.find((v) => v.id === vehicleId) ?? line?.vehicles[0];
 
   return (
@@ -224,34 +245,39 @@ function RequestCard({
           ) : (
             <Banner tone="warning">Tu línea no tiene vehículos activos registrados.</Banner>
           )}
-          <Segmented
-            label="Moneda"
-            options={CURRENCY_OPTIONS}
-            value={currency}
-            onChange={setCurrency}
-          />
-          <Field
-            label="Tarifa"
-            placeholder="8,00"
-            keyboardType="decimal-pad"
-            value={fare}
-            onChangeText={setFare}
-            error={
-              fare && !amount
-                ? 'Escribe un monto mayor que cero, con hasta dos decimales.'
-                : undefined
-            }
-          />
+          {fixedFare ? (
+            <Body muted>Se cobra la tarifa de tu línea para este tramo.</Body>
+          ) : (
+            <>
+              <Segmented
+                label="Moneda"
+                options={CURRENCY_OPTIONS}
+                value={currency}
+                onChange={setCurrency}
+              />
+              <Field
+                label="Tarifa"
+                placeholder="8,00"
+                keyboardType="decimal-pad"
+                value={fare}
+                onChangeText={setFare}
+                error={
+                  fare && !amount
+                    ? 'Escribe un monto mayor que cero, con hasta dos decimales.'
+                    : undefined
+                }
+              />
+            </>
+          )}
           <Button
             title="Tomar el viaje"
             loading={busy}
-            disabled={!amount || !vehicle}
+            disabled={(!fixedFare && !amount) || !vehicle}
             onPress={() =>
               void onAccept({
                 organizationId: line.organization.id,
                 vehicleId: vehicle!.id,
-                fareAmount: amount!,
-                fareCurrency: currency,
+                ...(fixedFare ? {} : { fareAmount: amount!, fareCurrency: currency }),
               })
             }
           />

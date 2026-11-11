@@ -2,6 +2,9 @@ import type { TaxiRequest } from '@vtp/shared-types';
 import { parseFare, requestSummary, rideRoute } from './taxi-board';
 
 const request = {
+  kind: 'terminal',
+  mode: 'car',
+  scheduledFor: null,
   direction: 'from_terminal',
   terminal: { name: 'Terminal La Bandera' },
   address: 'Av. Bolívar, Los Teques',
@@ -22,6 +25,26 @@ describe('taxi board labels', () => {
     expect(requestSummary(request, now)).toBe('Desde el terminal · 2 pasajeros · hace 3 min');
     expect(requestSummary({ ...request, passengers: 1 }, Date.parse(request.requestedAt))).toBe(
       'Desde el terminal · 1 pasajero · recién pedido',
+    );
+  });
+
+  it('shows stretch rides with their stops, vehicle and time', () => {
+    const stretch = {
+      ...request,
+      kind: 'stretch',
+      direction: null,
+      terminal: null,
+      from: { city: 'San Félix' },
+      to: { city: 'Puerto Ordaz' },
+      mode: 'motorcycle',
+      passengers: 1,
+    } as unknown as TaxiRequest;
+    expect(rideRoute(stretch)).toBe('San Félix → Puerto Ordaz · buscar en Av. Bolívar, Los Teques');
+    expect(requestSummary(stretch, Date.parse(request.requestedAt))).toBe(
+      'Moto ahora · 1 pasajero · recién pedido',
+    );
+    expect(requestSummary({ ...stretch, scheduledFor: '2026-11-12T10:30:00.000Z' })).toBe(
+      'Moto · para el 12/11 06:30 · 1 pasajero',
     );
   });
 

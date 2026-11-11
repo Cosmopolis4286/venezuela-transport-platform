@@ -1,7 +1,7 @@
 import { DEFAULT_LOCALE, type Locale } from '../i18n/locales.js';
 import { SHARED_MESSAGES } from '../i18n/shared-messages.js';
 import type { TripVehicle } from './dispatch.js';
-import type { Currency, StopSummary } from './network.js';
+import type { Currency, StopSummary, TransportMode } from './network.js';
 import type { Organization } from './organizations.js';
 
 /**
@@ -9,6 +9,21 @@ import type { Organization } from './organizations.js';
  * line that serves it sees the request, and the first driver (or dispatcher) to take it wins.
  * The line quotes the fare when it accepts; for now the passenger pays the driver directly.
  */
+
+/**
+ * `terminal`: to or from a terminal (intercity). `stretch`: on demand between two stops of a
+ * suburban corridor, by taxi or motorcycle, now or at a set time, at the line's fixed fare for the
+ * stretch (ADR-028).
+ */
+export const TAXI_RIDE_KINDS = ['terminal', 'stretch'] as const;
+export type TaxiRideKind = (typeof TAXI_RIDE_KINDS)[number];
+
+/** Kinds of vehicle that ride on demand. */
+export const ON_DEMAND_MODES = ['car', 'motorcycle'] as const satisfies readonly TransportMode[];
+export type OnDemandMode = (typeof ON_DEMAND_MODES)[number];
+
+/** A ride booked for a time is offered from the moment it is asked, up to this far ahead. */
+export const MAX_SCHEDULE_AHEAD_DAYS = 7;
 
 /** `from_terminal`: picked up at the terminal. `to_terminal`: dropped off there. */
 export const TAXI_DIRECTIONS = ['from_terminal', 'to_terminal'] as const;
@@ -46,11 +61,24 @@ export type TaxiTerminal = StopSummary & { lines: number };
 
 /** `POST /me/taxi-rides` */
 export interface RequestTaxiRequest {
-  terminalStopId: string;
-  direction: TaxiDirection;
-  /** The other end of the ride: street, sector, a reference point. */
+  /** Defaults to `terminal`. */
+  kind?: TaxiRideKind;
+  /** Terminal rides. */
+  terminalStopId?: string;
+  direction?: TaxiDirection;
+  /** Stretch rides: both stops of one active corridor, the kind of vehicle, and when. */
+  fromStopId?: string;
+  toStopId?: string;
+  mode?: OnDemandMode;
+  /** Omitted: now. ISO instant, up to `MAX_SCHEDULE_AHEAD_DAYS` ahead. */
+  scheduledFor?: string;
+  /**
+   * Terminal rides: the other end of the ride. Stretch rides: where to pick the passenger up,
+   * near the origin stop (no map: the line decides if it gets there).
+   */
   address: string;
   notes?: string;
+  /** A motorcycle carries one. */
   passengers: number;
   /** Shown to the driver once accepted; defaults to the account's verified phone. */
   contactPhone?: string;
@@ -59,9 +87,17 @@ export interface RequestTaxiRequest {
 /** A ride as its passenger sees it. */
 export interface TaxiRide {
   id: string;
+  kind: TaxiRideKind;
   status: TaxiRideStatus;
-  terminal: StopSummary;
-  direction: TaxiDirection;
+  /** Terminal rides. */
+  terminal: StopSummary | null;
+  direction: TaxiDirection | null;
+  /** Stretch rides. */
+  from: StopSummary | null;
+  to: StopSummary | null;
+  mode: OnDemandMode;
+  /** Booked for this instant; null: as soon as possible. */
+  scheduledFor: string | null;
   address: string;
   notes: string | null;
   passengers: number;
@@ -81,8 +117,13 @@ export interface TaxiRide {
 /** An open request as drivers and dispatchers see it before taking it: no contact details. */
 export interface TaxiRequest {
   id: string;
-  terminal: StopSummary;
-  direction: TaxiDirection;
+  kind: TaxiRideKind;
+  terminal: StopSummary | null;
+  direction: TaxiDirection | null;
+  from: StopSummary | null;
+  to: StopSummary | null;
+  mode: OnDemandMode;
+  scheduledFor: string | null;
   address: string;
   notes: string | null;
   passengers: number;
@@ -109,8 +150,9 @@ export interface AcceptTaxiRideRequest {
   /** The driver's taxi line (drivers may belong to several). */
   organizationId: string;
   vehicleId: string;
-  fareAmount: string;
-  fareCurrency: Currency;
+  /** Terminal rides only: stretch rides cost the line's fixed fare for the stretch. */
+  fareAmount?: string;
+  fareCurrency?: Currency;
 }
 
 export interface AssignTaxiRideRequest extends Omit<AcceptTaxiRideRequest, 'organizationId'> {
@@ -119,8 +161,10 @@ export interface AssignTaxiRideRequest extends Omit<AcceptTaxiRideRequest, 'orga
 
 /** `GET /me/taxi` — what a taxi driver needs on one screen. */
 export interface DriverTaxiBoard {
-  /** The ride the driver is on, if any (a driver takes one at a time). */
+  /** The ride the driver is on, or the next one due, if any (one at a time on the road). */
   current: OperatorTaxiRide | null;
+  /** Rides booked for later that the driver took, soonest first. */
+  upcoming: OperatorTaxiRide[];
   /** Open requests at the terminals the driver's lines serve, oldest first. */
   requests: TaxiRequest[];
   /** The driver's active taxi lines with their active vehicles. */
@@ -140,6 +184,32 @@ export interface TaxiDispatchBoard {
   vehicles: (TripVehicle & { busy: boolean })[];
 }
 
+/** A line's fixed fare for riding on demand between two stops (either way), by vehicle. */
+export interface OnDemandFare {
+  serviceAreaId: string;
+  stops: [StopSummary, StopSummary];
+  mode: OnDemandMode;
+  amount: string;
+  currency: Currency;
+}
+
+/** `PUT /organizations/:id/taxi/stretch-fares` replaces all of them. */
+export interface ReplaceOnDemandFaresRequest {
+  fares: { stopIds: [string, string]; mode: OnDemandMode; amount: string; currency: Currency }[];
+}
+
+/**
+ * `GET /taxi/stretch-options?from=&to=` (public): per vehicle, how many lines ride that stretch on
+ * demand and their fares, so the passenger sees the price before asking.
+ */
+export interface StretchOption {
+  mode: OnDemandMode;
+  lines: number;
+  currency: Currency;
+  minFare: string;
+  maxFare: string;
+}
+
 /** `PUT /organizations/:id/taxi/terminals` — where the line picks up and drops off. */
 export interface ReplaceTaxiTerminalsRequest {
   stopIds: string[];
@@ -147,11 +217,13 @@ export interface ReplaceTaxiTerminalsRequest {
 
 /** What the passenger should do next, in `locale`. */
 export function taxiRideHint(
-  ride: Pick<TaxiRide, 'status' | 'direction'>,
+  ride: Pick<TaxiRide, 'status' | 'direction'> & { kind?: TaxiRideKind },
   locale: Locale = DEFAULT_LOCALE,
 ): string {
   const hints = SHARED_MESSAGES[locale].taxiRideHint;
+  if (ride.kind === 'stretch' && ride.status === 'requested') return hints.requestedStretch;
   if (ride.status !== 'accepted') return hints[ride.status];
+  if (ride.kind === 'stretch') return hints.acceptedStretch;
   return ride.direction === 'from_terminal' ? hints.acceptedFromTerminal : hints.acceptedToTerminal;
 }
 

@@ -186,14 +186,18 @@ reservó y pausa las reservadas). Una serie tiene hasta 150 salidas y una ruta h
 
 **Bajo demanda** amplía el módulo `taxi`:
 
-- Hoy un taxi solo sale de un terminal o llega a él. Pasa a pedirse **por tramo**: parada de
-  origen y de destino del catálogo, más la dirección exacta de recogida y de llegada dentro de la
-  **zona de servicio** de cada parada (radio en km que fija la línea, por confirmar).
-- **Tarifa fija por tramo** que publica cada línea (resuelve la decisión pendiente de las tarifas
-  de taxi): el pasajero la ve antes de pedir. Ya no se escribe al tomar el viaje.
-- **Para una hora** (`scheduledFor`): la solicitud se ofrece a las líneas desde
-  `TAXI_SCHEDULED_LEAD_MINUTES` antes (por confirmar: 30) y se puede tomar desde que se pide.
-- Se paga con un paquete del tramo y tipo, o directo al conductor como hoy.
+- Hoy un taxi solo sale de un terminal o llega a él. Pasa a pedirse también **por tramo**
+  (`taxi_rides.kind = 'stretch'`): parada de origen y de destino del corredor, el tipo (taxi o
+  moto) y la **dirección de recogida cerca de la parada de origen**, escrita por el pasajero. Sin
+  mapa ni GPS en esta versión: la línea decide si llega (decidido por el dueño del producto).
+- **Tarifa fija por tramo** que publica cada línea (`on_demand_fares`, en los dos sentidos, por
+  tipo de vehículo). El pasajero ve antes de pedir el rango de tarifas de las líneas que hacen el
+  tramo; la línea que toma el viaje cobra la suya. Una línea ve las solicitudes de los tramos que
+  tiene con tarifa.
+- **Ahora o para una hora** (`scheduledFor`): la solicitud se ofrece a las líneas **desde que se
+  pide** (decidido) y vence si nadie la toma hasta 20 minutos después de la hora pedida.
+- Se paga directo al conductor como hoy; el pago con un paquete del tramo llega en la segunda
+  parte de este paso.
 - Las líneas de mototaxis usan el mismo flujo, con un pasajero por moto (decidido).
 
 ## 5. Paquetes de viajes (módulo nuevo `trip-packs`)
@@ -342,7 +346,7 @@ de paquetes por tramo y tipo de vehículo. Nada de esto queda en el código.
    `trip_pack_id`, empresas adheridas), con las pantallas de compra.
 7. ✅ **Paquetes: usarlos al reservar**, cancelaciones, libro de liquidaciones, avisos.
 8. ✅ **Reportes de paquetes** (sin devoluciones de paquetes: decidido).
-9. **Bajo demanda por tramo**: taxis y motos con tarifa fija, para ahora o para una hora, pagados
+9. 🟡 **Bajo demanda por tramo**: taxis y motos con tarifa fija, para ahora o para una hora, pagados
    con paquete.
 10. **Legal**: condiciones de los paquetes, los tramos suburbanos en la política de cancelación y
     reembolsos, y nueva versión de los documentos (una sola vez, para todo el suburbano).
