@@ -13,6 +13,9 @@ pull request.
 
 ### Agregado
 
+- **Reportes de paquetes de viajes**: en Métricas, paquetes vendidos, viajes usados (con las
+  tarifas que se les deben a las empresas), viajes por usar y viajes vencidos; en los reportes de
+  cada empresa, cuántos puestos se pagaron con paquetes (también en el CSV).
 - **Reservar con un paquete de viajes**: en la app, "¿Cómo pagas?" ofrece los paquetes que sirven
   para la salida; la reserva queda pagada al instante (un viaje por puesto). Hasta 4 reservas
   futuras por paquete y una por salida. Cancelar hasta 30 minutos antes devuelve el viaje al

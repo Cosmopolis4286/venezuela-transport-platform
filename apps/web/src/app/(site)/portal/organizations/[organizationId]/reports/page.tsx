@@ -113,7 +113,8 @@ async function Reports({
                       {formatPaymentAmount(t.earned, t.currency)}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {t.bookings} reservas · {t.seats} puestos · vendido{' '}
+                      {t.bookings} reservas · {t.seats} puestos
+                      {t.packSeats ? ` (${t.packSeats} con paquete de viajes)` : ''} · vendido{' '}
                       {formatPaymentAmount(t.gross, t.currency)} · comisión{' '}
                       {formatPaymentAmount(t.commission, t.currency)}
                       {t.cancellations

@@ -125,7 +125,9 @@ devolución. El pasajero recibe un aviso por push y correo.
 
 Para un rango de días: ventas y comisión de la plataforma por moneda, reembolsos enviados y los
 que esperan en la cola, usuarios nuevos, organizaciones activas por tipo y taxis pedidos,
-terminados y cancelados o vencidos.
+terminados y cancelados o vencidos. Si se venden paquetes de viajes, también: paquetes vendidos,
+viajes usados (y las tarifas que se les deben a las empresas por ellos), viajes vendidos que
+todavía no se usan (servicio que la plataforma debe) y viajes que vencieron sin usarse.
 
 ## Tareas periódicas sugeridas
 

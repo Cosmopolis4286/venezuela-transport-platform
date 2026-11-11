@@ -35,6 +35,19 @@ reembolsos enviados en el rango y los que esperan en la cola, usuarios nuevos, o
 activas por tipo y taxis pedidos, terminados y cancelados o vencidos. En el panel:
 **Métricas** (`/admin/metrics`).
 
+### Paquetes de viajes
+
+Las ventas de cada empresa incluyen `packSeats`: cuántos de sus puestos se pagaron con paquetes
+(también en el CSV). Las métricas de la plataforma traen `tripPacks` (ADR-028):
+
+- **vendidos**: paquetes pagados en el rango, con sus viajes y lo que se cobró, por moneda;
+- **usados**: viajes usados en el rango (menos los devueltos) y las tarifas que se les deben a las
+  empresas por ellos;
+- **por usar**: viajes vendidos que siguen en paquetes activos hoy, valorados al precio por viaje
+  de cada paquete (el servicio que la plataforma todavía debe);
+- **vencidos**: viajes que se perdieron en paquetes vencidos en el rango (su dinero queda para la
+  plataforma).
+
 ## Todavía no
 
 Gráficos, comparar con el período anterior, reportes de taxis por línea, ventas por canal o medio

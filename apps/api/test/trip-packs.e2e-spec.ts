@@ -5,6 +5,8 @@ import type {
   AuthResponse,
   Booking,
   CancellationQuote,
+  PlatformMetrics,
+  SalesReport,
   Route,
   TripAvailability,
   OtpChallengeResponse,
@@ -523,5 +525,27 @@ describe.runIf(expectDatabase)('Trip packs (e2e)', () => {
         ).body as TripPack
       ).status,
     ).toBe('exhausted');
+
+    // --- Reports: the operator sees the seats paid with packs; admins see the packs' figures.
+    const sales = (
+      await http()
+        .get(`/api/v1/organizations/${organization.id}/reports/sales`)
+        .set('Authorization', owner.auth)
+        .expect(200)
+    ).body as SalesReport;
+    // Kept: the other direction, day 2 and the late cancel (trip lost); the last trip; the
+    // 2 seats cancelled in time do not count.
+    expect(sales.totals).toEqual([
+      expect.objectContaining({ currency: 'USD', packSeats: 4, seats: 4 }),
+    ]);
+    const metrics = (
+      await http().get('/api/v1/admin/metrics').set('Authorization', admin.auth).expect(200)
+    ).body as PlatformMetrics;
+    expect(metrics.tripPacks.sold).toEqual(
+      expect.arrayContaining([expect.objectContaining({ currency: 'USD' })]),
+    );
+    expect(metrics.tripPacks.used.find((u) => u.currency === 'USD')!.trips).toBeGreaterThanOrEqual(
+      4,
+    );
   });
 });

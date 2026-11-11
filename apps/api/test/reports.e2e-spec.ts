@@ -266,6 +266,7 @@ describe.runIf(expectDatabase)('Reports (e2e)', () => {
           earned: (50 - 2 * commissionPerSeat).toFixed(2),
           cancellations: 1,
           refunded: '25.00',
+          packSeats: 0,
         },
       ]);
       expect(sales.byRoute).toEqual([
