@@ -26,6 +26,9 @@ pull request.
 
 ### Agregado
 
+- **Factura a otro nombre y número de factura en la app de pasajeros**: en la reserva el pasajero
+  puede pedir la factura del cargo por servicio a otro nombre o RIF hasta que se emita, y ve su
+  número, número de control y fecha una vez emitida.
 - **Facturación de la tarifa por servicio** (ADR-031): cada pago crea un borrador de factura
   (IVA incluido) que el personal emite en el portal del SENIAT y anota en `/admin/fiscal`; montos
   en bolívares con la tasa BCV del día. Notas de crédito y factura a la empresa cuando cancela una

@@ -279,6 +279,44 @@ describe.runIf(expectDatabase)('Fiscal: service-fee invoices and books (e2e)', (
         .send({ name: 'Otra', idType: 'V', idNumber: '1234567', address: null })
         .expect(409);
       const [secondDraft] = await documentsOf(second);
+      // The passenger sees the issued invoice and can no longer move it to another name.
+      const myBooking = (path: string) =>
+        http().get(`/api/v1/me/bookings/${path}`).set('Authorization', passenger.auth);
+      expect(((await myBooking(first.id).expect(200)).body as Booking).invoice).toEqual({
+        status: 'issued',
+        number,
+        controlNumber: `00-${run}`,
+        issuedOn: today,
+      });
+      const company = {
+        name: 'Distribuidora Prueba, C.A.',
+        idType: 'J',
+        idNumber: '31234567-8',
+        address: 'Zona industrial, Barquisimeto',
+      };
+      const setBilling = (bookingId: string, billing: unknown, auth = passenger.auth) =>
+        http()
+          .put(`/api/v1/me/bookings/${bookingId}/billing`)
+          .set('Authorization', auth)
+          .send({ billing });
+      await setBilling(first.id, company)
+        .expect(409)
+        .expect((res) => expect(res.body.error.reason).toBe('INVOICE_ALREADY_ISSUED'));
+      // While it is a draft, the invoice follows the name the passenger asks for.
+      await setBilling(second.id, company, owner.auth).expect(404);
+      await setBilling(second.id, { ...company, idType: 'X' }).expect(400);
+      const billed = (await setBilling(second.id, company).expect(200)).body as Booking;
+      expect(billed).toMatchObject({
+        billing: company,
+        invoice: { status: 'draft', number: null },
+      });
+      expect((await documentsOf(second))[0]!.buyer).toEqual(company);
+      expect(((await setBilling(second.id, null).expect(200)).body as Booking).billing).toBeNull();
+      expect((await documentsOf(second))[0]!.buyer).toMatchObject({
+        name: 'Ana Prueba',
+        idType: 'V',
+        address: null,
+      });
       await asAdmin('post', `/invoices/${secondDraft!.id}/issue`)
         .send({ number, controlNumber: `02-${run}` })
         .expect(409)

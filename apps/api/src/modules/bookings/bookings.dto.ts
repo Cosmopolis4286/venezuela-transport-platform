@@ -1,8 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  BUYER_ID_TYPES,
   IDENTITY_DOCUMENT_TYPES,
   MAX_SEATS_PER_BOOKING,
+  type BuyerIdType,
   type CreateBookingRequest,
+  type InvoiceBuyer,
+  type SetBookingBillingRequest,
   type IdentityDocumentType,
   type PassengerInput,
 } from '@vtp/shared-types';
@@ -116,4 +120,33 @@ export class ValidateTicketDto {
   @IsString()
   @Length(1, 4)
   seatNumber?: string;
+}
+
+export class BillingDto implements InvoiceBuyer {
+  @ApiProperty({ example: 'Inversiones Pérez, C.A.' })
+  @IsString()
+  @Length(2, 200)
+  name!: string;
+
+  @ApiProperty({ enum: BUYER_ID_TYPES })
+  @IsIn(BUYER_ID_TYPES)
+  idType!: BuyerIdType;
+
+  @ApiProperty({ example: '12345678-9' })
+  @Matches(/^[0-9A-Za-z-]{4,20}$/, { message: 'idNumber must be 4 to 20 letters or digits' })
+  idNumber!: string;
+
+  @ApiProperty({ nullable: true, example: 'Av. Bolívar, Valencia' })
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @Length(0, 300)
+  address!: string | null;
+}
+
+export class SetBookingBillingDto implements SetBookingBillingRequest {
+  @ApiProperty({ type: BillingDto, nullable: true, description: 'null: the first passenger' })
+  @ValidateIf((_, value) => value !== null)
+  @ValidateNested()
+  @Type(() => BillingDto)
+  billing!: BillingDto | null;
 }

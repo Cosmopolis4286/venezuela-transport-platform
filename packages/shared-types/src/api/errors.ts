@@ -101,6 +101,7 @@ export const API_ERROR_REASONS = [
   'INVOICE_RELATED_NOT_ISSUED',
   'INVOICE_NUMBER_TAKEN',
   'PURCHASE_TAKEN',
+  'INVOICE_ALREADY_ISSUED',
 ] as const;
 
 export type ApiErrorReason = (typeof API_ERROR_REASONS)[number];

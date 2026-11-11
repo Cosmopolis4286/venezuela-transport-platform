@@ -145,6 +145,23 @@ const es = {
     rejected: (reason: string) =>
       `No encontramos tu pago: ${reason} Revisa los datos y paga de nuevo.`,
   },
+  invoice: {
+    title: 'Factura del cargo por servicio',
+    pending: (name: string) =>
+      `La plataforma emitirá la factura del cargo por servicio a nombre de ${name}. El pasaje lo factura la empresa.`,
+    issued: (number: string, control: string, date: string) =>
+      `Factura N.º ${number} · control ${control} · ${date}`,
+    voided: 'La factura del cargo por servicio fue anulada.',
+    firstPassenger: 'el primer pasajero',
+    otherName: 'Factura a otro nombre',
+    useFirst: 'Volver al primer pasajero',
+    name: 'Nombre o razón social',
+    idType: 'Tipo',
+    idNumber: 'Cédula o RIF (sin la letra)',
+    address: 'Domicilio fiscal (opcional)',
+    save: 'Guardar datos de facturación',
+    saved: 'Datos de facturación guardados.',
+  },
   fees: {
     plus: (rate: string) => `+ ${rate} % de cargo por servicio`,
     fares: 'Pasajes',
@@ -339,6 +356,22 @@ const en: Messages = {
     rejected: (reason) =>
       `We could not find your payment: ${reason} Check the details and pay again.`,
   },
+  invoice: {
+    title: 'Service fee invoice',
+    pending: (name) =>
+      `The platform will issue the service fee invoice to ${name}. The fare is invoiced by the company.`,
+    issued: (number, control, date) => `Invoice no. ${number} · control ${control} · ${date}`,
+    voided: 'The service fee invoice was voided.',
+    firstPassenger: 'the first passenger',
+    otherName: 'Invoice to another name',
+    useFirst: 'Back to the first passenger',
+    name: 'Name or company name',
+    idType: 'Type',
+    idNumber: 'ID or RIF number (without the letter)',
+    address: 'Fiscal address (optional)',
+    save: 'Save billing details',
+    saved: 'Billing details saved.',
+  },
   fees: {
     plus: (rate) => `+ ${rate}% service fee`,
     fares: 'Fares',
@@ -532,6 +565,22 @@ const ptBR: Messages = {
       `Estamos verificando seu pagamento (operação ${operation}). Avisaremos quando for confirmado; enquanto isso seus assentos continuam reservados.`,
     rejected: (reason) =>
       `Não encontramos seu pagamento: ${reason} Confira os dados e pague de novo.`,
+  },
+  invoice: {
+    title: 'Fatura da taxa de serviço',
+    pending: (name) =>
+      `A plataforma emitirá a fatura da taxa de serviço em nome de ${name}. A passagem é faturada pela empresa.`,
+    issued: (number, control, date) => `Fatura n.º ${number} · controle ${control} · ${date}`,
+    voided: 'A fatura da taxa de serviço foi anulada.',
+    firstPassenger: 'o primeiro passageiro',
+    otherName: 'Fatura em outro nome',
+    useFirst: 'Voltar ao primeiro passageiro',
+    name: 'Nome ou razão social',
+    idType: 'Tipo',
+    idNumber: 'Documento ou RIF (sem a letra)',
+    address: 'Endereço fiscal (opcional)',
+    save: 'Salvar dados de faturamento',
+    saved: 'Dados de faturamento salvos.',
   },
   fees: {
     plus: (rate) => `+ ${rate}% de taxa de serviço`,
