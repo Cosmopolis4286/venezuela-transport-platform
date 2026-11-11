@@ -97,7 +97,14 @@ días adelante):
   pasajero: el conductor sigue tomando viajes para ahora, y en su app aparece en "Viajes
   programados". El tablero lo muestra como su viaje actual desde 30 minutos antes.
 - Si el corredor se apaga (ADR-029), no se piden viajes nuevos y no se muestran las tarifas.
-- Por ahora se le paga al conductor; el pago con un paquete de viajes viene en la segunda parte.
+- Se paga **al conductor** o **con un paquete de viajes** del tramo y vehículo (`tripPackId`):
+  - pedir el viaje gasta un viaje del paquete por pasajero (en la misma transacción);
+  - los viajes vuelven al paquete si nadie toma la solicitud, o si el pasajero cancela antes de
+    que la tomen o con 30 minutos o más antes de la hora pedida; después se pierden;
+  - solo las líneas que **aceptan paquetes** (política de la empresa) ven y toman esos viajes, y
+    el conductor ve "Pagado con paquete" (no cobra);
+  - al terminar el viaje, la línea gana su tarifa del tramo menos su comisión: una entrada del
+    libro de liquidaciones con `taxi_ride_id` (código `TAXI-…` en sus movimientos).
 
 | Método y ruta                                     | Quién                          |
 | ------------------------------------------------- | ------------------------------ |

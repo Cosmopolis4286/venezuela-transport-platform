@@ -1,4 +1,4 @@
-import type { PaymentCollection, RefundTier, SettlementPolicy } from '@vtp/shared-types';
+import type { Currency, PaymentCollection, RefundTier, SettlementPolicy } from '@vtp/shared-types';
 import { and, count, eq } from 'drizzle-orm';
 import type { Database, Transaction } from '../../database/database.service.js';
 import { bookingPassengers, bookings, trips } from '../bookings/bookings.schema.js';
@@ -179,4 +179,35 @@ export async function reverseEarning(tx: Transaction, bookingId: string): Promis
       earned: negative(earning.earned),
     })
     .onConflictDoNothing({ target: [settlementEntries.bookingId, settlementEntries.kind] });
+}
+
+/**
+ * What a taxi or motorcycle ride paid with a trip pack earns its line, when the ride is completed
+ * (ADR-028): the line's fixed fare for the stretch, minus its commission. The platform collected
+ * the pack. Once per ride.
+ */
+export async function recordRideEarning(
+  tx: Transaction,
+  ride: {
+    id: string;
+    organizationId: string;
+    passengers: number;
+    fareAmount: string;
+    fareCurrency: Currency;
+  },
+): Promise<void> {
+  const commissionRate = normalizeRate((await policyFor(tx, ride.organizationId)).commissionRate);
+  await tx
+    .insert(settlementEntries)
+    .values({
+      organizationId: ride.organizationId,
+      taxiRideId: ride.id,
+      collectedBy: 'platform',
+      seats: ride.passengers,
+      currency: ride.fareCurrency,
+      gross: ride.fareAmount,
+      commissionRate,
+      ...splitFare(ride.fareAmount, commissionRate),
+    })
+    .onConflictDoNothing({ target: [settlementEntries.taxiRideId, settlementEntries.kind] });
 }

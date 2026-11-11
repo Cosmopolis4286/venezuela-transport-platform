@@ -17,6 +17,7 @@ import { transportMode, vehicles } from '../fleet/fleet.schema.js';
 import { timestamps, users } from '../identity/identity.schema.js';
 import { currency, serviceAreas, stops } from '../network/network.schema.js';
 import { organizations } from '../organizations/organizations.schema.js';
+import { tripPacks } from '../trip-packs/trip-packs.schema.js';
 
 export const taxiDirection = pgEnum('taxi_direction', TAXI_DIRECTIONS);
 export const taxiRideStatus = pgEnum('taxi_ride_status', TAXI_RIDE_STATUSES);
@@ -90,6 +91,8 @@ export const taxiRides = pgTable(
     serviceAreaId: uuid().references(() => serviceAreas.id, { onDelete: 'restrict' }),
     mode: transportMode().notNull().default('car'),
     scheduledFor: timestamp({ withTimezone: true }),
+    /** Stretch rides paid with this trip pack: one trip per passenger, spent when asked. */
+    tripPackId: uuid().references(() => tripPacks.id, { onDelete: 'restrict' }),
     address: text().notNull(),
     notes: text(),
     passengers: smallint().notNull(),

@@ -80,6 +80,11 @@ export interface RequestTaxiRequest {
   notes?: string;
   /** A motorcycle carries one. */
   passengers: number;
+  /**
+   * Stretch rides: pay with one of the passenger's trip packs (one trip per passenger, spent when
+   * asked; ADR-028). Omitted: the passenger pays the driver.
+   */
+  tripPackId?: string;
   /** Shown to the driver once accepted; defaults to the account's verified phone. */
   contactPhone?: string;
 }
@@ -98,6 +103,8 @@ export interface TaxiRide {
   mode: OnDemandMode;
   /** Booked for this instant; null: as soon as possible. */
   scheduledFor: string | null;
+  /** The trip pack that pays it; null: the passenger pays the driver. */
+  tripPack: { id: string; code: string } | null;
   address: string;
   notes: string | null;
   passengers: number;
@@ -124,6 +131,8 @@ export interface TaxiRequest {
   to: StopSummary | null;
   mode: OnDemandMode;
   scheduledFor: string | null;
+  /** Paid with a trip pack: the driver charges nothing. */
+  paidWithPack: boolean;
   address: string;
   notes: string | null;
   passengers: number;

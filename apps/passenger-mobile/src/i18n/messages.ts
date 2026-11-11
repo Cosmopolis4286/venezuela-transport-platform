@@ -213,7 +213,7 @@ const es = {
   ride: {
     heading: 'Taxi o moto por tramo',
     intro:
-      'Te buscan cerca de la parada de origen y te llevan a tu destino. La primera línea que tome el viaje cobra su tarifa del tramo; pagas al conductor.',
+      'Te buscan cerca de la parada de origen y te llevan a tu destino. La primera línea que tome el viaje cobra su tarifa del tramo; le pagas al conductor o usas tu paquete de viajes.',
     corridor: 'Corredor',
     from: 'Desde',
     to: 'Hasta',
@@ -234,6 +234,8 @@ const es = {
     homeButton: 'Pedir taxi o moto',
     timeInvalid: 'Escribe la hora como 06:30.',
     timePast: 'Esa hora ya pasó: elige otro día u otra hora.',
+    payDriver: 'Le pago al conductor',
+    paidWithPack: (code: string) => `Pagado con tu paquete ${code}: no le pagas al conductor.`,
   },
   taxi: {
     heading: 'Taxi desde o hacia el terminal',
@@ -478,7 +480,7 @@ const en: Messages = {
   ride: {
     heading: 'Taxi or motorcycle by stretch',
     intro:
-      'You are picked up near the origin stop and taken to your destination. The first line to take the ride charges its fare for the stretch; you pay the driver.',
+      'You are picked up near the origin stop and taken to your destination. The first line to take the ride charges its fare for the stretch; you pay the driver or use your trip pack.',
     corridor: 'Corridor',
     from: 'From',
     to: 'To',
@@ -499,6 +501,8 @@ const en: Messages = {
     homeButton: 'Get a taxi or motorcycle',
     timeInvalid: 'Write the time like 06:30.',
     timePast: 'That time has passed: choose another day or time.',
+    payDriver: 'I pay the driver',
+    paidWithPack: (code) => `Paid with your trip pack ${code}: you do not pay the driver.`,
   },
   taxi: {
     heading: 'Taxi to or from the terminal',
@@ -744,7 +748,7 @@ const ptBR: Messages = {
   ride: {
     heading: 'Táxi ou moto por trecho',
     intro:
-      'Buscam você perto da parada de origem e levam ao seu destino. A primeira linha que aceitar cobra sua tarifa do trecho; você paga ao motorista.',
+      'Buscam você perto da parada de origem e levam ao seu destino. A primeira linha que aceitar cobra sua tarifa do trecho; você paga ao motorista ou usa seu pacote.',
     corridor: 'Corredor',
     from: 'De',
     to: 'Até',
@@ -766,6 +770,8 @@ const ptBR: Messages = {
     homeButton: 'Pedir táxi ou moto',
     timeInvalid: 'Escreva a hora como 06:30.',
     timePast: 'Esse horário já passou: escolha outro dia ou hora.',
+    payDriver: 'Pago ao motorista',
+    paidWithPack: (code) => `Pago com seu pacote ${code}: você não paga ao motorista.`,
   },
   taxi: {
     heading: 'Táxi para ou do terminal',

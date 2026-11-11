@@ -89,6 +89,10 @@ el precio antes de pedir), **ahora** o **para más tarde** (día y hora), y dón
 la parada de origen. La primera línea que lo toma cobra su tarifa del tramo; le pagas al
 conductor. Una moto lleva un solo pasajero.
 
+Si tienes un **paquete de viajes** de ese tramo y vehículo, en **¿Cómo pagas?** puedes usarlo: no
+le pagas al conductor. El viaje vuelve a tu paquete si nadie lo toma o si cancelas antes de que lo
+tomen (o, si lo pediste para más tarde, hasta 30 minutos antes).
+
 ## 6. Pedir un taxi en el terminal
 
 1. **Pedir un taxi**: elige el terminal, si vas **desde** o **hacia** él, la dirección, cuántos

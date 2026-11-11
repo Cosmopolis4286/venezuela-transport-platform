@@ -17,6 +17,8 @@ import { eq } from 'drizzle-orm';
 import request from 'supertest';
 import { DatabaseService } from '../src/database/database.service.js';
 import { users } from '../src/modules/identity/identity.schema.js';
+import { settlementEntries } from '../src/modules/settlements/settlements.schema.js';
+import { taxiRides } from '../src/modules/taxi/taxi.schema.js';
 import type { OtpMessage, OtpSender } from '../src/modules/identity/otp/otp-sender.js';
 
 const expectDatabase = process.env.E2E_EXPECT_DATABASE === 'true';
@@ -87,37 +89,220 @@ describe.runIf(expectDatabase)('On-demand stretch rides (e2e)', () => {
   const reason = (res: request.Response) =>
     (res.body as { error: { reason?: string } }).error.reason;
 
-  it('quotes stretch fares, offers rides to the lines that ride them and keeps drivers free', async () => {
-    const admin = await signIn('admin');
-    const stop = async (name: string) =>
-      (
+  it(
+    'quotes stretch fares, offers rides to the lines that ride them and keeps drivers free',
+    { timeout: 30_000 },
+    async () => {
+      const admin = await signIn('admin');
+      const stop = async (name: string) =>
+        (
+          await http()
+            .post('/api/v1/admin/stops')
+            .set('Authorization', admin.auth)
+            .send({
+              kind: 'stop',
+              name: `${name} ${run}`,
+              city: `${name} ${run}`,
+              state: 'Bolívar',
+            })
+            .expect(201)
+        ).body as Stop;
+      const a = await stop('Demanda San Félix');
+      const b = await stop('Demanda Puerto Ordaz');
+      const outside = await stop('Demanda Caracas');
+      const area = (
         await http()
-          .post('/api/v1/admin/stops')
+          .post('/api/v1/admin/service-areas')
           .set('Authorization', admin.auth)
-          .send({ kind: 'stop', name: `${name} ${run}`, city: `${name} ${run}`, state: 'Bolívar' })
+          .send({ name: `Demanda ${run}`, stopIds: [a.id, b.id], active: true })
           .expect(201)
-      ).body as Stop;
-    const a = await stop('Demanda San Félix');
-    const b = await stop('Demanda Puerto Ordaz');
-    const outside = await stop('Demanda Caracas');
-    const area = (
-      await http()
-        .post('/api/v1/admin/service-areas')
-        .set('Authorization', admin.auth)
-        .send({ name: `Demanda ${run}`, stopIds: [a.id, b.id], active: true })
-        .expect(201)
-    ).body as ServiceArea;
+      ).body as ServiceArea;
 
-    // Three approved lines; their owners drive (owners have every permission).
-    const line = async (type: 'taxi_line' | 'moto_line', plate: string) => {
+      // Three approved lines; their owners drive (owners have every permission).
+      const line = async (type: 'taxi_line' | 'moto_line', plate: string) => {
+        const owner = await signIn();
+        const { organization } = (
+          await http()
+            .post('/api/v1/organizations')
+            .set('Authorization', owner.auth)
+            .send({
+              type,
+              legalName: `${type} ${run} ${plate}`,
+              rif: `J-${randomInt(10_000_000, 99_999_999)}-${randomInt(0, 9)}`,
+            })
+            .expect(201)
+        ).body as { organization: { id: string } };
+        await http()
+          .post(`/api/v1/admin/organizations/${organization.id}/review`)
+          .set('Authorization', admin.auth)
+          .send({ decision: 'approve' })
+          .expect(200);
+        const url = `/api/v1/organizations/${organization.id}`;
+        const vehicle = (
+          await http()
+            .post(`${url}/vehicles`)
+            .set('Authorization', owner.auth)
+            .send({ plate })
+            .expect(201)
+        ).body as FleetVehicle;
+        const fares = (body: object) =>
+          http().put(`${url}/taxi/stretch-fares`).set('Authorization', owner.auth).send(body);
+        return { id: organization.id, url, owner, vehicle, fares };
+      };
+      const motos = await line('moto_line', `MT${randomInt(100, 999)}AB`);
+      const taxis = await line('taxi_line', `TX${randomInt(100, 999)}AB`);
+      const cheaper = await line('taxi_line', `TY${randomInt(100, 999)}AB`);
+
+      // --- Fixed fares per stretch, either way, in the line's own vehicle.
+      const fare = (mode: string, amount: string, stops = [a.id, b.id]) => ({
+        fares: [{ stopIds: stops, mode, amount, currency: 'USD' }],
+      });
+      expect(reason(await motos.fares(fare('car', '3.00')).expect(409))).toBe(
+        'TRANSPORT_MODE_NOT_ALLOWED',
+      );
+      expect(
+        reason(await motos.fares(fare('motorcycle', '2.00', [a.id, outside.id])).expect(409)),
+      ).toBe('ROUTE_OUTSIDE_SERVICE_AREA');
+      expect(
+        ((await motos.fares(fare('motorcycle', '2')).expect(200)).body as OnDemandFare[])[0],
+      ).toMatchObject({ mode: 'motorcycle', amount: '2.00', serviceAreaId: area.id });
+      await taxis.fares(fare('car', '5.00', [b.id, a.id])).expect(200);
+      await cheaper.fares(fare('car', '4.00')).expect(200);
+      const options = (
+        await http().get('/api/v1/taxi/stretch-options').query({ from: b.id, to: a.id }).expect(200)
+      ).body as StretchOption[];
+      expect(options).toEqual([
+        { mode: 'car', lines: 2, currency: 'USD', minFare: '4.00', maxFare: '5.00' },
+        { mode: 'motorcycle', lines: 1, currency: 'USD', minFare: '2.00', maxFare: '2.00' },
+      ]);
+
+      // --- A motorcycle ride for now: one passenger, offered to the motorcycle line only.
+      const ask = (auth: string, body: object) =>
+        http()
+          .post('/api/v1/me/taxi-rides')
+          .set('Authorization', auth)
+          .send({
+            kind: 'stretch',
+            fromStopId: a.id,
+            toStopId: b.id,
+            address: 'Calle 3, casa azul, al lado de la panadería',
+            passengers: 1,
+            ...body,
+          });
+      const rider = await signIn();
+      expect(reason(await ask(rider.auth, { mode: 'motorcycle', passengers: 2 }).expect(409))).toBe(
+        'MOTORCYCLE_ONE_PASSENGER',
+      );
+      const ride = (await ask(rider.auth, { mode: 'motorcycle' }).expect(201)).body as TaxiRide;
+      expect(ride).toMatchObject({
+        kind: 'stretch',
+        status: 'requested',
+        mode: 'motorcycle',
+        terminal: null,
+        from: expect.objectContaining({ id: a.id }),
+        to: expect.objectContaining({ id: b.id }),
+        scheduledFor: null,
+        fare: null,
+      });
+      const board = async (owner: { auth: string }) =>
+        (await http().get('/api/v1/me/taxi').set('Authorization', owner.auth).expect(200))
+          .body as DriverTaxiBoard;
+      expect((await board(motos.owner)).requests.map((r) => r.id)).toContain(ride.id);
+      expect((await board(taxis.owner)).requests.map((r) => r.id)).not.toContain(ride.id);
+      // Taking it: the line's fixed fare, no quote.
+      const accepted = (
+        await http()
+          .post(`/api/v1/me/taxi/rides/${ride.id}/accept`)
+          .set('Authorization', motos.owner.auth)
+          .send({ organizationId: motos.id, vehicleId: motos.vehicle.id })
+          .expect(200)
+      ).body as OperatorTaxiRide;
+      expect(accepted).toMatchObject({
+        kind: 'stretch',
+        fare: { amount: '2.00', currency: 'USD' },
+      });
+
+      // --- A car booked for tomorrow does not keep the driver from taking a ride now.
+      const tomorrow = new Date(Date.now() + 24 * 3600_000).toISOString();
+      const early = await signIn();
+      const booked = (
+        await ask(early.auth, { mode: 'car', passengers: 2, scheduledFor: tomorrow }).expect(201)
+      ).body as TaxiRide;
+      expect(booked.scheduledFor).not.toBeNull();
+      const accept = (rideId: string) =>
+        http()
+          .post(`/api/v1/me/taxi/rides/${rideId}/accept`)
+          .set('Authorization', taxis.owner.auth)
+          .send({ organizationId: taxis.id, vehicleId: taxis.vehicle.id });
+      expect(((await accept(booked.id).expect(200)).body as OperatorTaxiRide).fare).toEqual({
+        amount: '5.00',
+        currency: 'USD',
+      });
+      const now = await signIn();
+      const soon = (await ask(now.auth, { mode: 'car' }).expect(201)).body as TaxiRide;
+      await accept(soon.id).expect(200);
+      const driving = await board(taxis.owner);
+      expect(driving.current?.id).toBe(soon.id);
+      expect(driving.upcoming.map((r) => r.id)).toEqual([booked.id]);
+      // A second ride for now: the driver is already on one.
+      const another = await signIn();
+      const third = (await ask(another.auth, { mode: 'car' }).expect(201)).body as TaxiRide;
+      expect(reason(await accept(third.id).expect(409))).toBe('DRIVER_BUSY');
+
+      // --- Switching the corridor off stops new rides and hides the options.
+      await http()
+        .patch(`/api/v1/admin/service-areas/${area.id}`)
+        .set('Authorization', admin.auth)
+        .send({ active: false })
+        .expect(200);
+      const late = await signIn();
+      expect(reason(await ask(late.auth, { mode: 'car' }).expect(409))).toBe('SERVICE_DISABLED');
+      expect(
+        (
+          await http()
+            .get('/api/v1/taxi/stretch-options')
+            .query({ from: a.id, to: b.id })
+            .expect(200)
+        ).body,
+      ).toEqual([]);
+    },
+  );
+  it(
+    'pays stretch rides with a trip pack and earns the line its fare when done',
+    { timeout: 30_000 },
+    async () => {
+      const admin = await signIn('admin');
+      const db = app.get(DatabaseService).db;
+      const stop = async (name: string) =>
+        (
+          await http()
+            .post('/api/v1/admin/stops')
+            .set('Authorization', admin.auth)
+            .send({
+              kind: 'stop',
+              name: `${name} ${run}`,
+              city: `${name} ${run}`,
+              state: 'Bolívar',
+            })
+            .expect(201)
+        ).body as Stop;
+      const a = await stop('Paquete moto A');
+      const b = await stop('Paquete moto B');
+      const area = (
+        await http()
+          .post('/api/v1/admin/service-areas')
+          .set('Authorization', admin.auth)
+          .send({ name: `Paquete moto ${run}`, stopIds: [a.id, b.id], active: true })
+          .expect(201)
+      ).body as ServiceArea;
       const owner = await signIn();
       const { organization } = (
         await http()
           .post('/api/v1/organizations')
           .set('Authorization', owner.auth)
           .send({
-            type,
-            legalName: `${type} ${run} ${plate}`,
+            type: 'moto_line',
+            legalName: `Motos paquete ${run}`,
             rif: `J-${randomInt(10_000_000, 99_999_999)}-${randomInt(0, 9)}`,
           })
           .expect(201)
@@ -132,121 +317,135 @@ describe.runIf(expectDatabase)('On-demand stretch rides (e2e)', () => {
         await http()
           .post(`${url}/vehicles`)
           .set('Authorization', owner.auth)
-          .send({ plate })
+          .send({ plate: `MP${randomInt(100, 999)}AB` })
           .expect(201)
       ).body as FleetVehicle;
-      const fares = (body: object) =>
-        http().put(`${url}/taxi/stretch-fares`).set('Authorization', owner.auth).send(body);
-      return { id: organization.id, url, owner, vehicle, fares };
-    };
-    const motos = await line('moto_line', `MT${randomInt(100, 999)}AB`);
-    const taxis = await line('taxi_line', `TX${randomInt(100, 999)}AB`);
-    const cheaper = await line('taxi_line', `TY${randomInt(100, 999)}AB`);
-
-    // --- Fixed fares per stretch, either way, in the line's own vehicle.
-    const fare = (mode: string, amount: string, stops = [a.id, b.id]) => ({
-      fares: [{ stopIds: stops, mode, amount, currency: 'USD' }],
-    });
-    expect(reason(await motos.fares(fare('car', '3.00')).expect(409))).toBe(
-      'TRANSPORT_MODE_NOT_ALLOWED',
-    );
-    expect(
-      reason(await motos.fares(fare('motorcycle', '2.00', [a.id, outside.id])).expect(409)),
-    ).toBe('ROUTE_OUTSIDE_SERVICE_AREA');
-    expect(
-      ((await motos.fares(fare('motorcycle', '2')).expect(200)).body as OnDemandFare[])[0],
-    ).toMatchObject({ mode: 'motorcycle', amount: '2.00', serviceAreaId: area.id });
-    await taxis.fares(fare('car', '5.00', [b.id, a.id])).expect(200);
-    await cheaper.fares(fare('car', '4.00')).expect(200);
-    const options = (
-      await http().get('/api/v1/taxi/stretch-options').query({ from: b.id, to: a.id }).expect(200)
-    ).body as StretchOption[];
-    expect(options).toEqual([
-      { mode: 'car', lines: 2, currency: 'USD', minFare: '4.00', maxFare: '5.00' },
-      { mode: 'motorcycle', lines: 1, currency: 'USD', minFare: '2.00', maxFare: '2.00' },
-    ]);
-
-    // --- A motorcycle ride for now: one passenger, offered to the motorcycle line only.
-    const ask = (auth: string, body: object) =>
-      http()
-        .post('/api/v1/me/taxi-rides')
-        .set('Authorization', auth)
-        .send({
-          kind: 'stretch',
-          fromStopId: a.id,
-          toStopId: b.id,
-          address: 'Calle 3, casa azul, al lado de la panadería',
-          passengers: 1,
-          ...body,
-        });
-    const rider = await signIn();
-    expect(reason(await ask(rider.auth, { mode: 'motorcycle', passengers: 2 }).expect(409))).toBe(
-      'MOTORCYCLE_ONE_PASSENGER',
-    );
-    const ride = (await ask(rider.auth, { mode: 'motorcycle' }).expect(201)).body as TaxiRide;
-    expect(ride).toMatchObject({
-      kind: 'stretch',
-      status: 'requested',
-      mode: 'motorcycle',
-      terminal: null,
-      from: expect.objectContaining({ id: a.id }),
-      to: expect.objectContaining({ id: b.id }),
-      scheduledFor: null,
-      fare: null,
-    });
-    const board = async (owner: { auth: string }) =>
-      (await http().get('/api/v1/me/taxi').set('Authorization', owner.auth).expect(200))
-        .body as DriverTaxiBoard;
-    expect((await board(motos.owner)).requests.map((r) => r.id)).toContain(ride.id);
-    expect((await board(taxis.owner)).requests.map((r) => r.id)).not.toContain(ride.id);
-    // Taking it: the line's fixed fare, no quote.
-    const accepted = (
       await http()
-        .post(`/api/v1/me/taxi/rides/${ride.id}/accept`)
-        .set('Authorization', motos.owner.auth)
-        .send({ organizationId: motos.id, vehicleId: motos.vehicle.id })
-        .expect(200)
-    ).body as OperatorTaxiRide;
-    expect(accepted).toMatchObject({ kind: 'stretch', fare: { amount: '2.00', currency: 'USD' } });
+        .put(`${url}/taxi/stretch-fares`)
+        .set('Authorization', owner.auth)
+        .send({
+          fares: [{ stopIds: [a.id, b.id], mode: 'motorcycle', amount: '2.00', currency: 'USD' }],
+        })
+        .expect(200);
 
-    // --- A car booked for tomorrow does not keep the driver from taking a ride now.
-    const tomorrow = new Date(Date.now() + 24 * 3600_000).toISOString();
-    const early = await signIn();
-    const booked = (
-      await ask(early.auth, { mode: 'car', passengers: 2, scheduledFor: tomorrow }).expect(201)
-    ).body as TaxiRide;
-    expect(booked.scheduledFor).not.toBeNull();
-    const accept = (rideId: string) =>
-      http()
-        .post(`/api/v1/me/taxi/rides/${rideId}/accept`)
-        .set('Authorization', taxis.owner.auth)
-        .send({ organizationId: taxis.id, vehicleId: taxis.vehicle.id });
-    expect(((await accept(booked.id).expect(200)).body as OperatorTaxiRide).fare).toEqual({
-      amount: '5.00',
-      currency: 'USD',
-    });
-    const now = await signIn();
-    const soon = (await ask(now.auth, { mode: 'car' }).expect(201)).body as TaxiRide;
-    await accept(soon.id).expect(200);
-    const driving = await board(taxis.owner);
-    expect(driving.current?.id).toBe(soon.id);
-    expect(driving.upcoming.map((r) => r.id)).toEqual([booked.id]);
-    // A second ride for now: the driver is already on one.
-    const another = await signIn();
-    const third = (await ask(another.auth, { mode: 'car' }).expect(201)).body as TaxiRide;
-    expect(reason(await accept(third.id).expect(409))).toBe('DRIVER_BUSY');
+      // A paid motorcycle pack of the stretch.
+      const product = (
+        await http()
+          .post('/api/v1/admin/trip-pack-products')
+          .set('Authorization', admin.auth)
+          .send({
+            serviceAreaId: area.id,
+            stopIds: [a.id, b.id],
+            mode: 'motorcycle',
+            trips: 5,
+            price: '8',
+            currency: 'USD',
+          })
+          .expect(201)
+      ).body as { id: string };
+      const rider = await signIn();
+      const pack = (
+        await http()
+          .post('/api/v1/me/trip-packs')
+          .set('Authorization', rider.auth)
+          .send({ productId: product.id })
+          .expect(201)
+      ).body as { id: string; code: string };
+      const payment = (
+        await http()
+          .post(`/api/v1/me/trip-packs/${pack.id}/payments`)
+          .set('Authorization', rider.auth)
+          .send({ method: 'usdt' })
+          .expect(201)
+      ).body as { id: string };
+      await http()
+        .post(`/api/v1/me/payments/${payment.id}/simulate`)
+        .set('Authorization', rider.auth)
+        .send({})
+        .expect(200);
+      const remaining = async () =>
+        (
+          (
+            await http()
+              .get(`/api/v1/me/trip-packs/${pack.id}`)
+              .set('Authorization', rider.auth)
+              .expect(200)
+          ).body as { remaining: number }
+        ).remaining;
+      const ask = () =>
+        http().post('/api/v1/me/taxi-rides').set('Authorization', rider.auth).send({
+          kind: 'stretch',
+          fromStopId: b.id,
+          toStopId: a.id,
+          mode: 'motorcycle',
+          passengers: 1,
+          address: 'Esquina de la plaza, casa verde',
+          tripPackId: pack.id,
+        });
 
-    // --- Switching the corridor off stops new rides and hides the options.
-    await http()
-      .patch(`/api/v1/admin/service-areas/${area.id}`)
-      .set('Authorization', admin.auth)
-      .send({ active: false })
-      .expect(200);
-    const late = await signIn();
-    expect(reason(await ask(late.auth, { mode: 'car' }).expect(409))).toBe('SERVICE_DISABLED');
-    expect(
-      (await http().get('/api/v1/taxi/stretch-options').query({ from: a.id, to: b.id }).expect(200))
-        .body,
-    ).toEqual([]);
-  });
+      // Only lines that accept packs ride with them.
+      expect(reason(await ask().expect(409))).toBe('TRIP_PACK_NOT_VALID_HERE');
+      await http()
+        .put(`/api/v1/admin/organizations/${organization.id}/policy`)
+        .set('Authorization', admin.auth)
+        .send({ commissionRate: null, refundTiers: null, acceptsTripPacks: true })
+        .expect(200);
+
+      // Asking spends the trip; cancelling before a line takes it gives it back.
+      const first = (await ask().expect(201)).body as TaxiRide;
+      expect(first.tripPack).toEqual({ id: pack.id, code: pack.code });
+      expect(await remaining()).toBe(4);
+      const board = (
+        await http().get('/api/v1/me/taxi').set('Authorization', owner.auth).expect(200)
+      ).body as DriverTaxiBoard;
+      expect(board.requests.find((r) => r.id === first.id)?.paidWithPack).toBe(true);
+      await http()
+        .post(`/api/v1/me/taxi-rides/${first.id}/cancel`)
+        .set('Authorization', rider.auth)
+        .expect(200);
+      expect(await remaining()).toBe(5);
+
+      // A request nobody takes in time gives the trip back too.
+      const unanswered = (await ask().expect(201)).body as TaxiRide;
+      await db
+        .update(taxiRides)
+        .set({ expiresAt: new Date(Date.now() - 60_000) })
+        .where(eq(taxiRides.id, unanswered.id));
+      await http().get('/api/v1/me/taxi-rides').set('Authorization', rider.auth).expect(200);
+      expect(await remaining()).toBe(5);
+
+      // Taken, ridden and completed: the line earns its fare, the platform collected the pack.
+      const ride = (await ask().expect(201)).body as TaxiRide;
+      const step = (path: string, body?: object) =>
+        http()
+          .post(`/api/v1/me/taxi/rides/${ride.id}/${path}`)
+          .set('Authorization', owner.auth)
+          .send(body ?? {})
+          .expect(200);
+      await step('accept', { organizationId: organization.id, vehicleId: vehicle.id });
+      await step('pickup');
+      await step('complete');
+      expect(await remaining()).toBe(4);
+      const entries = await db
+        .select()
+        .from(settlementEntries)
+        .where(eq(settlementEntries.taxiRideId, ride.id));
+      expect(entries).toEqual([
+        expect.objectContaining({
+          kind: 'booking',
+          gross: '2.00',
+          collectedBy: 'platform',
+          organizationId: organization.id,
+          bookingId: null,
+        }),
+      ]);
+      const listed = (
+        await http().get(`${url}/settlement/entries`).set('Authorization', owner.auth).expect(200)
+      ).body as { taxiRideId: string | null; bookingCode: string; route: { name: string } }[];
+      expect(listed.find((e) => e.taxiRideId === ride.id)).toMatchObject({
+        bookingCode: expect.stringMatching(/^TAXI-/),
+        route: { name: expect.stringContaining('Moto') },
+      });
+    },
+  );
 });

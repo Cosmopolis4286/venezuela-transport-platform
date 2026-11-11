@@ -88,6 +88,11 @@ export class RequestTaxiDto implements RequestTaxiRequest {
   @Max(MAX_TAXI_PASSENGERS)
   passengers!: number;
 
+  @ApiPropertyOptional({ description: 'Stretch rides: pay with this trip pack of yours' })
+  @IsOptional()
+  @IsUUID()
+  tripPackId?: string;
+
   @ApiPropertyOptional({ example: '0414-1234567' })
   @IsOptional()
   @IsString()

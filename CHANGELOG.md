@@ -13,6 +13,10 @@ pull request.
 
 ### Agregado
 
+- **Pagar el taxi o la moto por tramo con un paquete de viajes**: un viaje por pasajero, gastado al
+  pedir y devuelto si nadie lo toma o se cancela a tiempo. Solo lo ven y toman las líneas que
+  aceptan paquetes; al terminar, la línea gana su tarifa del tramo (el libro de liquidaciones
+  admite viajes de taxi).
 - **Taxi o moto por tramo, bajo demanda**: en el suburbano, el pasajero pide un taxi o una moto
   entre dos paradas de su corredor, ahora o para una hora, y ve el precio antes de pedir. Las
   líneas de taxis y de mototaxis publican tarifas fijas por tramo (portal → Taxis/Mototaxis) y

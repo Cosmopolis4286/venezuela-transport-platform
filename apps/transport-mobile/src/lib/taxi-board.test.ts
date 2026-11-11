@@ -5,6 +5,7 @@ const request = {
   kind: 'terminal',
   mode: 'car',
   scheduledFor: null,
+  paidWithPack: false,
   direction: 'from_terminal',
   terminal: { name: 'Terminal La Bandera' },
   address: 'Av. Bolívar, Los Teques',

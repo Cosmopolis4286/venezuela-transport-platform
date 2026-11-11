@@ -211,6 +211,13 @@
       "when": 1794406134802,
       "tag": "0029_on_demand_stretch_rides",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1794424075827,
+      "tag": "0030_trip_pack_rides",
+      "breakpoints": true
     }
   ]
 }

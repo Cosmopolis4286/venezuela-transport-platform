@@ -196,8 +196,8 @@ reservó y pausa las reservadas). Una serie tiene hasta 150 salidas y una ruta h
   tiene con tarifa.
 - **Ahora o para una hora** (`scheduledFor`): la solicitud se ofrece a las líneas **desde que se
   pide** (decidido) y vence si nadie la toma hasta 20 minutos después de la hora pedida.
-- Se paga directo al conductor como hoy; el pago con un paquete del tramo llega en la segunda
-  parte de este paso.
+- Se paga directo al conductor o con un paquete del tramo y vehículo (ver
+  [taxis.md](taxis.md#viajes-por-tramo-bajo-demanda-adr-028)).
 - Las líneas de mototaxis usan el mismo flujo, con un pasajero por moto (decidido).
 
 ## 5. Paquetes de viajes (módulo nuevo `trip-packs`)
@@ -346,7 +346,7 @@ de paquetes por tramo y tipo de vehículo. Nada de esto queda en el código.
    `trip_pack_id`, empresas adheridas), con las pantallas de compra.
 7. ✅ **Paquetes: usarlos al reservar**, cancelaciones, libro de liquidaciones, avisos.
 8. ✅ **Reportes de paquetes** (sin devoluciones de paquetes: decidido).
-9. 🟡 **Bajo demanda por tramo**: taxis y motos con tarifa fija, para ahora o para una hora, pagados
+9. ✅ **Bajo demanda por tramo**: taxis y motos con tarifa fija, para ahora o para una hora, pagados
    con paquete.
 10. **Legal**: condiciones de los paquetes, los tramos suburbanos en la política de cancelación y
     reembolsos, y nueva versión de los documentos (una sola vez, para todo el suburbano).

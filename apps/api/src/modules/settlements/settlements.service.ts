@@ -1,5 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
+  TRANSPORT_MODE_LABELS,
+  toNetworkIso,
   CURRENCIES,
   formatPaymentAmount,
   NETWORK_UTC_OFFSET,
@@ -25,10 +27,11 @@ import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService } from '../../database/database.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { bookings, trips } from '../bookings/bookings.schema.js';
+import { taxiRides } from '../taxi/taxi.schema.js';
 import { tripPacks } from '../trip-packs/trip-packs.schema.js';
 import { users } from '../identity/identity.schema.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
-import { routes } from '../network/network.schema.js';
+import { routes, stops } from '../network/network.schema.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { organizations } from '../organizations/organizations.schema.js';
 import { fromScaled, toScaled } from '../payments/money.js';
@@ -98,9 +101,9 @@ export class SettlementsService {
         serviceDate: trips.serviceDate,
       })
       .from(settlementEntries)
-      .innerJoin(bookings, eq(bookings.id, settlementEntries.bookingId))
-      .innerJoin(trips, eq(trips.id, bookings.tripId))
-      .innerJoin(routes, eq(routes.id, trips.routeId))
+      .leftJoin(bookings, eq(bookings.id, settlementEntries.bookingId))
+      .leftJoin(trips, eq(trips.id, bookings.tripId))
+      .leftJoin(routes, eq(routes.id, trips.routeId))
       .where(
         and(
           eq(settlementEntries.organizationId, organizationId),
@@ -109,22 +112,54 @@ export class SettlementsService {
         ),
       )
       .orderBy(desc(settlementEntries.createdAt));
-    return rows.map(({ entry, ...rest }) => ({
-      id: entry.id,
-      bookingId: entry.bookingId,
-      kind: entry.kind,
-      collectedBy: entry.collectedBy,
-      bookingCode: rest.bookingCode,
-      route: rest.route,
-      serviceDate: rest.serviceDate,
-      seats: entry.seats,
-      currency: entry.currency,
-      gross: entry.gross,
-      commissionRate: entry.commissionRate,
-      commission: entry.commission,
-      earned: entry.earned,
-      createdAt: entry.createdAt.toISOString(),
-    }));
+    // Taxi and motorcycle rides paid with a pack (ADR-028): described by their stretch.
+    const rideIds = rows.flatMap((r) => (r.entry.taxiRideId ? [r.entry.taxiRideId] : []));
+    const rides = rideIds.length
+      ? await this.database.db
+          .select({
+            id: taxiRides.id,
+            mode: taxiRides.mode,
+            from: taxiRides.fromStopId,
+            to: taxiRides.toStopId,
+            at: taxiRides.completedAt,
+          })
+          .from(taxiRides)
+          .where(inArray(taxiRides.id, rideIds))
+      : [];
+    const stopIds = rides.flatMap((r) => [r.from!, r.to!]);
+    const stopNames = stopIds.length
+      ? await this.database.db
+          .select({ id: stops.id, city: stops.city })
+          .from(stops)
+          .where(inArray(stops.id, stopIds))
+      : [];
+    const city = (id: string | null) => stopNames.find((s) => s.id === id)?.city ?? '?';
+    return rows.map(({ entry, ...rest }) => {
+      const ride = rides.find((r) => r.id === entry.taxiRideId);
+      return {
+        id: entry.id,
+        bookingId: entry.bookingId,
+        taxiRideId: entry.taxiRideId,
+        kind: entry.kind,
+        collectedBy: entry.collectedBy,
+        bookingCode:
+          rest.bookingCode ?? `TAXI-${(entry.taxiRideId ?? '').slice(0, 6).toUpperCase()}`,
+        route: rest.route ?? {
+          id: '',
+          name: ride
+            ? `${TRANSPORT_MODE_LABELS[ride.mode]} · ${city(ride.from)} → ${city(ride.to)}`
+            : '',
+        },
+        serviceDate: rest.serviceDate ?? toNetworkIso(ride?.at ?? entry.createdAt).slice(0, 10),
+        seats: entry.seats,
+        currency: entry.currency,
+        gross: entry.gross,
+        commissionRate: entry.commissionRate,
+        commission: entry.commission,
+        earned: entry.earned,
+        createdAt: entry.createdAt.toISOString(),
+      };
+    });
   }
 
   async payouts(organizationId: string): Promise<Payout[]> {

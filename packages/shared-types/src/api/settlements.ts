@@ -139,10 +139,16 @@ export interface OrganizationSettlement {
   balances: SettlementBalance[];
 }
 
-/** One paid booking in an operator's ledger; its amounts are frozen at confirmation. */
+/**
+ * One paid booking in an operator's ledger; its amounts are frozen at confirmation. A taxi or
+ * motorcycle ride paid with a trip pack is an entry too (`taxiRideId`; `bookingCode` is then
+ * `TAXI-…` and `route.name` describes the stretch).
+ */
 export interface SettlementEntry {
   id: string;
-  bookingId: string;
+  /** Exactly one of the two is set. */
+  bookingId: string | null;
+  taxiRideId: string | null;
   /** `cancellation` entries are negative: the refund taken back when a passenger cancelled. */
   kind: 'booking' | 'cancellation';
   /** Who received the passenger's money. */

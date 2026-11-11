@@ -44,7 +44,7 @@ PostgreSQL generados desde las listas de `@vtp/shared-types`.
 |                 | `payment_accounts`                    | Cuentas de cobro por método: de la plataforma, o de una empresa que cobra ella misma (ADR-027)                                                     |
 | `settlements`   | `platform_settings`                   | La política general (una sola fila): comisión y tramos de reembolso                                                                                |
 |                 | `organization_policies`               | La política propia de una empresa (lo que deja vacío usa la general)                                                                               |
-|                 | `settlement_entries`                  | Libro de cada empresa: una fila al pagarse una reserva y otra (negativa) si se cancela                                                             |
+|                 | `settlement_entries`                  | Libro de cada empresa: una fila al pagarse una reserva (o al terminar un viaje de taxi pagado con paquete) y otra (negativa) si se cancela         |
 |                 | `payouts`                             | Pagos de la plataforma a las empresas (se anulan, no se borran)                                                                                    |
 | `taxi`          | `taxi_service_areas`                  | Terminales donde opera cada línea de taxis                                                                                                         |
 |                 | `on_demand_fares`                     | Tarifas fijas por tramo de las líneas de taxis y mototaxis, en los dos sentidos (ADR-028)                                                          |

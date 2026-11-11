@@ -86,6 +86,9 @@ export default function TaxiRideScreen() {
           ) : null}
           <Badge label={shared.taxiRideStatus[data.status]} tone={TONES[data.status]} />
           <Body>{taxiRideHint(data, locale)}</Body>
+          {data.tripPack ? (
+            <Banner tone="success">{t.ride.paidWithPack(data.tripPack.code)}</Banner>
+          ) : null}
           {/* A ride booked for later has no countdown worth showing. */}
           {data.status === 'requested' && !data.scheduledFor ? (
             <Body muted>{t.taxi.waitsFor(formatClock(secondsLeft))}</Body>

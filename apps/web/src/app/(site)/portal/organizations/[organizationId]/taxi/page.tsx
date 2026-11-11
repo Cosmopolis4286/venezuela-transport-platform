@@ -225,7 +225,8 @@ async function Taxi({ params }: { params: Promise<{ organizationId: string }> })
                     <div>
                       <p className="font-medium">{route(request)}</p>
                       <p className="text-sm text-muted-foreground">
-                        {what(request)} · {request.passengers}{' '}
+                        {what(request)}
+                        {request.paidWithPack ? ' · pagado con paquete' : ''} · {request.passengers}{' '}
                         {request.passengers === 1 ? 'pasajero' : 'pasajeros'} · pedido a las{' '}
                         {networkClock(request.requestedAt)} · vence a las{' '}
                         {networkClock(request.expiresAt)}

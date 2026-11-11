@@ -98,6 +98,12 @@ export default function TaxiScreen() {
               {vehicleName(current.vehicle)} · Tarifa{' '}
               {formatMoney(current.fare.amount, current.fare.currency)}
             </Body>
+            {current.paidWithPack ? (
+              <Banner tone="info">
+                Pagado con paquete de viajes: no le cobres al pasajero. La plataforma le paga la
+                tarifa a tu línea.
+              </Banner>
+            ) : null}
             {current.status === 'accepted' ? (
               <>
                 <Button
@@ -214,6 +220,7 @@ function RequestCard({
     <Card>
       <Body>{rideRoute(request)}</Body>
       <Body muted>{requestSummary(request)}</Body>
+      {request.paidWithPack ? <Badge label="Pagado con paquete" tone="success" /> : null}
       {request.passengerFirstName || request.notes ? (
         <Body muted>{[request.passengerFirstName, request.notes].filter(Boolean).join(' · ')}</Body>
       ) : null}

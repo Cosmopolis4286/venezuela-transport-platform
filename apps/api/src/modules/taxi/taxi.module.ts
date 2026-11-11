@@ -4,12 +4,20 @@ import { FleetModule } from '../fleet/fleet.module.js';
 import { IdentityModule } from '../identity/identity.module.js';
 import { NetworkModule } from '../network/network.module.js';
 import { OrganizationsModule } from '../organizations/organizations.module.js';
+import { TripPacksModule } from '../trip-packs/trip-packs.module.js';
 import { TaxiController, TaxiDriverController, TaxiLineController } from './taxi.controller.js';
 import { TaxiService } from './taxi.service.js';
 
 /** Taxis to and from the terminals: requests, taking them, and the ride's lifecycle. */
 @Module({
-  imports: [IdentityModule, AuditModule, OrganizationsModule, NetworkModule, FleetModule],
+  imports: [
+    IdentityModule,
+    AuditModule,
+    OrganizationsModule,
+    NetworkModule,
+    FleetModule,
+    TripPacksModule,
+  ],
   controllers: [TaxiController, TaxiDriverController, TaxiLineController],
   providers: [TaxiService],
 })

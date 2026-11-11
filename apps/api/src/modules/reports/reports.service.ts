@@ -15,7 +15,7 @@ import {
   type SalesReport,
   type TripPackMetrics,
 } from '@vtp/shared-types';
-import { and, asc, eq, gt, gte, inArray, isNotNull, lt, lte, sql, type SQL } from 'drizzle-orm';
+import { and, asc, eq, gt, gte, inArray, isNotNull, lt, lte, or, sql, type SQL } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService } from '../../database/database.service.js';
 import { bookingPassengers, bookings, trips } from '../bookings/bookings.schema.js';
@@ -74,7 +74,7 @@ const salesColumns = {
   earned: money(sql`sum(${settlementEntries.earned})`),
   cancellations: sql<number>`(count(*) filter (where ${isCancellation}))::int`,
   refunded: money(sql`-sum(${settlementEntries.gross}) filter (where ${isCancellation})`),
-  packSeats: sql<number>`coalesce(sum(${settlementEntries.seats}) filter (where ${bookings.tripPackId} is not null), 0)::int`,
+  packSeats: sql<number>`coalesce(sum(${settlementEntries.seats}) filter (where ${bookings.tripPackId} is not null or ${taxiRides.tripPackId} is not null), 0)::int`,
 };
 
 const byCurrency = <T extends { currency: Currency }>(rows: T[]): T[] =>
@@ -98,13 +98,15 @@ export class ReportsService {
     const totals = await db
       .select(salesColumns)
       .from(settlementEntries)
-      .innerJoin(bookings, eq(bookings.id, settlementEntries.bookingId))
+      .leftJoin(bookings, eq(bookings.id, settlementEntries.bookingId))
+      .leftJoin(taxiRides, eq(taxiRides.id, settlementEntries.taxiRideId))
       .where(where)
       .groupBy(settlementEntries.currency);
     const byRoute = await db
       .select({ ...salesColumns, route: { id: routes.id, name: routes.name } })
       .from(settlementEntries)
-      .innerJoin(bookings, eq(bookings.id, settlementEntries.bookingId))
+      .leftJoin(bookings, eq(bookings.id, settlementEntries.bookingId))
+      .leftJoin(taxiRides, eq(taxiRides.id, settlementEntries.taxiRideId))
       .innerJoin(trips, eq(trips.id, bookings.tripId))
       .innerJoin(routes, eq(routes.id, trips.routeId))
       .where(where)
@@ -117,7 +119,8 @@ export class ReportsService {
     const byDay = await db
       .select({ ...salesColumns, date: day })
       .from(settlementEntries)
-      .innerJoin(bookings, eq(bookings.id, settlementEntries.bookingId))
+      .leftJoin(bookings, eq(bookings.id, settlementEntries.bookingId))
+      .leftJoin(taxiRides, eq(taxiRides.id, settlementEntries.taxiRideId))
       .where(where)
       .groupBy(day, settlementEntries.currency)
       .orderBy(asc(day));
@@ -211,10 +214,11 @@ export class ReportsService {
         fares: money(sql`sum(${settlementEntries.gross})`),
       })
       .from(settlementEntries)
-      .innerJoin(bookings, eq(bookings.id, settlementEntries.bookingId))
+      .leftJoin(bookings, eq(bookings.id, settlementEntries.bookingId))
+      .leftJoin(taxiRides, eq(taxiRides.id, settlementEntries.taxiRideId))
       .where(
         and(
-          isNotNull(bookings.tripPackId),
+          or(isNotNull(bookings.tripPackId), isNotNull(taxiRides.tripPackId)),
           gte(settlementEntries.createdAt, range.start),
           lt(settlementEntries.createdAt, range.end),
         ),
@@ -260,7 +264,8 @@ export class ReportsService {
     const sales = await db
       .select(salesColumns)
       .from(settlementEntries)
-      .innerJoin(bookings, eq(bookings.id, settlementEntries.bookingId))
+      .leftJoin(bookings, eq(bookings.id, settlementEntries.bookingId))
+      .leftJoin(taxiRides, eq(taxiRides.id, settlementEntries.taxiRideId))
       .where(
         and(
           gte(settlementEntries.createdAt, range.start),

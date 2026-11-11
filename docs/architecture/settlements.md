@@ -48,6 +48,10 @@ ese momento: la comisión de una reserva queda fija al pagarse, y los tramos se 
 Los tramos (1 a 4) van del que pide más horas al que pide menos, con horas de 0 a 720 en cuartos
 de hora (0,5 = 30 minutos) y porcentajes enteros. Las horas se cuentan hasta la hora en que el pasajero aborda en su parada.
 
+Las entradas del libro son de una reserva o, desde el ADR-028, de un **viaje de taxi o moto
+pagado con un paquete** (`settlement_entries.taxi_ride_id`): la línea gana su tarifa del tramo
+menos su comisión cuando termina el viaje.
+
 ## Saldo y pagos a las empresas
 
 El saldo se calcula por moneda:

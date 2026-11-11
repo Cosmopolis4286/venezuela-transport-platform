@@ -3,6 +3,8 @@ import {
   cityIn,
   formatMoney,
   MAX_SCHEDULE_AHEAD_DAYS,
+  packCovers,
+  TRIP_PACK_RETURN_MINUTES,
   rolesWith,
   TAXI_REQUEST_MINUTES,
   type OnDemandFare,
@@ -19,9 +21,13 @@ import {
   type TaxiRide,
   type TaxiTerminal,
 } from '@vtp/shared-types';
-import { and, asc, count, desc, eq, gt, inArray, lte, ne, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
-import { DatabaseService, type Database } from '../../database/database.service.js';
+import {
+  DatabaseService,
+  type Database,
+  type Transaction,
+} from '../../database/database.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { vehicles } from '../fleet/fleet.schema.js';
 import { VehiclesService } from '../fleet/vehicles.service.js';
@@ -38,6 +44,10 @@ import {
   organizations,
   type OrganizationRow,
 } from '../organizations/organizations.schema.js';
+import { policyFor, recordRideEarning } from '../settlements/ledger.js';
+import { organizationPolicies } from '../settlements/settlements.schema.js';
+import { tripPacks } from '../trip-packs/trip-packs.schema.js';
+import { TripPacksService } from '../trip-packs/trip-packs.service.js';
 import { onDemandFares, taxiRides, taxiServiceAreas, type TaxiRideRow } from './taxi.schema.js';
 
 const DRIVING_ROLES = rolesWith('trips.drive');
@@ -59,12 +69,37 @@ const violated = (error: unknown): string | undefined => {
   return cause.code === '23505' ? (cause.constraint ?? 'unique') : undefined;
 };
 
-/** Requests nobody took in time; run before reading or taking requests. */
+/**
+ * Requests nobody took in time; run before reading or taking requests. Trips paid with a pack go
+ * back to it (unless it expired meanwhile).
+ */
 export async function expireTaxiRequests(db: Database, now = new Date()) {
-  await db
+  const expired = await db
     .update(taxiRides)
     .set({ status: 'expired' })
-    .where(and(eq(taxiRides.status, 'requested'), lte(taxiRides.expiresAt, now)));
+    .where(and(eq(taxiRides.status, 'requested'), lte(taxiRides.expiresAt, now)))
+    .returning({ tripPackId: taxiRides.tripPackId, passengers: taxiRides.passengers });
+  for (const ride of expired) {
+    if (ride.tripPackId) await giveTripsBack(db, ride.tripPackId, ride.passengers);
+  }
+}
+
+/** Trips back to a pack that has not expired; the same rule as `TripPacksService.giveBack`. */
+async function giveTripsBack(db: Database | Transaction, packId: string, trips: number) {
+  await db
+    .update(tripPacks)
+    .set({
+      remaining: sql`least(${tripPacks.trips}, ${tripPacks.remaining} + ${trips})`,
+      status: 'active',
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(tripPacks.id, packId),
+        inArray(tripPacks.status, ['active', 'exhausted']),
+        gt(tripPacks.expiresAt, new Date()),
+      ),
+    );
 }
 
 type Fare = Pick<AcceptTaxiRideRequest, 'vehicleId' | 'fareAmount' | 'fareCurrency'>;
@@ -95,6 +130,7 @@ export class TaxiService {
     private readonly vehicles: VehiclesService,
     private readonly notifications: NotificationsService,
     private readonly services: ServicesService,
+    private readonly packs: TripPacksService,
   ) {}
 
   // --- Passengers -------------------------------------------------------------------------
@@ -275,27 +311,50 @@ export class TaxiService {
       if (!contactPhone) throw invalid('Enter a valid phone number');
     }
     await expireTaxiRequests(this.database.db);
+    const packId = input.tripPackId ?? null;
+    if (packId) await this.assertPackFits(auth.user.id, packId, serviceAreaId, input);
     // Waits until a while after the time asked (or from now when it is for now).
     const waitFrom = scheduledFor?.getTime() ?? now;
     let row: TaxiRideRow;
     try {
-      [row] = (await this.database.db
-        .insert(taxiRides)
-        .values({
-          kind: 'stretch',
-          passengerUserId: auth.user.id,
-          fromStopId,
-          toStopId,
-          serviceAreaId,
-          mode,
-          scheduledFor,
-          address,
-          notes: input.notes?.trim() || null,
-          passengers: input.passengers,
-          contactPhone,
-          expiresAt: new Date(waitFrom + TAXI_REQUEST_MINUTES * MINUTE_MS),
-        })
-        .returning()) as [TaxiRideRow];
+      row = await this.database.db.transaction(async (tx) => {
+        if (packId) {
+          // One trip per passenger, spent now; given back if nobody takes it or it is cancelled
+          // in time.
+          const spent = await this.packs.spend(
+            tx,
+            auth.user.id,
+            packId,
+            input.passengers,
+            new Date(waitFrom),
+          );
+          if (!spent) {
+            throw conflict(
+              'The trip pack has not enough trips left or expires before this ride',
+              'TRIP_PACK_EXHAUSTED',
+            );
+          }
+        }
+        const [inserted] = (await tx
+          .insert(taxiRides)
+          .values({
+            tripPackId: packId,
+            kind: 'stretch',
+            passengerUserId: auth.user.id,
+            fromStopId,
+            toStopId,
+            serviceAreaId,
+            mode,
+            scheduledFor,
+            address,
+            notes: input.notes?.trim() || null,
+            passengers: input.passengers,
+            contactPhone,
+            expiresAt: new Date(waitFrom + TAXI_REQUEST_MINUTES * MINUTE_MS),
+          })
+          .returning()) as [TaxiRideRow];
+        return inserted;
+      });
     } catch (error) {
       if (violated(error) === 'taxi_rides_passenger_open_key') {
         throw conflict('You already have a taxi ride in progress', 'TAXI_RIDE_OPEN');
@@ -337,6 +396,51 @@ export class TaxiService {
       };
     });
     return (await this.toRides([row]))[0]!;
+  }
+
+  /** The pack can pay this stretch ride: the user's, active, same vehicle, corridor and stretch. */
+  private async assertPackFits(
+    userId: string,
+    packId: string,
+    serviceAreaId: string,
+    input: RequestTaxiRequest,
+  ): Promise<void> {
+    const pack = await this.packs.row(this.database.db, packId);
+    if (!pack || pack.userId !== userId) {
+      throw new ApiException('NOT_FOUND', 'Trip pack not found', HttpStatus.NOT_FOUND);
+    }
+    if (pack.status !== 'active') {
+      throw conflict('This trip pack has no trips to use', 'TRIP_PACK_EXHAUSTED');
+    }
+    const fits =
+      pack.mode === input.mode &&
+      pack.serviceAreaId === serviceAreaId &&
+      packCovers([pack.stopAId, pack.stopBId], input.fromStopId!, input.toStopId!);
+    // Some line that rides this stretch with that vehicle must accept packs.
+    const [a, b] = ordered(input.fromStopId!, input.toStopId!);
+    const [accepting] = fits
+      ? await this.database.db
+          .select({ id: onDemandFares.organizationId })
+          .from(onDemandFares)
+          .innerJoin(
+            organizationPolicies,
+            and(
+              eq(organizationPolicies.organizationId, onDemandFares.organizationId),
+              eq(organizationPolicies.acceptsTripPacks, true),
+            ),
+          )
+          .where(
+            and(
+              eq(onDemandFares.stopAId, a),
+              eq(onDemandFares.stopBId, b),
+              eq(onDemandFares.mode, input.mode!),
+            ),
+          )
+          .limit(1)
+      : [];
+    if (!fits || !accepting) {
+      throw conflict('This trip pack does not cover this ride', 'TRIP_PACK_NOT_VALID_HERE');
+    }
   }
 
   /** The corridor both stops belong to (the first, if several), or none. */
@@ -442,11 +546,19 @@ export class TaxiService {
   /** Before pickup only; afterwards the ride is between the passenger and the driver. */
   async cancelMine(auth: Authenticated, rideId: string, meta: RequestMeta): Promise<TaxiRide> {
     const ride = await this.requireMine(auth.user.id, rideId);
-    const [row] = await this.database.db
-      .update(taxiRides)
-      .set({ status: 'cancelled', cancelledAt: new Date() })
-      .where(and(eq(taxiRides.id, ride.id), inArray(taxiRides.status, ['requested', 'accepted'])))
-      .returning();
+    const row = await this.database.db.transaction(async (tx) => {
+      const [cancelled] = await tx
+        .update(taxiRides)
+        .set({ status: 'cancelled', cancelledAt: new Date() })
+        .where(and(eq(taxiRides.id, ride.id), inArray(taxiRides.status, ['requested', 'accepted'])))
+        .returning();
+      // Paid with a pack: the trips go back before a line takes it, or up to 30 minutes before
+      // the time asked (ADR-028); later, they are lost.
+      if (cancelled?.tripPackId && tripsGoBack(ride)) {
+        await giveTripsBack(tx, cancelled.tripPackId, cancelled.passengers);
+      }
+      return cancelled;
+    });
     if (!row) throw conflict('This ride can no longer be cancelled', 'TAXI_RIDE_NOT_CANCELLABLE');
     await this.record('taxi_ride.cancelled', row, auth, meta);
     return (await this.toRides([row]))[0]!;
@@ -515,20 +627,33 @@ export class TaxiService {
       return null;
     }
     const now = new Date();
-    const [row] = await this.database.db
-      .update(taxiRides)
-      .set(
-        step === 'pickup'
-          ? { status: 'in_progress', pickedUpAt: now }
-          : { status: 'completed', completedAt: now },
-      )
-      .where(
-        and(
-          eq(taxiRides.id, ride.id),
-          eq(taxiRides.status, step === 'pickup' ? 'accepted' : 'in_progress'),
-        ),
-      )
-      .returning();
+    const row = await this.database.db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(taxiRides)
+        .set(
+          step === 'pickup'
+            ? { status: 'in_progress', pickedUpAt: now }
+            : { status: 'completed', completedAt: now },
+        )
+        .where(
+          and(
+            eq(taxiRides.id, ride.id),
+            eq(taxiRides.status, step === 'pickup' ? 'accepted' : 'in_progress'),
+          ),
+        )
+        .returning();
+      // A ride paid with a pack earns the line its fare when it is done (ADR-028).
+      if (updated && step === 'complete' && updated.tripPackId) {
+        await recordRideEarning(tx, {
+          id: updated.id,
+          organizationId: updated.organizationId!,
+          passengers: updated.passengers,
+          fareAmount: updated.fareAmount!,
+          fareCurrency: updated.fareCurrency!,
+        });
+      }
+      return updated;
+    });
     if (!row) {
       throw conflict(
         step === 'pickup' ? 'This ride is not waiting for pickup' : 'This ride is not in progress',
@@ -676,6 +801,9 @@ export class TaxiService {
     if (!ride) throw notFound();
     // Terminal rides: the line quotes the fare. Stretch rides: its fixed fare for the stretch.
     let fare: { amount: string; currency: TaxiRideRow['fareCurrency'] & string };
+    if (ride.tripPackId && !(await policyFor(this.database.db, line.id)).acceptsTripPacks) {
+      throw conflict('Your line does not accept trip packs', 'TRIP_PACK_NOT_VALID_HERE');
+    }
     if (ride.kind === 'stretch') {
       if (vehicle.mode !== ride.mode) {
         throw conflict(
@@ -831,7 +959,18 @@ export class TaxiService {
           onDemandFares,
           and(fareMatchesRide(), inArray(onDemandFares.organizationId, organizationIds)),
         )
-        .where(and(eq(taxiRides.kind, 'stretch'), filters))
+        .leftJoin(
+          organizationPolicies,
+          eq(organizationPolicies.organizationId, onDemandFares.organizationId),
+        )
+        .where(
+          and(
+            eq(taxiRides.kind, 'stretch'),
+            filters,
+            // Rides paid with a pack only for lines that accept packs (ADR-028).
+            or(isNull(taxiRides.tripPackId), eq(organizationPolicies.acceptsTripPacks, true)),
+          ),
+        )
         .limit(100),
     ]);
     // Rides for now first by age; rides booked for later by their time.
@@ -931,6 +1070,17 @@ export class TaxiService {
   /** The passenger's view: the driver's name, verified phone and vehicle once taken. */
   private async toRides(rows: TaxiRideRow[]): Promise<TaxiRide[]> {
     const { user, line, vehicle, stop } = await this.related(rows);
+    const packIds = rows.flatMap((r) => (r.tripPackId ? [r.tripPackId] : []));
+    const packCodes = new Map(
+      packIds.length
+        ? (
+            await this.database.db
+              .select({ id: tripPacks.id, code: tripPacks.code })
+              .from(tripPacks)
+              .where(inArray(tripPacks.id, packIds))
+          ).map((p) => [p.id, p.code])
+        : [],
+    );
     return rows.map((ride) => {
       const driver = ride.driverUserId ? user.get(ride.driverUserId) : undefined;
       return {
@@ -943,6 +1093,9 @@ export class TaxiService {
         to: ride.toStopId ? stop.get(ride.toStopId)! : null,
         mode: ride.mode as OnDemandMode,
         scheduledFor: ride.scheduledFor?.toISOString() ?? null,
+        tripPack: ride.tripPackId
+          ? { id: ride.tripPackId, code: packCodes.get(ride.tripPackId) ?? '' }
+          : null,
         address: ride.address,
         notes: ride.notes,
         passengers: ride.passengers,
@@ -1046,6 +1199,7 @@ function requestFields(ride: TaxiRideRow, stop: Map<string, StopSummary>) {
     to: ride.toStopId ? stop.get(ride.toStopId)! : null,
     mode: ride.mode as OnDemandMode,
     scheduledFor: ride.scheduledFor?.toISOString() ?? null,
+    paidWithPack: ride.tripPackId !== null,
     address: ride.address,
     notes: ride.notes,
     passengers: ride.passengers,
@@ -1055,3 +1209,15 @@ function requestFields(ride: TaxiRideRow, stop: Map<string, StopSummary>) {
 }
 
 const byName = (a: StopSummary, b: StopSummary) => a.name.localeCompare(b.name, 'es');
+
+/** Before a line takes it, or 30 minutes or more before the time asked. */
+function tripsGoBack(
+  ride: Pick<TaxiRideRow, 'status' | 'scheduledFor'>,
+  now = Date.now(),
+): boolean {
+  if (ride.status === 'requested') return true;
+  return (
+    ride.scheduledFor !== null &&
+    ride.scheduledFor.getTime() - now >= TRIP_PACK_RETURN_MINUTES * MINUTE_MS
+  );
+}

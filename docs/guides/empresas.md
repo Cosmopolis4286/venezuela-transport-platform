@@ -72,6 +72,8 @@ y sus documentos; en el despacho asignas moto y conductor a cada salida.
    tramo**: dos paradas de un corredor y el monto, en los dos sentidos. Tus conductores ven las
    solicitudes de esos tramos (ahora o programadas) y al tomarlas se cobra tu tarifa, sin
    escribirla. Un viaje programado que tomas no te impide tomar otros hasta la hora de recoger.
+   Si tu línea **acepta paquetes de viajes** (lo activa VTP), también ves los viajes pagados con
+   paquete ("Pagado con paquete": no cobres); VTP te paga tu tarifa del tramo al terminarlos.
 
 ## 6. Cobros y liquidaciones
 

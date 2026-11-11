@@ -14,7 +14,9 @@ import {
   NETWORK_UTC_OFFSET,
   type OnDemandMode,
   type StretchOption,
+  packCovers,
   type TaxiRide,
+  type TripPack,
 } from '@vtp/shared-types';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -59,6 +61,22 @@ export function StretchRideForm() {
     { auth: false },
   );
   const chosen = options.data?.find((o) => o.mode === mode) ?? options.data?.[0] ?? null;
+  // The passenger's packs that cover this stretch and vehicle (ADR-028); the first is the default.
+  const packs = useApi<TripPack[]>('/me/trip-packs');
+  const passengerCount = chosen?.mode === 'motorcycle' ? 1 : Number(seats);
+  const usable = (packs.data ?? []).filter(
+    (p) =>
+      p.status === 'active' &&
+      p.remaining >= passengerCount &&
+      p.mode === chosen?.mode &&
+      p.serviceArea.id === area?.id &&
+      packCovers([p.stops[0].id, p.stops[1].id], from, to),
+  );
+  const [payWith, setPayWith] = useState<string | null>(null);
+  const payChoice =
+    payWith && (payWith === 'driver' || usable.some((p) => p.id === payWith))
+      ? payWith
+      : (usable[0]?.id ?? 'driver');
   const timeValid = /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
   // The chosen day and time, in Venezuela; it must still be ahead.
   const at = timeValid ? Date.parse(`${day}T${time}:00${NETWORK_UTC_OFFSET}`) : NaN;
@@ -85,7 +103,8 @@ export function StretchRideForm() {
               : undefined,
           address: address.trim(),
           notes: notes.trim() || undefined,
-          passengers: chosen.mode === 'motorcycle' ? 1 : Number(seats),
+          passengers: passengerCount,
+          ...(payChoice !== 'driver' ? { tripPackId: payChoice } : {}),
         },
       });
       router.replace({ pathname: '/taxi/[id]', params: { id: ride.id } });
@@ -167,6 +186,20 @@ export function StretchRideForm() {
       />
       {chosen?.mode === 'car' ? (
         <Segmented label={t.taxi.passengers} options={SEATS} value={seats} onChange={setSeats} />
+      ) : null}
+      {usable.length && chosen ? (
+        <Segmented
+          label={t.passengers.payHow}
+          options={[
+            ...usable.map((p) => ({
+              value: p.id,
+              label: t.passengers.payPack(p.code, p.remaining),
+            })),
+            { value: 'driver', label: t.ride.payDriver },
+          ]}
+          value={payChoice}
+          onChange={setPayWith}
+        />
       ) : null}
       <Field
         label={t.taxi.notes}

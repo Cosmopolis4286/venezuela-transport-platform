@@ -24,6 +24,7 @@ import { bookings } from '../bookings/bookings.schema.js';
 import { timestamps, users } from '../identity/identity.schema.js';
 import { currency } from '../network/network.schema.js';
 import { organizations } from '../organizations/organizations.schema.js';
+import { taxiRides } from '../taxi/taxi.schema.js';
 
 export const payoutMethod = pgEnum('payout_method', PAYOUT_METHODS);
 export const settlementEntryKind = pgEnum('settlement_entry_kind', ['booking', 'cancellation']);
@@ -67,6 +68,7 @@ export const organizationPolicies = pgTable('organization_policies', {
 /**
  * What one paid booking earned its operator, written in the same transaction that confirms the
  * booking. Amounts are in the fare currency and never change; a future refund adds its own entry.
+ * A taxi or motorcycle ride paid with a trip pack earns too (`taxi_ride_id`, ADR-028).
  */
 export const settlementEntries = pgTable(
   'settlement_entries',
@@ -75,9 +77,9 @@ export const settlementEntries = pgTable(
     organizationId: uuid()
       .notNull()
       .references(() => organizations.id, { onDelete: 'restrict' }),
-    bookingId: uuid()
-      .notNull()
-      .references(() => bookings.id, { onDelete: 'restrict' }),
+    /** Exactly one of the two is set. */
+    bookingId: uuid().references(() => bookings.id, { onDelete: 'restrict' }),
+    taxiRideId: uuid().references(() => taxiRides.id, { onDelete: 'restrict' }),
     /** `booking` when it was paid; `cancellation` (negative amounts) when the passenger cancelled. */
     kind: settlementEntryKind().notNull().default('booking'),
     /** Who received the passenger's money: with `operator`, the operator owes the commission. */
@@ -93,6 +95,11 @@ export const settlementEntries = pgTable(
   (t) => [
     // A booking is earned once, even if a provider reports the money twice, and cancelled once.
     uniqueIndex('settlement_entries_booking_kind_key').on(t.bookingId, t.kind),
+    uniqueIndex('settlement_entries_taxi_ride_kind_key').on(t.taxiRideId, t.kind),
+    check(
+      'settlement_entries_subject_check',
+      sql`(${t.bookingId} is null) <> (${t.taxiRideId} is null)`,
+    ),
     index('settlement_entries_organization_idx').on(t.organizationId, t.createdAt),
   ],
 );
