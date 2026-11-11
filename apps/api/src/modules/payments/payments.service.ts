@@ -33,6 +33,7 @@ import { organizations } from '../organizations/organizations.schema.js';
 import type { OrganizationAccess } from '../organizations/organization-access.js';
 import { departureText } from '../notifications/format.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { draftFeeInvoice } from '../fiscal/fiscal-ledger.js';
 import { policyFor, recordEarning } from '../settlements/ledger.js';
 import { compareAmounts, convert, toScaled } from './money.js';
 import { accountOwner, PAYMENT_PROVIDER, type PaymentProvider } from './payment-provider.js';
@@ -294,6 +295,7 @@ export class PaymentsService {
             payment.bookingId,
             payment.collectorOrganizationId ? 'operator' : 'platform',
           );
+          await draftFeeInvoice(tx, payment.bookingId);
           const [row] = await tx
             .update(payments)
             .set({ ...received, status: 'confirmed', confirmedAt: new Date() })

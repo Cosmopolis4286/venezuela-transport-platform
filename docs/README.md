@@ -31,7 +31,8 @@ Por dónde empezar según lo que necesites.
 - [Red: paradas, rutas, tarifas, horarios](architecture/network.md) ·
   [Flota: mapas de puestos y vehículos](architecture/fleet.md)
 - [Reservas](architecture/bookings.md) · [Pagos y boletos](architecture/payments.md) ·
-  [Liquidaciones y reembolsos](architecture/settlements.md)
+  [Liquidaciones y reembolsos](architecture/settlements.md) ·
+  [Facturación y libros fiscales](architecture/fiscal.md)
 - [Despacho](architecture/dispatch.md) · [Taxis](architecture/taxis.md) ·
   [Notificaciones](architecture/notifications.md) · [Reportes](architecture/reports.md)
 - [Portal web](architecture/web-portal.md) · [Apps móviles](architecture/mobile-apps.md) ·

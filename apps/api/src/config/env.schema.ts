@@ -114,6 +114,12 @@ export const envSchema = z
      * payment off.
      */
     PAYMENT_PROVIDER: z.enum(['simulated', 'manual', 'disabled']).optional(),
+    /**
+     * Who numbers the platform's service-fee invoices (ADR-031). `draft`: staff issue each one in
+     * the SENIAT portal and type its numbers. `digital_printer`: an authorized digital printer's
+     * API (not contracted yet: issuing answers 503 until its adapter exists).
+     */
+    INVOICE_ISSUER: z.enum(['draft', 'digital_printer']).default('draft'),
 
     REDIS_URL: z
       .union([z.url({ protocol: /^rediss?$/ }), z.literal('')])

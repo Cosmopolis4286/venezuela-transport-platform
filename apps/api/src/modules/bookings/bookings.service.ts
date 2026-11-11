@@ -24,6 +24,7 @@ import {
 } from '../../database/database.service.js';
 import { AppConfigService } from '../../config/app-config.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import { correctFeeInvoice } from '../fiscal/fiscal-ledger.js';
 import { vehicles } from '../fleet/fleet.schema.js';
 import { users } from '../identity/identity.schema.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
@@ -371,6 +372,7 @@ export class BookingsService {
               .where(eq(payments.id, payment.id));
           }
           await recordCancellation(tx, booking.id, booking.totalAmount, true);
+          await correctFeeInvoice(tx, booking.id);
         } else {
           await tx
             .update(payments)

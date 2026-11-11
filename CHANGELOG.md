@@ -26,6 +26,11 @@ pull request.
 
 ### Agregado
 
+- **Facturación de la tarifa por servicio** (ADR-031): cada pago crea un borrador de factura
+  (IVA incluido) que el personal emite en el portal del SENIAT y anota en `/admin/fiscal`; montos
+  en bolívares con la tasa BCV del día. Notas de crédito y factura a la empresa cuando cancela una
+  salida. Libros de ventas y compras por mes con descarga CSV. Tipo de contribuyente (ordinario o
+  formal) configurable y `INVOICE_ISSUER` preparado para una imprenta digital autorizada.
 - **Despliegue listo para usar** (rescatado del borrador #54): imágenes publicadas en GHCR tras
   cada CI verde en `main` (se activa con la variable `VTP_API_DOMAIN`), `deploy.sh`, y la API con
   un rol de base de datos de mínimos privilegios (`vtp_app`) separado del dueño que migra. Prueba

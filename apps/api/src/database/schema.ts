@@ -12,3 +12,4 @@ export * from '../modules/payments/payments.schema.js';
 export * from '../modules/taxi/taxi.schema.js';
 export * from '../modules/settlements/settlements.schema.js';
 export * from '../modules/notifications/notifications.schema.js';
+export * from '../modules/fiscal/fiscal.schema.js';

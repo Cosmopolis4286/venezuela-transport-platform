@@ -124,6 +124,8 @@ export class AccountDeletionService {
         .set({ revokedAt: new Date(), revokedReason: 'account_deleted' })
         .where(eq(sessions.userId, userId));
       await tx.delete(pushDevices).where(eq(pushDevices.userId, userId));
+      // Fiscal documents (`invoices`) keep the buyer's name and ID: the tax code requires keeping
+      // issued invoices, and a paid booking's draft is issued all the same (ADR-031).
       await tx.delete(memberships).where(eq(memberships.userId, userId));
       await tx
         .update(users)
