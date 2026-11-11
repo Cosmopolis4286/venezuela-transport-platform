@@ -13,6 +13,11 @@ pull request.
 
 ### Agregado
 
+- **Taxi o moto por tramo, bajo demanda**: en el suburbano, el pasajero pide un taxi o una moto
+  entre dos paradas de su corredor, ahora o para una hora, y ve el precio antes de pedir. Las
+  líneas de taxis y de mototaxis publican tarifas fijas por tramo (portal → Taxis/Mototaxis) y
+  ven solo las solicitudes de sus tramos; al tomarlas se cobra su tarifa. Un viaje programado
+  aceptado no ocupa al conductor hasta la hora de recoger.
 - **Reportes de paquetes de viajes**: en Métricas, paquetes vendidos, viajes usados (con las
   tarifas que se les deben a las empresas), viajes por usar y viajes vencidos; en los reportes de
   cada empresa, cuántos puestos se pagaron con paquetes (también en el CSV).

@@ -47,6 +47,7 @@ PostgreSQL generados desde las listas de `@vtp/shared-types`.
 |                 | `settlement_entries`                  | Libro de cada empresa: una fila al pagarse una reserva y otra (negativa) si se cancela                                                             |
 |                 | `payouts`                             | Pagos de la plataforma a las empresas (se anulan, no se borran)                                                                                    |
 | `taxi`          | `taxi_service_areas`                  | Terminales donde opera cada línea de taxis                                                                                                         |
+|                 | `on_demand_fares`                     | Tarifas fijas por tramo de las líneas de taxis y mototaxis, en los dos sentidos (ADR-028)                                                          |
 |                 | `taxi_rides`                          | Solicitudes y viajes de taxi; índices parciales únicos: un taxi abierto por pasajero, un viaje por conductor                                       |
 | `reports`       | —                                     | No tiene tablas: lee el libro, las salidas y la actividad ([reports.md](reports.md))                                                               |
 | `notifications` | `push_devices`                        | Tokens de Expo por teléfono, con la app y el idioma                                                                                                |
