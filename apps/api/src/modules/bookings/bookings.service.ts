@@ -168,7 +168,7 @@ export class BookingsService {
           const valid = seatNumbersOf(trip);
           const unknown = seats.find((seat) => !valid.has(seat));
           if (unknown) throw invalid(`Seat ${unknown} does not exist on this vehicle`);
-          await expireHolds(tx, trip.id);
+          await expireHolds(tx, { tripId: trip.id });
 
           const [row] = await tx
             .insert(bookings)
@@ -224,7 +224,7 @@ export class BookingsService {
   }
 
   async listMine(userId: string): Promise<Booking[]> {
-    await expireHolds(this.database.db);
+    await expireHolds(this.database.db, { userId });
     const rows = await this.database.db
       .select()
       .from(bookings)
@@ -608,7 +608,7 @@ export class BookingsService {
   }
 
   private async requireMine(userId: string, bookingId: string): Promise<BookingRow> {
-    await expireHolds(this.database.db);
+    await expireHolds(this.database.db, { userId });
     const [booking] = await this.database.db
       .select()
       .from(bookings)

@@ -374,7 +374,7 @@ export class PaymentsService {
     operationNumber: string,
     meta: RequestMeta,
   ): Promise<Booking> {
-    await expireHolds(this.database.db);
+    await expireHolds(this.database.db, { userId: auth.user.id });
     await this.voidStale();
     const payment = await this.database.db.transaction(async (tx) => {
       const [row] = await tx
@@ -675,7 +675,7 @@ export class PaymentsService {
     userId: string,
     bookingId: string,
   ): Promise<{ booking: BookingRow; organizationId: string }> {
-    await expireHolds(this.database.db);
+    await expireHolds(this.database.db, { userId });
     await this.voidStale();
     const [row] = await this.database.db
       .select({ booking: bookings, organizationId: trips.organizationId })
