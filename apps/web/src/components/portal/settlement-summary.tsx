@@ -38,6 +38,12 @@ export function SettlementBalances({ settlement }: { settlement: OrganizationSet
           ? 'Cobros: la empresa recibe los pagos en sus propias cuentas, los verifica, hace sus reembolsos y le paga la comisión a la plataforma.'
           : 'Cobros: la plataforma recibe los pagos de los pasajeros y le paga a la empresa lo que gana.'}
       </p>
+      {settlement.acceptsTripPacks ? (
+        <p className="text-sm text-muted-foreground">
+          Acepta paquetes de viajes: por cada viaje usado gana su tarifa normal del tramo, menos la
+          comisión, aunque la plataforma cobró el paquete.
+        </p>
+      ) : null}
       {settlement.balances.length === 0 ? (
         <p className="text-sm text-muted-foreground">Todavía no hay reservas pagadas.</p>
       ) : (

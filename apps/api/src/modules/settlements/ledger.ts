@@ -53,6 +53,7 @@ export async function policyFor(
     commissionOverride: string | null;
     refundTiersOverride: RefundTier[] | null;
     paymentCollection: PaymentCollection;
+    acceptsTripPacks: boolean;
   }
 > {
   const [platform] = await db.select().from(platformSettings).where(eq(platformSettings.id, 1));
@@ -68,6 +69,7 @@ export async function policyFor(
     commissionOverride: own?.commissionRate ?? null,
     refundTiersOverride: own?.refundTiers ?? null,
     paymentCollection: own?.paymentCollection ?? 'platform',
+    acceptsTripPacks: own?.acceptsTripPacks ?? false,
   };
 }
 
@@ -147,6 +149,34 @@ export async function recordCancellation(
       commissionRate: earning.commissionRate,
       commission: negative(fromCommission),
       earned: negative(fromEarned),
+    })
+    .onConflictDoNothing({ target: [settlementEntries.bookingId, settlementEntries.kind] });
+}
+
+/**
+ * Undoes all of a booking's earning: a trip paid with a pack that went back to the pack (ADR-028).
+ * Nothing was refunded in money, so the platform's commission goes back too.
+ */
+export async function reverseEarning(tx: Transaction, bookingId: string): Promise<void> {
+  const [earning] = await tx
+    .select()
+    .from(settlementEntries)
+    .where(and(eq(settlementEntries.bookingId, bookingId), eq(settlementEntries.kind, 'booking')));
+  if (!earning) return;
+  const negative = (amount: string) => (toScaled(amount, 2) === 0n ? '0.00' : `-${amount}`);
+  await tx
+    .insert(settlementEntries)
+    .values({
+      organizationId: earning.organizationId,
+      bookingId,
+      kind: 'cancellation',
+      collectedBy: earning.collectedBy,
+      seats: -earning.seats,
+      currency: earning.currency,
+      gross: negative(earning.gross),
+      commissionRate: earning.commissionRate,
+      commission: negative(earning.commission),
+      earned: negative(earning.earned),
     })
     .onConflictDoNothing({ target: [settlementEntries.bookingId, settlementEntries.kind] });
 }

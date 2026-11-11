@@ -91,6 +91,10 @@ const es = {
     documentNumberFor: (seat: string) => `Número de documento del puesto ${seat}`,
     total: 'Total',
     hold: 'Apartar puestos',
+    payHow: '¿Cómo pagas?',
+    payMoney: (total: string) => `Pagar ${total}`,
+    payPack: (code: string, left: number) => `Con mi paquete ${code} (quedan ${left})`,
+    bookWithPack: 'Reservar con mi paquete',
     notBookable: 'Esta salida ya no se puede reservar.',
     checkNames: 'Revisa los nombres y números de documento.',
   },
@@ -100,6 +104,7 @@ const es = {
     held: (clock: string) =>
       `Tus puestos están apartados por ${clock} minutos. Paga antes de que termine el tiempo.`,
     confirmed: 'Pago confirmado. Muestra el código QR de cada pasajero al abordar.',
+    showQr: 'Muestra el código QR de cada pasajero al abordar.',
     expired: 'El tiempo para pagar terminó y los puestos se liberaron.',
     refundDue: 'Tu pago llegó cuando la reserva ya no estaba activa. Te lo devolveremos.',
     refunded: 'Te devolvimos el pago de esta reserva.',
@@ -111,6 +116,16 @@ const es = {
     cancelConfirm: 'Sí, cancelar',
     cancelKeep: 'No, mantener mi viaje',
     notCancellable: 'Este viaje ya no se puede cancelar: el autobús salió o ya abordaste.',
+    paidWithPack: (code: string) => `Pagada con tu paquete ${code}.`,
+    packPolicy:
+      'Si cancelas hasta 30 minutos antes de abordar, el viaje vuelve a tu paquete; después, se pierde.',
+    cancelPackBack: (trips: number, code: string) =>
+      trips === 1
+        ? `Si cancelas ahora, el viaje vuelve a tu paquete ${code}.`
+        : `Si cancelas ahora, los ${trips} viajes vuelven a tu paquete ${code}.`,
+    cancelPackLost:
+      'Si cancelas ahora, el viaje no vuelve a tu paquete (faltan menos de 30 minutos o el paquete venció), pero tu puesto queda libre.',
+    cancelledPack: (code: string) => `Cancelaste esta reserva, pagada con tu paquete ${code}.`,
     policy: 'Política de cancelación',
     tier: (percent: number, hours: number) =>
       hours === 0
@@ -320,6 +335,10 @@ const en: Messages = {
     documentNumberFor: (seat) => `ID number for seat ${seat}`,
     total: 'Total',
     hold: 'Hold seats',
+    payHow: 'How do you pay?',
+    payMoney: (total) => `Pay ${total}`,
+    payPack: (code, left) => `With my trip pack ${code} (${left} left)`,
+    bookWithPack: 'Book with my trip pack',
     notBookable: 'This departure can no longer be booked.',
     checkNames: 'Check the names and ID numbers.',
   },
@@ -328,6 +347,7 @@ const en: Messages = {
     codeA11y: (code) => `Code ${code}`,
     held: (clock) => `Your seats are held for ${clock} minutes. Pay before the time runs out.`,
     confirmed: 'Payment confirmed. Show each passenger’s QR code when boarding.',
+    showQr: 'Show each passenger’s QR code when boarding.',
     expired: 'The time to pay ran out and the seats were released.',
     refundDue: 'Your payment arrived after the booking was no longer active. We will refund it.',
     refunded: 'We refunded the payment for this booking.',
@@ -339,6 +359,16 @@ const en: Messages = {
     cancelConfirm: 'Yes, cancel',
     cancelKeep: 'No, keep my trip',
     notCancellable: 'This trip can no longer be cancelled: the bus left or you boarded.',
+    paidWithPack: (code) => `Paid with your trip pack ${code}.`,
+    packPolicy:
+      'If you cancel up to 30 minutes before boarding, the trip goes back to your pack; after that, it is lost.',
+    cancelPackBack: (trips, code) =>
+      trips === 1
+        ? `If you cancel now, the trip goes back to your trip pack ${code}.`
+        : `If you cancel now, the ${trips} trips go back to your trip pack ${code}.`,
+    cancelPackLost:
+      'If you cancel now, the trip does not go back to your pack (less than 30 minutes left or the pack expired), but your seat is freed.',
+    cancelledPack: (code) => `You cancelled this booking, paid with your trip pack ${code}.`,
     policy: 'Cancellation policy',
     tier: (percent, hours) =>
       hours === 0
@@ -544,6 +574,10 @@ const ptBR: Messages = {
     documentNumberFor: (seat) => `Número do documento do assento ${seat}`,
     total: 'Total',
     hold: 'Reservar assentos',
+    payHow: 'Como você paga?',
+    payMoney: (total) => `Pagar ${total}`,
+    payPack: (code, left) => `Com meu pacote ${code} (restam ${left})`,
+    bookWithPack: 'Reservar com meu pacote',
     notBookable: 'Esta partida não pode mais ser reservada.',
     checkNames: 'Confira os nomes e os números dos documentos.',
   },
@@ -553,6 +587,7 @@ const ptBR: Messages = {
     held: (clock) =>
       `Seus assentos estão reservados por ${clock} minutos. Pague antes que o tempo acabe.`,
     confirmed: 'Pagamento confirmado. Mostre o QR code de cada passageiro no embarque.',
+    showQr: 'Mostre o QR code de cada passageiro ao embarcar.',
     expired: 'O tempo para pagar acabou e os assentos foram liberados.',
     refundDue: 'Seu pagamento chegou quando a reserva já não estava ativa. Vamos devolvê-lo.',
     refunded: 'Devolvemos o pagamento desta reserva.',
@@ -564,6 +599,16 @@ const ptBR: Messages = {
     cancelConfirm: 'Sim, cancelar',
     cancelKeep: 'Não, manter minha viagem',
     notCancellable: 'Esta viagem não pode mais ser cancelada: o ônibus partiu ou você embarcou.',
+    paidWithPack: (code) => `Paga com seu pacote ${code}.`,
+    packPolicy:
+      'Se você cancelar até 30 minutos antes do embarque, a viagem volta ao seu pacote; depois, ela é perdida.',
+    cancelPackBack: (trips, code) =>
+      trips === 1
+        ? `Se você cancelar agora, a viagem volta ao seu pacote ${code}.`
+        : `Se você cancelar agora, as ${trips} viagens voltam ao seu pacote ${code}.`,
+    cancelPackLost:
+      'Se você cancelar agora, a viagem não volta ao seu pacote (faltam menos de 30 minutos ou o pacote venceu), mas seu assento fica livre.',
+    cancelledPack: (code) => `Você cancelou esta reserva, paga com seu pacote ${code}.`,
     policy: 'Política de cancelamento',
     tier: (percent, hours) =>
       hours === 0

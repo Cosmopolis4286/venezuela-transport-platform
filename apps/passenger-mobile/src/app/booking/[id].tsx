@@ -100,7 +100,13 @@ export default function BookingScreen() {
       {status === 'held' && data.payment?.status !== 'reported' ? (
         <Banner tone="warning">{t.booking.held(formatClock(secondsLeft))}</Banner>
       ) : null}
-      {status === 'confirmed' ? <Banner tone="success">{t.booking.confirmed}</Banner> : null}
+      {status === 'confirmed' ? (
+        <Banner tone="success">
+          {data.tripPack
+            ? `${t.booking.paidWithPack(data.tripPack.code)} ${t.booking.showQr}`
+            : t.booking.confirmed}
+        </Banner>
+      ) : null}
       {status === 'expired' ? <Banner tone="error">{t.booking.expired}</Banner> : null}
       {refundDue ? <Banner tone="warning">{t.booking.refundDue}</Banner> : null}
       {refunded ? <Banner tone="info">{t.booking.refunded}</Banner> : null}
@@ -142,9 +148,13 @@ export default function BookingScreen() {
         </Body>
       </Card>
 
+      {data.tripPack && status === 'cancelled' && !operatorCancelled ? (
+        <Banner tone="info">{t.booking.cancelledPack(data.tripPack.code)}</Banner>
+      ) : null}
       {status === 'held' || status === 'confirmed' ? (
         <Body muted>
-          {t.booking.policy}: {policyText(t, data.refundPolicy)}
+          {t.booking.policy}:{' '}
+          {data.tripPack ? t.booking.packPolicy : policyText(t, data.refundPolicy)}
         </Body>
       ) : null}
 
@@ -278,6 +288,12 @@ function CancelPaid({
       <Subheading>{t.booking.cancelPaid}</Subheading>
       {!quote.cancellable ? (
         <Body>{t.booking.notCancellable}</Body>
+      ) : quote.tripPack ? (
+        <Body>
+          {quote.tripPack.tripsBack
+            ? t.booking.cancelPackBack(quote.tripPack.tripsBack, quote.tripPack.code)
+            : t.booking.cancelPackLost}
+        </Body>
       ) : quote.refund ? (
         <Body>
           {t.booking.cancelQuote(
@@ -289,7 +305,7 @@ function CancelPaid({
         <Body>{t.booking.cancelNoRefund}</Body>
       )}
       <Body muted>
-        {t.booking.policy}: {policyText(t, quote.policy)}
+        {t.booking.policy}: {quote.tripPack ? t.booking.packPolicy : policyText(t, quote.policy)}
       </Body>
       {error ? <Banner tone="error">{error}</Banner> : null}
       {quote.cancellable ? (

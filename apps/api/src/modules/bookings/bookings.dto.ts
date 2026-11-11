@@ -13,6 +13,7 @@ import {
   IsArray,
   IsIn,
   IsString,
+  IsOptional,
   IsUUID,
   Length,
   Matches,
@@ -90,6 +91,11 @@ export class CreateBookingDto implements CreateBookingRequest {
   @ValidateNested({ each: true })
   @Type(() => PassengerDto)
   passengers!: PassengerDto[];
+
+  @ApiPropertyOptional({ description: 'Pay with this trip pack of yours (ADR-028)' })
+  @IsOptional()
+  @IsUUID()
+  tripPackId?: string;
 }
 
 export class TripsDateQueryDto {

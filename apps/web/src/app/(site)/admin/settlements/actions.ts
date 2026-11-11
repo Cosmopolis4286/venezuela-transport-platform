@@ -57,6 +57,7 @@ export async function setOrganizationPolicy(_: FormState, form: FormData): Promi
           refundTiers: ownTiers ? tiersFrom(form) : null,
           paymentCollection:
             text(form, 'paymentCollection') === 'operator' ? 'operator' : 'platform',
+          acceptsTripPacks: form.get('acceptsTripPacks') === 'on',
         },
       },
     );

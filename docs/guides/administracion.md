@@ -101,6 +101,9 @@ La empresa ve cada pago en su portal.
 - **Tasas de cambio de la plataforma**: convierten el precio de los paquetes al cobrar (las
   empresas tienen las suyas para sus boletos). Sin tasa de bolívares no se ofrece pago móvil ni
   transferencia para paquetes en dólares.
+- **Empresas adheridas**: en **Liquidaciones → la empresa**, marca **Acepta paquetes de viajes**
+  después de acordarlo con ella. Solo sus rutas suburbanas aceptan paquetes; por cada viaje usado
+  gana su tarifa normal del tramo, menos la comisión.
 - Los pagos de paquetes llegan a las cuentas de la plataforma y aparecen en **Pagos** como "paquete
   …"; se confirman o rechazan como los de las reservas. El dinero que llega para un paquete ya
   anulado aparece en **Reembolsos**.

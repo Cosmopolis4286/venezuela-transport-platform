@@ -131,6 +131,8 @@ export interface OrganizationSettlement {
   refundTiersOverride: RefundTier[] | null;
   /** The platform's tiers for suburban routes (operators have no override). */
   suburbanRefundTiers: RefundTier[];
+  /** Its departures accept trip packs; the platform pays it its fare for each trip used. */
+  acceptsTripPacks: boolean;
   /** Who receives this operator's passengers' payments. */
   paymentCollection: PaymentCollection;
   /** One per currency with activity, USD first. */
@@ -208,6 +210,8 @@ export interface SetOrganizationPolicyRequest {
   refundTiers: RefundTier[] | null;
   /** Omitted: unchanged. */
   paymentCollection?: PaymentCollection;
+  /** Its departures accept trip packs (ADR-028). Omitted: unchanged. */
+  acceptsTripPacks?: boolean;
 }
 
 /**
@@ -267,6 +271,12 @@ export interface CancellationQuote {
   /** In the currency the passenger paid with; null when nothing is refunded. */
   refund: { amount: string; currency: PaymentCurrency } | null;
   policy: RefundTier[];
+  /**
+   * Bookings paid with a trip pack: how many trips go back to the pack if cancelled now (all of
+   * them up to 30 minutes before boarding while the pack has not expired, ADR-028); no money is
+   * refunded.
+   */
+  tripPack: { code: string; tripsBack: number } | null;
 }
 
 /** `POST /admin/refunds/:paymentId` — the reference of the transfer that sent the money back. */

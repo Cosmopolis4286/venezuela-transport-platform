@@ -1,8 +1,12 @@
-import { randomUUID } from 'node:crypto';
+import { randomInt, randomUUID } from 'node:crypto';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import type {
   AuthResponse,
+  Booking,
+  CancellationQuote,
+  Route,
+  TripAvailability,
   OtpChallengeResponse,
   Payment,
   PaymentOption,
@@ -17,6 +21,9 @@ import request from 'supertest';
 import { DatabaseService } from '../src/database/database.service.js';
 import { users } from '../src/modules/identity/identity.schema.js';
 import type { OtpMessage, OtpSender } from '../src/modules/identity/otp/otp-sender.js';
+import { bookings } from '../src/modules/bookings/bookings.schema.js';
+import { addDays, todayInVenezuela } from '../src/modules/network/departures.js';
+import { settlementEntries } from '../src/modules/settlements/settlements.schema.js';
 import { tripPacks } from '../src/modules/trip-packs/trip-packs.schema.js';
 
 const expectDatabase = process.env.E2E_EXPECT_DATABASE === 'true';
@@ -262,5 +269,259 @@ describe.runIf(expectDatabase)('Trip packs (e2e)', () => {
       .get(`/api/v1/me/trip-packs/${pack.id}`)
       .set('Authorization', passenger.auth)
       .expect(200);
+  });
+  it('pays bookings with a pack, within its limits, and gives trips back in time', async () => {
+    const admin = await signIn('admin');
+    const owner = await signIn();
+    const passenger = await signIn();
+    const db = app.get(DatabaseService).db;
+    const stop = async (name: string) =>
+      (
+        await http()
+          .post('/api/v1/admin/stops')
+          .set('Authorization', admin.auth)
+          .send({ kind: 'stop', name: `${name} ${run}`, city: `${name} ${run}`, state: 'Bolívar' })
+          .expect(201)
+      ).body as Stop;
+    const a = await stop('Uso San Félix');
+    const b = await stop('Uso Puerto Ordaz');
+    const area = (
+      await http()
+        .post('/api/v1/admin/service-areas')
+        .set('Authorization', admin.auth)
+        .send({ name: `Uso ${run}`, stopIds: [a.id, b.id], active: true })
+        .expect(201)
+    ).body as ServiceArea;
+
+    // An approved bus company with a daily suburban route each way.
+    const { organization } = (
+      await http()
+        .post('/api/v1/organizations')
+        .set('Authorization', owner.auth)
+        .send({
+          type: 'bus_company',
+          legalName: `Busetas ${run}`,
+          rif: `J-${randomInt(10_000_000, 99_999_999)}-${randomInt(0, 9)}`,
+        })
+        .expect(201)
+    ).body as { organization: { id: string } };
+    await http()
+      .post(`/api/v1/admin/organizations/${organization.id}/review`)
+      .set('Authorization', admin.auth)
+      .send({ decision: 'approve' })
+      .expect(200);
+    const tomorrow = addDays(todayInVenezuela(), 1);
+    const route = async (from: Stop, to: Stop) => {
+      const url = `/api/v1/organizations/${organization.id}/routes`;
+      const created = (
+        await http()
+          .post(url)
+          .set('Authorization', owner.auth)
+          .send({
+            name: `${from.city} – ${to.city}`,
+            service: 'suburban',
+            serviceAreaId: area.id,
+            stops: [
+              { stopId: from.id, minutesFromOrigin: 0 },
+              { stopId: to.id, minutesFromOrigin: 30 },
+            ],
+          })
+          .expect(201)
+      ).body as Route;
+      await http()
+        .put(`${url}/${created.id}/fares`)
+        .set('Authorization', owner.auth)
+        .send({
+          fares: [{ fromStopId: from.id, toStopId: to.id, amount: '2.00', currency: 'USD' }],
+        })
+        .expect(200);
+      const withSchedule = (
+        await http()
+          .post(`${url}/${created.id}/schedules`)
+          .set('Authorization', owner.auth)
+          .send({
+            departureTime: '07:00',
+            daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
+            validFrom: tomorrow,
+            serviceClass: 'standard',
+            seats: 30,
+          })
+          .expect(201)
+      ).body as Route;
+      await http()
+        .post(`${url}/${created.id}/status`)
+        .set('Authorization', owner.auth)
+        .send({ status: 'active' })
+        .expect(200);
+      return withSchedule.schedules[0]!.id;
+    };
+    const going = await route(a, b);
+    const coming = await route(b, a);
+
+    // A paid pack of the stretch.
+    const product = (
+      await http()
+        .post('/api/v1/admin/trip-pack-products')
+        .set('Authorization', admin.auth)
+        .send({
+          serviceAreaId: area.id,
+          stopIds: [a.id, b.id],
+          mode: 'bus',
+          trips: 10,
+          price: '12',
+          currency: 'USD',
+        })
+        .expect(201)
+    ).body as TripPackProduct;
+    const bought = (
+      await http()
+        .post('/api/v1/me/trip-packs')
+        .set('Authorization', passenger.auth)
+        .send({ productId: product.id })
+        .expect(201)
+    ).body as TripPack;
+    const payment = (
+      await http()
+        .post(`/api/v1/me/trip-packs/${bought.id}/payments`)
+        .set('Authorization', passenger.auth)
+        .send({ method: 'usdt' })
+        .expect(201)
+    ).body as Payment;
+    await http()
+      .post(`/api/v1/me/payments/${payment.id}/simulate`)
+      .set('Authorization', passenger.auth)
+      .send({})
+      .expect(200);
+    const remaining = async () =>
+      (
+        (
+          await http()
+            .get(`/api/v1/me/trip-packs/${bought.id}`)
+            .set('Authorization', passenger.auth)
+            .expect(200)
+        ).body as TripPack
+      ).remaining;
+
+    const book = (scheduleId: string, from: Stop, to: Stop, date: string, seats = ['1']) =>
+      http()
+        .post('/api/v1/bookings')
+        .set('Authorization', passenger.auth)
+        .send({
+          scheduleId,
+          serviceDate: date,
+          fromStopId: from.id,
+          toStopId: to.id,
+          tripPackId: bought.id,
+          passengers: seats.map((seatNumber, i) => ({
+            seatNumber,
+            firstName: 'Luis',
+            lastName: `Diario ${run}`,
+            documentType: 'V',
+            documentNumber: `${20_000_000 + i}`,
+          })),
+        });
+
+    // The operator must accept packs (a platform admin enables it).
+    expect(reason(await book(going, a, b, tomorrow).expect(409))).toBe('TRIP_PACK_NOT_VALID_HERE');
+    await http()
+      .put(`/api/v1/admin/organizations/${organization.id}/policy`)
+      .set('Authorization', admin.auth)
+      .send({ commissionRate: null, refundTiers: null, acceptsTripPacks: true })
+      .expect(200);
+    const availability = (
+      await http()
+        .get('/api/v1/trips/availability')
+        .query({ scheduleId: going, serviceDate: tomorrow, from: a.id, to: b.id })
+        .expect(200)
+    ).body as TripAvailability;
+    expect(availability).toMatchObject({
+      acceptsTripPacks: true,
+      mode: 'bus',
+      service: 'suburban',
+      serviceAreaId: area.id,
+    });
+
+    // Two seats: confirmed at once, two trips spent, the operator earns its fare.
+    const first = (await book(going, a, b, tomorrow, ['1', '2']).expect(201)).body as Booking;
+    expect(first).toMatchObject({
+      status: 'confirmed',
+      payment: null,
+      tripPack: { id: bought.id, code: bought.code },
+      total: { amount: '4.00', currency: 'USD' },
+    });
+    expect(first.passengers.every((p) => p.ticket)).toBe(true);
+    expect(await remaining()).toBe(8);
+    const earned = await db
+      .select()
+      .from(settlementEntries)
+      .where(eq(settlementEntries.bookingId, first.id));
+    expect(earned).toEqual([
+      expect.objectContaining({ kind: 'booking', gross: '4.00', collectedBy: 'platform' }),
+    ]);
+    // One booking per departure; the other direction works too.
+    expect(reason(await book(going, a, b, tomorrow, ['3']).expect(409))).toBe(
+      'TRIP_PACK_ONE_PER_DEPARTURE',
+    );
+    await book(coming, b, a, tomorrow).expect(201);
+    // At most four upcoming bookings per pack.
+    await book(going, a, b, addDays(tomorrow, 1)).expect(201);
+    const fourth = (await book(going, a, b, addDays(tomorrow, 2)).expect(201)).body as Booking;
+    expect(reason(await book(going, a, b, addDays(tomorrow, 3)).expect(409))).toBe(
+      'TRIP_PACK_TOO_MANY_BOOKINGS',
+    );
+    expect(await remaining()).toBe(5);
+
+    // Cancelling 30 minutes or more before boarding gives the trips back and undoes the earning.
+    const quote = (booking: Booking) =>
+      http()
+        .get(`/api/v1/me/bookings/${booking.id}/cancellation`)
+        .set('Authorization', passenger.auth)
+        .expect(200)
+        .then((res) => res.body as CancellationQuote);
+    expect((await quote(first)).tripPack).toEqual({ code: bought.code, tripsBack: 2 });
+    await http()
+      .post(`/api/v1/me/bookings/${first.id}/cancel`)
+      .set('Authorization', passenger.auth)
+      .expect(200);
+    expect(await remaining()).toBe(7);
+    const entries = await db
+      .select()
+      .from(settlementEntries)
+      .where(eq(settlementEntries.bookingId, first.id));
+    expect(entries.find((e) => e.kind === 'cancellation')).toMatchObject({
+      gross: '-4.00',
+      earned: `-${entries.find((e) => e.kind === 'booking')!.earned}`,
+    });
+
+    // Later than that, the trip is lost and the operator keeps its fare.
+    await db
+      .update(bookings)
+      .set({ departsAt: sql`now() + interval '20 minutes'` })
+      .where(eq(bookings.id, fourth.id));
+    expect((await quote(fourth)).tripPack).toEqual({ code: bought.code, tripsBack: 0 });
+    await http()
+      .post(`/api/v1/me/bookings/${fourth.id}/cancel`)
+      .set('Authorization', passenger.auth)
+      .expect(200);
+    expect(await remaining()).toBe(7);
+
+    // Not enough trips left for the seats asked: nothing is spent.
+    await db.update(tripPacks).set({ remaining: 1 }).where(eq(tripPacks.id, bought.id));
+    expect(reason(await book(going, a, b, addDays(tomorrow, 4), ['1', '2']).expect(409))).toBe(
+      'TRIP_PACK_EXHAUSTED',
+    );
+    expect(await remaining()).toBe(1);
+    // The last trip empties the pack.
+    await book(going, a, b, addDays(tomorrow, 4)).expect(201);
+    expect(
+      (
+        (
+          await http()
+            .get(`/api/v1/me/trip-packs/${bought.id}`)
+            .set('Authorization', passenger.auth)
+            .expect(200)
+        ).body as TripPack
+      ).status,
+    ).toBe('exhausted');
   });
 });

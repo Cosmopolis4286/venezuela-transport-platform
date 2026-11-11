@@ -13,6 +13,15 @@ pull request.
 
 ### Agregado
 
+- **Reservar con un paquete de viajes**: en la app, "¿Cómo pagas?" ofrece los paquetes que sirven
+  para la salida; la reserva queda pagada al instante (un viaje por puesto). Hasta 4 reservas
+  futuras por paquete y una por salida. Cancelar hasta 30 minutos antes devuelve el viaje al
+  paquete. La empresa gana su tarifa normal del tramo; un administrador activa qué empresas
+  aceptan paquetes (Liquidaciones → empresa).
+
+### Cambiado
+
+- La búsqueda de salidas ya no muestra las que partieron (importa con salidas frecuentes).
 - **Paquetes de viajes (pantallas)**: en la app de pasajeros, **Paquetes de viajes** (desde el
   inicio suburbano y desde Mis viajes) para comprar, pagar y ver los paquetes; en el panel,
   **Paquetes** con el catálogo y las tasas de cambio de la plataforma. El panel de pago de la app

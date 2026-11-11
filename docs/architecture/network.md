@@ -62,7 +62,8 @@ pantallas se describen en [suburban.md](suburban.md#0-dos-servicios-que-se-encie
 **pública**; `mode` limita a un tipo de vehículo y cada salida trae su `mode`. La web y la app
 piden todas y filtran con pestañas **Todos · Bus · Taxi · Moto**, con cuántas salidas tiene cada
 una.
-Devuelve las salidas de horarios activos, en rutas activas de organizaciones activas, en las que
+Devuelve las salidas que todavía no partieron de la parada de abordaje (hoy, desde la hora
+actual), de horarios activos, en rutas activas de organizaciones activas, en las que
 `from` va antes que `to`, ordenadas por hora, con la tarifa de ese par (o `null`) y los puestos
 libres (`seatsAvailable`).
 

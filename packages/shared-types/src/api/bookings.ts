@@ -2,7 +2,7 @@ import { SHARED_MESSAGES } from '../i18n/shared-messages.js';
 import type { TripDriver, TripVehicle } from './dispatch.js';
 import type { IdentityDocumentType } from './onboarding.js';
 import type { LayoutSeat } from './fleet.js';
-import type { Currency, ServiceClass, StopSummary } from './network.js';
+import type { Currency, Service, ServiceClass, StopSummary, TransportMode } from './network.js';
 import type { Organization } from './organizations.js';
 import type { Payment } from './payments.js';
 import type { RefundTier } from './settlements.js';
@@ -46,6 +46,11 @@ export interface TripAvailability {
   fare: { amount: string; currency: Currency } | null;
   /** False once the departure has left or the hold window cannot fit. */
   bookable: boolean;
+  mode: TransportMode;
+  service: Service;
+  serviceAreaId: string | null;
+  /** The operator accepts trip packs (a platform admin enables it, ADR-028). */
+  acceptsTripPacks: boolean;
 }
 
 export interface PassengerInput {
@@ -63,6 +68,11 @@ export interface CreateBookingRequest {
   fromStopId: string;
   toStopId: string;
   passengers: PassengerInput[];
+  /**
+   * Pays with one of the passenger's trip packs: one trip per seat, and the booking is confirmed
+   * at once instead of held (ADR-028).
+   */
+  tripPackId?: string;
 }
 
 export interface BookingPassenger extends PassengerInput {
@@ -97,6 +107,8 @@ export interface Booking {
   expiresAt: string | null;
   /** The payment in progress, or the one that confirmed (or must be refunded for) the booking. */
   payment: Payment | null;
+  /** The trip pack it was paid with; null when paid with money. */
+  tripPack: { id: string; code: string } | null;
   /**
    * The operator's refund tiers in force now, so the passenger sees them before paying. The
    * exact amount is quoted at cancellation time (`GET /me/bookings/:id/cancellation`).

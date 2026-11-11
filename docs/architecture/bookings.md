@@ -34,6 +34,21 @@ Estados de una reserva: `held` (puestos apartados hasta `expiresAt`, esperando e
 - Un horario con viajes no se puede borrar (se pausa).
 - La búsqueda de salidas devuelve `seatsAvailable` por salida.
 
+## Reservas pagadas con un paquete de viajes
+
+`POST /bookings` con `tripPackId` paga con un paquete del pasajero (ADR-028): se gasta un viaje
+por puesto en la misma transacción que toma los puestos, y la reserva queda **confirmada** al
+instante, sin apartado ni pago. Debe coincidir con el paquete: tipo de vehículo, corredor, el
+tramo en cualquier sentido, una empresa que **acepta paquetes** (`organization_policies.
+accepts_trip_packs`, la activa un administrador) y una salida antes de que venza el paquete.
+Límites: 4 reservas futuras por paquete y una por salida. La empresa gana su tarifa normal menos
+su comisión, como si la plataforma hubiera cobrado el boleto.
+
+Cancelar hasta 30 minutos antes de abordar devuelve los viajes al paquete (si no venció) y deshace
+la ganancia de la empresa, comisión incluida; después, los viajes se pierden y la empresa conserva
+lo ganado. Si la empresa cancela la salida, los viajes vuelven al paquete y la empresa pierde lo
+ganado, como con un boleto pagado.
+
 ## Endpoints (`/api/v1`)
 
 | Método y ruta                                                              | Quién                                                                                  |

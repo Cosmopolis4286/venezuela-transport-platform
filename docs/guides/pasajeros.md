@@ -77,6 +77,10 @@ Tus paquetes**): varios viajes de un tramo, en bus, taxi o moto, por un precio f
   pago. Si no lo pagas en 24 horas, se anula.
 - **Vencen** (por defecto, 60 días después de pagarlos) y **no se devuelven**: los viajes que no
   uses se pierden.
+- Para usarlo, reserva como siempre: al llegar a los pasajeros, en **¿Cómo pagas?** aparece tu
+  paquete (si sirve para esa salida). La reserva queda pagada al instante. Puedes tener hasta 4
+  reservas futuras con un paquete, y una por salida.
+- Si cancelas hasta 30 minutos antes de abordar, el viaje vuelve a tu paquete; después, se pierde.
 
 ## 6. Pedir un taxi en el terminal
 

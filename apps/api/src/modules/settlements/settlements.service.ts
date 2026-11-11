@@ -226,7 +226,10 @@ export class SettlementsService {
       input.commissionRate === null ? null : normalizeRate(input.commissionRate);
     const refundTiers = input.refundTiers === null ? null : checkTiers(input.refundTiers);
     const [current] = await this.database.db
-      .select({ paymentCollection: organizationPolicies.paymentCollection })
+      .select({
+        paymentCollection: organizationPolicies.paymentCollection,
+        acceptsTripPacks: organizationPolicies.acceptsTripPacks,
+      })
       .from(organizationPolicies)
       .where(eq(organizationPolicies.organizationId, organizationId));
     // Stored only when the operator collects; null means the platform does.
@@ -236,7 +239,13 @@ export class SettlementsService {
         : input.paymentCollection === 'operator'
           ? 'operator'
           : null;
-    if (commissionRate === null && refundTiers === null && collection === null) {
+    const acceptsTripPacks = input.acceptsTripPacks ?? current?.acceptsTripPacks ?? false;
+    if (
+      commissionRate === null &&
+      refundTiers === null &&
+      collection === null &&
+      !acceptsTripPacks
+    ) {
       await this.database.db
         .delete(organizationPolicies)
         .where(eq(organizationPolicies.organizationId, organizationId));
@@ -245,6 +254,7 @@ export class SettlementsService {
         commissionRate,
         refundTiers,
         paymentCollection: collection,
+        acceptsTripPacks,
         updatedByUserId: auth.user.id,
       };
       await this.database.db
@@ -261,7 +271,12 @@ export class SettlementsService {
       targetType: 'organization',
       targetId: organizationId,
       ip: meta.ip,
-      metadata: { commissionRate, refundTiers, paymentCollection: collection ?? 'platform' },
+      metadata: {
+        commissionRate,
+        refundTiers,
+        paymentCollection: collection ?? 'platform',
+        acceptsTripPacks,
+      },
     });
     return this.settlement(organizationId);
   }
@@ -572,6 +587,7 @@ export class SettlementsService {
         refundTiers: own?.refundTiers ?? platform.refundTiers,
         refundTiersOverride: own?.refundTiers ?? null,
         suburbanRefundTiers: platform.suburbanRefundTiers,
+        acceptsTripPacks: own?.acceptsTripPacks ?? false,
         paymentCollection: own?.paymentCollection ?? 'platform',
         balances: CURRENCIES.flatMap((currency) => {
           const t = totals.get(`${organizationId}:${currency}`);

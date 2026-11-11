@@ -23,6 +23,7 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsNumber,
@@ -117,6 +118,14 @@ export class SetOrganizationPolicyDto implements SetOrganizationPolicyRequest {
   @IsOptional()
   @IsIn(PAYMENT_COLLECTIONS)
   paymentCollection?: PaymentCollection;
+
+  @ApiProperty({
+    required: false,
+    description: 'Its departures accept trip packs; omitted: unchanged',
+  })
+  @IsOptional()
+  @IsBoolean()
+  acceptsTripPacks?: boolean;
 }
 
 export class CreatePayoutDto implements CreatePayoutRequest {

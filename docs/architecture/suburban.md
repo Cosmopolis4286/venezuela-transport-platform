@@ -340,7 +340,7 @@ de paquetes por tramo y tipo de vehículo. Nada de esto queda en el código.
 5. ✅ **Tramos de reembolso suburbanos** con cuartos de hora y la regla de los 30 minutos.
 6. ✅ **Paquetes: catálogo y compra** (`trip_pack_products`, `trip_packs`, `payments` con
    `trip_pack_id`, empresas adheridas), con las pantallas de compra.
-7. **Paquetes: usarlos al reservar**, cancelaciones, libro de liquidaciones, avisos.
+7. ✅ **Paquetes: usarlos al reservar**, cancelaciones, libro de liquidaciones, avisos.
 8. **Reportes de paquetes** (sin devoluciones de paquetes: decidido).
 9. **Bajo demanda por tramo**: taxis y motos con tarifa fija, para ahora o para una hora, pagados
    con paquete.

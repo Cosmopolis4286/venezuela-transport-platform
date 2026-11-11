@@ -120,6 +120,12 @@ const es: SharedMessages = {
     LAST_SERVICE_ON: 'Debe quedar al menos un servicio encendido.',
     TRIP_PACK_NOT_FOR_SALE: 'Ese paquete ya no está a la venta.',
     TRIP_PACK_NOT_AWAITING_PAYMENT: 'Ese paquete ya no espera un pago.',
+    TRIP_PACK_NOT_VALID_HERE:
+      'Ese paquete no sirve para esta salida: revisa el tramo, el tipo de vehículo y la empresa.',
+    TRIP_PACK_EXHAUSTED: 'Al paquete no le quedan viajes suficientes o vence antes de esta salida.',
+    TRIP_PACK_TOO_MANY_BOOKINGS:
+      'Ya tienes 4 reservas futuras con ese paquete. Usa o cancela alguna antes de reservar otra.',
+    TRIP_PACK_ONE_PER_DEPARTURE: 'Ya tienes una reserva con ese paquete en esta salida.',
     APPLICATION_OPEN: 'Ya tienes una solicitud abierta.',
     APPLICATION_UNDER_REVIEW: 'Tu solicitud está en revisión y no se puede cambiar ahora.',
     APPLICATION_WRONG_STATUS: 'La solicitud no está esperando revisión.',
@@ -264,6 +270,14 @@ const en: SharedMessages = {
     LAST_SERVICE_ON: 'At least one service must stay on.',
     TRIP_PACK_NOT_FOR_SALE: 'That trip pack is no longer for sale.',
     TRIP_PACK_NOT_AWAITING_PAYMENT: 'That trip pack is no longer waiting for a payment.',
+    TRIP_PACK_NOT_VALID_HERE:
+      'That trip pack does not cover this departure: check the stretch, the vehicle and the company.',
+    TRIP_PACK_EXHAUSTED:
+      'The trip pack does not have enough trips left or expires before this departure.',
+    TRIP_PACK_TOO_MANY_BOOKINGS:
+      'You already have 4 upcoming bookings with that trip pack. Use or cancel one first.',
+    TRIP_PACK_ONE_PER_DEPARTURE:
+      'You already have a booking with that trip pack on this departure.',
     APPLICATION_OPEN: 'You already have an open application.',
     APPLICATION_UNDER_REVIEW: 'Your application is under review and cannot be changed now.',
     APPLICATION_WRONG_STATUS: 'The application is not waiting for review.',
@@ -409,6 +423,12 @@ const ptBR: SharedMessages = {
     LAST_SERVICE_ON: 'Pelo menos um serviço deve ficar ligado.',
     TRIP_PACK_NOT_FOR_SALE: 'Esse pacote não está mais à venda.',
     TRIP_PACK_NOT_AWAITING_PAYMENT: 'Esse pacote não espera mais um pagamento.',
+    TRIP_PACK_NOT_VALID_HERE:
+      'Esse pacote não serve para esta partida: verifique o trecho, o tipo de veículo e a empresa.',
+    TRIP_PACK_EXHAUSTED: 'O pacote não tem viagens suficientes ou vence antes desta partida.',
+    TRIP_PACK_TOO_MANY_BOOKINGS:
+      'Você já tem 4 reservas futuras com esse pacote. Use ou cancele alguma antes.',
+    TRIP_PACK_ONE_PER_DEPARTURE: 'Você já tem uma reserva com esse pacote nesta partida.',
     APPLICATION_OPEN: 'Você já tem uma solicitação aberta.',
     APPLICATION_UNDER_REVIEW: 'Sua solicitação está em análise e não pode ser alterada agora.',
     APPLICATION_WRONG_STATUS: 'A solicitação não está aguardando análise.',

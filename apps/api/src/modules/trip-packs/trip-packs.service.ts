@@ -9,7 +9,7 @@ import {
   type TripPackProduct,
   type TripPackProductInput,
 } from '@vtp/shared-types';
-import { and, asc, desc, eq, inArray, lt } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, inArray, lt, sql } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import {
   DatabaseService,
@@ -209,6 +209,61 @@ export class TripPacksService {
       .where(and(eq(tripPacks.id, packId), eq(tripPacks.status, 'pending_payment')))
       .returning();
     return row ?? null;
+  }
+
+  /**
+   * Spends `seats` trips of one of the user's active packs for a departure leaving at
+   * `departsAt`, atomically (two bookings never spend the same trip). Null when the pack has not
+   * enough trips left, is not active or expires before the departure.
+   */
+  async spend(
+    tx: Transaction,
+    userId: string,
+    packId: string,
+    seats: number,
+    departsAt: Date,
+  ): Promise<TripPackRow | null> {
+    const [row] = await tx
+      .update(tripPacks)
+      .set({
+        remaining: sql`${tripPacks.remaining} - ${seats}`,
+        status: sql`case when ${tripPacks.remaining} - ${seats} = 0 then 'exhausted'::trip_pack_status else 'active'::trip_pack_status end`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(tripPacks.id, packId),
+          eq(tripPacks.userId, userId),
+          eq(tripPacks.status, 'active'),
+          gte(tripPacks.remaining, seats),
+          gt(tripPacks.expiresAt, departsAt),
+        ),
+      )
+      .returning();
+    return row ?? null;
+  }
+
+  /**
+   * Gives `seats` trips back (a booking cancelled in time, or a departure the operator
+   * cancelled). Lost if the pack already expired. True when they went back.
+   */
+  async giveBack(tx: Transaction, packId: string, seats: number): Promise<boolean> {
+    const [row] = await tx
+      .update(tripPacks)
+      .set({
+        remaining: sql`least(${tripPacks.trips}, ${tripPacks.remaining} + ${seats})`,
+        status: 'active',
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(tripPacks.id, packId),
+          inArray(tripPacks.status, ['active', 'exhausted']),
+          gt(tripPacks.expiresAt, new Date()),
+        ),
+      )
+      .returning({ id: tripPacks.id });
+    return Boolean(row);
   }
 
   /** Gives a pack whose payment was rejected a fresh time to pay. */

@@ -88,6 +88,38 @@ export interface TripPack {
   createdAt: string;
 }
 
+/** Minutes before boarding until which a trip booked with a pack goes back to it if cancelled. */
+export const TRIP_PACK_RETURN_MINUTES = 30;
+
+/**
+ * Whether `pack` can pay for this departure: active with trips left, the same kind of vehicle and
+ * corridor, the stretch in either direction, an operator that accepts packs, and boarding before
+ * the pack expires. The API checks the same and the booking limits.
+ */
+export function packFits(
+  pack: Pick<TripPack, 'status' | 'remaining' | 'mode' | 'serviceArea' | 'stops' | 'expiresAt'>,
+  departure: {
+    mode: TransportMode;
+    serviceAreaId: string | null;
+    acceptsTripPacks: boolean;
+    from: { id: string };
+    to: { id: string };
+    departsAt: string;
+  },
+  seats = 1,
+): boolean {
+  return (
+    pack.status === 'active' &&
+    pack.remaining >= seats &&
+    departure.acceptsTripPacks &&
+    pack.mode === departure.mode &&
+    pack.serviceArea.id === departure.serviceAreaId &&
+    packCovers([pack.stops[0].id, pack.stops[1].id], departure.from.id, departure.to.id) &&
+    pack.expiresAt !== null &&
+    Date.parse(departure.departsAt) < Date.parse(pack.expiresAt)
+  );
+}
+
 /** `POST /me/trip-packs` */
 export interface BuyTripPackRequest {
   productId: string;

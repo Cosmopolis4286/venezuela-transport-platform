@@ -197,6 +197,13 @@
       "when": 1794174289582,
       "tag": "0027_trip_packs",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1794225433485,
+      "tag": "0028_trip_pack_bookings",
+      "breakpoints": true
     }
   ]
 }

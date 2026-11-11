@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  boolean,
   check,
   index,
   jsonb,
@@ -57,6 +58,8 @@ export const organizationPolicies = pgTable('organization_policies', {
   refundTiers: jsonb().$type<RefundTier[]>(),
   /** Null: the platform collects (ADR-027). */
   paymentCollection: paymentCollection(),
+  /** Its departures accept trip packs; the platform pays it its fare per trip used (ADR-028). */
+  acceptsTripPacks: boolean().notNull().default(false),
   updatedByUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
   ...timestamps,
 });

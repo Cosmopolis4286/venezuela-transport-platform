@@ -9,6 +9,7 @@ import {
   Screen,
   Segmented,
   Subheading,
+  useApi,
   useAuth,
   useCurrentUser,
   userMessage,
@@ -16,7 +17,9 @@ import {
 import {
   formatMoney,
   IDENTITY_DOCUMENT_TYPES,
+  packFits,
   type Booking,
+  type TripPack,
   type IdentityDocumentType,
   type PassengerInput,
 } from '@vtp/shared-types';
@@ -47,7 +50,24 @@ export default function PassengersScreen() {
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [payWith, setPayWith] = useState<string | null>(null);
+  // Trip packs only pay suburban departures of operators that accept them (ADR-028).
+  const packs = useApi<TripPack[]>(
+    trip?.service === 'suburban' && trip.acceptsTripPacks ? '/me/trip-packs' : null,
+  );
   if (!trip || !seats.length) return <Redirect href="/" />;
+  const usable = (packs.data ?? []).filter((pack) => packFits(pack, trip, seats.length));
+  // A pack that fits is the default: it is what the passenger bought it for.
+  const choice =
+    payWith && (payWith === 'money' || usable.some((p) => p.id === payWith))
+      ? payWith
+      : (usable[0]?.id ?? 'money');
+  const pack = usable.find((p) => p.id === choice) ?? null;
+  const total = formatMoney(
+    (Number(trip.fare!.amount) * passengers.length).toFixed(2),
+    trip.fare!.currency,
+    locale,
+  );
 
   const update = (index: number, patch: Partial<PassengerInput>) =>
     setPassengers((current) => current.map((p, i) => (i === index ? { ...p, ...patch } : p)));
@@ -66,6 +86,7 @@ export default function PassengersScreen() {
           fromStopId: trip.from.id,
           toStopId: trip.to.id,
           passengers,
+          ...(pack ? { tripPackId: pack.id } : {}),
         },
       });
       clear();
@@ -120,17 +141,27 @@ export default function PassengersScreen() {
           />
         </Card>
       ))}
-      <Body>
-        {t.passengers.total}:{' '}
-        {formatMoney(
-          (Number(trip.fare!.amount) * passengers.length).toFixed(2),
-          trip.fare!.currency,
-          locale,
-        )}
-      </Body>
+      {usable.length ? (
+        <Segmented
+          label={t.passengers.payHow}
+          options={[
+            ...usable.map((p) => ({
+              value: p.id,
+              label: t.passengers.payPack(p.code, p.remaining),
+            })),
+            { value: 'money', label: t.passengers.payMoney(total) },
+          ]}
+          value={choice}
+          onChange={setPayWith}
+        />
+      ) : (
+        <Body>
+          {t.passengers.total}: {total}
+        </Body>
+      )}
       {error ? <Banner tone="error">{error}</Banner> : null}
       <Button
-        title={t.passengers.hold}
+        title={pack ? t.passengers.bookWithPack : t.passengers.hold}
         loading={busy}
         disabled={!complete}
         onPress={() => void hold()}

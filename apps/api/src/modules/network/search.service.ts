@@ -126,8 +126,11 @@ export class SearchService {
           )
       ).map((t) => `${t.scheduleId}:${t.serviceDate}`),
     );
+    const now = Date.now();
     const departures: Departure[] = open.flatMap((row) =>
       occurrencesOn(date, row.schedule, row.fromOffset, row.toOffset)
+        // Departures that already left the boarding stop cannot be booked: not listed.
+        .filter((trip) => Date.parse(trip.departsAt) > now)
         .filter((trip) => !cancelled.has(`${row.schedule.id}:${trip.serviceDate}`))
         .map((trip) => ({
           scheduleId: row.schedule.id,
