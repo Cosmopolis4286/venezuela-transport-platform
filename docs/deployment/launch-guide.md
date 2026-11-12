@@ -61,7 +61,15 @@ En la web los pasajeros **buscan**; para comprar usan la app Android (o la taqui
 - En `/etc/vtp/api.env`: `MAIL_DELIVERY=smtp`, `OTP_DELIVERY=email`, `SMTP_HOST`, `SMTP_PORT`,
   `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` y `ALERT_EMAIL` (avisos de errores para ti). Vuelve a
   desplegar.
+- Soporte: instala **WhatsApp Business** (gratis) en un teléfono de la empresa y pon su número en
+  `SUPPORT_WHATSAPP` (`/etc/vtp/api.env`). La web y las apps muestran "Escríbenos por WhatsApp";
+  no se conecta nada al sistema (ver la nota de abajo).
 - **Comprobar:** regístrate en la web con un correo real y recibe el código.
+
+> **WhatsApp:** en la v1 solo es un enlace para hablar con soporte. Los códigos y avisos siguen
+> por correo. Las bibliotecas no oficiales (que imitan WhatsApp Web) violan las condiciones de
+> WhatsApp y el número puede ser bloqueado; la API oficial de Meta cobra por cada mensaje que la
+> empresa inicia. Se evaluará después del piloto.
 
 ## Paso 5. Copias de seguridad y monitoreo (técnico)
 

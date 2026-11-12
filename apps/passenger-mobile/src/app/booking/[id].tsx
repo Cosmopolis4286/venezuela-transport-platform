@@ -8,6 +8,7 @@ import {
   Row,
   Screen,
   Subheading,
+  SupportButton,
   useApi,
   useAuth,
   useColors,
@@ -221,6 +222,7 @@ export default function BookingScreen() {
         </Body>
       ) : null}
       <InvoicePanel booking={data} onChange={(b) => booking.mutate(b)} />
+      <SupportButton bookingCode={data.code} />
       {error ? <Banner tone="error">{error}</Banner> : null}
       {status === 'held' ? (
         <Button

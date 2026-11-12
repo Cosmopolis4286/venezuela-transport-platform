@@ -19,6 +19,7 @@ import {
   Row,
   Screen,
   Subheading,
+  SupportButton,
   formatDate,
   statusTone,
   useApi,
@@ -245,6 +246,7 @@ export default function Home() {
       <Button variant="secondary" title="Mis cobros" onPress={() => router.push('/earnings')} />
       <Button variant="secondary" title="Cerrar sesión" onPress={() => void signOut()} />
       <DeleteAccount />
+      <SupportButton />
     </Screen>
   );
 }

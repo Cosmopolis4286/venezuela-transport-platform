@@ -6,6 +6,7 @@ import {
   DeleteAccount,
   Heading,
   LanguagePicker,
+  SupportButton,
   Row,
   Screen,
   Subheading,
@@ -60,6 +61,7 @@ export default function Account() {
           void signOut();
         }}
       />
+      <SupportButton />
       <LanguagePicker />
       <DeleteAccount />
     </Screen>

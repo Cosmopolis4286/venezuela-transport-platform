@@ -33,6 +33,14 @@ describe('validateEnv', () => {
     expect(env.REDIS_URL).toBeUndefined();
   });
 
+  it('accepts an international support WhatsApp number and rejects anything else', () => {
+    expect(validateEnv({ ...valid, SUPPORT_WHATSAPP: '+58 412 123 4567' }).SUPPORT_WHATSAPP).toBe(
+      '+58 412 123 4567',
+    );
+    expect(validateEnv(valid).SUPPORT_WHATSAPP).toBe('');
+    expect(() => validateEnv({ ...valid, SUPPORT_WHATSAPP: '0412' })).toThrow(/SUPPORT_WHATSAPP/);
+  });
+
   it('parses the CORS allowlist', () => {
     const env = validateEnv({
       ...valid,
