@@ -14,9 +14,9 @@ cancela sola si el tiempo para pagar termina. Los puestos quedan libres.
 2.1. El pasajero puede cancelar una reserva pagada desde la aplicación **hasta que el autobús
 salga o algún pasajero de la reserva aborde**.
 
-2.2. El monto que se devuelve depende de cuántas horas antes de la hora de abordaje se cancela,
-según la política de la empresa de transporte. Si la empresa no fijó una propia, aplica la
-general:
+2.2. El monto que se devuelve depende de cuántas horas antes de la hora de abordaje se cancela.
+En las **rutas entre ciudades** (interurbanas) aplica la política de la empresa de transporte; si
+la empresa no fijó una propia, aplica la general:
 
 | Si cancela…                            | Se devuelve                                     |
 | -------------------------------------- | ----------------------------------------------- |
@@ -24,16 +24,41 @@ general:
 | Entre 48 y 2 horas antes               | **50 %** de lo pagado                           |
 | Con menos de 2 horas                   | Nada (el puesto queda libre para otro pasajero) |
 
+En las **rutas suburbanas** (dentro de un corredor) aplica, para todas las empresas, esta escala:
+
+| Si cancela…                            | Se devuelve                                     |
+| -------------------------------------- | ----------------------------------------------- |
+| Con **24 horas o más** de anticipación | **100 %** de lo pagado                          |
+| Entre 24 y 2 horas antes               | **75 %** de lo pagado                           |
+| Entre 2 horas y 30 minutos antes       | **50 %** de lo pagado                           |
+| Con menos de 30 minutos                | Nada (el puesto queda libre para otro pasajero) |
+
 2.3. La política aplicable se muestra en la reserva **antes de pagar**, y antes de confirmar la
 cancelación la aplicación indica el monto exacto que se devolverá.
 
 2.4. Se cancela la reserva completa (todos sus puestos). Para cambiar de fecha u horario, se
 cancela la reserva con el reembolso que corresponda y se compra otra.
 
+2.5. **Reservas pagadas con un paquete de viajes.** Si se cancelan con **30 minutos o más** antes
+de la hora de abordaje, cada viaje vuelve al paquete (si el paquete no venció). Con menos de 30
+minutos, el viaje se pierde. No se devuelve dinero por estas reservas.
+
 ## 3. Si la empresa cancela la salida
 
 Si la empresa de transporte cancela la salida, cada pasajero recibe un aviso con el motivo y el
-**reembolso completo** de lo que pagó, sin importar con cuánta anticipación ocurra.
+**reembolso completo** de lo que pagó, sin importar con cuánta anticipación ocurra. Si la reserva
+se pagó con un paquete, los viajes vuelven al paquete.
+
+## 3A. Paquetes de viajes
+
+3A.1. Un paquete de viajes **no se reembolsa** una vez activado, ni en todo ni en parte, salvo lo
+que disponga la ley. Los viajes sin usar se pierden al vencer el paquete.
+
+3A.2. Si el pago de un paquete llega cuando el paquete ya no puede activarse (por ejemplo, porque
+venció el plazo para pagarlo), se devuelve **todo lo recibido**, como en la sección 4.
+
+3A.3. Si {{nombre_comercial}} deja de vender un servicio o un corredor, los paquetes ya comprados
+siguen valiendo hasta su vencimiento.
 
 ## 4. Pagos que no confirmaron una reserva
 
@@ -55,10 +80,25 @@ que corresponda). Las comisiones que cobre el banco o la red del pasajero no son
 5.4. En USDT, el reembolso se envía por la misma red; el pasajero debe indicar una dirección
 válida en esa red si la de origen no admite devoluciones.
 
-## 6. Taxis
+## 6. Taxis y mototaxis
 
-Hoy el taxi se paga directamente al conductor, por lo que no hay reembolsos por la Plataforma. La
-solicitud se puede cancelar sin costo mientras el pasajero no haya subido al vehículo.
+6.1. El taxi o la moto se paga directamente al conductor, por lo que no hay reembolsos de dinero
+por la Plataforma.
+
+6.2. **Taxis de terminal:** la solicitud se puede cancelar sin costo mientras el pasajero no haya
+subido al vehículo.
+
+6.3. **Taxis y mototaxis por tramo:** cancelar es gratis mientras ninguna línea haya aceptado el
+viaje, durante los primeros minutos después de que lo acepta (hoy, 3) y, en un viaje para una hora
+determinada, hasta 30 minutos antes de esa hora. Después, y mientras el pasajero no haya subido,
+cancelar cuesta una **tasa** (hoy, el 50 % de la tarifa de la línea), que el pasajero paga en
+efectivo al conductor de su siguiente viaje de taxi o moto pedido por la Plataforma, además de la
+tarifa. La tasa compensa a la línea que salió a buscarlo. La Plataforma muestra hasta cuándo se
+cancela gratis, el monto de la tasa antes de cancelar y las tasas pendientes antes de pedir otro
+viaje.
+
+6.4. Si el viaje se pagó con un paquete, el viaje vuelve al paquete cuando nadie lo acepta o
+cuando el pasajero lo cancela, aunque deba la tasa de la sección 6.3.
 
 ## 7. Reclamos
 

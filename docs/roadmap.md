@@ -60,12 +60,11 @@ En orden; cada uno es un pull request.
 1. ⏭️ **Despliegue de prueba**: servidor, dominio, HTTPS y copias de seguridad
    ([preparación del VPS](deployment/vps-preparation.md)), con la cuenta SMTP y el proyecto de EAS.
    Necesita las decisiones de la tabla de abajo (tiene costo).
-2. **Transporte suburbano y paquetes de viajes** (Casacoima – San Félix – Puerto Ordaz; ADR-028),
-   en los pull requests del [plan](architecture/suburban.md#plan-por-pull-requests): tipo de
-   vehículo (listo), servicios interurbano y suburbano que se encienden por corredor (ADR-029),
-   líneas de mototaxis, horarios por frecuencia, tramos de reembolso suburbanos (listo),
-   paquetes (compra, uso, devolución), taxis y motos bajo demanda por tramo con tarifa fija, y los
-   textos legales.
+2. ✅ **Transporte suburbano y paquetes de viajes** (Casacoima – San Félix – Puerto Ordaz;
+   ADR-028/029/030), según el [plan](architecture/suburban.md#plan-por-pull-requests): tipo de
+   vehículo, servicios que se encienden por corredor, líneas de mototaxis, horarios por
+   frecuencia, tramos de reembolso suburbanos, paquetes, taxis y motos bajo demanda por tramo con
+   tasa de cancelación, y los textos legales (pendientes de revisión de un abogado).
 3. **Cobro de los taxis en la app**, si se decide (los paquetes ya lo cubren para el suburbano).
 
 ## Pendientes menores

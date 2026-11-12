@@ -13,6 +13,11 @@ pull request.
 
 ### Agregado
 
+- **Textos legales del suburbano** (versión 2026-11-12, se pide aceptarlos de nuevo): servicios
+  interurbano y suburbano, paquetes de viajes (vigencia, uso, sin reembolso), escala de reembolso
+  suburbana, taxis y mototaxis por tramo con su tasa de cancelación, y en las condiciones para
+  empresas, paquetes aceptados, tarifas por tramo y compensación de las tasas. Siguen siendo
+  borradores para revisión de un abogado.
 - **Tasa por cancelar tarde un taxi o una moto por tramo** (ADR-030): gratis 3 minutos después de
   que una línea toma el viaje (y hasta 30 minutos antes de uno programado); después, el 50 % de la
   tarifa, que el pasajero paga en efectivo en su próximo viaje para la línea que salió (las

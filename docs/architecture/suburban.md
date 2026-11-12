@@ -321,9 +321,9 @@ y uno nuevo para paquetes).
 
 ## 7. Legal, datos personales y avisos
 
-- Condiciones de los paquetes (vigencia, uso por tramo, devoluciones escalonadas, cancelación
-  hasta 30 minutos antes) en los términos y la política de reembolsos de `docs/legal`. Es un
-  cambio importante: sube `version` y `LEGAL_VERSION`.
+- ✅ Condiciones de los paquetes (vigencia, uso por tramo, sin reembolso, cancelación hasta 30
+  minutos antes), tramos suburbanos y tasa de cancelación de taxis y motos en los términos, la
+  política de reembolsos y las condiciones para empresas de `docs/legal` (versión 2026-11-12).
 - Comprar paquetes es cobrar por servicios que prestan terceros: entra en la revisión legal
   pendiente del ADR-018.
 - `account-deletion.service.ts`: al borrar la cuenta se anonimiza el dueño de los paquetes (y se
@@ -353,5 +353,7 @@ de paquetes por tramo y tipo de vehículo. Nada de esto queda en el código.
 8. ✅ **Reportes de paquetes** (sin devoluciones de paquetes: decidido).
 9. ✅ **Bajo demanda por tramo**: taxis y motos con tarifa fija, para ahora o para una hora, pagados
    con paquete.
-10. **Legal**: condiciones de los paquetes, los tramos suburbanos en la política de cancelación y
-    reembolsos, y nueva versión de los documentos (una sola vez, para todo el suburbano).
+10. ✅ **Legal**: condiciones de los paquetes, los tramos suburbanos en la política de cancelación y
+    reembolsos, taxis y motos por tramo con su tasa de cancelación (ADR-030), y nueva versión de
+    los documentos (2026-11-12; una sola vez, para todo el suburbano). Sigue pendiente la revisión
+    de un abogado, como el resto de `docs/legal`.
