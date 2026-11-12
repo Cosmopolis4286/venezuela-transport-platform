@@ -90,7 +90,9 @@ subido al vehículo.
 
 6.3. **Taxis y mototaxis por tramo:** cancelar es gratis mientras ninguna línea haya aceptado el
 viaje, durante los primeros minutos después de que lo acepta (hoy, 3) y, en un viaje para una hora
-determinada, hasta 30 minutos antes de esa hora. Después, y mientras el pasajero no haya subido,
+determinada, hasta 30 minutos antes de esa hora. También es gratis si el conductor no lo recoge
+dentro de los 20 minutos siguientes a aceptar el viaje (o a la hora pedida). Fuera de esos casos, y
+mientras el pasajero no haya subido,
 cancelar cuesta una **tasa** (hoy, el 50 % de la tarifa de la línea), que el pasajero paga en
 efectivo al conductor de su siguiente viaje de taxi o moto pedido por la Plataforma, además de la
 tarifa. La tasa compensa a la línea que salió a buscarlo. La Plataforma muestra hasta cuándo se

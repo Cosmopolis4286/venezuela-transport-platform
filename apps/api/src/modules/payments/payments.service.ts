@@ -3,6 +3,7 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import {
   PAYMENT_METHOD_CURRENCY,
   PAYMENT_METHODS,
+  PLATFORM_RATE_MAX_HOURS,
   PAYMENT_REVIEW_HOLD_HOURS,
   longDate,
   paymentAccountProblem,
@@ -21,7 +22,7 @@ import {
   type TripPack,
   type Currency,
 } from '@vtp/shared-types';
-import { and, asc, eq, inArray, isNull, ne } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNull, ne } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { AppConfigService } from '../../config/app-config.service.js';
 import { DatabaseService } from '../../database/database.service.js';
@@ -952,7 +953,16 @@ export class PaymentsService {
     price: string;
     currency: Currency;
   }): Promise<PaymentOption[]> {
-    const rows = await this.database.db.select().from(platformExchangeRates);
+    // Only fresh rates: the bolívar moves fast, and the platform bears the loss of a stale one.
+    const rows = await this.database.db
+      .select()
+      .from(platformExchangeRates)
+      .where(
+        gt(
+          platformExchangeRates.updatedAt,
+          new Date(Date.now() - PLATFORM_RATE_MAX_HOURS * 3600_000),
+        ),
+      );
     return this.convertedOptions(pack.price, pack.currency, rows, null);
   }
 

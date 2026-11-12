@@ -55,6 +55,9 @@ export default function TaxiRideScreen() {
   const freeSecondsLeft = useSecondsLeft(
     data?.status === 'accepted' ? data.freeCancellationUntil : null,
   );
+  const lateSecondsLeft = useSecondsLeft(
+    data?.status === 'accepted' ? data.lateCancellationEndsAt : null,
+  );
   const feesDue = useFeeTotal(data?.feesDue ?? []);
   const lateFee = data?.lateCancellationFee
     ? formatMoney(data.lateCancellationFee.amount, data.lateCancellationFee.currency, locale)
@@ -154,8 +157,10 @@ export default function TaxiRideScreen() {
               <Body muted>
                 {t.ride.freeCancelUntil(networkClock(data.freeCancellationUntil), lateFee)}
               </Body>
-            ) : (
+            ) : lateSecondsLeft > 0 ? (
               <Banner tone="warning">{t.ride.lateCancel(lateFee)}</Banner>
+            ) : (
+              <Body muted>{t.ride.driverLate}</Body>
             )
           ) : null}
           {error ? <Banner tone="error">{error}</Banner> : null}

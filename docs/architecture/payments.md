@@ -44,7 +44,9 @@ Un pago es de una **reserva** o de un **paquete de viajes** (`payments.booking_i
 
 - siempre cobra la plataforma (`collector_organization_id` nulo) en sus cuentas;
 - el precio se convierte con las **tasas de la plataforma** (`platform_exchange_rates`, que fija
-  el administrador en `PUT /admin/exchange-rates`), no con las de una empresa;
+  el administrador en `PUT /admin/exchange-rates`), no con las de una empresa. Una tasa con más
+  de `PLATFORM_RATE_MAX_HOURS` (24) horas no se usa: ese medio de pago deja de ofrecerse hasta que
+  se guarde de nuevo, para no vender con una tasa vieja;
 - cuando llega el dinero, el paquete pasa a `active` y vence a los días de vigencia del producto;
   no se anota nada en el libro de liquidaciones (las empresas ganan cuando se usa cada viaje);
 - un paquete espera su pago 24 horas (`TRIP_PACK_LIMITS.paymentHours`); después se anula, salvo que

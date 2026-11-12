@@ -242,6 +242,7 @@ const es = {
       `Además de la tarifa, págale al conductor ${amount} de una cancelación anterior.`,
     freeCancelUntil: (time: string, fee: string) =>
       `Puedes cancelar sin costo hasta las ${time}. Después, cancelar cuesta ${fee}, que pagas en tu próximo viaje.`,
+    driverLate: 'El conductor todavía no llega: si lo necesitas, puedes cancelar sin costo.',
     lateCancel: (fee: string) =>
       `Si cancelas ahora, pagarás una tasa de ${fee} en tu próximo viaje de taxi o moto (si usaste un paquete, el viaje vuelve a él).`,
   },
@@ -517,6 +518,7 @@ const en: Messages = {
       `On top of the fare, pay the driver ${amount} for an earlier cancellation.`,
     freeCancelUntil: (time, fee) =>
       `You can cancel for free until ${time}. After that, cancelling costs ${fee}, paid on your next ride.`,
+    driverLate: 'The driver has not arrived yet: you can cancel for free if you need to.',
     lateCancel: (fee) =>
       `If you cancel now, you will pay a ${fee} fee on your next taxi or motorcycle ride (a trip paid with a pack goes back to it).`,
   },
@@ -794,6 +796,7 @@ const ptBR: Messages = {
       `Além da tarifa, pague ao motorista ${amount} de um cancelamento anterior.`,
     freeCancelUntil: (time, fee) =>
       `Você pode cancelar sem custo até ${time}. Depois, cancelar custa ${fee}, pago na sua próxima viagem.`,
+    driverLate: 'O motorista ainda não chegou: se precisar, você pode cancelar sem custo.',
     lateCancel: (fee) =>
       `Se cancelar agora, você pagará uma taxa de ${fee} na sua próxima viagem de táxi ou moto (se usou um pacote, a viagem volta para ele).`,
   },

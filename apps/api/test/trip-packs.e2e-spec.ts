@@ -26,6 +26,7 @@ import type { OtpMessage, OtpSender } from '../src/modules/identity/otp/otp-send
 import { bookings } from '../src/modules/bookings/bookings.schema.js';
 import { addDays, todayInVenezuela } from '../src/modules/network/departures.js';
 import { settlementEntries } from '../src/modules/settlements/settlements.schema.js';
+import { platformExchangeRates } from '../src/modules/payments/payments.schema.js';
 import { tripPacks } from '../src/modules/trip-packs/trip-packs.schema.js';
 
 const expectDatabase = process.env.E2E_EXPECT_DATABASE === 'true';
@@ -195,6 +196,18 @@ describe.runIf(expectDatabase)('Trip packs (e2e)', () => {
         expect.objectContaining({ method: 'pago_movil', amount: '600.00', currency: 'VES' }),
       ]),
     );
+    // A rate older than a day is not used: no payment in bolívares until it is saved again.
+    const rates = app.get(DatabaseService).db;
+    await rates
+      .update(platformExchangeRates)
+      .set({ updatedAt: new Date(Date.now() - 25 * 3600_000) })
+      .where(eq(platformExchangeRates.currency, 'VES'));
+    expect((await options()).map((o) => o.method)).not.toContain('pago_movil');
+    await rates
+      .update(platformExchangeRates)
+      .set({ updatedAt: new Date() })
+      .where(eq(platformExchangeRates.currency, 'VES'));
+    expect((await options()).map((o) => o.method)).toContain('pago_movil');
     const payment = (
       await http()
         .post(`/api/v1/me/trip-packs/${pack.id}/payments`)

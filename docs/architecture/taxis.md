@@ -124,6 +124,14 @@ días adelante):
   (debe solo la comisión); si la cobró otra, la primera gana la tasa menos su comisión (cobrada
   por la plataforma) y la segunda tiene una fila cobrada por ella sin ganancia, que le resta la
   tasa de su saldo.
+- **Si el conductor se retrasa**, cancelar vuelve a ser gratis: no hay tasa si no lo recogió
+  20 minutos después de tomarlo o de la hora pedida (`RIDE_PICKUP_GRACE_MINUTES`,
+  `lateCancellationEndsAt`). No hay estado "llegué": es la forma simple de no cobrarle al
+  pasajero cuando el conductor no aparece.
+- **Viajes abandonados**: un viaje tomado que no se recoge en 2 horas (desde que se tomó o desde la
+  hora pedida) se cancela solo, sin tasa y devolviendo los viajes del paquete; uno en curso que
+  no se termina en 6 horas se da por terminado (con su ganancia y sus tasas). Así el pasajero no
+  queda bloqueado (`RIDE_ABANDONED_HOURS`).
 - Si el pasajero no vuelve a pedir un viaje, la tasa queda pendiente (no hay cobro forzoso).
 
 | Método y ruta                                     | Quién                          |

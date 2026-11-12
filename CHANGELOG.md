@@ -13,6 +13,10 @@ pull request.
 
 ### Agregado
 
+- **Blindaje del suburbano para la primera versión**: sin tasa de cancelación si el conductor no
+  recoge al pasajero en 20 minutos; los viajes de taxi o moto abandonados se cierran solos (no
+  bloquean al pasajero y devuelven los viajes del paquete); los paquetes no se cobran en
+  bolívares con una tasa de la plataforma de más de 24 horas.
 - **Textos legales del suburbano** (versión 2026-11-12, se pide aceptarlos de nuevo): servicios
   interurbano y suburbano, paquetes de viajes (vigencia, uso, sin reembolso), escala de reembolso
   suburbana, taxis y mototaxis por tramo con su tasa de cancelación, y en las condiciones para

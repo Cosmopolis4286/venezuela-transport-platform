@@ -571,6 +571,9 @@ describe.runIf(expectDatabase)('On-demand stretch rides (e2e)', () => {
       expect(Date.parse(shown.freeCancellationUntil!) - Date.parse(shown.acceptedAt!)).toBe(
         3 * 60_000,
       );
+      expect(Date.parse(shown.lateCancellationEndsAt!) - Date.parse(shown.acceptedAt!)).toBe(
+        20 * 60_000,
+      );
       await cancel(quick.id);
       expect(await fees()).toEqual([]);
 
@@ -581,6 +584,26 @@ describe.runIf(expectDatabase)('On-demand stretch rides (e2e)', () => {
       await first.step(booked.id, 'accept');
       await takenAgo(booked.id, 10);
       await cancel(booked.id);
+      expect(await fees()).toEqual([]);
+
+      // --- The driver is late (not picked up 20 minutes after taking it): free again.
+      const slow = await ask();
+      await first.step(slow.id, 'accept');
+      await takenAgo(slow.id, 25);
+      expect((await cancel(slow.id)).status).toBe('cancelled');
+      expect(await fees()).toEqual([]);
+
+      // --- Taken and abandoned for hours: it closes on its own, so the passenger can ask again.
+      const abandoned = await ask();
+      await first.step(abandoned.id, 'accept');
+      await takenAgo(abandoned.id, 3 * 60);
+      const closed = (
+        await http()
+          .get(`/api/v1/me/taxi-rides/${abandoned.id}`)
+          .set('Authorization', rider.auth)
+          .expect(200)
+      ).body as TaxiRide;
+      expect(closed.status).toBe('cancelled');
       expect(await fees()).toEqual([]);
 
       // --- Later: 50 % of the line's fare, owed until the next ride.

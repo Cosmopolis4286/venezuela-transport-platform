@@ -76,6 +76,9 @@ Las horas aceptan cuartos: 0,5 son 30 minutos. Un cambio
 se aplica desde ese momento: las reservas ya pagadas conservan su comisión, y los tramos se leen
 al cancelar.
 
+**Tasas de cambio de los paquetes** (Paquetes de viajes): una tasa con más de 24 horas no se usa
+y el pago en bolívares deja de ofrecerse. Guárdalas al menos una vez al día, aunque no cambien.
+
 ### Una empresa
 
 Abre la empresa en la lista para:

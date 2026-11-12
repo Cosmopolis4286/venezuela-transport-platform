@@ -20,6 +20,12 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> =
 export const PAYMENT_CURRENCIES = ['VES', 'BRL', 'USDT'] as const;
 export type PaymentCurrency = (typeof PAYMENT_CURRENCIES)[number];
 
+/**
+ * The platform's rates (trip packs) older than this are not used: the method that needs one is
+ * not offered until an admin saves the rates again, so packs are never sold at a stale rate.
+ */
+export const PLATFORM_RATE_MAX_HOURS = 24;
+
 export const PAYMENT_METHOD_CURRENCY: Record<PaymentMethod, PaymentCurrency> = {
   pago_movil: 'VES',
   bank_transfer: 'VES',

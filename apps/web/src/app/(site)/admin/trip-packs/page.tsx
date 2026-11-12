@@ -2,7 +2,10 @@ import {
   CURRENCIES,
   DEFAULT_TRIP_PACK_VALIDITY_DAYS,
   formatMoney,
+  networkClock,
+  PLATFORM_RATE_MAX_HOURS,
   RATE_CURRENCIES,
+  toNetworkIso,
   TRANSPORT_MODE_LABELS,
   TRANSPORT_MODES,
   type ExchangeRate,
@@ -161,7 +164,12 @@ export default async function TripPacksPage() {
           <CardTitle>Tasas de cambio de la plataforma</CardTitle>
           <CardDescription>
             Convierten el precio de los paquetes al cobrar (las empresas tienen las suyas para sus
-            boletos). USDT se cobra 1:1 con el dólar. Sin tasa, ese medio de pago no se ofrece.
+            boletos). USDT se cobra 1:1 con el dólar. Sin tasa, o con una de más de{' '}
+            {PLATFORM_RATE_MAX_HOURS} horas, ese medio de pago no se ofrece: guárdalas al menos una
+            vez al día, aunque no cambien.
+            {rates.length
+              ? ` Última actualización: ${networkClock(rates[0]!.updatedAt)} del ${toNetworkIso(rates[0]!.updatedAt).slice(0, 10)}.`
+              : ''}
           </CardDescription>
         </div>
         <ActionForm action={savePlatformRates}>

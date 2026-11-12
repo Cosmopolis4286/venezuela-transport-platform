@@ -96,7 +96,8 @@ le pagas al conductor. Si nadie lo toma o lo cancelas, el viaje vuelve a tu paqu
 si lo pediste para más tarde, hasta 30 minutos antes de la hora. La app te muestra hasta qué hora.
 Después, cancelar cuesta una **tasa** (hoy el 50 % de la tarifa de la línea), que le pagas en
 efectivo al conductor de tu **próximo** viaje de taxi o moto, además de su tarifa; la app te la
-recuerda antes de pedir.
+recuerda antes de pedir. Si el conductor no llega 20 minutos después de tomar el viaje (o de la
+hora que pediste), puedes cancelar sin costo.
 
 ## 6. Pedir un taxi en el terminal
 

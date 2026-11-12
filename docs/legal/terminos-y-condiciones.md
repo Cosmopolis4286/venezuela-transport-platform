@@ -158,7 +158,9 @@ tramo:
 
 - es **gratis** durante los primeros minutos después de que una línea lo acepta (hoy, 3 minutos)
   y, en un viaje para una hora determinada, hasta 30 minutos antes de esa hora;
-- después, el pasajero debe una **tasa de cancelación** (hoy, el 50 % de la tarifa de la línea),
+- si el conductor no recoge al pasajero dentro de los 20 minutos siguientes a aceptar el viaje (o
+  a la hora pedida), cancelar vuelve a ser gratis;
+- fuera de esos casos, el pasajero debe una **tasa de cancelación** (hoy, el 50 % de la tarifa de la línea),
   para compensar a la línea que salió a buscarlo. La Plataforma muestra hasta qué hora se cancela
   gratis y el monto de la tasa antes de cancelar;
 - la tasa se paga **en efectivo al conductor del siguiente viaje** de taxi o moto que el

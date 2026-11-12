@@ -4,6 +4,8 @@ import {
   formatMoney,
   MAX_SCHEDULE_AHEAD_DAYS,
   packCovers,
+  RIDE_ABANDONED_HOURS,
+  RIDE_PICKUP_GRACE_MINUTES,
   TRIP_PACK_RETURN_MINUTES,
   rolesWith,
   TAXI_REQUEST_MINUTES,
@@ -92,6 +94,67 @@ export async function expireTaxiRequests(db: Database, now = new Date()) {
   for (const ride of expired) {
     if (ride.tripPackId) await giveTripsBack(db, ride.tripPackId, ride.passengers);
   }
+  await closeAbandonedRides(db, now);
+}
+
+/**
+ * Rides left open close on their own, so the passenger can ask for another: taken but never
+ * picked up are cancelled (free; pack trips go back), picked up but never completed are
+ * completed (as if the driver had pressed it).
+ */
+async function closeAbandonedRides(db: Database, now: Date) {
+  const hoursAgo = (hours: number) => new Date(now.getTime() - hours * 3600_000);
+  const notPickedUp = await db
+    .update(taxiRides)
+    .set({ status: 'cancelled', cancelledAt: now })
+    .where(
+      and(
+        eq(taxiRides.status, 'accepted'),
+        lte(
+          sql`greatest(${taxiRides.acceptedAt}, coalesce(${taxiRides.scheduledFor}, ${taxiRides.acceptedAt}))`,
+          hoursAgo(RIDE_ABANDONED_HOURS.accepted),
+        ),
+      ),
+    )
+    .returning({ tripPackId: taxiRides.tripPackId, passengers: taxiRides.passengers });
+  for (const ride of notPickedUp) {
+    if (ride.tripPackId) await giveTripsBack(db, ride.tripPackId, ride.passengers);
+  }
+  await db.transaction(async (tx) => {
+    const forgotten = await tx
+      .update(taxiRides)
+      .set({ status: 'completed', completedAt: now })
+      .where(
+        and(
+          eq(taxiRides.status, 'in_progress'),
+          lte(taxiRides.pickedUpAt, hoursAgo(RIDE_ABANDONED_HOURS.inProgress)),
+        ),
+      )
+      .returning();
+    for (const ride of forgotten) await settleCompletedRide(tx, ride, now);
+  });
+}
+
+/**
+ * What completing a ride settles: a ride paid with a pack earns the line its fare (ADR-028), and
+ * the driver collected the passenger's pending late-cancellation fees in cash (ADR-030).
+ */
+async function settleCompletedRide(tx: Transaction, ride: TaxiRideRow, now: Date) {
+  if (ride.tripPackId) {
+    await recordRideEarning(tx, {
+      id: ride.id,
+      organizationId: ride.organizationId!,
+      passengers: ride.passengers,
+      fareAmount: ride.fareAmount!,
+      fareCurrency: ride.fareCurrency!,
+    });
+  }
+  const charged = await tx
+    .update(rideCancellationFees)
+    .set({ chargedRideId: ride.id, chargedAt: now })
+    .where(dueOn(ride))
+    .returning();
+  for (const fee of charged) await recordRideFee(tx, fee, ride.organizationId!);
 }
 
 /** Trips back to a pack that has not expired; the same rule as `TripPacksService.giveBack`. */
@@ -694,25 +757,7 @@ export class TaxiService {
           ),
         )
         .returning();
-      // A ride paid with a pack earns the line its fare when it is done (ADR-028).
-      if (updated && step === 'complete' && updated.tripPackId) {
-        await recordRideEarning(tx, {
-          id: updated.id,
-          organizationId: updated.organizationId!,
-          passengers: updated.passengers,
-          fareAmount: updated.fareAmount!,
-          fareCurrency: updated.fareCurrency!,
-        });
-      }
-      // The driver collected the passenger's pending late-cancellation fees in cash.
-      if (updated && step === 'complete') {
-        const charged = await tx
-          .update(rideCancellationFees)
-          .set({ chargedRideId: updated.id, chargedAt: now })
-          .where(dueOn(updated))
-          .returning();
-        for (const fee of charged) await recordRideFee(tx, fee, updated.organizationId!);
-      }
+      if (updated && step === 'complete') await settleCompletedRide(tx, updated, now);
       return updated;
     });
     if (!row) {
@@ -1193,6 +1238,7 @@ export class TaxiService {
             : null,
         freeCancellationUntil: late ? new Date(late.from).toISOString() : null,
         lateCancellationFee: late?.fee ?? null,
+        lateCancellationEndsAt: late ? new Date(late.until).toISOString() : null,
         feesDue: feesDue(ride),
         organization: (ride.organizationId && line.get(ride.organizationId)) || null,
         driver: driver
@@ -1310,21 +1356,25 @@ const byName = (a: StopSummary, b: StopSummary) => a.name.localeCompare(b.name, 
 function lateWindowOf(
   ride: TaxiRideRow,
   policy: RideCancellationPolicy,
-): { from: number; fee: { amount: string; currency: Currency } } | null {
+): { from: number; until: number; fee: { amount: string; currency: Currency } } | null {
   if (ride.kind !== 'stretch' || ride.status !== 'accepted' || !ride.acceptedAt) return null;
   const amount = percentOf(ride.fareAmount!, policy.feePercent);
   if (toCents(amount) === 0) return null;
+  const taken = ride.acceptedAt.getTime();
+  const asked = ride.scheduledFor?.getTime() ?? 0;
   const from = Math.max(
-    ride.acceptedAt.getTime() + policy.freeMinutes * MINUTE_MS,
-    (ride.scheduledFor?.getTime() ?? 0) - TRIP_PACK_RETURN_MINUTES * MINUTE_MS,
+    taken + policy.freeMinutes * MINUTE_MS,
+    asked - TRIP_PACK_RETURN_MINUTES * MINUTE_MS,
   );
-  return { from, fee: { amount, currency: ride.fareCurrency! } };
+  // The driver should have picked the passenger up by then: later, cancelling is free again.
+  const until = Math.max(taken, asked) + RIDE_PICKUP_GRACE_MINUTES * MINUTE_MS;
+  return from < until ? { from, until, fee: { amount, currency: ride.fareCurrency! } } : null;
 }
 
 /** The fee owed for cancelling `ride` at `now`, or null when it is free. */
 function lateFeeOf(ride: TaxiRideRow, policy: RideCancellationPolicy, now: number) {
   const late = lateWindowOf(ride, policy);
-  return late && now >= late.from ? late.fee : null;
+  return late && now >= late.from && now < late.until ? late.fee : null;
 }
 
 const toCents = (amount: string) => Math.round(Number(amount) * 100);

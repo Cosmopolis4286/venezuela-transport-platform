@@ -111,6 +111,11 @@ export interface TaxiRide {
    */
   freeCancellationUntil: string | null;
   lateCancellationFee: { amount: string; currency: Currency } | null;
+  /**
+   * When the driver is late (no pickup by then), cancelling is free again; null with no fee.
+   * `RIDE_PICKUP_GRACE_MINUTES` after it was taken, or after the time asked.
+   */
+  lateCancellationEndsAt: string | null;
   /** Fees of earlier late cancellations the passenger pays the driver on this ride, in cash. */
   feesDue: { amount: string; currency: Currency }[];
   address: string;
@@ -243,6 +248,18 @@ export interface ReplaceTaxiTerminalsRequest {
 }
 
 /** What the passenger should do next, in `locale`. */
+/**
+ * A stretch ride a line took should be picked up within this many minutes of being taken (or of
+ * the time asked): later, the passenger cancels for free (the driver is late, ADR-030).
+ */
+export const RIDE_PICKUP_GRACE_MINUTES = 20;
+
+/**
+ * Rides left open (never picked up, or never completed) close on their own after these hours,
+ * so the passenger is not blocked from asking for another one.
+ */
+export const RIDE_ABANDONED_HOURS = { accepted: 2, inProgress: 6 } as const;
+
 export function taxiRideHint(
   ride: Pick<TaxiRide, 'status' | 'direction'> & { kind?: TaxiRideKind },
   locale: Locale = DEFAULT_LOCALE,
