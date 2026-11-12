@@ -21,6 +21,13 @@ También puedes buscar en la web: `/es/buscar` (o `/en`, `/pt-br`).
 
 Los puestos quedan apartados **15 minutos** mientras pagas. Si no pagas a tiempo, se liberan.
 
+### Rutas urbanas y suburbanas (boleto abierto)
+
+Si la ruta tiene salidas **cada pocos minutos**, el resultado dice "Cada N min, de 05:00 a 20:00 ·
+boleto abierto". No eliges puesto: indicas cuántos pasajeros, sus datos y pagas. El boleto sirve
+para **cualquier unidad de esa ruta ese día**, dentro del horario; muéstraselo al conductor al
+subir.
+
 ## 3. Pagar
 
 Elige cómo pagar: **pago móvil**, **transferencia** (en bolívares), **PIX** (en reales) o

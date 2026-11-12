@@ -52,6 +52,9 @@ const es = {
     seatsFree: (free: number, total: number) => `${free} de ${total} libres`,
     priceAtCounter: 'Precio en taquilla',
     chooseSeats: 'Elegir puestos',
+    frequency: (minutes: number, first: string, last: string) =>
+      `Cada ${minutes} min, de ${first} a ${last} · boleto abierto`,
+    buyTickets: 'Comprar boletos',
   },
   trip: {
     departed: 'Esta salida ya partió.',
@@ -62,9 +65,16 @@ const es = {
     continue: 'Continuar',
     signInToHold: 'Inicia sesión para apartar tus puestos.',
     signIn: 'Iniciar sesión',
+    openTicket: (first: string, last: string) =>
+      `Boleto abierto: sirve para cualquier unidad de esta ruta ese día, de ${first} a ${last}. No eliges puesto.`,
+    howMany: '¿Cuántos pasajeros?',
+    signInToBuy: 'Inicia sesión para comprar tus boletos.',
   },
   seats: (n: number) => plural(n, 'puesto', 'puestos'),
+  passengerCount: (n: number) => plural(n, 'pasajero', 'pasajeros'),
   seat: (number: string) => `Puesto ${number}`,
+  ticket: (number: string) => `Boleto ${number}`,
+  passengerN: (n: number) => `Pasajero ${n}`,
   dayOffset: (days: number) => ` (+${days} d)`,
   seatMap: {
     decks: ['Planta baja', 'Planta alta'],
@@ -87,6 +97,8 @@ const es = {
   booking: {
     code: 'Código de reserva',
     codeA11y: (code: string) => `Código ${code}`,
+    openTicket: (date: string, first: string, last: string) =>
+      `Boleto abierto para el ${date}: súbete a cualquier unidad de la ruta entre ${first} y ${last}.`,
     held: (clock: string) =>
       `Tus puestos están apartados por ${clock} minutos. Paga antes de que termine el tiempo.`,
     confirmed: 'Pago confirmado. Muestra el código QR de cada pasajero al abordar.',
@@ -267,6 +279,8 @@ const en: Messages = {
     seatsFree: (free, total) => `${free} of ${total} available`,
     priceAtCounter: 'Price at the ticket office',
     chooseSeats: 'Choose seats',
+    frequency: (minutes, first, last) => `Every ${minutes} min, ${first} to ${last} · open ticket`,
+    buyTickets: 'Buy tickets',
   },
   trip: {
     departed: 'This departure has already left.',
@@ -277,9 +291,16 @@ const en: Messages = {
     continue: 'Continue',
     signInToHold: 'Sign in to hold your seats.',
     signIn: 'Sign in',
+    openTicket: (first, last) =>
+      `Open ticket: valid on any unit of this route that day, from ${first} to ${last}. No seat to choose.`,
+    howMany: 'How many passengers?',
+    signInToBuy: 'Sign in to buy your tickets.',
   },
   seats: (n) => plural(n, 'seat', 'seats'),
+  passengerCount: (n) => plural(n, 'passenger', 'passengers'),
   seat: (number) => `Seat ${number}`,
+  ticket: (number) => `Ticket ${number}`,
+  passengerN: (n) => `Passenger ${n}`,
   dayOffset: (days) => ` (+${days} d)`,
   seatMap: {
     decks: ['Lower deck', 'Upper deck'],
@@ -302,6 +323,8 @@ const en: Messages = {
   booking: {
     code: 'Booking code',
     codeA11y: (code) => `Code ${code}`,
+    openTicket: (date, first, last) =>
+      `Open ticket for ${date}: board any unit of the route between ${first} and ${last}.`,
     held: (clock) => `Your seats are held for ${clock} minutes. Pay before the time runs out.`,
     confirmed: 'Payment confirmed. Show each passenger’s QR code when boarding.',
     expired: 'The time to pay ran out and the seats were released.',
@@ -475,6 +498,9 @@ const ptBR: Messages = {
     seatsFree: (free, total) => `${free} de ${total} livres`,
     priceAtCounter: 'Preço no guichê',
     chooseSeats: 'Escolher assentos',
+    frequency: (minutes, first, last) =>
+      `A cada ${minutes} min, das ${first} às ${last} · bilhete aberto`,
+    buyTickets: 'Comprar bilhetes',
   },
   trip: {
     departed: 'Esta partida já saiu.',
@@ -485,9 +511,16 @@ const ptBR: Messages = {
     continue: 'Continuar',
     signInToHold: 'Entre para reservar seus assentos.',
     signIn: 'Entrar',
+    openTicket: (first, last) =>
+      `Bilhete aberto: vale para qualquer veículo desta rota nesse dia, das ${first} às ${last}. Sem escolher assento.`,
+    howMany: 'Quantos passageiros?',
+    signInToBuy: 'Entre para comprar seus bilhetes.',
   },
   seats: (n) => plural(n, 'assento', 'assentos'),
+  passengerCount: (n) => plural(n, 'passageiro', 'passageiros'),
   seat: (number) => `Assento ${number}`,
+  ticket: (number) => `Bilhete ${number}`,
+  passengerN: (n) => `Passageiro ${n}`,
   dayOffset: (days) => ` (+${days} d)`,
   seatMap: {
     decks: ['Piso inferior', 'Piso superior'],
@@ -510,6 +543,8 @@ const ptBR: Messages = {
   booking: {
     code: 'Código da reserva',
     codeA11y: (code) => `Código ${code}`,
+    openTicket: (date, first, last) =>
+      `Bilhete aberto para ${date}: embarque em qualquer veículo da rota entre ${first} e ${last}.`,
     held: (clock) =>
       `Seus assentos estão reservados por ${clock} minutos. Pague antes que o tempo acabe.`,
     confirmed: 'Pagamento confirmado. Mostre o QR code de cada passageiro no embarque.',

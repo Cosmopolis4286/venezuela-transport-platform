@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { formatDuration, isTimeOfDay, runsRoutes, withServiceFee } from './network.js';
+import {
+  formatDuration,
+  frequencyRuns,
+  isTimeOfDay,
+  runsRoutes,
+  withServiceFee,
+} from './network.js';
 import { roleHasPermission } from './organizations.js';
 
 describe('network helpers', () => {
@@ -31,5 +37,14 @@ describe('withServiceFee', () => {
     expect(withServiceFee('25.00', '15.00')).toEqual({ fee: '3.75', total: '28.75' });
     expect(withServiceFee('10.10', '0.00')).toEqual({ fee: '0.00', total: '10.10' });
     expect(withServiceFee('0.10', '5.00')).toEqual({ fee: '0.01', total: '0.11' });
+  });
+});
+
+describe('frequencyRuns', () => {
+  it('counts the units of a frequency schedule, 1 for a single departure', () => {
+    expect(frequencyRuns('05:00', '20:00', 15)).toBe(61);
+    expect(frequencyRuns('05:00', '05:10', 15)).toBe(1);
+    expect(frequencyRuns('06:00', null, null)).toBe(1);
+    expect(frequencyRuns('20:00', '05:00', 15)).toBe(1);
   });
 });

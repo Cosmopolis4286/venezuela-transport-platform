@@ -78,15 +78,25 @@ function DepartureCard({ departure }: { departure: Departure }) {
   const extraDays = daysBetween(departure.departsAt, departure.arrivesAt);
   return (
     <Card>
-      <Row>
-        <Text style={{ color: colors.text, fontSize: 22, fontWeight: '700' }}>
-          {localTime(departure.departsAt)}
+      {departure.headwayMinutes && departure.lastDepartsAt ? (
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>
+          {t.results.frequency(
+            departure.headwayMinutes,
+            localTime(departure.departsAt),
+            localTime(departure.lastDepartsAt),
+          )}
         </Text>
-        <Body muted>
-          → {localTime(departure.arrivesAt)}
-          {extraDays ? t.dayOffset(extraDays) : ''} · {formatDuration(departure.durationMinutes)}
-        </Body>
-      </Row>
+      ) : (
+        <Row>
+          <Text style={{ color: colors.text, fontSize: 22, fontWeight: '700' }}>
+            {localTime(departure.departsAt)}
+          </Text>
+          <Body muted>
+            → {localTime(departure.arrivesAt)}
+            {extraDays ? t.dayOffset(extraDays) : ''} · {formatDuration(departure.durationMinutes)}
+          </Body>
+        </Row>
+      )}
       <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>
         {departure.operator.tradeName ?? departure.operator.legalName}
       </Text>
@@ -95,7 +105,11 @@ function DepartureCard({ departure }: { departure: Departure }) {
         {departure.operator.type === 'taxi_line' ? (
           <Badge label={shared.organizationType.taxi_line} />
         ) : null}
-        <Body muted>{t.results.seatsFree(departure.seatsAvailable, departure.seats)}</Body>
+        {departure.headwayMinutes ? (
+          <Body muted>{formatDuration(departure.durationMinutes)}</Body>
+        ) : (
+          <Body muted>{t.results.seatsFree(departure.seatsAvailable, departure.seats)}</Body>
+        )}
       </Row>
       <Body muted>
         {departure.from.name} → {departure.to.name}
@@ -111,7 +125,7 @@ function DepartureCard({ departure }: { departure: Departure }) {
       {departure.fare && departure.seatsAvailable > 0 ? (
         <Button
           variant="secondary"
-          title={t.results.chooseSeats}
+          title={departure.headwayMinutes ? t.results.buyTickets : t.results.chooseSeats}
           onPress={() =>
             router.push({
               pathname: '/trip',

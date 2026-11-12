@@ -49,10 +49,14 @@ export interface TripAvailability {
   serviceFeeRate: string;
   /** False once the departure has left or the hold window cannot fit. */
   bookable: boolean;
+  /** Frequency service: open tickets without seats (see `Departure`). */
+  headwayMinutes: number | null;
+  lastDepartsAt: string | null;
 }
 
 export interface PassengerInput {
-  seatNumber: string;
+  /** Omitted on frequency departures: the ticket is open and the API numbers it. */
+  seatNumber?: string;
   firstName: string;
   lastName: string;
   documentType: IdentityDocumentType;
@@ -69,6 +73,8 @@ export interface CreateBookingRequest {
 }
 
 export interface BookingPassenger extends PassengerInput {
+  /** The seat, or the ticket number of the day on an open ticket. */
+  seatNumber: string;
   /** Per passenger, in the fare's currency. */
   fare: string;
   /** Issued once the booking is confirmed. `qr` is the payload to render as a QR code. */
@@ -89,6 +95,11 @@ export interface Booking {
     serviceClass: ServiceClass;
     /** Set when the operator cancelled the whole departure (every passenger is refunded in full). */
     cancellation: { reason: string } | null;
+    /**
+     * Set on an open ticket (frequency service): valid on any unit of the route that day, from
+     * the booking's `departsAt` (first unit) to its `arrivesAt` (arrival of the last one).
+     */
+    headwayMinutes: number | null;
   };
   operator: Pick<Organization, 'id' | 'type' | 'legalName' | 'tradeName'>;
   route: { id: string; name: string };
@@ -162,6 +173,7 @@ export interface TripSummary {
 /** `GET /organizations/:id/trips/:tripId/manifest` — passenger list for boarding. */
 export interface TripManifest extends TripSummary {
   passengers: (PassengerInput & {
+    seatNumber: string;
     bookingCode: string;
     bookingStatus: BookingStatus;
     from: StopSummary;

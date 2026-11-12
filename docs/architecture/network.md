@@ -6,14 +6,14 @@ reservas, los puestos y el despacho se construyen sobre ella.
 
 ## Conceptos
 
-| Concepto    | Dueño                                 | Notas                                                                                                   |
-| ----------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| **Zona**    | Administradores de la plataforma      | Ciudad o región: estado (`active`, `coming_soon`, `paused`), moneda propuesta, comisión, centro y radio |
-| **Parada**  | Personal de la plataforma (catálogo)  | `terminal` o `stop` (parada en la vía); nombre, ciudad, estado, dirección opcional y un punto WGS 84    |
-| **Ruta**    | Empresa de autobuses o línea de taxis | Paradas ordenadas (2–40) con el tiempo de viaje desde el origen; `draft` → `active` ⇄ `inactive`        |
-| **Tarifa**  | Ruta                                  | Precio entre dos paradas en el orden del viaje, en `USD` o `VES`; puede haber pares sin tarifa          |
-| **Horario** | Ruta                                  | Salida recurrente desde el origen: hora local, días de la semana, fechas de vigencia, clase, puestos    |
-| **Salida**  | Se calcula, no se guarda              | Un horario en una fecha, visto desde la parada donde aborda el pasajero                                 |
+| Concepto    | Dueño                                 | Notas                                                                                                                                                                                |
+| ----------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Zona**    | Administradores de la plataforma      | Ciudad o región: estado (`active`, `coming_soon`, `paused`), moneda propuesta, comisión, centro y radio                                                                              |
+| **Parada**  | Personal de la plataforma (catálogo)  | `terminal` o `stop` (parada en la vía); nombre, ciudad, estado, dirección opcional y un punto WGS 84                                                                                 |
+| **Ruta**    | Empresa de autobuses o línea de taxis | Paradas ordenadas (2–40) con el tiempo de viaje desde el origen; `draft` → `active` ⇄ `inactive`                                                                                     |
+| **Tarifa**  | Ruta                                  | Precio entre dos paradas en el orden del viaje, en `USD` o `VES`; puede haber pares sin tarifa                                                                                       |
+| **Horario** | Ruta                                  | Salida recurrente desde el origen: hora local, días de la semana, fechas de vigencia, clase, puestos; o por frecuencia (cada N min hasta una última salida, boleto abierto, ADR-032) |
+| **Salida**  | Se calcula, no se guarda              | Un horario en una fecha, visto desde la parada donde aborda el pasajero                                                                                                              |
 
 - **Las paradas son compartidas.** Todas las empresas usan el mismo "Terminal La Bandera", así los
   pasajeros pueden buscar entre empresas. Las empresas le piden al personal de la plataforma las

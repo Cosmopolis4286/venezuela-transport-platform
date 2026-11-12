@@ -82,7 +82,7 @@ export const ROLE_PERMISSIONS: Record<OrganizationRole, readonly OrganizationPer
   ],
   dispatcher: ['members.view', 'operations.dispatch', 'bookings.view'],
   ticket_agent: ['tickets.sell', 'bookings.view'],
-  driver: ['trips.drive'],
+  driver: ['trips.drive', 'tickets.validate'],
   inspector: ['tickets.validate', 'bookings.view'],
 };
 

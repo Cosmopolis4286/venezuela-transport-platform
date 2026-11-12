@@ -21,7 +21,7 @@ const FARE_RULES = {
 };
 const SCHEDULE_RULES = {
   VALIDATION_FAILED:
-    'Revisa el horario: indica la hora, al menos un día, un mapa de puestos o entre 1 y 100 puestos, y que la fecha final no sea anterior a la inicial.',
+    'Revisa el horario: indica la hora, al menos un día, un mapa de puestos o entre 1 y 100 puestos, y que la fecha final no sea anterior a la inicial. Con frecuencia: entre 3 y 180 minutos y una última salida el mismo día, después de la primera.',
 };
 
 const routesPath = (form: FormData) =>
@@ -135,7 +135,12 @@ export async function addSchedule(_: FormState, form: FormData): Promise<FormSta
         validUntil: text(form, 'validUntil') || null,
         serviceClass: text(form, 'serviceClass'),
         seats: Number(text(form, 'seats')) || undefined,
-        seatLayoutId: text(form, 'seatLayoutId') || null,
+        // Frequency service: open tickets, so no seat map (ADR-032).
+        seatLayoutId: text(form, 'headwayMinutes') ? null : text(form, 'seatLayoutId') || null,
+        headwayMinutes: Number(text(form, 'headwayMinutes')) || null,
+        lastDepartureTime: text(form, 'headwayMinutes')
+          ? text(form, 'lastDepartureTime') || null
+          : null,
       },
     });
   } catch (error) {

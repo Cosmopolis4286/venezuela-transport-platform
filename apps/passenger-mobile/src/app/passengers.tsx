@@ -65,7 +65,10 @@ export default function PassengersScreen() {
           serviceDate: trip.serviceDate,
           fromStopId: trip.from.id,
           toStopId: trip.to.id,
-          passengers,
+          // Open tickets (empty seat) go without a seat: the API numbers them.
+          passengers: passengers.map(({ seatNumber, ...rest }) =>
+            seatNumber ? { seatNumber, ...rest } : rest,
+          ),
         },
       });
       clear();
@@ -89,8 +92,10 @@ export default function PassengersScreen() {
       <Heading>{t.passengers.heading}</Heading>
       <Body muted>{t.passengers.intro}</Body>
       {passengers.map((passenger, index) => (
-        <Card key={passenger.seatNumber}>
-          <Subheading>{t.seat(passenger.seatNumber)}</Subheading>
+        <Card key={passenger.seatNumber || `open-${index}`}>
+          <Subheading>
+            {passenger.seatNumber ? t.seat(passenger.seatNumber) : t.passengerN(index + 1)}
+          </Subheading>
           <Field
             label={t.passengers.firstNames}
             value={passenger.firstName}
@@ -111,7 +116,7 @@ export default function PassengersScreen() {
             onChange={(documentType) => update(index, { documentType })}
           />
           <Field
-            label={t.passengers.documentNumberFor(passenger.seatNumber)}
+            label={t.passengers.documentNumberFor(passenger.seatNumber || String(index + 1))}
             value={passenger.documentNumber}
             onChangeText={(documentNumber) => update(index, { documentNumber })}
             keyboardType={passenger.documentType === 'P' ? 'default' : 'number-pad'}

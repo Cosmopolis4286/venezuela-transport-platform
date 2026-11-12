@@ -1,0 +1,5 @@
+ALTER TABLE "route_schedules" ADD COLUMN "headway_minutes" smallint;--> statement-breakpoint
+ALTER TABLE "route_schedules" ADD COLUMN "last_departure_time" time;--> statement-breakpoint
+ALTER TABLE "bookings" ADD COLUMN "boarding_driver_user_id" uuid;--> statement-breakpoint
+ALTER TABLE "bookings" ADD CONSTRAINT "bookings_boarding_driver_user_id_users_id_fk" FOREIGN KEY ("boarding_driver_user_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "route_schedules" ADD CONSTRAINT "route_schedules_frequency_check" CHECK (("route_schedules"."headway_minutes" is null and "route_schedules"."last_departure_time" is null) or ("route_schedules"."headway_minutes" between 3 and 180 and "route_schedules"."last_departure_time" >= "route_schedules"."departure_time" and "route_schedules"."seat_layout_id" is null));

@@ -34,6 +34,21 @@ Estados de una reserva: `held` (puestos apartados hasta `expiresAt`, esperando e
 - Un horario con viajes no se puede borrar (se pausa).
 - La búsqueda de salidas devuelve `seatsAvailable` por salida.
 
+## Boleto abierto (servicio por frecuencia, ADR-032)
+
+- En un horario con `headwayMinutes` (una unidad cada N minutos hasta `lastDepartureTime`) el
+  pasajero no elige puesto: `POST /bookings` va **sin** `seatNumber` y la API asigna los números
+  libres más bajos del día (1, 2, 3…). Si dos compras numeran a la vez, la que choca se renumera.
+- Capacidad del día: puestos por unidad × unidades (`frequencyRuns`). La búsqueda y
+  `trips/availability` devuelven `headwayMinutes` y `lastDepartsAt`.
+- La reserva guarda `departsAt` = primera unidad y `arrivesAt` = llegada de la última: el boleto
+  se valida desde una hora antes de la primera hasta esa llegada. `Booking.trip.headwayMinutes`
+  indica que es abierto.
+- Se vende hasta que sale la última unidad del día. La cancelación usa la primera unidad como hora
+  de salida. No hay recordatorio de viaje.
+- Al validarlo, el primer conductor (o inspector) queda en `bookings.boarding_driver_user_id`; en
+  una ruta que le paga al conductor, ese es quien cobra (ADR-030).
+
 ## Endpoints (`/api/v1`)
 
 | Método y ruta                                                              | Quién                                                                                  |

@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import {
   CURRENCIES,
+  MAX_HEADWAY_MINUTES,
+  MIN_HEADWAY_MINUTES,
   ROUTE_STATUSES,
   SERVICE_CLASSES,
   STOP_KINDS,
@@ -233,6 +235,22 @@ export class ScheduleDto implements ScheduleInput {
   @IsOptional()
   @IsUUID()
   seatLayoutId?: string | null;
+
+  @ApiPropertyOptional({
+    example: 15,
+    nullable: true,
+    description: 'Frequency service: a unit every N minutes (open tickets, no seat map)',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(MIN_HEADWAY_MINUTES)
+  @Max(MAX_HEADWAY_MINUTES)
+  headwayMinutes?: number | null;
+
+  @ApiPropertyOptional({ example: '20:00', nullable: true, description: 'Last unit of the day' })
+  @IsOptional()
+  @Matches(TIME_OF_DAY, { message: 'lastDepartureTime must be HH:MM' })
+  lastDepartureTime?: string | null;
 
   @ApiPropertyOptional()
   @IsOptional()

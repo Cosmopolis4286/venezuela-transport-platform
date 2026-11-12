@@ -106,6 +106,11 @@ export const bookings = pgTable(
     confirmedAt: timestamp({ withTimezone: true }),
     cancelledAt: timestamp({ withTimezone: true }),
     /**
+     * Open tickets (frequency service): who validated it first. A route paid to drivers pays this
+     * driver, since the day's trip has many units (ADR-032).
+     */
+    boardingDriverUserId: uuid().references(() => users.id, { onDelete: 'restrict' }),
+    /**
      * Who the service-fee invoice is for when the passenger asked for another name (ADR-031);
      * null: the first passenger. `billingIdType` is V, E, J, G or P.
      */

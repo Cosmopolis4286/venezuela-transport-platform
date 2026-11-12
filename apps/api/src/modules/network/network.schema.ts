@@ -174,6 +174,9 @@ export const routeSchedules = pgTable(
     seats: integer().notNull(),
     /** When set, `seats` mirrors the layout's capacity. */
     seatLayoutId: uuid().references(() => seatLayouts.id, { onDelete: 'restrict' }),
+    /** Frequency service: a unit every N minutes until `lastDepartureTime` (open tickets). */
+    headwayMinutes: smallint(),
+    lastDepartureTime: time(),
     active: boolean().notNull().default(true),
     ...timestamps,
   },
@@ -183,6 +186,10 @@ export const routeSchedules = pgTable(
     check(
       'route_schedules_validity_check',
       sql`${t.validUntil} is null or ${t.validUntil} >= ${t.validFrom}`,
+    ),
+    check(
+      'route_schedules_frequency_check',
+      sql`(${t.headwayMinutes} is null and ${t.lastDepartureTime} is null) or (${t.headwayMinutes} between 3 and 180 and ${t.lastDepartureTime} >= ${t.departureTime} and ${t.seatLayoutId} is null)`,
     ),
   ],
 );

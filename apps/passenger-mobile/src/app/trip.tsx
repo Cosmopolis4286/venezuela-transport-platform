@@ -4,6 +4,7 @@ import {
   Button,
   Heading,
   Screen,
+  Segmented,
   Subheading,
   useApi,
   useAuth,
@@ -38,6 +39,7 @@ export default function TripScreen() {
   const colors = useColors();
   const { t, shared, locale } = useT();
   const [selected, setSelected] = useState<string[]>([]);
+  const [count, setCount] = useState('1');
   const query =
     from && to && scheduleId && serviceDate
       ? `/trips/availability?${new URLSearchParams({ scheduleId, serviceDate, from: from.id, to: to.id })}`
@@ -75,6 +77,74 @@ export default function TripScreen() {
           : [...current, seat],
     );
   const extraDays = daysBetween(data.departsAt, data.arrivesAt);
+
+  const open = data.headwayMinutes !== null && data.lastDepartsAt !== null;
+  const counts = Array.from(
+    { length: Math.min(MAX_SEATS_PER_BOOKING, Math.max(free, 0)) },
+    (_, i) => String(i + 1),
+  );
+  const signInPrompt = (
+    <>
+      <Banner tone="info">{open ? t.trip.signInToBuy : t.trip.signInToHold}</Banner>
+      <Button title={t.trip.signIn} variant="secondary" onPress={() => router.push('/sign-in')} />
+    </>
+  );
+
+  if (open) {
+    const passengers = Math.min(Number(count), counts.length);
+    return (
+      <Screen>
+        <Heading>{data.route.name}</Heading>
+        <Body muted>
+          {data.operator.tradeName ?? data.operator.legalName} · {longDate(data.departsAt, locale)}
+        </Body>
+        <Body muted>
+          {data.from.name} → {data.to.name}
+        </Body>
+        {!data.bookable ? (
+          <Banner tone="info">{data.fare ? t.trip.departed : t.trip.counterOnly}</Banner>
+        ) : (
+          <>
+            <Banner tone="info">
+              {t.trip.openTicket(localTime(data.departsAt), localTime(data.lastDepartsAt!))}
+            </Banner>
+            {counts.length ? (
+              <Segmented
+                label={t.trip.howMany}
+                options={counts.map((value) => ({ value, label: value }))}
+                value={String(passengers)}
+                onChange={setCount}
+              />
+            ) : null}
+            {passengers > 0 ? (
+              <PriceBreakdown
+                label={t.passengerCount(passengers)}
+                fares={(Number(data.fare!.amount) * passengers).toFixed(2)}
+                rate={data.serviceFeeRate}
+                currency={data.fare!.currency}
+              />
+            ) : null}
+            {state.status === 'signedIn' ? (
+              <Button
+                title={t.trip.continue}
+                disabled={passengers < 1}
+                onPress={() => {
+                  // Open tickets carry no seat: the API numbers them.
+                  draft.start(
+                    data,
+                    Array.from({ length: passengers }, () => ''),
+                  );
+                  router.push('/passengers');
+                }}
+              />
+            ) : (
+              signInPrompt
+            )}
+          </>
+        )}
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
@@ -114,14 +184,7 @@ export default function TripScreen() {
               }}
             />
           ) : (
-            <>
-              <Banner tone="info">{t.trip.signInToHold}</Banner>
-              <Button
-                title={t.trip.signIn}
-                variant="secondary"
-                onPress={() => router.push('/sign-in')}
-              />
-            </>
+            signInPrompt
           )}
         </>
       )}

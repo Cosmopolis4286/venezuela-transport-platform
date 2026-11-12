@@ -7,6 +7,8 @@ import {
   DAY_OF_WEEK_LABELS,
   ROUTE_STATUS_LABELS,
   SERVICE_CLASS_LABELS,
+  MAX_HEADWAY_MINUTES,
+  MIN_HEADWAY_MINUTES,
   SERVICE_CLASSES,
   formatDuration,
   type OrganizationMembershipSummary,
@@ -358,13 +360,17 @@ function Schedules({
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-medium">
-                    {schedule.departureTime} → {arrivalTime(schedule.departureTime)}
+                    {schedule.headwayMinutes
+                      ? `Cada ${schedule.headwayMinutes} min, de ${schedule.departureTime} a ${schedule.lastDepartureTime}`
+                      : `${schedule.departureTime} → ${arrivalTime(schedule.departureTime)}`}
                   </p>
+                  {schedule.headwayMinutes ? <Badge>Boleto abierto</Badge> : null}
                   <Badge variant="outline">{SERVICE_CLASS_LABELS[schedule.serviceClass]}</Badge>
                   {schedule.active ? null : <Badge variant="secondary">Inactivo</Badge>}
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {daysLabel(schedule.daysOfWeek)} · {schedule.seats} puestos
+                  {schedule.headwayMinutes ? ' por unidad' : ''}
                   {schedule.seatLayoutId ? ` (${layoutName(schedule.seatLayoutId)})` : ''} · desde{' '}
                   {schedule.validFrom}
                   {schedule.validUntil ? ` hasta ${schedule.validUntil}` : ''}
@@ -466,6 +472,22 @@ function AddSchedule({
           </Field>
           <Field label="Puestos" htmlFor="seats" hint="Solo si no eliges un mapa.">
             <Input id="seats" name="seats" type="number" min={1} max={100} />
+          </Field>
+          <Field
+            label="Frecuencia en minutos (opcional)"
+            htmlFor="headwayMinutes"
+            hint="Urbano o suburbano: sale una unidad cada N minutos y se vende boleto abierto, sin puesto ni mapa."
+          >
+            <Input
+              id="headwayMinutes"
+              name="headwayMinutes"
+              type="number"
+              min={MIN_HEADWAY_MINUTES}
+              max={MAX_HEADWAY_MINUTES}
+            />
+          </Field>
+          <Field label="Última salida" htmlFor="lastDepartureTime" hint="Solo con frecuencia.">
+            <Input id="lastDepartureTime" name="lastDepartureTime" type="time" />
           </Field>
           <Field label="Desde" htmlFor="validFrom">
             <Input id="validFrom" name="validFrom" type="date" required />
