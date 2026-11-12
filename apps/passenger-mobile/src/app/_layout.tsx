@@ -18,6 +18,8 @@ function RootNavigator() {
   const { t } = useT();
   const router = useRouter();
   const signedIn = state.status === 'signedIn';
+  // A guest (bought without registering) can still sign in or register: its trips come along.
+  const registered = signedIn && !state.user.guest;
   // A tapped notification opens the booking or taxi ride it is about.
   const openNotice = useCallback(
     (data: Record<string, unknown>) => {
@@ -46,7 +48,7 @@ function RootNavigator() {
         <Stack.Screen name="taxi/index" options={{ title: t.nav.taxiRequest }} />
         <Stack.Screen name="taxi/[id]" options={{ title: t.nav.taxiRide }} />
       </Stack.Protected>
-      <Stack.Protected guard={!signedIn}>
+      <Stack.Protected guard={!registered}>
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />
         <Stack.Screen name="register" options={{ headerShown: false }} />
       </Stack.Protected>

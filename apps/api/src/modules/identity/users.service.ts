@@ -177,6 +177,7 @@ export class UsersService {
       identityVerified: user.identityVerifiedAt !== null,
       platformRole: user.platformRole,
       termsVersion: user.termsVersion,
+      guest: user.guest,
       createdAt: user.createdAt.toISOString(),
     };
   }

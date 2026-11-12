@@ -6,11 +6,14 @@ import { AuditService } from '../audit/audit.service.js';
 import { AuthThrottle, CurrentAuth, ReqMeta } from './auth.decorators.js';
 import { AccountDeletionService } from './account-deletion.service.js';
 import { AuthService } from './auth.service.js';
+import { GuestService } from './guest.service.js';
 import {
   AcceptTermsDto,
+  ClaimGuestDto,
   ContactVerificationConfirmDto,
   OtpRequestDto,
   UpdateProfileDto,
+  UpgradeGuestDto,
 } from './dto/auth.dto.js';
 import type { Authenticated, RequestMeta } from './sessions.service.js';
 import { UsersService } from './users.service.js';
@@ -24,7 +27,32 @@ export class MeController {
     private readonly auth: AuthService,
     private readonly audit: AuditService,
     private readonly deletion: AccountDeletionService,
+    private readonly guests: GuestService,
   ) {}
+
+  /** A guest registers (e-mail and password) and keeps its trips (ADR-034). */
+  @Post('account')
+  @AuthThrottle()
+  @HttpCode(HttpStatus.OK)
+  upgradeGuest(
+    @CurrentAuth() auth: Authenticated,
+    @Body() body: UpgradeGuestDto,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<UserProfile> {
+    return this.guests.upgrade(auth, body, meta);
+  }
+
+  /** After signing in on a phone that bought as a guest: its trips move to this account. */
+  @Post('claim-guest')
+  @AuthThrottle()
+  @HttpCode(HttpStatus.OK)
+  claimGuest(
+    @CurrentAuth() auth: Authenticated,
+    @Body() body: ClaimGuestDto,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<{ bookings: number }> {
+    return this.guests.claim(auth, body.guestAccessToken, meta);
+  }
 
   /** Accepts the current Terms and Privacy Policy (after a new version is published). */
   @Post('terms')

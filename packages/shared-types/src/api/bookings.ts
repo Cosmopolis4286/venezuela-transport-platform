@@ -70,6 +70,8 @@ export interface CreateBookingRequest {
   fromStopId: string;
   toStopId: string;
   passengers: PassengerInput[];
+  /** Optional phone or WhatsApp to reach the buyer (guests have no e-mail). */
+  contactPhone?: string;
 }
 
 export interface BookingPassenger extends PassengerInput {
@@ -126,6 +128,8 @@ export interface Booking {
   refundPolicy: RefundTier[];
   /** Who the service-fee invoice is for, when the passenger asked for another name (ADR-031). */
   billing: InvoiceBuyer | null;
+  /** Phone or WhatsApp the buyer left to be reached. */
+  contactPhone: string | null;
   /** The platform's invoice for the service fee, once the booking is paid. */
   invoice: BookingInvoice | null;
   createdAt: string;

@@ -26,6 +26,11 @@ pull request.
 
 ### Agregado
 
+- **Comprar sin registrarse** (ADR-034): en la app de pasajeros, "Continuar sin crear cuenta"
+  guarda una cuenta de invitado en el teléfono con sus viajes y boletos. "Crear mi cuenta" la
+  convierte en cuenta normal sin perder nada, e iniciar sesión en una cuenta existente le pasa los
+  viajes. Teléfono o WhatsApp de contacto opcional al reservar (lo ve el soporte). Términos y
+  Privacidad actualizados (versión 2026-11-12: los usuarios aceptan de nuevo).
 - **Atención por WhatsApp**: búsqueda de reservas por código para el personal
   (`/admin/bookings`, auditada, con el contacto del cliente y enlace para escribirle), página
   `/es/app` con un enlace fijo de descarga de la app (`ANDROID_APP_URL`) y la

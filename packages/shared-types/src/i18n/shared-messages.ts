@@ -167,6 +167,9 @@ const es: SharedMessages = {
     INVOICE_NUMBER_TAKEN: 'Ya existe un documento con ese número o número de control.',
     PURCHASE_TAKEN: 'Esa factura de compra ya está registrada.',
     INVOICE_ALREADY_ISSUED: 'La factura ya fue emitida: no se puede cambiar a nombre de quién va.',
+    ACCOUNT_REQUIRED:
+      'Para esto necesitas crear tu cuenta (correo y contraseña). Tus viajes se conservan.',
+    NOT_A_GUEST: 'Esta cuenta ya está registrada.',
   },
 };
 
@@ -307,6 +310,9 @@ const en: SharedMessages = {
     INVOICE_NUMBER_TAKEN: 'A document with that number or control number already exists.',
     PURCHASE_TAKEN: 'That purchase invoice is already recorded.',
     INVOICE_ALREADY_ISSUED: 'The invoice was already issued: its name can no longer change.',
+    ACCOUNT_REQUIRED:
+      'For this you need to create your account (e-mail and password). Your trips are kept.',
+    NOT_A_GUEST: 'This account is already registered.',
   },
 };
 
@@ -447,6 +453,9 @@ const ptBR: SharedMessages = {
     INVOICE_NUMBER_TAKEN: 'Já existe um documento com esse número ou número de controle.',
     PURCHASE_TAKEN: 'Essa fatura de compra já está registrada.',
     INVOICE_ALREADY_ISSUED: 'A fatura já foi emitida: não é possível mudar o nome dela.',
+    ACCOUNT_REQUIRED:
+      'Para isso você precisa criar sua conta (e-mail e senha). Suas viagens são mantidas.',
+    NOT_A_GUEST: 'Esta conta já está registrada.',
   },
 };
 

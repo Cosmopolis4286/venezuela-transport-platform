@@ -34,9 +34,17 @@ estos Términos.
 
 ## 2. Cuentas
 
-2.1. Para reservar o pedir un taxi se necesita una cuenta. Se puede crear con un correo
-electrónico y contraseña, o entrando con un código de un solo uso enviado al correo (o, cuando
-esté disponible, por SMS o WhatsApp).
+2.1. Para reservar o pedir un taxi se puede usar una cuenta o **comprar sin registrarse**. La
+cuenta se crea con un correo electrónico y contraseña, o entrando con un código de un solo uso
+enviado al correo (o, cuando esté disponible, por SMS o WhatsApp).
+
+2.1.1. **Compra sin registro.** En la aplicación de pasajeros se puede reservar y pagar sin crear
+una cuenta: la aplicación guarda en ese teléfono una cuenta de invitado con sus viajes y boletos.
+Si el Usuario borra la aplicación, pierde o cambia el teléfono sin haber creado su cuenta, puede no
+recuperar el acceso a esos boletos desde la aplicación; podrá pedir ayuda a {{correo_soporte}} con
+el código de la reserva y el documento de los pasajeros. Al crear una cuenta o entrar con una
+existente desde ese teléfono, los viajes de invitado pasan a esa cuenta. Las cuentas de invitado
+que no compraron nada se eliminan al mes.
 
 2.2. Para crear una cuenta hay que ser **mayor de 18 años** y tener capacidad legal para
 contratar. Los niños, niñas y adolescentes pueden viajar como pasajeros en una reserva hecha por

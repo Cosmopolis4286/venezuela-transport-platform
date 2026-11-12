@@ -45,6 +45,7 @@ export default function PassengersScreen() {
       documentNumber: '',
     })),
   );
+  const [contactPhone, setContactPhone] = useState(user.phone ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   if (!trip || !seats.length) return <Redirect href="/" />;
@@ -69,6 +70,7 @@ export default function PassengersScreen() {
           passengers: passengers.map(({ seatNumber, ...rest }) =>
             seatNumber ? { seatNumber, ...rest } : rest,
           ),
+          ...(contactPhone.trim() ? { contactPhone: contactPhone.trim() } : {}),
         },
       });
       clear();
@@ -125,6 +127,14 @@ export default function PassengersScreen() {
           />
         </Card>
       ))}
+      <Field
+        label={t.passengers.contactPhone}
+        hint={t.passengers.contactHint}
+        value={contactPhone}
+        onChangeText={setContactPhone}
+        keyboardType="phone-pad"
+        maxLength={20}
+      />
       <PriceBreakdown
         label={t.passengers.total}
         fares={(Number(trip.fare!.amount) * passengers.length).toFixed(2)}

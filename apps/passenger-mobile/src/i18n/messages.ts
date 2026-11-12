@@ -65,6 +65,8 @@ const es = {
     continue: 'Continuar',
     signInToHold: 'Inicia sesión para apartar tus puestos.',
     signIn: 'Iniciar sesión',
+    continueNoAccount: 'Continuar sin crear cuenta',
+    haveAccount: '¿Ya tienes cuenta? Inicia sesión',
     openTicket: (first: string, last: string) =>
       `Boleto abierto: sirve para cualquier unidad de esta ruta ese día, de ${first} a ${last}. No eliges puesto.`,
     howMany: '¿Cuántos pasajeros?',
@@ -93,6 +95,8 @@ const es = {
     hold: 'Apartar puestos',
     notBookable: 'Esta salida ya no se puede reservar.',
     checkNames: 'Revisa los nombres y números de documento.',
+    contactPhone: 'Teléfono o WhatsApp (opcional)',
+    contactHint: 'Solo para avisarte si hay algún problema con tu viaje.',
   },
   booking: {
     code: 'Código de reserva',
@@ -191,6 +195,16 @@ const es = {
     unverified: 'Sin verificar',
     myTrips: 'Mis viajes',
     signOut: 'Cerrar sesión',
+    guestTitle: 'Estás usando la app sin cuenta',
+    guestIntro:
+      'Tus viajes y boletos quedan guardados en este teléfono. Si creas tu cuenta, no los pierdes aunque cambies de teléfono.',
+    createAccount: 'Crear mi cuenta',
+    firstName: 'Nombre',
+    lastName: 'Apellido',
+    email: 'Correo electrónico',
+    password: 'Contraseña (mínimo 10 caracteres)',
+    haveAccount: 'Ya tengo cuenta: iniciar sesión',
+    created: 'Listo: tu cuenta quedó creada y tus viajes siguen aquí.',
   },
   taxi: {
     heading: 'Taxi desde o hacia el terminal',
@@ -291,6 +305,8 @@ const en: Messages = {
     continue: 'Continue',
     signInToHold: 'Sign in to hold your seats.',
     signIn: 'Sign in',
+    continueNoAccount: 'Continue without an account',
+    haveAccount: 'Already have an account? Sign in',
     openTicket: (first, last) =>
       `Open ticket: valid on any unit of this route that day, from ${first} to ${last}. No seat to choose.`,
     howMany: 'How many passengers?',
@@ -319,6 +335,8 @@ const en: Messages = {
     hold: 'Hold seats',
     notBookable: 'This departure can no longer be booked.',
     checkNames: 'Check the names and ID numbers.',
+    contactPhone: 'Phone or WhatsApp (optional)',
+    contactHint: 'Only to reach you if there is a problem with your trip.',
   },
   booking: {
     code: 'Booking code',
@@ -412,6 +430,16 @@ const en: Messages = {
     unverified: 'Not verified',
     myTrips: 'My trips',
     signOut: 'Sign out',
+    guestTitle: 'You are using the app without an account',
+    guestIntro:
+      'Your trips and tickets are saved on this phone. Create your account so you keep them even if you change phones.',
+    createAccount: 'Create my account',
+    firstName: 'First name',
+    lastName: 'Last name',
+    email: 'E-mail',
+    password: 'Password (at least 10 characters)',
+    haveAccount: 'I already have an account: sign in',
+    created: 'Done: your account is ready and your trips are still here.',
   },
   taxi: {
     heading: 'Taxi to or from the terminal',
@@ -511,6 +539,8 @@ const ptBR: Messages = {
     continue: 'Continuar',
     signInToHold: 'Entre para reservar seus assentos.',
     signIn: 'Entrar',
+    continueNoAccount: 'Continuar sem criar conta',
+    haveAccount: 'Já tem conta? Entre',
     openTicket: (first, last) =>
       `Bilhete aberto: vale para qualquer veículo desta rota nesse dia, das ${first} às ${last}. Sem escolher assento.`,
     howMany: 'Quantos passageiros?',
@@ -539,6 +569,8 @@ const ptBR: Messages = {
     hold: 'Reservar assentos',
     notBookable: 'Esta partida não pode mais ser reservada.',
     checkNames: 'Confira os nomes e os números dos documentos.',
+    contactPhone: 'Telefone ou WhatsApp (opcional)',
+    contactHint: 'Só para avisar você se houver algum problema com sua viagem.',
   },
   booking: {
     code: 'Código da reserva',
@@ -634,6 +666,16 @@ const ptBR: Messages = {
     unverified: 'Não verificado',
     myTrips: 'Minhas viagens',
     signOut: 'Sair',
+    guestTitle: 'Você está usando o app sem conta',
+    guestIntro:
+      'Suas viagens e bilhetes ficam salvos neste telefone. Crie sua conta para não perdê-los se trocar de telefone.',
+    createAccount: 'Criar minha conta',
+    firstName: 'Nome',
+    lastName: 'Sobrenome',
+    email: 'E-mail',
+    password: 'Senha (mínimo 10 caracteres)',
+    haveAccount: 'Já tenho conta: entrar',
+    created: 'Pronto: sua conta foi criada e suas viagens continuam aqui.',
   },
   taxi: {
     heading: 'Táxi para ou do terminal',

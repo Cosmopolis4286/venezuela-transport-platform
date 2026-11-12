@@ -198,6 +198,7 @@ export class BookingsService {
               arrivesAt: new Date(context.occurrence.lastArrivesAt ?? context.occurrence.arrivesAt),
               fareAmount: fare.amount,
               totalAmount: total,
+              contactPhone: input.contactPhone?.replace(/[^\d+]/g, '') || null,
               serviceFee,
               serviceFeeRate,
               currency: fare.currency,
@@ -290,7 +291,7 @@ export class BookingsService {
       customer: {
         name: [row.user.firstName, row.user.lastName].filter(Boolean).join(' ') || null,
         email: row.user.email,
-        phone: row.user.phone,
+        phone: row.user.phone ?? row.booking.contactPhone,
       },
     };
   }
@@ -816,6 +817,7 @@ export class BookingsService {
         payment: payment ? toPayment(payment) : null,
         refundPolicy: refundPolicies.get(trip.operator.id) ?? [],
         billing: billingOf(booking),
+        contactPhone: booking.contactPhone,
         invoice: invoice
           ? {
               status: invoice.status,

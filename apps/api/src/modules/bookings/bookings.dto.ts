@@ -96,6 +96,14 @@ export class CreateBookingDto implements CreateBookingRequest {
   @ValidateNested({ each: true })
   @Type(() => PassengerDto)
   passengers!: PassengerDto[];
+
+  @ApiPropertyOptional({
+    example: '+58 412 123 4567',
+    description: 'Phone or WhatsApp to reach the buyer',
+  })
+  @IsOptional()
+  @Matches(/^[+\d\s().-]{7,20}$/, { message: 'contactPhone is not a valid phone number' })
+  contactPhone?: string;
 }
 
 export class TripsDateQueryDto {

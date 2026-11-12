@@ -7,6 +7,7 @@ import { AccountDeletionService } from './account-deletion.service.js';
 import { AuthController } from './auth.controller.js';
 import { AuthGuard } from './auth.guard.js';
 import { AuthService } from './auth.service.js';
+import { GuestService } from './guest.service.js';
 import { TokenService } from './crypto/token.service.js';
 import { MeController } from './me.controller.js';
 import { ConsoleOtpSender, DisabledOtpSender, OTP_SENDER } from './otp/otp-sender.js';
@@ -22,6 +23,7 @@ import { UsersService } from './users.service.js';
   providers: [
     AccountDeletionService,
     AuthService,
+    GuestService,
     UsersService,
     SessionsService,
     OtpService,

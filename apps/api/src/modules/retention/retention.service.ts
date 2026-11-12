@@ -10,7 +10,7 @@ import { AppConfigService } from '../../config/app-config.service.js';
 import { DatabaseService } from '../../database/database.service.js';
 import { FILE_STORAGE, type FileStorage } from '../../storage/file-storage.js';
 import { auditEvents } from '../audit/audit.schema.js';
-import { bookingPassengers } from '../bookings/bookings.schema.js';
+import { bookingPassengers, bookings } from '../bookings/bookings.schema.js';
 import { otpChallenges, sessions, users } from '../identity/identity.schema.js';
 import { notifications } from '../notifications/notifications.schema.js';
 import { applicationDocuments, applications } from '../onboarding/onboarding.schema.js';
@@ -32,6 +32,8 @@ export const RETENTION = {
   taxiRidesYears: 5,
   /** After the review of an application that no longer works (rejected, or account deleted). */
   kycYears: 5,
+  /** Guests that never bought nor asked for a taxi (ADR-034) are removed after a month. */
+  emptyGuestsDays: 30,
 } as const;
 
 export interface RetentionResult {
@@ -43,6 +45,7 @@ export interface RetentionResult {
   taxiRides: number;
   applications: number;
   files: number;
+  guests: number;
 }
 
 /**
@@ -130,7 +133,30 @@ export class RetentionService implements OnApplicationBootstrap, OnApplicationSh
       )
       .returning({ id: taxiRides.id });
 
+    // The buyer's contact phone goes with the passengers' data.
+    await db
+      .update(bookings)
+      .set({ contactPhone: null })
+      .where(
+        and(
+          lt(bookings.createdAt, yearsAgo(RETENTION.passengersYears)),
+          isNotNull(bookings.contactPhone),
+        ),
+      );
+
     const { applications: erased, files } = await this.eraseKyc(yearsAgo(RETENTION.kycYears));
+
+    const guests = await db
+      .delete(users)
+      .where(
+        and(
+          eq(users.guest, true),
+          lt(users.createdAt, daysAgo(RETENTION.emptyGuestsDays)),
+          sql`not exists (select 1 from ${bookings} where ${bookings.userId} = ${users.id})`,
+          sql`not exists (select 1 from ${taxiRides} where ${taxiRides.passengerUserId} = ${users.id})`,
+        ),
+      )
+      .returning({ id: users.id });
 
     return {
       otpChallenges: otp.length,
@@ -141,6 +167,7 @@ export class RetentionService implements OnApplicationBootstrap, OnApplicationSh
       taxiRides: rides.length,
       applications: erased,
       files,
+      guests: guests.length,
     };
   }
 

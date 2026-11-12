@@ -3,12 +3,14 @@ import {
   Body,
   Button,
   Heading,
+  LegalLinks,
   Screen,
   Segmented,
   Subheading,
   useApi,
   useAuth,
   useColors,
+  userMessage,
 } from '@vtp/mobile-core';
 import {
   daysBetween,
@@ -34,7 +36,9 @@ export default function TripScreen() {
     serviceDate: string;
   }>();
   const { from, to } = useSearch();
-  const { state } = useAuth();
+  const { state, continueAsGuest } = useAuth();
+  const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
   const draft = useBookingDraft();
   const colors = useColors();
   const { t, shared, locale } = useT();
@@ -83,10 +87,31 @@ export default function TripScreen() {
     { length: Math.min(MAX_SEATS_PER_BOOKING, Math.max(free, 0)) },
     (_, i) => String(i + 1),
   );
-  const signInPrompt = (
+  /**
+   * Not signed in: buy without an account (a guest kept on this phone, ADR-034) and go on with
+   * `next`; or sign in. Continuing accepts the Terms and Privacy Policy, as the line says.
+   */
+  const startWithout = (next: () => void) => (
     <>
-      <Banner tone="info">{open ? t.trip.signInToBuy : t.trip.signInToHold}</Banner>
-      <Button title={t.trip.signIn} variant="secondary" onPress={() => router.push('/sign-in')} />
+      <Button
+        title={t.trip.continueNoAccount}
+        loading={joining}
+        onPress={() => {
+          setJoining(true);
+          setJoinError(null);
+          continueAsGuest()
+            .then(next)
+            .catch((e: unknown) => setJoinError(userMessage(e)))
+            .finally(() => setJoining(false));
+        }}
+      />
+      <LegalLinks prefix="continue" />
+      {joinError ? <Banner tone="error">{joinError}</Banner> : null}
+      <Button
+        title={t.trip.haveAccount}
+        variant="secondary"
+        onPress={() => router.push('/sign-in')}
+      />
     </>
   );
 
@@ -137,9 +162,15 @@ export default function TripScreen() {
                   router.push('/passengers');
                 }}
               />
-            ) : (
-              signInPrompt
-            )}
+            ) : passengers > 0 ? (
+              startWithout(() => {
+                draft.start(
+                  data,
+                  Array.from({ length: passengers }, () => ''),
+                );
+                router.push('/passengers');
+              })
+            ) : null}
           </>
         )}
       </Screen>
@@ -183,8 +214,13 @@ export default function TripScreen() {
                 router.push('/passengers');
               }}
             />
+          ) : selected.length ? (
+            startWithout(() => {
+              draft.start(data, selected);
+              router.push('/passengers');
+            })
           ) : (
-            signInPrompt
+            <Body muted>{t.trip.chooseSeats}</Body>
           )}
         </>
       )}
