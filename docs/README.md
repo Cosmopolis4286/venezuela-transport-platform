@@ -7,6 +7,7 @@ Por dónde empezar según lo que necesites.
 - [Guía del pasajero](guides/pasajeros.md): comprar, pagar, cancelar, pedir un taxi.
 - [Guía para empresas](guides/empresas.md): portal, rutas, despacho, taxis, liquidaciones.
 - [Guía para conductores e inspectores](guides/conductores.md): app de transportistas.
+- [Guion del piloto suburbano](guides/piloto-suburbano.md): la prueba con gente real antes de abrir.
 - [Manual de administración](guides/administracion.md): revisiones, políticas, pagos a empresas,
   reembolsos.
 - [Glosario](glossary.md).
@@ -48,6 +49,7 @@ Por dónde empezar según lo que necesites.
 
 ## Despliegue
 
-- [Preparación del VPS](deployment/vps-preparation.md) · [Monitoreo](deployment/monitoring.md) ·
+- [Guía de lanzamiento de la v1](deployment/launch-guide.md) ·
+  [Preparación del VPS](deployment/vps-preparation.md) · [Monitoreo](deployment/monitoring.md) ·
   [Copias de seguridad](deployment/backups.md) ·
   [Revisión de seguridad](deployment/security-review.md)
