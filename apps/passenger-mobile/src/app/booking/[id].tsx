@@ -26,6 +26,7 @@ import {
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
+import { InvoicePanel } from '@/components/invoice-panel';
 import { PriceBreakdown } from '@/components/price-breakdown';
 import { PaymentPanel } from '@/components/payment-panel';
 import { QrCode } from '@/components/qr-code';
@@ -206,6 +207,7 @@ export default function BookingScreen() {
           )}
         </Body>
       ) : null}
+      <InvoicePanel booking={data} onChange={(b) => booking.mutate(b)} />
       {error ? <Banner tone="error">{error}</Banner> : null}
       {status === 'held' ? (
         <Button

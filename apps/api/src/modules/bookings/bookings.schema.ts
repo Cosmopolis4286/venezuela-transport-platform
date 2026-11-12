@@ -105,6 +105,14 @@ export const bookings = pgTable(
     expiresAt: timestamp({ withTimezone: true }),
     confirmedAt: timestamp({ withTimezone: true }),
     cancelledAt: timestamp({ withTimezone: true }),
+    /**
+     * Who the service-fee invoice is for when the passenger asked for another name (ADR-031);
+     * null: the first passenger. `billingIdType` is V, E, J, G or P.
+     */
+    billingName: text(),
+    billingIdType: text(),
+    billingIdNumber: text(),
+    billingAddress: text(),
     /** Set when the passenger got the trip reminder (notifications), so it is sent once. */
     reminderSentAt: timestamp({ withTimezone: true }),
     ...timestamps,

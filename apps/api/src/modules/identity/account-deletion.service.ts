@@ -126,6 +126,15 @@ export class AccountDeletionService {
       await tx.delete(pushDevices).where(eq(pushDevices.userId, userId));
       // Fiscal documents (`invoices`) keep the buyer's name and ID: the tax code requires keeping
       // issued invoices, and a paid booking's draft is issued all the same (ADR-031).
+      await tx
+        .update(bookings)
+        .set({
+          billingName: null,
+          billingIdType: null,
+          billingIdNumber: null,
+          billingAddress: null,
+        })
+        .where(eq(bookings.userId, userId));
       await tx.delete(memberships).where(eq(memberships.userId, userId));
       await tx
         .update(users)

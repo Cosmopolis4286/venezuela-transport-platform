@@ -1,3 +1,4 @@
+import type { InvoiceBuyer, InvoiceStatus } from './fiscal.js';
 import { SHARED_MESSAGES } from '../i18n/shared-messages.js';
 import type { TripDriver, TripVehicle } from './dispatch.js';
 import type { IdentityDocumentType } from './onboarding.js';
@@ -112,7 +113,27 @@ export interface Booking {
    * exact amount is quoted at cancellation time (`GET /me/bookings/:id/cancellation`).
    */
   refundPolicy: RefundTier[];
+  /** Who the service-fee invoice is for, when the passenger asked for another name (ADR-031). */
+  billing: InvoiceBuyer | null;
+  /** The platform's invoice for the service fee, once the booking is paid. */
+  invoice: BookingInvoice | null;
   createdAt: string;
+}
+
+export interface BookingInvoice {
+  status: InvoiceStatus;
+  /** Set when issued. */
+  number: string | null;
+  controlNumber: string | null;
+  issuedOn: string | null;
+}
+
+/**
+ * `PUT /me/bookings/:id/billing`: invoice the service fee to another name (or back to the first
+ * passenger with `null`), while the invoice is not issued yet.
+ */
+export interface SetBookingBillingRequest {
+  billing: InvoiceBuyer | null;
 }
 
 /** A trip as the operator sees it (`GET /organizations/:id/trips?date=`). */

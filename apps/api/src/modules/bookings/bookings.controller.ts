@@ -7,6 +7,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -28,6 +29,7 @@ import {
 } from '../organizations/organization-access.js';
 import {
   CreateBookingDto,
+  SetBookingBillingDto,
   TripQueryDto,
   TripsDateQueryDto,
   ValidateTicketDto,
@@ -84,6 +86,16 @@ export class BookingsController {
     @Param('bookingId', ParseUUIDPipe) bookingId: string,
   ): Promise<CancellationQuote> {
     return this.bookings.cancellationQuote(auth.user.id, bookingId);
+  }
+
+  @ApiBearerAuth()
+  @Put('me/bookings/:bookingId/billing')
+  billing(
+    @CurrentAuth() auth: Authenticated,
+    @Param('bookingId', ParseUUIDPipe) bookingId: string,
+    @Body() body: SetBookingBillingDto,
+  ): Promise<Booking> {
+    return this.bookings.setBilling(auth.user.id, bookingId, body.billing);
   }
 
   @ApiBearerAuth()

@@ -39,6 +39,14 @@ avisa y el dinero se te devuelve.
 Antes de pagar, la reserva muestra la **política de cancelación** de la empresa (cuánto se
 devuelve según cuántas horas antes canceles), para que la conozcas antes de comprar.
 
+### Factura del cargo por servicio
+
+La plataforma emite una factura por su **cargo por servicio**; el pasaje lo factura la empresa
+de transporte. Por defecto va a nombre del primer pasajero. En la reserva, **Factura a otro
+nombre** permite indicar otro nombre o razón social, cédula o RIF y domicilio fiscal (por ejemplo,
+para tu empresa), y **Volver al primer pasajero** lo deshace. Se puede cambiar hasta que la
+factura se emita; después la reserva muestra su número, número de control y fecha.
+
 > En los entornos de prueba los pagos son simulados: la app ofrece "Simular pago".
 
 ## 4. Viajar

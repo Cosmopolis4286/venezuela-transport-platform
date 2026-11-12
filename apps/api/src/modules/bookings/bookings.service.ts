@@ -1,6 +1,7 @@
 import { randomInt } from 'node:crypto';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
+  BUYER_ID_TYPES,
   formatPaymentAmount,
   MAX_SEATS_PER_BOOKING,
   TICKET_QR_PREFIX,
@@ -10,6 +11,7 @@ import {
   type CancelDepartureResult,
   type CancellationQuote,
   type CreateBookingRequest,
+  type InvoiceBuyer,
   type RefundTier,
   type TripManifest,
   type TripSummary,
@@ -24,7 +26,8 @@ import {
 } from '../../database/database.service.js';
 import { AppConfigService } from '../../config/app-config.service.js';
 import { AuditService } from '../audit/audit.service.js';
-import { correctFeeInvoice } from '../fiscal/fiscal-ledger.js';
+import { applyBilling, correctFeeInvoice } from '../fiscal/fiscal-ledger.js';
+import { invoices } from '../fiscal/fiscal.schema.js';
 import { vehicles } from '../fleet/fleet.schema.js';
 import { users } from '../identity/identity.schema.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
@@ -165,7 +168,7 @@ export class BookingsService {
           const valid = seatNumbersOf(trip);
           const unknown = seats.find((seat) => !valid.has(seat));
           if (unknown) throw invalid(`Seat ${unknown} does not exist on this vehicle`);
-          await expireHolds(tx, trip.id);
+          await expireHolds(tx, { tripId: trip.id });
 
           const [row] = await tx
             .insert(bookings)
@@ -221,7 +224,7 @@ export class BookingsService {
   }
 
   async listMine(userId: string): Promise<Booking[]> {
-    await expireHolds(this.database.db);
+    await expireHolds(this.database.db, { userId });
     const rows = await this.database.db
       .select()
       .from(bookings)
@@ -233,6 +236,32 @@ export class BookingsService {
 
   async getMine(userId: string, bookingId: string): Promise<Booking> {
     return (await this.toBookings([await this.requireMine(userId, bookingId)]))[0]!;
+  }
+
+  /**
+   * Who the service-fee invoice is for (ADR-031): another name, or `null` for the first passenger.
+   * Allowed until the invoice is issued.
+   */
+  async setBilling(
+    userId: string,
+    bookingId: string,
+    billing: InvoiceBuyer | null,
+  ): Promise<Booking> {
+    await this.requireMine(userId, bookingId);
+    await this.database.db.transaction(async (tx) => {
+      await tx
+        .update(bookings)
+        .set({
+          billingName: billing?.name.trim() ?? null,
+          billingIdType: billing?.idType ?? null,
+          billingIdNumber: billing?.idNumber.trim().toUpperCase() ?? null,
+          billingAddress: billing?.address?.trim() || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(bookings.id, bookingId));
+      await applyBilling(tx, bookingId);
+    });
+    return this.getMine(userId, bookingId);
   }
 
   /** What cancelling a paid booking now would refund, per the operator's policy (ADR-025). */
@@ -579,7 +608,7 @@ export class BookingsService {
   }
 
   private async requireMine(userId: string, bookingId: string): Promise<BookingRow> {
-    await expireHolds(this.database.db);
+    await expireHolds(this.database.db, { userId });
     const [booking] = await this.database.db
       .select()
       .from(bookings)
@@ -628,6 +657,24 @@ export class BookingsService {
     const stops = await this.stops.summaries([
       ...new Set(rows.flatMap((b) => [b.fromStopId, b.toStopId])),
     ]);
+    const feeInvoices = await this.database.db
+      .select({
+        bookingId: invoices.bookingId,
+        status: invoices.status,
+        number: invoices.number,
+        controlNumber: invoices.controlNumber,
+        issuedOn: invoices.issuedOn,
+      })
+      .from(invoices)
+      .where(
+        and(
+          inArray(
+            invoices.bookingId,
+            rows.map((b) => b.id),
+          ),
+          eq(invoices.reason, 'service_fee'),
+        ),
+      );
     const refundPolicies = new Map<string, RefundTier[]>();
     for (const operatorId of new Set(tripRows.map((t) => t.operator.id))) {
       refundPolicies.set(operatorId, (await policyFor(this.database.db, operatorId)).refundTiers);
@@ -638,6 +685,7 @@ export class BookingsService {
         booking.status === 'held',
       );
       const trip = tripRows.find((t) => t.trip.id === booking.tripId)!;
+      const invoice = feeInvoices.find((i) => i.bookingId === booking.id);
       return {
         id: booking.id,
         code: booking.code,
@@ -686,10 +734,30 @@ export class BookingsService {
           booking.status === 'held' && booking.expiresAt ? booking.expiresAt.toISOString() : null,
         payment: payment ? toPayment(payment) : null,
         refundPolicy: refundPolicies.get(trip.operator.id) ?? [],
+        billing: billingOf(booking),
+        invoice: invoice
+          ? {
+              status: invoice.status,
+              number: invoice.number,
+              controlNumber: invoice.controlNumber,
+              issuedOn: invoice.issuedOn,
+            }
+          : null,
         createdAt: booking.createdAt.toISOString(),
       };
     });
   }
+}
+
+function billingOf(booking: BookingRow): InvoiceBuyer | null {
+  const idType = BUYER_ID_TYPES.find((t) => t === booking.billingIdType);
+  if (!booking.billingName || !idType || !booking.billingIdNumber) return null;
+  return {
+    name: booking.billingName,
+    idType,
+    idNumber: booking.billingIdNumber,
+    address: booking.billingAddress,
+  };
 }
 
 export type SeatCount = { tripId: string; status: BookingRow['status']; seats: number };

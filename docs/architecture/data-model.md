@@ -33,7 +33,7 @@ PostgreSQL generados desde las listas de `@vtp/shared-types`.
 |                 | `vehicles`                       | Vehículos de cada empresa (placa, mapa de puestos, activo)                                                                                         |
 |                 | `vehicle_documents`              | Certificado de circulación, póliza y permiso de cada vehículo, con su vencimiento                                                                  |
 | `bookings`      | `trips`                          | Un horario en una fecha; se crea con la primera reserva, al asignar o al cancelarla (motivo)                                                       |
-|                 | `bookings`                       | Reservas: tramo, montos congelados, estado (`held`, `confirmed`, `cancelled`, `expired`), recordatorio enviado                                     |
+|                 | `bookings`                       | Reservas: tramo, montos congelados, estado (`held`, `confirmed`, `cancelled`, `expired`), recordatorio enviado, datos de facturación               |
 |                 | `booking_passengers`             | Un puesto por fila; un índice parcial único impide vender un puesto dos veces; abordaje                                                            |
 | `payments`      | `exchange_rates`                 | Tasas de cambio de cada empresa                                                                                                                    |
 |                 | `payments`                       | Intentos de pago con monto y tasa congelados, referencia, estado, número de operación informado y reembolso                                        |

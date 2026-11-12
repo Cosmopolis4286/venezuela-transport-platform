@@ -31,6 +31,16 @@ Código: `apps/api/src/modules/fiscal/`. Contratos: `packages/shared-types/src/a
 Se escriben dentro de la transacción del pago o de la cancelación (`fiscal-ledger.ts`) y hay un
 solo documento por reserva y motivo, aunque el proveedor avise dos veces.
 
+### A nombre de quién
+
+Por defecto, del primer pasajero. El pasajero puede pedirla a otro nombre desde la reserva
+(`PUT /me/bookings/:id/billing` con nombre, tipo y número de cédula o RIF y domicilio, o `null`
+para volver al primer pasajero): se guarda en la reserva (`bookings.billing_*`) y, si el borrador
+ya existe, lo actualiza. Una vez emitida la factura ya no cambia (`INVOICE_ALREADY_ISSUED`). La
+reserva muestra la factura (`Booking.invoice`: estado, número, control y fecha) y los datos de
+facturación (`Booking.billing`). Al borrar la cuenta se borran los datos de facturación de sus
+reservas; las facturas se conservan.
+
 ## Emitir
 
 `POST /api/v1/admin/fiscal/invoices/:id/issue`. Con `INVOICE_ISSUER=draft` (por defecto):

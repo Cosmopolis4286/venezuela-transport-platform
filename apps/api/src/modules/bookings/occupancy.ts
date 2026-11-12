@@ -28,8 +28,15 @@ export async function takenSeatCounts(
   return new Map(rows.map((r) => [`${r.scheduleId}:${r.serviceDate}`, r.taken]));
 }
 
-/** Releases the seats of holds that ran out (all trips, or one). Called before taking seats. */
-export async function expireHolds(db: Database | Transaction, tripId?: string): Promise<void> {
+/**
+ * Releases the seats of holds that ran out: of one trip before taking seats, or of one user before
+ * showing or paying their bookings (a request never touches other users' bookings). Seat counts
+ * already ignore holds past their time (`occupiesSeat`), so nothing waits for this to run.
+ */
+export async function expireHolds(
+  db: Database | Transaction,
+  scope: { tripId?: string; userId?: string } = {},
+): Promise<void> {
   const expired = await db
     .update(bookings)
     .set({ status: 'expired' })
@@ -37,7 +44,8 @@ export async function expireHolds(db: Database | Transaction, tripId?: string): 
       and(
         eq(bookings.status, 'held'),
         sql`${bookings.expiresAt} <= now()`,
-        tripId ? eq(bookings.tripId, tripId) : undefined,
+        scope.tripId ? eq(bookings.tripId, scope.tripId) : undefined,
+        scope.userId ? eq(bookings.userId, scope.userId) : undefined,
       ),
     )
     .returning({ id: bookings.id });
