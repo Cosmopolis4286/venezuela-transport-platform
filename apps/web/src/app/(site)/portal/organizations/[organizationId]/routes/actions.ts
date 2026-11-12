@@ -19,13 +19,9 @@ const STATUS_RULES = {};
 const FARE_RULES = {
   VALIDATION_FAILED: 'Revisa los precios: usa números mayores que cero, con hasta dos decimales.',
 };
-const SERIES_RULES = {
-  VALIDATION_FAILED:
-    'Revisa las salidas frecuentes: cada 5 a 240 minutos, al menos dos salidas antes de la hora final, al menos un día, y los puestos o el mapa.',
-};
 const SCHEDULE_RULES = {
   VALIDATION_FAILED:
-    'Revisa el horario: indica la hora, al menos un día, un mapa de puestos o entre 1 y 100 puestos, y que la fecha final no sea anterior a la inicial.',
+    'Revisa el horario: indica la hora, al menos un día, un mapa de puestos o entre 1 y 100 puestos, y que la fecha final no sea anterior a la inicial. Con frecuencia: entre 3 y 180 minutos y una última salida el mismo día, después de la primera.',
 };
 
 const routesPath = (form: FormData) =>
@@ -37,12 +33,8 @@ const routePath = (form: FormData) =>
 function routeBody(form: FormData) {
   const hours = form.getAll('hours').map(Number);
   const minutes = form.getAll('minutes').map(Number);
-  const service = text(form, 'service');
   return {
     name: text(form, 'name'),
-    // Only the new-route form sends these: the service and corridor never change afterwards.
-    ...(service ? { service } : {}),
-    ...(service === 'suburban' ? { serviceAreaId: text(form, 'serviceAreaId') } : {}),
     stops: form
       .getAll('stopId')
       .map(String)
@@ -71,6 +63,21 @@ export async function updateRoute(_: FormState, form: FormData): Promise<FormSta
   }
   refresh();
   return { success: 'Recorrido guardado.' };
+}
+
+/** Interurban or suburban, and who is paid (ADR-030); empty payee = the default for the scope. */
+export async function setRoutePayee(_: FormState, form: FormData): Promise<FormState> {
+  const payee = text(form, 'payeeOverride');
+  try {
+    await apiRequest(routePath(form), {
+      method: 'PATCH',
+      body: { scope: text(form, 'scope'), payeeOverride: payee || null },
+    });
+  } catch (error) {
+    return failure(error, ROUTE_RULES);
+  }
+  refresh();
+  return { success: 'Cobro guardado. Se aplica a las ventas desde ahora.' };
 }
 
 export async function changeRouteStatus(_: FormState, form: FormData): Promise<FormState> {
@@ -117,69 +124,30 @@ export async function saveFares(_: FormState, form: FormData): Promise<FormState
   return { success: 'Precios guardados.' };
 }
 
-/** One departure, or a frequency series when "repeat every" and "until" are filled in. */
 export async function addSchedule(_: FormState, form: FormData): Promise<FormState> {
-  const every = Number(text(form, 'everyMinutes'));
-  const until = text(form, 'lastDeparture');
-  const common = {
-    daysOfWeek: form.getAll('day').map(Number),
-    validFrom: text(form, 'validFrom'),
-    validUntil: text(form, 'validUntil') || null,
-    serviceClass: text(form, 'serviceClass'),
-    seats: Number(text(form, 'seats')) || undefined,
-    seatLayoutId: text(form, 'seatLayoutId') || null,
-  };
-  const series = Boolean(every || until);
   try {
-    if (series) {
-      if (!every || !until)
-        return { error: 'Para repetir, indica cada cuántos minutos y hasta qué hora.' };
-      await apiRequest(`${routePath(form)}/schedule-series`, {
-        method: 'POST',
-        body: {
-          ...common,
-          firstDeparture: text(form, 'departureTime'),
-          lastDeparture: until,
-          everyMinutes: every,
-        },
-      });
-    } else {
-      await apiRequest(`${routePath(form)}/schedules`, {
-        method: 'POST',
-        body: { ...common, departureTime: text(form, 'departureTime') },
-      });
-    }
+    await apiRequest(`${routePath(form)}/schedules`, {
+      method: 'POST',
+      body: {
+        departureTime: text(form, 'departureTime'),
+        daysOfWeek: form.getAll('day').map(Number),
+        validFrom: text(form, 'validFrom'),
+        validUntil: text(form, 'validUntil') || null,
+        serviceClass: text(form, 'serviceClass'),
+        seats: Number(text(form, 'seats')) || undefined,
+        // Frequency service: open tickets, so no seat map (ADR-032).
+        seatLayoutId: text(form, 'headwayMinutes') ? null : text(form, 'seatLayoutId') || null,
+        headwayMinutes: Number(text(form, 'headwayMinutes')) || null,
+        lastDepartureTime: text(form, 'headwayMinutes')
+          ? text(form, 'lastDepartureTime') || null
+          : null,
+      },
+    });
   } catch (error) {
-    return failure(error, series ? SERIES_RULES : SCHEDULE_RULES);
+    return failure(error, SCHEDULE_RULES);
   }
   refresh();
-  return { success: series ? 'Salidas frecuentes agregadas.' : 'Horario agregado.' };
-}
-
-export async function setSeriesActive(_: FormState, form: FormData): Promise<FormState> {
-  try {
-    await apiRequest(
-      `${routePath(form)}/schedule-series/${encodeURIComponent(text(form, 'seriesId'))}`,
-      { method: 'PATCH', body: { active: text(form, 'active') === 'true' } },
-    );
-  } catch (error) {
-    return failure(error);
-  }
-  refresh();
-  return {};
-}
-
-export async function deleteSeries(_: FormState, form: FormData): Promise<FormState> {
-  try {
-    await apiRequest(
-      `${routePath(form)}/schedule-series/${encodeURIComponent(text(form, 'seriesId'))}`,
-      { method: 'DELETE' },
-    );
-  } catch (error) {
-    return failure(error);
-  }
-  refresh();
-  return {};
+  return { success: 'Horario agregado.' };
 }
 
 export async function setScheduleLayout(_: FormState, form: FormData): Promise<FormState> {

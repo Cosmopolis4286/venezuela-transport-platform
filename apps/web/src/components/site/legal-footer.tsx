@@ -3,7 +3,16 @@ import Link from 'next/link';
 import type { Messages } from '@/i18n/messages';
 
 /** Links to the legal documents, at the bottom of every page. */
-export function LegalFooter({ segment, t }: { segment: string; t: Messages['legal'] }) {
+export function LegalFooter({
+  segment,
+  t,
+  support,
+}: {
+  segment: string;
+  t: Messages['legal'];
+  /** Rendered first, e.g. the WhatsApp support link. */
+  support?: React.ReactNode;
+}) {
   const links = [
     [LEGAL_PAGES.terms, t.terms],
     [LEGAL_PAGES.privacy, t.privacy],
@@ -17,6 +26,7 @@ export function LegalFooter({ segment, t }: { segment: string; t: Messages['lega
         aria-label={t.footer}
         className="mx-auto flex max-w-5xl flex-wrap gap-x-4 gap-y-2 px-6 py-6 text-sm text-muted-foreground"
       >
+        {support}
         {links.map(([slug, label]) => (
           <Link key={slug} href={`/${segment}/legal/${slug}`} className="hover:underline">
             {label}

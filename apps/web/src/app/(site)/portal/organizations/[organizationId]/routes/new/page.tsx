@@ -1,9 +1,4 @@
-import {
-  servicesFor,
-  type OrganizationMembershipSummary,
-  type ServiceArea,
-  type Stop,
-} from '@vtp/shared-types';
+import type { OrganizationMembershipSummary, Stop } from '@vtp/shared-types';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { RouteEditor } from '@/components/portal/route-editor';
@@ -23,10 +18,9 @@ export default function NewRoutePage({
 
 async function NewRoute({ params }: { params: Promise<{ organizationId: string }> }) {
   const { organizationId } = await params;
-  const [{ organization }, stops, areas] = await Promise.all([
+  const [{ organization }, stops] = await Promise.all([
     apiFetch<OrganizationMembershipSummary>(`/organizations/${encodeURIComponent(organizationId)}`),
     apiFetch<Stop[]>('/stops'),
-    apiFetch<ServiceArea[]>('/service-areas'),
   ]);
   return (
     <>
@@ -52,8 +46,6 @@ async function NewRoute({ params }: { params: Promise<{ organizationId: string }
           hidden={{ organizationId: organization.id }}
           stops={stops}
           submitLabel="Crear ruta"
-          services={servicesFor(organization.type)}
-          areas={areas.map((a) => ({ id: a.id, name: a.name, stopIds: a.stops.map((s) => s.id) }))}
         />
       </Card>
     </>

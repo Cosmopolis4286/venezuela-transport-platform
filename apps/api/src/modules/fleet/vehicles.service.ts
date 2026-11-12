@@ -1,6 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
-  modesFor,
   normalizePlate,
   plateProblem,
   runsRoutes,
@@ -29,8 +28,6 @@ import {
 import { FleetService } from './fleet.service.js';
 
 const notFound = () => new ApiException('NOT_FOUND', 'Vehicle not found', HttpStatus.NOT_FOUND);
-const motorcycleWithLayout = () =>
-  ApiException.conflict('A motorcycle has no seat map', 'MOTORCYCLE_ONE_PASSENGER');
 
 const isUniqueViolation = (error: unknown) => {
   const cause = (error as { cause?: { code?: string } }).cause ?? error;
@@ -130,24 +127,15 @@ export class VehiclesService {
   ): Promise<FleetVehicle> {
     if (!runsRoutes(access.organization.type)) {
       throw ApiException.conflict(
-        'Only bus companies, taxi lines and motorcycle taxi lines have vehicles',
+        'Only bus companies and taxi lines have vehicles',
         'ORGANIZATION_TYPE_NOT_ALLOWED',
       );
     }
-    const allowed = modesFor(access.organization.type);
-    const mode = input.mode ?? allowed[0]!;
-    if (!allowed.includes(mode)) {
-      throw ApiException.conflict(
-        'This organization does not run that kind of vehicle',
-        'TRANSPORT_MODE_NOT_ALLOWED',
-      );
-    }
-    if (mode === 'motorcycle' && input.seatLayoutId) throw motorcycleWithLayout();
     const values = await this.values(access.organization.id, input);
     const row = await this.save(() =>
       this.database.db
         .insert(vehicles)
-        .values({ plate: values.plate!, ...values, mode, organizationId: access.organization.id })
+        .values({ plate: values.plate!, ...values, organizationId: access.organization.id })
         .returning(),
     );
     await this.record('vehicle.created', row, actor, meta);
@@ -157,12 +145,11 @@ export class VehiclesService {
   async update(
     access: OrganizationAccess,
     vehicleId: string,
-    input: Partial<Omit<VehicleInput, 'mode'>>,
+    input: Partial<VehicleInput>,
     actor: Authenticated,
     meta: RequestMeta,
   ): Promise<FleetVehicle> {
-    const current = await this.require(access.organization.id, vehicleId);
-    if (current.mode === 'motorcycle' && input.seatLayoutId) throw motorcycleWithLayout();
+    await this.require(access.organization.id, vehicleId);
     const values = await this.values(access.organization.id, input);
     const row = await this.save(() =>
       this.database.db
@@ -192,7 +179,7 @@ export class VehiclesService {
   }
 
   /** Validated column values for the fields present in `input`. */
-  private async values(organizationId: string, input: Partial<Omit<VehicleInput, 'mode'>>) {
+  private async values(organizationId: string, input: Partial<VehicleInput>) {
     const values: Partial<Pick<VehicleRow, 'plate' | 'label' | 'seatLayoutId' | 'active'>> = {};
     if (input.plate !== undefined) {
       const problem = plateProblem(input.plate);
@@ -268,7 +255,6 @@ function toVehicle(
     organizationId: row.organizationId,
     plate: row.plate,
     label: row.label,
-    mode: row.mode,
     seatLayout: layout,
     active: row.active,
     documents,

@@ -1,19 +1,19 @@
 import { randomInt } from 'node:crypto';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
+  BUYER_ID_TYPES,
   formatPaymentAmount,
   MAX_SEATS_PER_BOOKING,
   TICKET_QR_PREFIX,
   toNetworkIso,
   refundPercentFor,
+  type AdminBookingLookup,
   type Booking,
   type CancelDepartureResult,
   type CancellationQuote,
   type CreateBookingRequest,
-  refundTiersForService,
-  packCovers,
-  TRIP_PACK_LIMITS,
-  TRIP_PACK_RETURN_MINUTES,
+  type InvoiceBuyer,
+  type RefundTier,
   type TripManifest,
   type TripSummary,
 } from '@vtp/shared-types';
@@ -27,6 +27,8 @@ import {
 } from '../../database/database.service.js';
 import { AppConfigService } from '../../config/app-config.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import { applyBilling, correctFeeInvoice } from '../fiscal/fiscal-ledger.js';
+import { invoices } from '../fiscal/fiscal.schema.js';
 import { vehicles } from '../fleet/fleet.schema.js';
 import { users } from '../identity/identity.schema.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
@@ -38,14 +40,13 @@ import { departureText } from '../notifications/format.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { payments, type PaymentRow } from '../payments/payments.schema.js';
 import {
+  commissionFor,
   percentOf,
   policyFor,
   recordCancellation,
-  recordEarning,
-  reverseEarning,
+  shareOf,
+  withServiceFee,
 } from '../settlements/ledger.js';
-import { tripPacks } from '../trip-packs/trip-packs.schema.js';
-import { TripPacksService } from '../trip-packs/trip-packs.service.js';
 import {
   bookingPassengers,
   bookings,
@@ -88,6 +89,12 @@ function bookingCode(): string {
 }
 
 const cents = (amount: string) => Math.round(Number(amount) * 100);
+
+/** What the passenger paid for the fares alone, without the service fee (ADR-029). */
+const faresOf = (booking: Pick<BookingRow, 'totalAmount' | 'serviceFee'>) =>
+  booking.serviceFee === null
+    ? booking.totalAmount
+    : fromCents(cents(booking.totalAmount) - cents(booking.serviceFee));
 const fromCents = (value: number) => (value / 100).toFixed(2);
 
 @Injectable()
@@ -99,7 +106,6 @@ export class BookingsService {
     private readonly audit: AuditService,
     private readonly config: AppConfigService,
     private readonly notifications: NotificationsService,
-    private readonly packs: TripPacksService,
   ) {}
 
   /** Holds the seats for `BOOKING_HOLD_MINUTES`; payment confirms the booking. */
@@ -108,11 +114,11 @@ export class BookingsService {
     input: CreateBookingRequest,
     meta: RequestMeta,
   ): Promise<Booking> {
-    const seats = input.passengers.map((p) => p.seatNumber.trim().toUpperCase());
-    if (!seats.length || seats.length > MAX_SEATS_PER_BOOKING) {
+    const passengerCount = input.passengers.length;
+    if (!passengerCount || passengerCount > MAX_SEATS_PER_BOOKING) {
       throw invalid(`Book between 1 and ${MAX_SEATS_PER_BOOKING} seats`);
     }
-    if (new Set(seats).size !== seats.length) throw invalid('Each seat can be chosen only once');
+    await this.stops.assertServed([input.fromStopId, input.toStopId]);
 
     const context = await this.trips.resolve(
       input.scheduleId,
@@ -120,14 +126,23 @@ export class BookingsService {
       input.fromStopId,
       input.toStopId,
     );
+    // Frequency service (ADR-032): an open ticket for the day, numbered here; no seat to choose.
+    const open = context.schedule.headwayMinutes !== null;
+    const chosen = input.passengers.map((p) => p.seatNumber?.trim().toUpperCase() ?? '');
+    if (open && chosen.some(Boolean)) {
+      throw invalid('This service sells open tickets: leave seatNumber out');
+    }
+    if (!open) {
+      if (chosen.some((seat) => !seat)) throw invalid('Choose a seat for each passenger');
+      if (new Set(chosen).size !== chosen.length) {
+        throw invalid('Each seat can be chosen only once');
+      }
+    }
     if (!context.fare)
       throw conflict('This trip cannot be booked online yet', 'DEPARTURE_NOT_BOOKABLE');
     if (!isBookable(context))
       throw conflict('This departure has already left', 'DEPARTURE_NOT_BOOKABLE');
-    await this.trips.assertOnSale(context);
     const fare = context.fare;
-    const packId = input.tripPackId ?? null;
-    if (packId) await this.assertPackFits(auth.user.id, packId, context);
 
     const [{ active }] = (await this.database.db
       .select({ active: count() })
@@ -139,8 +154,7 @@ export class BookingsService {
           gt(bookings.expiresAt, sql`now()`),
         ),
       )) as [{ active: number }];
-    // Paying with a pack confirms at once: no hold is left waiting.
-    if (!packId && active >= MAX_ACTIVE_HOLDS_PER_USER) {
+    if (active >= MAX_ACTIVE_HOLDS_PER_USER) {
       throw conflict(
         'Pay or cancel your pending bookings before holding more seats',
         'TOO_MANY_HOLDS',
@@ -148,49 +162,28 @@ export class BookingsService {
     }
 
     const holdMinutes = this.config.get('BOOKING_HOLD_MINUTES');
-    const total = fromCents(cents(fare.amount) * seats.length);
+    const fares = fromCents(cents(fare.amount) * passengerCount);
+    // The platform's service fee goes on top of the fares (ADR-029), frozen with the hold.
+    const serviceFeeRate = await commissionFor(
+      this.database.db,
+      context.operator.id,
+      input.fromStopId,
+    );
+    const { fee: serviceFee, total } = withServiceFee(fares, serviceFeeRate);
     let booking: BookingRow | undefined;
-    for (let attempt = 0; !booking && attempt < 3; attempt++) {
+    for (let attempt = 0; !booking && attempt < 5; attempt++) {
       try {
         booking = await this.database.db.transaction(async (tx) => {
           const trip = await this.trips.getOrCreate(tx, context);
           if (trip.status !== 'scheduled')
             throw conflict('This departure was cancelled', 'DEPARTURE_NOT_BOOKABLE');
+          await expireHolds(tx, { tripId: trip.id });
           const valid = seatNumbersOf(trip);
+          const seats = open
+            ? await this.freeTicketNumbers(tx, trip.id, valid, passengerCount)
+            : chosen;
           const unknown = seats.find((seat) => !valid.has(seat));
           if (unknown) throw invalid(`Seat ${unknown} does not exist on this vehicle`);
-          await expireHolds(tx, trip.id);
-          if (packId) {
-            const [same] = await tx
-              .select({ id: bookings.id })
-              .from(bookings)
-              .where(
-                and(
-                  eq(bookings.tripId, trip.id),
-                  eq(bookings.tripPackId, packId),
-                  eq(bookings.status, 'confirmed'),
-                ),
-              );
-            if (same) {
-              throw conflict(
-                'You already have a booking with this trip pack on this departure',
-                'TRIP_PACK_ONE_PER_DEPARTURE',
-              );
-            }
-            const spent = await this.packs.spend(
-              tx,
-              auth.user.id,
-              packId,
-              seats.length,
-              new Date(context.occurrence.departsAt),
-            );
-            if (!spent) {
-              throw conflict(
-                'The trip pack has not enough trips left or expires before this departure',
-                'TRIP_PACK_EXHAUSTED',
-              );
-            }
-          }
 
           const [row] = await tx
             .insert(bookings)
@@ -201,13 +194,15 @@ export class BookingsService {
               fromStopId: input.fromStopId,
               toStopId: input.toStopId,
               departsAt: new Date(context.occurrence.departsAt),
-              arrivesAt: new Date(context.occurrence.arrivesAt),
+              // An open ticket is valid until the last unit of the day arrives.
+              arrivesAt: new Date(context.occurrence.lastArrivesAt ?? context.occurrence.arrivesAt),
               fareAmount: fare.amount,
               totalAmount: total,
+              contactPhone: input.contactPhone?.replace(/[^\d+]/g, '') || null,
+              serviceFee,
+              serviceFeeRate,
               currency: fare.currency,
-              ...(packId
-                ? { status: 'confirmed' as const, confirmedAt: new Date(), tripPackId: packId }
-                : { expiresAt: sql`now() + make_interval(mins => ${holdMinutes})` }),
+              expiresAt: sql`now() + make_interval(mins => ${holdMinutes})`,
             })
             .returning();
           // The partial unique index on (trip, seat) rejects seats another booking holds.
@@ -222,12 +217,12 @@ export class BookingsService {
               documentNumber: passenger.documentNumber.replace(/[\s.-]/g, '').toUpperCase(),
             })),
           );
-          // The operator earns its normal fare for each trip used; the platform collected (ADR-028).
-          if (packId) await recordEarning(tx, row!.id, 'platform');
           return row!;
         });
       } catch (error) {
         const constraint = uniqueViolation(error);
+        // Two open tickets numbered at once: number them again.
+        if (constraint === 'booking_passengers_active_seat_key' && open) continue;
         if (constraint === 'booking_passengers_active_seat_key') {
           throw conflict('One of the seats was just taken, choose another', 'SEAT_TAKEN');
         }
@@ -235,35 +230,23 @@ export class BookingsService {
         // Code collision: retry with a new code.
       }
     }
+    if (!booking && open) {
+      throw conflict('Many tickets were sold at once, try again', 'RELOAD_AND_RETRY');
+    }
     if (!booking) throw new Error('Could not generate a unique booking code');
     await this.audit.record({
-      action: packId ? 'booking.paid_with_trip_pack' : 'booking.held',
+      action: 'booking.held',
       actorUserId: auth.user.id,
       targetType: 'booking',
       targetId: booking.id,
       ip: meta.ip,
-      metadata: { tripId: booking.tripId, seats: seats.length, tripPackId: packId ?? undefined },
+      metadata: { tripId: booking.tripId, seats: passengerCount, open },
     });
-    if (packId) {
-      const bookingId = booking.id;
-      this.notifications.later(async () => {
-        const notice = await this.notifications.booking(bookingId);
-        return {
-          kind: 'payment_confirmed',
-          userIds: [notice.userId],
-          app: 'passenger',
-          email: true,
-          reference: { key: 'bookingId', id: bookingId },
-          text: (m, locale) =>
-            m.paymentConfirmed(notice.code, notice.route, departureText(notice.departsAt, locale)),
-        };
-      });
-    }
     return (await this.toBookings([booking]))[0]!;
   }
 
   async listMine(userId: string): Promise<Booking[]> {
-    await expireHolds(this.database.db);
+    await expireHolds(this.database.db, { userId });
     const rows = await this.database.db
       .select()
       .from(bookings)
@@ -275,6 +258,90 @@ export class BookingsService {
 
   async getMine(userId: string, bookingId: string): Promise<Booking> {
     return (await this.toBookings([await this.requireMine(userId, bookingId)]))[0]!;
+  }
+
+  /**
+   * Support (platform staff): a booking by its code (`VTP-7K3QXA`, `7k3qxa` or `vtp7k3qxa`), with the
+   * passenger's contact. Every lookup is audited: it shows personal data.
+   */
+  async findByCode(
+    rawCode: string,
+    actor: Authenticated,
+    meta: RequestMeta,
+  ): Promise<AdminBookingLookup> {
+    const code = normalizeBookingCode(rawCode);
+    const [row] = code
+      ? await this.database.db
+          .select({ booking: bookings, user: users })
+          .from(bookings)
+          .innerJoin(users, eq(users.id, bookings.userId))
+          .where(eq(bookings.code, code))
+      : [];
+    if (!row) throw notFound();
+    await this.audit.record({
+      action: 'booking.looked_up',
+      actorUserId: actor.user.id,
+      targetType: 'booking',
+      targetId: row.booking.id,
+      ip: meta.ip,
+    });
+    const [booking] = await this.toBookings([row.booking]);
+    return {
+      booking: booking!,
+      customer: {
+        name: [row.user.firstName, row.user.lastName].filter(Boolean).join(' ') || null,
+        email: row.user.email,
+        phone: row.user.phone ?? row.booking.contactPhone,
+      },
+    };
+  }
+
+  /** The lowest ticket numbers of the day nobody holds, or 409 when the day is sold out. */
+  private async freeTicketNumbers(
+    tx: Transaction,
+    tripId: string,
+    valid: Set<string>,
+    count: number,
+  ): Promise<string[]> {
+    const taken = new Set(
+      (
+        await tx
+          .select({ seatNumber: bookingPassengers.seatNumber })
+          .from(bookingPassengers)
+          .where(and(eq(bookingPassengers.tripId, tripId), eq(bookingPassengers.active, true)))
+      ).map((row) => row.seatNumber),
+    );
+    const free = [...valid].filter((n) => !taken.has(n)).sort(compareSeats);
+    if (free.length < count) {
+      throw conflict('There are no tickets left for this day', 'DEPARTURE_NOT_BOOKABLE');
+    }
+    return free.slice(0, count);
+  }
+
+  /**
+   * Who the service-fee invoice is for (ADR-031): another name, or `null` for the first passenger.
+   * Allowed until the invoice is issued.
+   */
+  async setBilling(
+    userId: string,
+    bookingId: string,
+    billing: InvoiceBuyer | null,
+  ): Promise<Booking> {
+    await this.requireMine(userId, bookingId);
+    await this.database.db.transaction(async (tx) => {
+      await tx
+        .update(bookings)
+        .set({
+          billingName: billing?.name.trim() ?? null,
+          billingIdType: billing?.idType ?? null,
+          billingIdNumber: billing?.idNumber.trim().toUpperCase() ?? null,
+          billingAddress: billing?.address?.trim() || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(bookings.id, bookingId));
+      await applyBilling(tx, bookingId);
+    });
+    return this.getMine(userId, bookingId);
   }
 
   /** What cancelling a paid booking now would refund, per the operator's policy (ADR-025). */
@@ -310,23 +377,13 @@ export class BookingsService {
           throw conflict('The bus left or a passenger boarded', 'BOOKING_NOT_CANCELLABLE');
         }
         refundPercent = quote.refundPercent;
-        if (locked.tripPackId) {
-          // Paid with a pack: the trips go back up to 30 minutes before boarding (ADR-028), and
-          // the operator's earning is undone; later, they are lost and the operator keeps it.
-          if (quote.tripPack?.tripsBack) {
-            await this.packs.giveBack(tx, locked.tripPackId, quote.tripPack.tripsBack);
-            await reverseEarning(tx, locked.id);
-          }
-        }
         if (payment && quote.refund) {
           await tx
             .update(payments)
             .set({ status: 'refund_due', refundAmount: quote.refund.amount })
             .where(eq(payments.id, payment.id));
         }
-        if (!locked.tripPackId && quote.refundPercent > 0) {
-          await recordCancellation(tx, locked.id, fareRefund);
-        }
+        if (quote.refundPercent > 0) await recordCancellation(tx, locked.id, fareRefund);
       }
       const [row] = await tx
         .update(bookings)
@@ -423,20 +480,8 @@ export class BookingsService {
               })
               .where(eq(payments.id, payment.id));
           }
-          if (booking.tripPackId) {
-            // The trips go back to the pack (unless it already expired).
-            const [seats] = await tx
-              .select({ n: count() })
-              .from(bookingPassengers)
-              .where(
-                and(
-                  eq(bookingPassengers.bookingId, booking.id),
-                  eq(bookingPassengers.active, true),
-                ),
-              );
-            await this.packs.giveBack(tx, booking.tripPackId, seats?.n ?? 0);
-          }
           await recordCancellation(tx, booking.id, booking.totalAmount, true);
+          await correctFeeInvoice(tx, booking.id);
         } else {
           await tx
             .update(payments)
@@ -501,69 +546,16 @@ export class BookingsService {
     };
   }
 
-  /**
-   * The pack can pay for this departure (ADR-028): the user's, active, same kind of vehicle and
-   * corridor, the stretch in either direction, an operator that accepts packs, and fewer than
-   * `TRIP_PACK_LIMITS.maxFutureBookings` upcoming bookings with it. Trips left and expiry are
-   * checked when spending them.
-   */
-  private async assertPackFits(
-    userId: string,
-    packId: string,
-    context: Awaited<ReturnType<TripsService['resolve']>>,
-  ): Promise<void> {
-    const pack = await this.packs.row(this.database.db, packId);
-    if (!pack || pack.userId !== userId) throw notFound('Trip pack not found');
-    if (pack.status !== 'active') {
-      throw conflict('This trip pack has no trips to use', 'TRIP_PACK_EXHAUSTED');
-    }
-    const { acceptsTripPacks } = await policyFor(this.database.db, context.operator.id);
-    const fits =
-      acceptsTripPacks &&
-      pack.mode === context.sale.mode &&
-      context.sale.service === 'suburban' &&
-      pack.serviceAreaId === context.sale.serviceAreaId &&
-      packCovers([pack.stopAId, pack.stopBId], context.from.id, context.to.id);
-    if (!fits) {
-      throw conflict('This trip pack does not cover this departure', 'TRIP_PACK_NOT_VALID_HERE');
-    }
-    const [{ upcoming }] = (await this.database.db
-      .select({ upcoming: count() })
-      .from(bookings)
-      .where(
-        and(
-          eq(bookings.tripPackId, packId),
-          eq(bookings.status, 'confirmed'),
-          gt(bookings.departsAt, sql`now()`),
-        ),
-      )) as [{ upcoming: number }];
-    if (upcoming >= TRIP_PACK_LIMITS.maxFutureBookings) {
-      throw conflict(
-        'This trip pack already has the most upcoming bookings it can hold',
-        'TRIP_PACK_TOO_MANY_BOOKINGS',
-      );
-    }
-  }
-
   /** Refund for a confirmed booking now: in the payment's currency, and in the fare's. */
   private async quote(
     db: Database | Transaction,
     booking: BookingRow,
   ): Promise<{ quote: CancellationQuote; payment: PaymentRow | undefined; fareRefund: string }> {
     const [trip] = await db
-      .select({
-        organizationId: trips.organizationId,
-        departedAt: trips.departedAt,
-        service: routes.service,
-      })
+      .select({ organizationId: trips.organizationId, departedAt: trips.departedAt })
       .from(trips)
-      .innerJoin(routes, eq(routes.id, trips.routeId))
       .where(eq(trips.id, booking.tripId));
-    // Suburban routes use the suburban tiers: nothing back in the last 30 minutes (ADR-028).
-    const refundTiers = refundTiersForService(
-      await policyFor(db, trip!.organizationId),
-      trip!.service,
-    );
+    const { refundTiers } = await policyFor(db, trip!.organizationId);
     const [boarded] = await db
       .select({ n: count() })
       .from(bookingPassengers)
@@ -579,35 +571,13 @@ export class BookingsService {
       .where(and(eq(payments.bookingId, booking.id), eq(payments.status, 'confirmed')));
     const hoursLeft = (booking.departsAt.getTime() - Date.now()) / 3_600_000;
     const cancellable = hoursLeft > 0 && (boarded?.n ?? 0) === 0 && !trip!.departedAt;
-    if (booking.tripPackId) {
-      const pack = await this.packs.row(db, booking.tripPackId);
-      const [seats] = await db
-        .select({ n: count() })
-        .from(bookingPassengers)
-        .where(
-          and(eq(bookingPassengers.bookingId, booking.id), eq(bookingPassengers.active, true)),
-        );
-      const inTime = cancellable && hoursLeft * 60 >= TRIP_PACK_RETURN_MINUTES;
-      const packUsable =
-        pack !== undefined &&
-        (pack.status === 'active' || pack.status === 'exhausted') &&
-        (pack.expiresAt?.getTime() ?? 0) > Date.now();
-      const tripsBack = inTime && packUsable ? (seats?.n ?? 0) : 0;
-      return {
-        quote: {
-          cancellable,
-          hoursBeforeDeparture: Math.round(hoursLeft * 10) / 10,
-          refundPercent: tripsBack ? 100 : 0,
-          refund: null,
-          policy: [{ hoursBefore: TRIP_PACK_RETURN_MINUTES / 60, percent: 100 }],
-          tripPack: { code: pack?.code ?? '', tripsBack },
-        },
-        payment: undefined,
-        fareRefund: '0.00',
-      };
-    }
     const refundPercent = cancellable ? refundPercentFor(refundTiers, hoursLeft) : 0;
-    const refundAmount = payment ? percentOf(payment.amount, refundPercent) : '0.00';
+    // The refund tiers apply to the fares; the service fee is not refunded when the passenger
+    // cancels (ADR-029). `faresOf` is the whole total for bookings made before the fee existed.
+    const fares = faresOf(booking);
+    const refundAmount = payment
+      ? percentOf(shareOf(payment.amount, fares, booking.totalAmount), refundPercent)
+      : '0.00';
     return {
       quote: {
         cancellable,
@@ -618,10 +588,9 @@ export class BookingsService {
             ? { amount: refundAmount, currency: payment.currency }
             : null,
         policy: refundTiers,
-        tripPack: null,
       },
       payment,
-      fareRefund: percentOf(booking.totalAmount, refundPercent),
+      fareRefund: percentOf(fares, refundPercent),
     };
   }
 
@@ -719,7 +688,7 @@ export class BookingsService {
   }
 
   private async requireMine(userId: string, bookingId: string): Promise<BookingRow> {
-    await expireHolds(this.database.db);
+    await expireHolds(this.database.db, { userId });
     const [booking] = await this.database.db
       .select()
       .from(bookings)
@@ -734,8 +703,8 @@ export class BookingsService {
       .select({
         trip: trips,
         route: { id: routes.id, name: routes.name },
-        service: routes.service,
         serviceClass: routeSchedules.serviceClass,
+        headwayMinutes: routeSchedules.headwayMinutes,
         operator: {
           id: organizations.id,
           type: organizations.type,
@@ -769,20 +738,27 @@ export class BookingsService {
     const stops = await this.stops.summaries([
       ...new Set(rows.flatMap((b) => [b.fromStopId, b.toStopId])),
     ]);
-    const packIds = [...new Set(rows.flatMap((b) => (b.tripPackId ? [b.tripPackId] : [])))];
-    const packCodes = new Map(
-      packIds.length
-        ? (
-            await this.database.db
-              .select({ id: tripPacks.id, code: tripPacks.code })
-              .from(tripPacks)
-              .where(inArray(tripPacks.id, packIds))
-          ).map((p) => [p.id, p.code])
-        : [],
-    );
-    const policies = new Map<string, Awaited<ReturnType<typeof policyFor>>>();
+    const feeInvoices = await this.database.db
+      .select({
+        bookingId: invoices.bookingId,
+        status: invoices.status,
+        number: invoices.number,
+        controlNumber: invoices.controlNumber,
+        issuedOn: invoices.issuedOn,
+      })
+      .from(invoices)
+      .where(
+        and(
+          inArray(
+            invoices.bookingId,
+            rows.map((b) => b.id),
+          ),
+          eq(invoices.reason, 'service_fee'),
+        ),
+      );
+    const refundPolicies = new Map<string, RefundTier[]>();
     for (const operatorId of new Set(tripRows.map((t) => t.operator.id))) {
-      policies.set(operatorId, await policyFor(this.database.db, operatorId));
+      refundPolicies.set(operatorId, (await policyFor(this.database.db, operatorId)).refundTiers);
     }
     return rows.map((booking) => {
       const payment = currentPayment(
@@ -790,6 +766,7 @@ export class BookingsService {
         booking.status === 'held',
       );
       const trip = tripRows.find((t) => t.trip.id === booking.tripId)!;
+      const invoice = feeInvoices.find((i) => i.bookingId === booking.id);
       return {
         id: booking.id,
         code: booking.code,
@@ -801,6 +778,7 @@ export class BookingsService {
           departsAt: toNetworkIso(booking.departsAt),
           arrivesAt: toNetworkIso(booking.arrivesAt),
           serviceClass: trip.serviceClass,
+          headwayMinutes: trip.headwayMinutes,
           cancellation:
             trip.trip.status === 'cancelled'
               ? { reason: trip.trip.cancellationReason ?? '' }
@@ -829,19 +807,49 @@ export class BookingsService {
                 : null,
           })),
         total: { amount: booking.totalAmount, currency: booking.currency },
+        fares: faresOf(booking),
+        serviceFee:
+          booking.serviceFee !== null && booking.serviceFeeRate !== null
+            ? { amount: booking.serviceFee, rate: booking.serviceFeeRate }
+            : null,
         expiresAt:
           booking.status === 'held' && booking.expiresAt ? booking.expiresAt.toISOString() : null,
         payment: payment ? toPayment(payment) : null,
-        tripPack: booking.tripPackId
-          ? { id: booking.tripPackId, code: packCodes.get(booking.tripPackId) ?? '' }
+        refundPolicy: refundPolicies.get(trip.operator.id) ?? [],
+        billing: billingOf(booking),
+        contactPhone: booking.contactPhone,
+        invoice: invoice
+          ? {
+              status: invoice.status,
+              number: invoice.number,
+              controlNumber: invoice.controlNumber,
+              issuedOn: invoice.issuedOn,
+            }
           : null,
-        refundPolicy: policies.has(trip.operator.id)
-          ? refundTiersForService(policies.get(trip.operator.id)!, trip.service)
-          : [],
         createdAt: booking.createdAt.toISOString(),
       };
     });
   }
+}
+
+/** `vtp-7k3qxa`, `VTP7K3QXA` or `7K3QXA` → `VTP-7K3QXA`; null if it cannot be a booking code. */
+export function normalizeBookingCode(input: string): string | null {
+  const bare = input
+    .trim()
+    .toUpperCase()
+    .replace(/^VTP-?/, '');
+  return /^[A-Z0-9]{6}$/.test(bare) ? `VTP-${bare}` : null;
+}
+
+function billingOf(booking: BookingRow): InvoiceBuyer | null {
+  const idType = BUYER_ID_TYPES.find((t) => t === booking.billingIdType);
+  if (!booking.billingName || !idType || !booking.billingIdNumber) return null;
+  return {
+    name: booking.billingName,
+    idType,
+    idNumber: booking.billingIdNumber,
+    address: booking.billingAddress,
+  };
 }
 
 export type SeatCount = { tripId: string; status: BookingRow['status']; seats: number };

@@ -34,14 +34,7 @@ export interface Notice {
   address?: string;
   /** What it is about; also passed to the app to open it. */
   reference?: {
-    key:
-      | 'bookingId'
-      | 'tripId'
-      | 'rideId'
-      | 'organizationId'
-      | 'applicationId'
-      | 'invitationId'
-      | 'tripPackId';
+    key: 'bookingId' | 'tripId' | 'rideId' | 'organizationId' | 'applicationId' | 'invitationId';
     id: string;
   };
 }

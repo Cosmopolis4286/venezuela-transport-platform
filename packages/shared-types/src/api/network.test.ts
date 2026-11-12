@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatDuration,
+  frequencyRuns,
   isTimeOfDay,
-  modesFor,
   runsRoutes,
-  seriesTimes,
-  servicesFor,
+  withServiceFee,
 } from './network.js';
 import { roleHasPermission } from './organizations.js';
+import { normalizeWhatsapp, whatsappLink } from './support.js';
 
 describe('network helpers', () => {
   it('validates 24-hour times of day', () => {
@@ -32,27 +32,33 @@ describe('network helpers', () => {
   });
 });
 
-describe('modesFor', () => {
-  it('gives each route operator at least one mode and terminals none', () => {
-    expect(modesFor('bus_company')).toEqual(['bus']);
-    expect(modesFor('taxi_line')).toEqual(['car']);
-    expect(modesFor('terminal')).toEqual([]);
+describe('withServiceFee', () => {
+  it('adds the fee on top, rounded half up to cents', () => {
+    expect(withServiceFee('0.75', '15.00')).toEqual({ fee: '0.11', total: '0.86' });
+    expect(withServiceFee('25.00', '15.00')).toEqual({ fee: '3.75', total: '28.75' });
+    expect(withServiceFee('10.10', '0.00')).toEqual({ fee: '0.00', total: '10.10' });
+    expect(withServiceFee('0.10', '5.00')).toEqual({ fee: '0.01', total: '0.11' });
   });
 });
 
-describe('servicesFor', () => {
-  it('lets motorcycle taxi lines publish only suburban routes, with motorcycles', () => {
-    expect(servicesFor('moto_line')).toEqual(['suburban']);
-    expect(modesFor('moto_line')).toEqual(['motorcycle']);
-    expect(servicesFor('bus_company')).toEqual(['intercity', 'suburban']);
-    expect(servicesFor('terminal')).toEqual([]);
+describe('frequencyRuns', () => {
+  it('counts the units of a frequency schedule, 1 for a single departure', () => {
+    expect(frequencyRuns('05:00', '20:00', 15)).toBe(61);
+    expect(frequencyRuns('05:00', '05:10', 15)).toBe(1);
+    expect(frequencyRuns('06:00', null, null)).toBe(1);
+    expect(frequencyRuns('20:00', '05:00', 15)).toBe(1);
   });
 });
 
-describe('seriesTimes', () => {
-  it('lists every departure from the first to the last allowed time', () => {
-    expect(seriesTimes('05:00', '06:00', 20)).toEqual(['05:00', '05:20', '05:40', '06:00']);
-    expect(seriesTimes('05:00', '05:50', 20)).toEqual(['05:00', '05:20', '05:40']);
-    expect(seriesTimes('22:00', '21:00', 15)).toEqual([]);
+describe('support contact', () => {
+  it('keeps only valid international numbers and builds the chat link', () => {
+    expect(normalizeWhatsapp('+58 412-123.4567')).toBe('584121234567');
+    expect(normalizeWhatsapp('(0412) 123')).toBeNull();
+    expect(normalizeWhatsapp('')).toBeNull();
+    expect(normalizeWhatsapp(undefined)).toBeNull();
+    expect(whatsappLink('584121234567')).toBe('https://wa.me/584121234567');
+    expect(whatsappLink('584121234567', 'Hola, reserva VTP-1')).toBe(
+      'https://wa.me/584121234567?text=Hola%2C%20reserva%20VTP-1',
+    );
   });
 });

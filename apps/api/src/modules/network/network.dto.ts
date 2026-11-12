@@ -1,19 +1,20 @@
-import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import {
   CURRENCIES,
+  MAX_HEADWAY_MINUTES,
+  MIN_HEADWAY_MINUTES,
   ROUTE_STATUSES,
   SERVICE_CLASSES,
-  SCHEDULE_SERIES_LIMITS,
-  SERVICES,
   STOP_KINDS,
-  TRANSPORT_MODES,
+  ZONE_STATUSES,
+  COMMISSION_PATTERN,
+  PAYEES,
+  ROUTE_SCOPES,
+  type Payee,
+  type RouteScope,
   type ChangeRouteStatusRequest,
-  type CityRef,
-  type IntercitySettingsInput,
-  type Service,
-  type ScheduleSeriesInput,
-  type ScheduleSeriesUpdate,
-  type ServiceAreaInput,
+  type OperatingZoneInput,
+  type ZoneStatus,
   type Currency,
   type Fare,
   type ReplaceFaresRequest,
@@ -23,7 +24,6 @@ import {
   type ServiceClass,
   type StopInput,
   type StopKind,
-  type TransportMode,
 } from '@vtp/shared-types';
 import { Type } from 'class-transformer';
 import {
@@ -97,6 +97,14 @@ export class StopDto implements StopInput {
   @IsOptional()
   @IsBoolean()
   active?: boolean;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Omitted on create: taken from the location',
+  })
+  @IsOptional()
+  @IsUUID()
+  zoneId?: string | null;
 }
 
 export class UpdateStopDto extends PartialType(StopDto) {}
@@ -141,29 +149,18 @@ export class RouteDto implements RouteInput {
   @Type(() => RouteStopDto)
   stops!: RouteStopDto[];
 
-  @ApiPropertyOptional({
-    enum: TRANSPORT_MODES,
-    description: "Only on creation; defaults to the organization's first mode",
-  })
+  @ApiPropertyOptional({ enum: ROUTE_SCOPES, default: 'interurban' })
   @IsOptional()
-  @IsIn(TRANSPORT_MODES)
-  mode?: TransportMode;
+  @IsIn(ROUTE_SCOPES)
+  scope?: RouteScope;
 
-  @ApiPropertyOptional({ enum: SERVICES, description: 'Only on creation; defaults to intercity' })
+  @ApiPropertyOptional({ enum: PAYEES, nullable: true, description: 'Null: default for the scope' })
   @IsOptional()
-  @IsIn(SERVICES)
-  service?: Service;
-
-  @ApiPropertyOptional({ nullable: true, description: 'Corridor of a suburban route' })
-  @IsOptional()
-  @IsUUID()
-  serviceAreaId?: string | null;
+  @IsIn([...PAYEES, null])
+  payeeOverride?: Payee | null;
 }
 
-/** The mode, service and corridor are fixed once the route exists. */
-export class UpdateRouteDto extends PartialType(
-  OmitType(RouteDto, ['mode', 'service', 'serviceAreaId'] as const),
-) {}
+export class UpdateRouteDto extends PartialType(RouteDto) {}
 
 export class RouteStatusDto implements ChangeRouteStatusRequest {
   @ApiProperty({ enum: ROUTE_STATUSES })
@@ -239,6 +236,22 @@ export class ScheduleDto implements ScheduleInput {
   @IsUUID()
   seatLayoutId?: string | null;
 
+  @ApiPropertyOptional({
+    example: 15,
+    nullable: true,
+    description: 'Frequency service: a unit every N minutes (open tickets, no seat map)',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(MIN_HEADWAY_MINUTES)
+  @Max(MAX_HEADWAY_MINUTES)
+  headwayMinutes?: number | null;
+
+  @ApiPropertyOptional({ example: '20:00', nullable: true, description: 'Last unit of the day' })
+  @IsOptional()
+  @Matches(TIME_OF_DAY, { message: 'lastDepartureTime must be HH:MM' })
+  lastDepartureTime?: string | null;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsBoolean()
@@ -259,85 +272,78 @@ export class DepartureSearchQueryDto {
   @ApiProperty({ example: '2026-11-20', description: 'Local date of departure from `from`' })
   @Matches(ISO_DATE, { message: 'date must be YYYY-MM-DD' })
   date!: string;
-
-  @ApiPropertyOptional({ enum: TRANSPORT_MODES, description: 'Only this kind of vehicle' })
-  @IsOptional()
-  @IsIn(TRANSPORT_MODES)
-  mode?: TransportMode;
-
-  @ApiPropertyOptional({ enum: SERVICES, description: 'Only this service' })
-  @IsOptional()
-  @IsIn(SERVICES)
-  service?: Service;
 }
 
-export class CityRefDto implements CityRef {
-  @ApiProperty({ example: 'Puerto Ordaz' })
-  @IsString()
-  @Length(2, 80)
-  city!: string;
-
-  @ApiProperty({ example: 'Bolívar' })
-  @IsString()
-  @Length(2, 60)
-  state!: string;
-}
-
-export class IntercitySettingsDto implements IntercitySettingsInput {
-  @ApiProperty()
-  @IsBoolean()
-  enabled!: boolean;
-
-  @ApiProperty({ type: [CityRefDto], description: 'Cities without intercity sales' })
-  @IsArray()
-  @ArrayMaxSize(200)
-  @ValidateNested({ each: true })
-  @Type(() => CityRefDto)
-  closedCities!: CityRefDto[];
-}
-
-export class ServiceAreaDto implements ServiceAreaInput {
-  @ApiProperty({ example: 'Ciudad Guayana' })
+export class OperatingZoneDto implements OperatingZoneInput {
+  @ApiProperty({ example: 'Eje Casacoima – San Félix' })
   @IsString()
   @Length(2, 80)
   name!: string;
 
-  @ApiProperty({ type: [String], description: 'Catalog stops of the corridor' })
-  @IsArray()
-  @ArrayMinSize(2)
-  @ArrayMaxSize(200)
-  @IsUUID('all', { each: true })
-  stopIds!: string[];
+  @ApiProperty({ example: 'san-felix' })
+  @Matches(/^[a-z0-9]+(-[a-z0-9]+)*$/, { message: 'slug: lower-case letters, digits and hyphens' })
+  @Length(2, 60)
+  slug!: string;
 
-  @ApiPropertyOptional({ description: 'Platform admins only' })
+  @ApiPropertyOptional({ enum: ZONE_STATUSES })
   @IsOptional()
-  @IsBoolean()
-  active?: boolean;
-}
+  @IsIn(ZONE_STATUSES)
+  status?: ZoneStatus;
 
-export class UpdateServiceAreaDto extends PartialType(ServiceAreaDto) {}
+  @ApiPropertyOptional({ enum: CURRENCIES })
+  @IsOptional()
+  @IsIn(CURRENCIES)
+  defaultCurrency?: Currency;
 
-export class ScheduleSeriesDto
-  extends OmitType(ScheduleDto, ['departureTime', 'active'] as const)
-  implements ScheduleSeriesInput
-{
-  @ApiProperty({ example: '05:00', description: 'First departure (America/Caracas)' })
-  @Matches(TIME_OF_DAY, { message: 'firstDeparture must be HH:MM' })
-  firstDeparture!: string;
+  @ApiPropertyOptional({ example: '15.00', nullable: true })
+  @IsOptional()
+  @IsString()
+  @Matches(COMMISSION_PATTERN, {
+    message: 'commissionRate must be a percentage between 0 and 100 with up to 2 decimals',
+  })
+  commissionRate?: string | null;
 
-  @ApiProperty({ example: '20:00', description: 'No departure after this time' })
-  @Matches(TIME_OF_DAY, { message: 'lastDeparture must be HH:MM' })
-  lastDeparture!: string;
+  @ApiPropertyOptional({ example: 8.29, nullable: true })
+  @IsOptional()
+  @IsLatitude()
+  latitude?: number | null;
 
-  @ApiProperty({ example: 15 })
+  @ApiPropertyOptional({ example: -62.64, nullable: true })
+  @IsOptional()
+  @IsLongitude()
+  longitude?: number | null;
+
+  @ApiPropertyOptional({ example: 40, nullable: true })
+  @IsOptional()
   @IsInt()
-  @Min(SCHEDULE_SERIES_LIMITS.minEveryMinutes)
-  @Max(SCHEDULE_SERIES_LIMITS.maxEveryMinutes)
-  everyMinutes!: number;
+  @Min(1)
+  @Max(500)
+  radiusKm?: number | null;
 }
 
-export class ScheduleSeriesUpdateDto implements ScheduleSeriesUpdate {
-  @ApiProperty()
-  @IsBoolean()
-  active!: boolean;
+export class UpdateOperatingZoneDto extends PartialType(OperatingZoneDto) {}
+
+export class NearbyStopsQueryDto {
+  @ApiProperty({ example: 8.3 })
+  @Type(() => Number)
+  @IsLatitude()
+  latitude!: number;
+
+  @ApiProperty({ example: -62.7 })
+  @Type(() => Number)
+  @IsLongitude()
+  longitude!: number;
+
+  @ApiPropertyOptional({ example: 25, description: 'Search radius (km), 1–200; default 25' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(200)
+  radiusKm?: number;
+
+  @ApiPropertyOptional({ enum: STOP_KINDS })
+  @IsOptional()
+  @IsIn(STOP_KINDS)
+  kind?: StopKind;
 }

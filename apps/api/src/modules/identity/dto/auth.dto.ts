@@ -14,6 +14,9 @@ import {
   type RefreshRequest,
   type RegisterRequest,
   type UpdateProfileRequest,
+  type ClaimGuestRequest,
+  type GuestRequest,
+  type UpgradeGuestRequest,
 } from '@vtp/shared-types';
 import {
   Equals,
@@ -166,8 +169,47 @@ export class PasswordResetDto implements PasswordResetRequest {
 }
 
 export class AcceptTermsDto implements AcceptTermsRequest {
-  @ApiProperty({ example: '2026-11-12', description: 'Must be the current LEGAL_VERSION' })
+  @ApiProperty({ example: '2026-11-07', description: 'Must be the current LEGAL_VERSION' })
   @IsString()
   @MaxLength(20)
   version!: string;
+}
+
+export class GuestDto implements GuestRequest {
+  @ApiProperty({ enum: ['passenger'], description: 'Only the passenger app buys as a guest' })
+  @IsIn(['passenger'])
+  client!: AuthClient;
+
+  @ApiProperty({ enum: [true], description: 'Accepts the current Terms and Privacy Policy' })
+  @Equals(true, { message: 'Accept the Terms and the Privacy Policy to continue' })
+  acceptTerms!: true;
+}
+
+export class UpgradeGuestDto implements UpgradeGuestRequest {
+  @ApiProperty({ example: 'maria@example.com' })
+  @IsEmail()
+  @MaxLength(254)
+  email!: string;
+
+  @ApiProperty({ minLength: PASSWORD_MIN, maxLength: PASSWORD_MAX })
+  @IsString()
+  @Length(PASSWORD_MIN, PASSWORD_MAX)
+  password!: string;
+
+  @ApiProperty({ example: 'María' })
+  @IsString()
+  @Length(1, 80)
+  firstName!: string;
+
+  @ApiProperty({ example: 'Pérez' })
+  @IsString()
+  @Length(1, 80)
+  lastName!: string;
+}
+
+export class ClaimGuestDto implements ClaimGuestRequest {
+  @ApiProperty({ description: "The guest's access token, kept on the phone that bought" })
+  @IsString()
+  @Length(10, 500)
+  guestAccessToken!: string;
 }

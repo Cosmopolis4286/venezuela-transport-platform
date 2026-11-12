@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { Readable } from 'node:stream';
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import { assertNotGuest } from '../identity/guest.service.js';
 import {
   requiredDocuments,
   roleAllowedFor,
@@ -86,6 +87,7 @@ export class OnboardingService {
     input: ApplicationInput,
     meta: RequestMeta,
   ): Promise<ProviderApplication> {
+    assertNotGuest(auth);
     const values = await this.validated(input);
     const [row] = await this.database.db
       .insert(applications)

@@ -18,9 +18,6 @@ Términos del negocio y del código, en el orden en que suelen aparecer.
 | **Boleto**                                       | Un puesto pagado, con su código QR (`VTP1.<id>`) que se escanea al abordar                                 |
 | **Lista de pasajeros** (`manifest`)              | Quién viaja en cada puesto de una salida y si abordó                                                       |
 | **Despacho** (`dispatch`)                        | Asignar vehículo y conductor a cada salida                                                                 |
-| **Línea de mototaxis** (`moto_line`)             | Organización de mototaxis: rutas suburbanas de moto, un pasajero por moto (ADR-028)                        |
-| **Tipo de vehículo** (`TransportMode`)           | Bus, carro o moto; cada ruta es de un solo tipo y tiene sus propias tarifas (diseño, ADR-028)              |
-| **Paquete de viajes** (`trip pack`)              | Viajes de un tramo fijo y un tipo de vehículo, comprados por adelantado a la plataforma; vencen (diseño)   |
 | **Tasa de cambio** (`exchange rate`)             | Bolívares o reales por dólar que fija cada empresa para convertir sus tarifas                              |
 | **Pago móvil**                                   | Transferencia inmediata entre bancos venezolanos por teléfono y cédula                                     |
 | **PIX**                                          | Pago instantáneo de Brasil, en reales                                                                      |

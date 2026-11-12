@@ -1,4 +1,4 @@
-import type { OrganizationType } from './organizations.js';
+import type { CashTotal } from './cash-sales.js';
 import type { Currency } from './network.js';
 
 /**
@@ -30,8 +30,6 @@ export interface SalesFigures {
   cancellations: number;
   /** Fares given back for those cancellations. */
   refunded: string;
-  /** Of `seats`, those paid with trip packs (ADR-028). */
-  packSeats: number;
 }
 
 export interface SalesReport {
@@ -42,6 +40,11 @@ export interface SalesReport {
   byRoute: (SalesFigures & { route: { id: string; name: string } })[];
   /** Only days with movement, oldest first. */
   byDay: (SalesFigures & { date: string })[];
+  /** Passengers who paid the driver in cash (not in the figures above: no fee, not settled). */
+  cash: {
+    totals: CashTotal[];
+    byRoute: (CashTotal & { route: { id: string; name: string } })[];
+  };
 }
 
 export interface DepartureOccupancy {
@@ -85,22 +88,6 @@ export interface PlatformMetrics {
   refundsPending: number;
   newUsers: number;
   /** Organizations approved and active now, by type. */
-  activeOrganizations: Record<OrganizationType, number>;
+  activeOrganizations: { bus_company: number; taxi_line: number; terminal: number };
   taxiRides: { requested: number; completed: number; cancelledOrExpired: number };
-  tripPacks: TripPackMetrics;
-}
-
-/** Trip packs the platform sold (ADR-028). */
-export interface TripPackMetrics {
-  /** Packs paid in the range, per pack currency: how many, their trips and what they brought. */
-  sold: { currency: Currency; packs: number; trips: number; amount: string }[];
-  /** Trips used in the range (minus those given back), and the fares owed for them to operators. */
-  used: { currency: Currency; trips: number; fares: string }[];
-  /**
-   * Trips sold and not used yet, in active packs now: service the platform still owes, valued at
-   * each pack's price per trip.
-   */
-  outstanding: { currency: Currency; trips: number; value: string }[];
-  /** Trips lost in packs that expired in the range (the platform keeps their money). */
-  expired: { currency: Currency; trips: number; value: string }[];
 }

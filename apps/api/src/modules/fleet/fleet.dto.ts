@@ -1,10 +1,8 @@
-import { ApiProperty, OmitType, PartialType } from '@nestjs/swagger';
+import { ApiProperty, PartialType } from '@nestjs/swagger';
 import {
   SEAT_LAYOUT_LIMITS,
-  TRANSPORT_MODES,
   type LayoutSeat,
   type SeatLayoutInput,
-  type TransportMode,
   type VehicleDocumentInput,
   type VehicleInput,
 } from '@vtp/shared-types';
@@ -14,7 +12,6 @@ import {
   ArrayMinSize,
   IsArray,
   IsBoolean,
-  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -94,15 +91,6 @@ export class VehicleDto implements VehicleInput {
   @Length(1, 20)
   plate!: string;
 
-  @ApiProperty({
-    required: false,
-    enum: TRANSPORT_MODES,
-    description: "Only on creation; defaults to the organization's first mode",
-  })
-  @IsOptional()
-  @IsIn(TRANSPORT_MODES)
-  mode?: TransportMode;
-
   @ApiProperty({ required: false, nullable: true, example: 'Unidad 12 · Encava 610' })
   @IsOptional()
   @IsString()
@@ -120,8 +108,7 @@ export class VehicleDto implements VehicleInput {
   active?: boolean;
 }
 
-/** The mode is fixed once the vehicle is registered. */
-export class UpdateVehicleDto extends PartialType(OmitType(VehicleDto, ['mode'] as const)) {}
+export class UpdateVehicleDto extends PartialType(VehicleDto) {}
 
 export class VehicleDocumentDto implements VehicleDocumentInput {
   @ApiProperty({ example: 'RCV-2026-004512' })

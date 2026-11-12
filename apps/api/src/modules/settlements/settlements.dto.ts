@@ -7,15 +7,15 @@ import {
   PAYOUT_DIRECTIONS,
   PAYOUT_METHODS,
   type CreatePayoutRequest,
+  type DriverPayoutAccount,
   type Currency,
   type MarkRefundedRequest,
   type PaymentCollection,
   type PayoutDirection,
   type PayoutMethod,
   type RefundTier,
-  type RideCancellationPolicy,
   type SetOrganizationPolicyRequest,
-  type UpdateSettlementPolicyRequest,
+  type SettlementPolicy,
   type SettlementEntriesQuery,
   type VoidPayoutRequest,
 } from '@vtp/shared-types';
@@ -24,12 +24,11 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
-  IsBoolean,
   IsIn,
   IsInt,
-  IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
   Length,
   Matches,
   Max,
@@ -49,8 +48,8 @@ export class SettlementEntriesQueryDto implements SettlementEntriesQuery {
 }
 
 export class RefundTierDto implements RefundTier {
-  @ApiProperty({ example: 48, description: 'Hours before boarding, in quarters (0.5 = 30 min)' })
-  @IsNumber({ maxDecimalPlaces: 2 })
+  @ApiProperty({ example: 48, description: 'Hours before boarding' })
+  @IsInt()
   @Min(0)
   @Max(720)
   hoursBefore!: number;
@@ -66,24 +65,7 @@ const commissionMessage = {
   message: 'commissionRate must be a percentage between 0 and 100 with up to 2 decimals',
 };
 
-export class RideCancellationPolicyDto implements RideCancellationPolicy {
-  @ApiProperty({
-    example: 3,
-    description: 'Free cancelling for these minutes after a line took it',
-  })
-  @IsInt()
-  @Min(0)
-  @Max(60)
-  freeMinutes!: number;
-
-  @ApiProperty({ example: 50, description: "Late cancelling: this % of the line's fare" })
-  @IsInt()
-  @Min(0)
-  @Max(100)
-  feePercent!: number;
-}
-
-export class SettlementPolicyDto implements UpdateSettlementPolicyRequest {
+export class SettlementPolicyDto implements SettlementPolicy {
   @ApiProperty({ example: '8.00' })
   @IsString()
   @Matches(COMMISSION_PATTERN, commissionMessage)
@@ -96,25 +78,6 @@ export class SettlementPolicyDto implements UpdateSettlementPolicyRequest {
   @ValidateNested({ each: true })
   @Type(() => RefundTierDto)
   refundTiers!: RefundTierDto[];
-
-  @ApiProperty({
-    type: [RefundTierDto],
-    required: false,
-    description: 'Suburban routes; omitted: unchanged',
-  })
-  @IsOptional()
-  @IsArray()
-  @ArrayMinSize(1)
-  @ArrayMaxSize(MAX_REFUND_TIERS)
-  @ValidateNested({ each: true })
-  @Type(() => RefundTierDto)
-  suburbanRefundTiers?: RefundTierDto[];
-
-  @ApiPropertyOptional({ type: RideCancellationPolicyDto, description: 'Omitted: unchanged' })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => RideCancellationPolicyDto)
-  rideCancellation?: RideCancellationPolicyDto;
 }
 
 export class SetOrganizationPolicyDto implements SetOrganizationPolicyRequest {
@@ -142,14 +105,6 @@ export class SetOrganizationPolicyDto implements SetOrganizationPolicyRequest {
   @IsOptional()
   @IsIn(PAYMENT_COLLECTIONS)
   paymentCollection?: PaymentCollection;
-
-  @ApiProperty({
-    required: false,
-    description: 'Its departures accept trip packs; omitted: unchanged',
-  })
-  @IsOptional()
-  @IsBoolean()
-  acceptsTripPacks?: boolean;
 }
 
 export class CreatePayoutDto implements CreatePayoutRequest {
@@ -157,6 +112,11 @@ export class CreatePayoutDto implements CreatePayoutRequest {
   @IsOptional()
   @IsIn(PAYOUT_DIRECTIONS)
   direction?: PayoutDirection;
+
+  @ApiPropertyOptional({ description: 'Pay this driver of the organization (ADR-030)' })
+  @IsOptional()
+  @IsUUID()
+  driverUserId?: string;
 
   @ApiProperty({ enum: CURRENCIES })
   @IsIn(CURRENCIES)
@@ -194,4 +154,30 @@ export class MarkRefundedDto implements MarkRefundedRequest {
   @IsString()
   @Length(2, 120)
   reference!: string;
+}
+
+export class DriverPayoutAccountDto implements DriverPayoutAccount {
+  @ApiProperty({ enum: PAYOUT_METHODS })
+  @IsIn(PAYOUT_METHODS)
+  method!: PayoutMethod;
+
+  @ApiProperty({ example: '0102 – Banco de Venezuela' })
+  @IsString()
+  @Length(2, 80)
+  bank!: string;
+
+  @ApiProperty({ example: '0414-1234567', description: 'Phone, account number or wallet' })
+  @IsString()
+  @Length(4, 120)
+  account!: string;
+
+  @ApiProperty({ example: 'V-12345678' })
+  @IsString()
+  @Length(4, 20)
+  holderId!: string;
+
+  @ApiProperty({ example: 'Carlos Pérez' })
+  @IsString()
+  @Length(2, 120)
+  holderName!: string;
 }

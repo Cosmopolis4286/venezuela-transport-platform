@@ -21,6 +21,24 @@ También puedes buscar en la web: `/es/buscar` (o `/en`, `/pt-br`).
 
 Los puestos quedan apartados **15 minutos** mientras pagas. Si no pagas a tiempo, se liberan.
 
+### Rutas urbanas y suburbanas (boleto abierto)
+
+Si la ruta tiene salidas **cada pocos minutos**, el resultado dice "Cada N min, de 05:00 a 20:00 ·
+boleto abierto". No eliges puesto: indicas cuántos pasajeros, sus datos y pagas. El boleto sirve
+para **cualquier unidad de esa ruta ese día**, dentro del horario; muéstraselo al conductor al
+subir.
+
+### Comprar sin crear cuenta
+
+No hace falta registrarse: al elegir el viaje toca **Continuar sin crear cuenta**. Pones los datos
+de los pasajeros (nombre y cédula) y, si quieres, un **teléfono o WhatsApp** para que te avisemos
+si hay algún problema. Tus viajes y boletos quedan guardados **en ese teléfono**, en **Mis
+viajes**.
+
+Para no perderlos si cambias de teléfono, en **Mi cuenta** toca **Crear mi cuenta** (nombre,
+correo y contraseña): tus viajes se quedan. Si ya tenías cuenta, toca **Ya tengo cuenta: iniciar
+sesión** y los viajes de este teléfono pasan a tu cuenta.
+
 ## 3. Pagar
 
 Elige cómo pagar: **pago móvil**, **transferencia** (en bolívares), **PIX** (en reales) o
@@ -38,6 +56,14 @@ avisa y el dinero se te devuelve.
 
 Antes de pagar, la reserva muestra la **política de cancelación** de la empresa (cuánto se
 devuelve según cuántas horas antes canceles), para que la conozcas antes de comprar.
+
+### Factura del cargo por servicio
+
+La plataforma emite una factura por su **cargo por servicio**; el pasaje lo factura la empresa
+de transporte. Por defecto va a nombre del primer pasajero. En la reserva, **Factura a otro
+nombre** permite indicar otro nombre o razón social, cédula o RIF y domicilio fiscal (por ejemplo,
+para tu empresa), y **Volver al primer pasajero** lo deshace. Se puede cambiar hasta que la
+factura se emita; después la reserva muestra su número, número de control y fecha.
 
 > En los entornos de prueba los pagos son simulados: la app ofrece "Simular pago".
 
@@ -57,48 +83,9 @@ la política de la empresa, por ejemplo:
 - 50 % si cancelas con al menos 2 horas;
 - después, sin reembolso (pero tu puesto queda libre para otro pasajero).
 
-En los viajes **suburbanos** (por ejemplo, Casacoima – San Félix – Puerto Ordaz): 100 % con 24
-horas o más, 75 % con 2 horas o más, 50 % con 30 minutos o más, y nada en los últimos 30 minutos.
-
 El reembolso se hace por el mismo medio con el que pagaste. Te avisamos cuando se registra la
 cancelación y cuando se envía el dinero. No se puede cancelar después de abordar ni cuando el
 autobús ya salió.
-
-## Viajes suburbanos y paquetes de viajes
-
-Si VTP opera viajes suburbanos (por ejemplo, Casacoima – San Félix – Puerto Ordaz), arriba de la
-pantalla de inicio puedes elegir **Entre ciudades** o **Suburbano**. La app recuerda tu elección.
-
-En **Suburbano** también puedes comprar **paquetes de viajes** (**Ver paquetes**, o **Mis viajes →
-Tus paquetes**): varios viajes de un tramo, en bus, taxi o moto, por un precio fijo.
-
-- Sirven en los **dos sentidos** del tramo (ida y vuelta).
-- Se pagan como una reserva (pago móvil, transferencia, PIX o USDT) y se activan cuando llega el
-  pago. Si no lo pagas en 24 horas, se anula.
-- **Vencen** (por defecto, 60 días después de pagarlos) y **no se devuelven**: los viajes que no
-  uses se pierden.
-- Para usarlo, reserva como siempre: al llegar a los pasajeros, en **¿Cómo pagas?** aparece tu
-  paquete (si sirve para esa salida). La reserva queda pagada al instante. Puedes tener hasta 4
-  reservas futuras con un paquete, y una por salida.
-- Si cancelas hasta 30 minutos antes de abordar, el viaje vuelve a tu paquete; después, se pierde.
-
-### Taxi o moto por tramo
-
-En **Suburbano**, **Pedir taxi o moto**: elige desde qué parada y hasta cuál, el vehículo (ves
-el precio antes de pedir), **ahora** o **para más tarde** (día y hora), y dónde te buscan cerca de
-la parada de origen. La primera línea que lo toma cobra su tarifa del tramo; le pagas al
-conductor. Una moto lleva un solo pasajero.
-
-Si tienes un **paquete de viajes** de ese tramo y vehículo, en **¿Cómo pagas?** puedes usarlo: no
-le pagas al conductor. Cuando una línea lo toma, la app te muestra un **código de recogida** de 4
-dígitos: díselo al conductor al subir. Si nadie lo toma o lo cancelas, el viaje vuelve a tu paquete.
-
-**Cancelar**: es gratis antes de que una línea tome el viaje, durante los 3 minutos siguientes y,
-si lo pediste para más tarde, hasta 30 minutos antes de la hora. La app te muestra hasta qué hora.
-Después, cancelar cuesta una **tasa** (hoy el 50 % de la tarifa de la línea), que le pagas en
-efectivo al conductor de tu **próximo** viaje de taxi o moto, además de su tarifa; la app te la
-recuerda antes de pedir. Si el conductor no llega 20 minutos después de tomar el viaje (o de la
-hora que pediste), puedes cancelar sin costo.
 
 ## 6. Pedir un taxi en el terminal
 
@@ -108,6 +95,11 @@ hora que pediste), puedes cancelar sin costo.
    y una tarifa. Te llega un aviso con la placa y la tarifa.
 3. Sigue el estado en la app. Puedes cancelar mientras no hayas subido. **Al taxi se le paga
    directamente al conductor.**
+
+## Ayuda
+
+En **Mi cuenta** y en cada reserva está **Escríbenos por WhatsApp**: abre un chat con soporte con
+el código de tu reserva ya escrito. También está al pie de la web.
 
 ## Preguntas frecuentes
 

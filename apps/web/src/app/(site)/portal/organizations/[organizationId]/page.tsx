@@ -3,8 +3,6 @@ import {
   ORGANIZATION_TYPE_LABELS,
   ROLES_BY_ORGANIZATION_TYPE,
   ROUTE_STATUS_LABELS,
-  SERVICE_LABELS,
-  TRANSPORT_MODE_LABELS,
   RATE_CURRENCIES,
   runsRoutes,
   type ExchangeRate,
@@ -98,17 +96,13 @@ async function Organization({ params }: { params: Promise<{ organizationId: stri
           </div>
         </Card>
       ) : null}
-      {organization.type === 'taxi_line' || organization.type === 'moto_line' ? (
+      {organization.type === 'taxi_line' ? (
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-col gap-1">
-              <CardTitle>
-                {organization.type === 'taxi_line' ? 'Taxis' : 'Mototaxis bajo demanda'}
-              </CardTitle>
+              <CardTitle>Taxis</CardTitle>
               <CardDescription>
-                {organization.type === 'taxi_line'
-                  ? 'Terminales donde opera la línea, tarifas por tramo y solicitudes de los pasajeros.'
-                  : 'Tarifas por tramo y solicitudes de los pasajeros.'}
+                Terminales donde opera la línea y solicitudes de los pasajeros.
               </CardDescription>
             </div>
             <Button asChild size="sm" variant="outline">
@@ -117,7 +111,7 @@ async function Organization({ params }: { params: Promise<{ organizationId: stri
           </div>
         </Card>
       ) : null}
-      {runsRoutes(organization.type) &&
+      {organization.type === 'bus_company' &&
       (permissions.includes('finance.view') || permissions.includes('bookings.view')) ? (
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -190,8 +184,7 @@ async function Organization({ params }: { params: Promise<{ organizationId: stri
           canManage={permissions.includes('routes.manage')}
         />
       ) : null}
-      {/* Motorcycles carry one passenger: no seat maps. */}
-      {runsRoutes(organization.type) && organization.type !== 'moto_line' ? (
+      {runsRoutes(organization.type) ? (
         <SeatLayouts
           organizationId={organization.id}
           canManage={permissions.includes('fleet.manage')}
@@ -202,11 +195,7 @@ async function Organization({ params }: { params: Promise<{ organizationId: stri
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-col gap-1">
               <CardTitle>Vehículos</CardTitle>
-              <CardDescription>
-                {organization.type === 'moto_line'
-                  ? 'Placas de las motos y sus documentos.'
-                  : 'Placas de las unidades y su mapa de puestos.'}
-              </CardDescription>
+              <CardDescription>Placas de las unidades y su mapa de puestos.</CardDescription>
             </div>
             <Button asChild size="sm" variant="outline">
               <Link href={`/portal/organizations/${organization.id}/vehicles`}>Ver vehículos</Link>
@@ -283,10 +272,6 @@ async function Routes({
                   >
                     {ROUTE_STATUS_LABELS[route.status]}
                   </Badge>
-                  <Badge variant="outline">{TRANSPORT_MODE_LABELS[route.mode]}</Badge>
-                  {route.service === 'suburban' ? (
-                    <Badge variant="outline">{SERVICE_LABELS.suburban}</Badge>
-                  ) : null}
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {route.origin.city} → {route.destination.city} · {route.stopCount} paradas ·{' '}

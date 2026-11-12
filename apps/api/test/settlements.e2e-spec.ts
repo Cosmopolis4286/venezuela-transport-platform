@@ -83,7 +83,7 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
   };
 
   it(
-    'earns fares minus commission, records and voids payouts, and clears refunds',
+    'earns full fares with the service fee on top, records and voids payouts, and clears refunds',
     { timeout: 30_000 },
     async () => {
       const db = app.get(DatabaseService).db;
@@ -224,10 +224,6 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
           { hoursBefore: 48, percent: 100 },
         ],
       }).expect(400);
-      await putPlatform({
-        ...platformPolicy,
-        rideCancellation: { freeMinutes: 3, feePercent: 150 },
-      }).expect(400);
       // Saving the same values back leaves the shared default untouched for other tests.
       expect((await putPlatform(platformPolicy).expect(200)).body).toEqual(platformPolicy);
 
@@ -238,11 +234,9 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
         commissionOverride: null,
         refundTiers: platformPolicy.refundTiers,
         refundTiersOverride: null,
-        suburbanRefundTiers: platformPolicy.suburbanRefundTiers,
-        rideCancellation: platformPolicy.rideCancellation,
-        acceptsTripPacks: false,
         paymentCollection: 'platform',
         balances: [],
+        drivers: [],
       });
       // Active bus companies are listed for the admins before their first sale.
       expect(
@@ -279,7 +273,7 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
           }),
         );
 
-      // --- Two seats paid at 10 %: 50.00 gross, 5.00 commission, 45.00 earned.
+      // --- Two seats at 10 % (ADR-029): 50.00 fares + 5.00 fee = 55.00 paid, 50.00 earned.
       const first = await payUsdt(await book(['1', '2']));
       expect(first.booking.status).toBe('confirmed');
       // A repeated notification does not earn twice.
@@ -305,13 +299,14 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
       expect((await settlement()).balances).toEqual([
         {
           currency: 'USD',
-          gross: '75.00',
+          gross: '82.13',
           commission: '7.13',
-          earned: '67.87',
+          earned: '75.00',
           collected: '0.00',
           paidOut: '0.00',
           received: '0.00',
-          balance: '67.87',
+          forDrivers: '0.00',
+          balance: '75.00',
         },
       ]);
       const entries = (
@@ -320,8 +315,8 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
       expect(
         entries.map((e) => [e.seats, e.gross, e.commissionRate, e.commission, e.earned]),
       ).toEqual([
-        [1, '25.00', '8.50', '2.13', '22.87'],
-        [2, '50.00', '10.00', '5.00', '45.00'],
+        [1, '27.13', '8.50', '2.13', '25.00'],
+        [2, '55.00', '10.00', '5.00', '50.00'],
       ]);
       expect(entries[0]).toMatchObject({ route: { id: route.id }, serviceDate: date });
       await http()
@@ -351,12 +346,12 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
       await payout({ currency: 'VES', amount: '1' })
         .expect(409)
         .expect((res) => expect(res.body.error.reason).toBe('PAYOUT_EXCEEDS_BALANCE'));
-      await payout({ currency: 'USD', amount: '67.88' }).expect(409);
+      await payout({ currency: 'USD', amount: '75.01' }).expect(409);
       const wrong = (await payout({ currency: 'USD', amount: '60' }).expect(201)).body as Payout;
       expect(wrong).toMatchObject({ amount: '60.00', currency: 'USD', voidedAt: null });
       expect((await settlement()).balances[0]).toMatchObject({
         paidOut: '60.00',
-        balance: '7.87',
+        balance: '15.00',
       });
       const voidPayout = (id: string) =>
         http()
@@ -368,16 +363,16 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
         .expect(409)
         .expect((res) => expect(res.body.error.reason).toBe('PAYOUT_ALREADY_VOIDED'));
       await voidPayout(randomUUID()).expect(404);
-      await payout({ currency: 'USD', amount: '67.87', note: 'Semana 44' }).expect(201);
+      await payout({ currency: 'USD', amount: '75.00', note: 'Semana 44' }).expect(201);
       expect((await settlement()).balances[0]).toMatchObject({
-        paidOut: '67.87',
+        paidOut: '75.00',
         balance: '0.00',
       });
       const history = (
         await http().get(`${org}/payouts`).set('Authorization', owner.auth).expect(200)
       ).body as Payout[];
       expect(history.map((p) => [p.amount, p.voidedAt !== null, p.note])).toEqual([
-        ['67.87', false, 'Semana 44'],
+        ['75.00', false, 'Semana 44'],
         ['60.00', true, null],
       ]);
 
@@ -423,7 +418,8 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
         organization: { id: organization.id },
         payer: { email: passenger.email },
         method: 'usdt',
-        amount: '25.00',
+        // The fare plus the service fee in force when it was held.
+        amount: short.booking.total.amount,
         receivedAmount: '5.00',
       });
       const refund = (paymentId: string, auth = admin.auth) =>
@@ -472,7 +468,7 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
         ).payment,
       ).toMatchObject({ status: 'refunded' });
       // Nothing was earned for the unpaid booking.
-      expect((await settlement()).balances[0]).toMatchObject({ gross: '75.00' });
+      expect((await settlement()).balances[0]).toMatchObject({ gross: '82.13' });
     },
   );
 });

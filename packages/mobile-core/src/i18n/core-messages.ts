@@ -42,6 +42,11 @@ const es = {
     haveAccount: 'Ya tengo cuenta',
     emailTaken: 'Ya existe una cuenta con ese correo. Inicia sesión.',
   },
+  support: {
+    whatsapp: 'Escríbenos por WhatsApp',
+    message: 'Hola, necesito ayuda con VTP.',
+    aboutBooking: (code: string) => `Hola, necesito ayuda con mi reserva ${code}.`,
+  },
   legal: {
     acceptPrefix: 'Acepto los',
     continuePrefix: 'Al continuar aceptas los',
@@ -105,6 +110,11 @@ const en: CoreMessages = {
     haveAccount: 'I already have an account',
     emailTaken: 'There is already an account with that e-mail. Sign in.',
   },
+  support: {
+    whatsapp: 'Message us on WhatsApp',
+    message: 'Hi, I need help with VTP.',
+    aboutBooking: (code) => `Hi, I need help with my booking ${code}.`,
+  },
   legal: {
     acceptPrefix: 'I accept the',
     continuePrefix: 'By continuing you accept the',
@@ -165,6 +175,11 @@ const ptBR: CoreMessages = {
     submit: 'Criar conta',
     haveAccount: 'Já tenho conta',
     emailTaken: 'Já existe uma conta com esse e-mail. Entre.',
+  },
+  support: {
+    whatsapp: 'Fale conosco pelo WhatsApp',
+    message: 'Olá, preciso de ajuda com a VTP.',
+    aboutBooking: (code) => `Olá, preciso de ajuda com minha reserva ${code}.`,
   },
   legal: {
     acceptPrefix: 'Aceito os',

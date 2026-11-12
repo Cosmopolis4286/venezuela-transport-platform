@@ -14,69 +14,11 @@ export const NETWORK_UTC_OFFSET = '-04:00';
 export const ROUTE_OPERATOR_TYPES = [
   'bus_company',
   'taxi_line',
-  'moto_line',
 ] as const satisfies readonly OrganizationType[];
 
 export function runsRoutes(type: OrganizationType): boolean {
   return (ROUTE_OPERATOR_TYPES as readonly OrganizationType[]).includes(type);
 }
-
-// --- Services (ADR-029) -----------------------------------------------------------------------
-
-/**
- * `intercity`: between cities (buses, shared cars, terminal taxis). `suburban`: short, frequent
- * trips inside a corridor (`ServiceArea`). The operator chooses it when creating a route.
- */
-export const SERVICES = ['intercity', 'suburban'] as const;
-export type Service = (typeof SERVICES)[number];
-
-export const SERVICE_LABELS: Record<Service, string> = SHARED_MESSAGES.es.service;
-
-/** Services each organization type publishes routes in; the first is the default. */
-export const SERVICES_BY_ORGANIZATION_TYPE: Record<OrganizationType, readonly Service[]> = {
-  bus_company: ['intercity', 'suburban'],
-  taxi_line: ['intercity', 'suburban'],
-  // Motorcycle taxis only run short trips inside a corridor (ADR-028).
-  moto_line: ['suburban'],
-  terminal: [],
-};
-
-export function servicesFor(type: OrganizationType): readonly Service[] {
-  return SERVICES_BY_ORGANIZATION_TYPE[type];
-}
-
-// --- Transport modes -------------------------------------------------------------------------
-
-/**
- * The kind of vehicle a route runs and a vehicle is (ADR-028). Each route has one mode, so each
- * mode has its own fares for the same pair of stops.
- */
-export const TRANSPORT_MODES = ['bus', 'car', 'motorcycle'] as const;
-export type TransportMode = (typeof TRANSPORT_MODES)[number];
-
-export const TRANSPORT_MODE_LABELS: Record<TransportMode, string> =
-  SHARED_MESSAGES.es.transportMode;
-
-/** Modes each organization type runs; the first is the default for new routes and vehicles. */
-export const TRANSPORT_MODES_BY_ORGANIZATION_TYPE: Record<
-  OrganizationType,
-  readonly TransportMode[]
-> = {
-  bus_company: ['bus'],
-  taxi_line: ['car'],
-  moto_line: ['motorcycle'],
-  terminal: [],
-};
-
-export function modesFor(type: OrganizationType): readonly TransportMode[] {
-  return TRANSPORT_MODES_BY_ORGANIZATION_TYPE[type];
-}
-
-/**
- * A motorcycle carries one passenger (decided by the product owner): its departures have one
- * seat and no seat map, and its vehicles have no seat map either.
- */
-export const MOTORCYCLE_SEATS = 1;
 
 // --- Stops -------------------------------------------------------------------------------------
 
@@ -98,6 +40,8 @@ export interface Stop {
   operatorOrganizationId: string | null;
   /** Inactive stops are hidden from search and cannot be added to routes. */
   active: boolean;
+  /** Operating zone (city or region) the stop belongs to; null = not assigned yet. */
+  zoneId: string | null;
 }
 
 /** `POST /api/v1/admin/stops` and `PATCH /api/v1/admin/stops/:stopId` (all optional on PATCH). */
@@ -112,6 +56,8 @@ export interface StopInput {
   longitude?: number | null;
   operatorOrganizationId?: string | null;
   active?: boolean;
+  /** Omitted on create: assigned to the zone whose area contains the location, if any. */
+  zoneId?: string | null;
 }
 
 /** Compact stop shown inside routes and departures. */
@@ -182,9 +128,14 @@ export interface Schedule {
   seats: number;
   /** Seat map passengers choose from; `seats` then equals its capacity. */
   seatLayoutId: string | null;
+  /**
+   * Frequency service (urban and suburban): a unit leaves every `headwayMinutes` from
+   * `departureTime` to `lastDepartureTime`. Passengers buy an open ticket for the day, valid on
+   * any unit, without choosing a seat; `seats` is the capacity of one unit. Null: one departure.
+   */
+  headwayMinutes: number | null;
+  lastDepartureTime: string | null;
   active: boolean;
-  /** Set when it was created as part of a frequency series (`ScheduleSeriesInput`). */
-  seriesId: string | null;
 }
 
 /** `POST …/routes/:routeId/schedules` and `PATCH …/schedules/:scheduleId` (all optional on PATCH). */
@@ -197,55 +148,70 @@ export interface ScheduleInput {
   /** Required without a seat layout; with one, the layout's capacity is used. */
   seats?: number;
   seatLayoutId?: string | null;
+  /** Both or neither; frequency schedules have no seat layout. */
+  headwayMinutes?: number | null;
+  lastDepartureTime?: string | null;
   active?: boolean;
 }
 
+/** Minutes between units on a frequency schedule. */
+export const MIN_HEADWAY_MINUTES = 3;
+export const MAX_HEADWAY_MINUTES = 180;
+
 /**
- * `POST …/routes/:routeId/schedule-series`: frequent departures, e.g. from 05:00 to 20:00 every
- * 15 minutes. Each departure becomes its own schedule (so trips, bookings and dispatch work as
- * for any other), grouped by `seriesId` to pause or delete them together.
+ * Units a frequency schedule runs in a day (`HH:MM` times on the same day), so the day's open
+ * tickets are capped at `seats × runs`. 1 for a single departure.
  */
-export interface ScheduleSeriesInput extends Omit<ScheduleInput, 'departureTime' | 'active'> {
-  /** `HH:MM`, the first departure. */
-  firstDeparture: string;
-  /** `HH:MM`, the last departure is at or before this time, the same day. */
-  lastDeparture: string;
-  everyMinutes: number;
+export function frequencyRuns(
+  departureTime: string,
+  lastDepartureTime: string | null,
+  headwayMinutes: number | null,
+): number {
+  if (!lastDepartureTime || !headwayMinutes) return 1;
+  const minutes = (time: string) => {
+    const [h = 0, m = 0] = time.split(':').map(Number);
+    return h * 60 + m;
+  };
+  const span = minutes(lastDepartureTime) - minutes(departureTime);
+  return span < 0 ? 1 : Math.floor(span / headwayMinutes) + 1;
 }
 
-/** `PATCH …/schedule-series/:seriesId` */
-export interface ScheduleSeriesUpdate {
-  active: boolean;
-}
+/**
+ * `interurban`: between cities (bus terminals). `suburban`: urban and suburban service (buses,
+ * por puesto). Decides who is paid by default (ADR-030).
+ */
+export const ROUTE_SCOPES = ['interurban', 'suburban'] as const;
+export type RouteScope = (typeof ROUTE_SCOPES)[number];
 
-export const SCHEDULE_SERIES_LIMITS = {
-  minEveryMinutes: 5,
-  maxEveryMinutes: 240,
-  maxDepartures: 150,
-} as const;
+export const ROUTE_SCOPE_LABELS: Record<RouteScope, string> = {
+  interurban: 'Interurbana',
+  suburban: 'Urbana o suburbana',
+};
 
-/** The departure times of a series: `["05:00", "05:15", …]` (empty if `last` is before `first`). */
-export function seriesTimes(first: string, last: string, everyMinutes: number): string[] {
-  const minutes = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
-  const times: string[] = [];
-  if (everyMinutes <= 0) return times;
-  for (let m = minutes(first); m <= minutes(last); m += everyMinutes) {
-    times.push(`${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`);
-  }
-  return times;
+/** Who receives the fares of a route: the line/company, or the driver of each trip (ADR-030). */
+export const PAYEES = ['organization', 'driver'] as const;
+export type Payee = (typeof PAYEES)[number];
+
+export const PAYEE_LABELS: Record<Payee, string> = {
+  organization: 'La empresa o línea',
+  driver: 'El conductor de cada viaje',
+};
+
+/** Interurban routes pay the line; suburban ones the driver, unless the route says otherwise. */
+export function defaultPayee(scope: RouteScope): Payee {
+  return scope === 'suburban' ? 'driver' : 'organization';
 }
 
 export interface Route {
   id: string;
   organizationId: string;
   name: string;
-  /** Set when the route is created; never changes. */
-  mode: TransportMode;
-  /** Set when the route is created; never changes. */
-  service: Service;
-  /** Corridor of a suburban route (every stop belongs to it); null for intercity routes. */
-  serviceAreaId: string | null;
   status: RouteStatus;
+  scope: RouteScope;
+  /** The route's own choice; null uses `defaultPayee(scope)`. */
+  payeeOverride: Payee | null;
+  /** Who is paid for this route's sales. */
+  payee: Payee;
   stops: RouteStop[];
   fares: Fare[];
   schedules: Schedule[];
@@ -256,8 +222,6 @@ export interface Route {
 export interface RouteSummary {
   id: string;
   name: string;
-  mode: TransportMode;
-  service: Service;
   status: RouteStatus;
   origin: StopSummary;
   destination: StopSummary;
@@ -273,12 +237,10 @@ export interface RouteSummary {
 export interface RouteInput {
   name: string;
   stops: { stopId: string; minutesFromOrigin: number }[];
-  /** Only on creation; defaults to the organization's first mode (`modesFor`). */
-  mode?: TransportMode;
-  /** Only on creation; defaults to `intercity`. */
-  service?: Service;
-  /** Required for suburban routes, on creation: every stop must belong to that corridor. */
-  serviceAreaId?: string | null;
+  /** Default `interurban`. */
+  scope?: RouteScope;
+  /** Null (or omitted) uses the default for the scope. */
+  payeeOverride?: Payee | null;
 }
 
 /** `PUT …/routes/:routeId/fares` replaces every fare of the route. */
@@ -293,16 +255,9 @@ export interface ChangeRouteStatusRequest {
 
 // --- Search ------------------------------------------------------------------------------------
 
-/**
- * `GET /api/v1/search/departures?from=<stopId>&to=<stopId>&date=YYYY-MM-DD[&mode=bus][&service=]`
- * (public). Without `mode` or `service`, all of them. Departures of a service that is switched off
- * (`ServicesStatus`) are never listed.
- */
+/** `GET /api/v1/search/departures?from=<stopId>&to=<stopId>&date=YYYY-MM-DD` (public). */
 export interface Departure {
   scheduleId: string;
-  mode: TransportMode;
-  service: Service;
-  serviceAreaId: string | null;
   /** Date the bus leaves the route's origin (may be the day before `departsAt` at an intermediate stop). */
   serviceDate: string;
   operator: Pick<Organization, 'id' | 'type' | 'legalName' | 'tradeName'>;
@@ -319,6 +274,30 @@ export interface Departure {
   seatsAvailable: number;
   /** Null when the operator has not priced this pair of stops. */
   fare: Pick<Fare, 'amount' | 'currency'> | null;
+  /** Platform service fee (percentage, e.g. "15.00") charged on top of the fare (ADR-029). */
+  serviceFeeRate: string;
+  /**
+   * Frequency service: a unit every `headwayMinutes` from `departsAt` (the first) to
+   * `lastDepartsAt` (the last), at the boarding stop; the ticket is open for the day.
+   */
+  headwayMinutes: number | null;
+  lastDepartsAt: string | null;
+}
+
+/**
+ * The service fee on `fares` at `rate` percent and the total the passenger pays, rounded half up
+ * to cents exactly as the API does (ADR-029). For showing prices; the API's booking is the truth.
+ */
+export function withServiceFee(fares: string, rate: string): { fee: string; total: string } {
+  const scaled = (value: string) => {
+    const [whole = '0', fraction = ''] = value.split('.');
+    return BigInt(whole) * 100n + BigInt((fraction + '00').slice(0, 2));
+  };
+  const cents = scaled(fares);
+  const product = cents * scaled(rate);
+  const fee = (product * 2n + 10_000n) / 20_000n;
+  const show = (value: bigint) => `${value / 100n}.${(value % 100n).toString().padStart(2, '0')}`;
+  return { fee: show(fee), total: show(cents + fee) };
 }
 
 /** `HH:MM` on a 24-hour clock. */
@@ -390,4 +369,61 @@ export function formatMoney(
     maximumFractionDigits: 2,
   }).format(Number(amount));
   return currency === 'USD' ? `US$ ${value}` : `Bs. ${value}`;
+}
+
+// --- Operating zones -------------------------------------------------------------------------
+
+/**
+ * `active`: sells trips and taxis. `coming_soon`: listed so passengers know it is coming, but
+ * nothing in it can be booked. `paused`: hidden (e.g. a strike or a regulatory stop).
+ */
+export const ZONE_STATUSES = ['active', 'coming_soon', 'paused'] as const;
+export type ZoneStatus = (typeof ZONE_STATUSES)[number];
+
+export const ZONE_STATUS_LABELS: Record<ZoneStatus, string> = {
+  active: 'Activa',
+  coming_soon: 'Próximamente',
+  paused: 'Pausada',
+};
+
+/**
+ * A city or region the platform operates in (e.g. «Eje Casacoima – San Félix», «Maturín»).
+ * Stops belong to a zone; a route's zone is the zone of its first stop. One database for all.
+ */
+export interface OperatingZone {
+  id: string;
+  name: string;
+  /** Lower-case, for URLs: `san-felix`. */
+  slug: string;
+  status: ZoneStatus;
+  /** Suggested currency for new fares in this zone. */
+  defaultCurrency: Currency;
+  /**
+   * Platform commission (percentage, e.g. "15.00") for trips that start in this zone; null uses
+   * the platform rate. A company's own override still wins.
+   */
+  commissionRate: string | null;
+  /** Centre and radius of the area; new stops inside it are assigned to the zone. */
+  latitude: number | null;
+  longitude: number | null;
+  radiusKm: number | null;
+  /** Stops assigned to the zone (admin listing only). */
+  stopCount?: number;
+}
+
+/** `POST /api/v1/admin/zones` and `PATCH /api/v1/admin/zones/:zoneId` (all optional on PATCH). */
+export interface OperatingZoneInput {
+  name: string;
+  slug: string;
+  status?: ZoneStatus;
+  defaultCurrency?: Currency;
+  commissionRate?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  radiusKm?: number | null;
+}
+
+/** `GET /api/v1/stops/nearby?latitude=&longitude=&radiusKm=`: stops of active zones, nearest first. */
+export interface NearbyStop extends Stop {
+  distanceKm: number;
 }

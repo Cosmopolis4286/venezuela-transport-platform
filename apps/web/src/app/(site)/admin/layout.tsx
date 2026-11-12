@@ -21,8 +21,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Link href="/admin/stops" className="text-sm opacity-90 hover:underline">
               Terminales y paradas
             </Link>
-            <Link href="/admin/services" className="text-sm opacity-90 hover:underline">
-              Servicios
+            <Link href="/admin/bookings" className="text-sm opacity-90 hover:underline">
+              Buscar reserva
             </Link>
             <Suspense>
               <MoneyLinks />
@@ -54,6 +54,9 @@ async function MoneyLinks() {
   if (user.platformRole !== 'admin') return null;
   return (
     <>
+      <Link href="/admin/zones" className="text-sm opacity-90 hover:underline">
+        Zonas
+      </Link>
       <Link href="/admin/payments" className="text-sm opacity-90 hover:underline">
         Pagos
       </Link>
@@ -63,8 +66,8 @@ async function MoneyLinks() {
       <Link href="/admin/refunds" className="text-sm opacity-90 hover:underline">
         Reembolsos
       </Link>
-      <Link href="/admin/trip-packs" className="text-sm opacity-90 hover:underline">
-        Paquetes
+      <Link href="/admin/fiscal" className="text-sm opacity-90 hover:underline">
+        Facturación
       </Link>
       <Link href="/admin/metrics" className="text-sm opacity-90 hover:underline">
         Métricas

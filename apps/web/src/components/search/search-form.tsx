@@ -1,18 +1,11 @@
-import {
-  INTL_LOCALES,
-  localeSegment,
-  todayInVenezuela,
-  type Service,
-  type ServiceArea,
-  type StopSummary,
-} from '@vtp/shared-types';
+import { INTL_LOCALES, localeSegment, todayInVenezuela, type Stop } from '@vtp/shared-types';
 import { Button } from '@/components/ui/button';
 import { Input, Select } from '@/components/ui/input';
 import { Field } from '@/components/ui/label';
 import { getMessages } from '@/i18n/locale';
 import { getStops } from '@/lib/server/network';
 
-function StopOptions({ stops, collator }: { stops: StopSummary[]; collator: string }) {
+function StopOptions({ stops, collator }: { stops: Stop[]; collator: string }) {
   const states = [...new Set(stops.map((s) => s.state))].sort((a, b) =>
     a.localeCompare(b, collator),
   );
@@ -29,38 +22,15 @@ function StopOptions({ stops, collator }: { stops: StopSummary[]; collator: stri
   ));
 }
 
-/** Suburban: only the stops of the active corridors, one group per corridor. */
-function AreaOptions({ areas, collator }: { areas: ServiceArea[]; collator: string }) {
-  return areas.map((area) => (
-    <optgroup key={area.id} label={area.name}>
-      {[...area.stops]
-        .sort((a, b) => a.city.localeCompare(b.city, collator) || a.name.localeCompare(b.name))
-        .map((s) => (
-          <option key={s.id} value={s.id}>
-            {s.city} · {s.name}
-          </option>
-        ))}
-    </optgroup>
-  ));
-}
-
-/**
- * Plain GET form to /[lang]/buscar: works without JavaScript and gives shareable result URLs.
- * With `areas` (the suburban service) it offers only the stops of those corridors.
- */
+/** Plain GET form to /[lang]/buscar: works without JavaScript and gives shareable result URLs. */
 export async function SearchForm({
   from = '',
   to = '',
   date,
-  service,
-  areas,
 }: {
   from?: string;
   to?: string;
   date?: string;
-  /** Sent along so the results stay on the same service; omitted with a single service. */
-  service?: Service;
-  areas?: ServiceArea[];
 }) {
   const [stops, { locale, t }] = await Promise.all([getStops(), getMessages()]);
   const today = todayInVenezuela();
@@ -74,21 +44,13 @@ export async function SearchForm({
       <Field label={t.form.origin} htmlFor="from">
         <Select id="from" name="from" required defaultValue={from}>
           <option value="">{t.form.fromPlaceholder}</option>
-          {areas ? (
-            <AreaOptions areas={areas} collator={collator} />
-          ) : (
-            <StopOptions stops={stops} collator={collator} />
-          )}
+          <StopOptions stops={stops} collator={collator} />
         </Select>
       </Field>
       <Field label={t.form.destination} htmlFor="to">
         <Select id="to" name="to" required defaultValue={to}>
           <option value="">{t.form.toPlaceholder}</option>
-          {areas ? (
-            <AreaOptions areas={areas} collator={collator} />
-          ) : (
-            <StopOptions stops={stops} collator={collator} />
-          )}
+          <StopOptions stops={stops} collator={collator} />
         </Select>
       </Field>
       <Field label={t.form.date} htmlFor="date">
@@ -101,7 +63,6 @@ export async function SearchForm({
           defaultValue={date ?? today}
         />
       </Field>
-      {service ? <input type="hidden" name="service" value={service} /> : null}
       <Button type="submit">{t.form.submit}</Button>
     </form>
   );

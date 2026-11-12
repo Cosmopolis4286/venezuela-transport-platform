@@ -1,6 +1,7 @@
 import {
   formatPaymentAmount,
   PAYOUT_METHOD_LABELS,
+  type DriverBalance,
   type OrganizationSettlement,
   type Payout,
   type SettlementEntry,
@@ -19,48 +20,26 @@ function balanceText(balance: string, currency: Parameters<typeof formatPaymentA
 }
 
 /** Balance per currency: fares, commission, payouts and what is still owed. */
-export function SettlementBalances({
-  settlement,
-  onDemand = false,
-}: {
-  settlement: OrganizationSettlement;
-  /** A taxi or motorcycle line: explain the late-cancellation fee. */
-  onDemand?: boolean;
-}) {
+export function SettlementBalances({ settlement }: { settlement: OrganizationSettlement }) {
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-muted-foreground">
-        Comisión de la plataforma: <strong>{percent(settlement.commissionRate)}</strong>
-        {settlement.commissionOverride ? ' (acordada con la empresa)' : ' (por defecto)'}. Se aplica
-        a las reservas pagadas desde que se fija.
+        Cargo por servicio de la plataforma: <strong>{percent(settlement.commissionRate)}</strong>
+        {settlement.commissionOverride ? ' (acordado con la empresa)' : ' (por defecto)'}, que paga
+        el pasajero además de la tarifa: la empresa recibe su tarifa completa. Se aplica a las
+        reservas hechas desde que se fija.
       </p>
       <p className="text-sm text-muted-foreground">
         Reembolso si el pasajero cancela: {describeRefundTiers(settlement.refundTiers)}
-        {settlement.refundTiersOverride ? ' (acordado con la empresa)' : ' (por defecto)'}; en rutas
-        suburbanas, {describeRefundTiers(settlement.suburbanRefundTiers)}. La plataforma conserva su
-        comisión; el reembolso se descuenta de lo ganado por la empresa.
+        {settlement.refundTiersOverride ? ' (acordado con la empresa)' : ' (por defecto)'}, sobre la
+        tarifa; el cargo por servicio no se reembolsa. Si la empresa cancela la salida, el pasajero
+        recibe todo y la empresa asume el cargo por servicio.
       </p>
       <p className="text-sm text-muted-foreground">
         {settlement.paymentCollection === 'operator'
-          ? 'Cobros: la empresa recibe los pagos en sus propias cuentas, los verifica, hace sus reembolsos y le paga la comisión a la plataforma.'
+          ? 'Cobros: la empresa recibe los pagos en sus propias cuentas (tarifa y cargo por servicio), los verifica, hace sus reembolsos y le paga a la plataforma el cargo por servicio.'
           : 'Cobros: la plataforma recibe los pagos de los pasajeros y le paga a la empresa lo que gana.'}
       </p>
-      {onDemand ? (
-        <p className="text-sm text-muted-foreground">
-          Taxis y motos por tramo: si el pasajero cancela más de{' '}
-          {settlement.rideCancellation.freeMinutes} min después de que la línea tomó el viaje, debe
-          una tasa del {settlement.rideCancellation.feePercent} % de la tarifa (salvo que el
-          conductor no lo haya recogido en 20 min). La cobra en efectivo el conductor de su próximo
-          viaje; si es de otra línea, se la descontamos a esa y se la pagamos a la que salió a
-          buscarlo, menos la comisión.
-        </p>
-      ) : null}
-      {settlement.acceptsTripPacks ? (
-        <p className="text-sm text-muted-foreground">
-          Acepta paquetes de viajes: por cada viaje usado gana su tarifa normal del tramo, menos la
-          comisión, aunque la plataforma cobró el paquete.
-        </p>
-      ) : null}
       {settlement.balances.length === 0 ? (
         <p className="text-sm text-muted-foreground">Todavía no hay reservas pagadas.</p>
       ) : (
@@ -69,8 +48,8 @@ export function SettlementBalances({
             <thead className="text-left text-muted-foreground">
               <tr>
                 <th className="py-2 pr-4 font-normal">Moneda</th>
-                <th className="py-2 pr-4 text-right font-normal">Boletos vendidos</th>
-                <th className="py-2 pr-4 text-right font-normal">Comisión</th>
+                <th className="py-2 pr-4 text-right font-normal">Pagado por pasajeros</th>
+                <th className="py-2 pr-4 text-right font-normal">Cargo por servicio</th>
                 <th className="py-2 pr-4 text-right font-normal">Para la empresa</th>
                 <th className="py-2 pr-4 text-right font-normal">Cobrado por la empresa</th>
                 <th className="py-2 pr-4 text-right font-normal">Pagado a la empresa</th>
@@ -109,11 +88,66 @@ export function SettlementBalances({
           </table>
           <p className="pt-2 text-xs text-muted-foreground">
             Saldo = para la empresa − cobrado por la empresa − pagado a la empresa + pagado por la
-            empresa. «Debe» es lo que la empresa le debe a la plataforma (su comisión).
+            empresa. «Debe» es lo que la empresa le debe a la plataforma (el cargo por servicio que
+            cobró).
           </p>
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Fares of routes paid to drivers (ADR-030), per driver and currency. `pay` renders the admin's
+ * payout form for one row (platform staff only).
+ */
+export function DriverBalances({
+  drivers,
+  pay,
+}: {
+  drivers: DriverBalance[];
+  pay?: (row: DriverBalance) => React.ReactNode;
+}) {
+  if (drivers.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Ninguna ruta le paga a sus conductores todavía (se elige en cada ruta: las urbanas y
+        suburbanas les pagan por defecto).
+      </p>
+    );
+  }
+  return (
+    <ul className="flex flex-col divide-y">
+      {drivers.map((row) => (
+        <li
+          key={`${row.driver?.id ?? 'none'}:${row.currency}`}
+          className="flex flex-col gap-2 py-3 text-sm"
+        >
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <span className="font-medium">
+              {row.driver ? row.driver.name : 'Viajes sin conductor asignado'}
+            </span>
+            <span className="tabular-nums">
+              Ganado {formatPaymentAmount(row.earned, row.currency)} · pagado{' '}
+              {formatPaymentAmount(row.paidOut, row.currency)} · saldo{' '}
+              <strong>{formatPaymentAmount(row.balance, row.currency)}</strong>
+            </span>
+          </div>
+          {row.driver ? (
+            <p className="text-muted-foreground">
+              {row.payoutAccount
+                ? `Cobra por ${PAYOUT_METHOD_LABELS[row.payoutAccount.method]}: ${row.payoutAccount.bank} · ${row.payoutAccount.account} · ${row.payoutAccount.holderId} · ${row.payoutAccount.holderName}`
+                : 'Aún no indicó dónde cobrar (lo hace en la app de transportistas).'}
+            </p>
+          ) : (
+            <p className="text-muted-foreground">
+              Se le pagan al conductor que el despacho asigne a cada viaje.
+            </p>
+          )}
+          {row.driver && pay && Number(row.balance) > 0 ? pay(row) : null}
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -131,8 +165,8 @@ export function SettlementEntries({ entries }: { entries: SettlementEntry[] }) {
             <th className="py-2 pr-4 font-normal">Reserva</th>
             <th className="py-2 pr-4 font-normal">Ruta y fecha</th>
             <th className="py-2 pr-4 text-right font-normal">Puestos</th>
-            <th className="py-2 pr-4 text-right font-normal">Total</th>
-            <th className="py-2 pr-4 text-right font-normal">Comisión</th>
+            <th className="py-2 pr-4 text-right font-normal">Pagado</th>
+            <th className="py-2 pr-4 text-right font-normal">Cargo por servicio</th>
             <th className="py-2 text-right font-normal">Para la empresa</th>
           </tr>
         </thead>
@@ -144,9 +178,6 @@ export function SettlementEntries({ entries }: { entries: SettlementEntry[] }) {
                 {e.bookingCode}
                 {e.kind === 'cancellation' ? (
                   <span className="text-muted-foreground"> · cancelada</span>
-                ) : null}
-                {e.kind === 'ride_cancellation_fee' ? (
-                  <span className="text-muted-foreground"> · tasa de cancelación</span>
                 ) : null}
                 {e.collectedBy === 'operator' ? (
                   <span className="text-muted-foreground"> · cobró la empresa</span>
@@ -181,6 +212,7 @@ export function PayoutLine({ payout, children }: { payout: Payout; children?: Re
         </span>
         <span className="text-sm text-muted-foreground">
           {payout.direction === 'from_operator' ? 'De la empresa a la plataforma · ' : ''}
+          {payout.driver ? `Al conductor ${payout.driver.name} · ` : ''}
           {PAYOUT_METHOD_LABELS[payout.method]} · ref. {payout.reference} ·{' '}
           {formatDate(payout.createdAt)}
         </span>

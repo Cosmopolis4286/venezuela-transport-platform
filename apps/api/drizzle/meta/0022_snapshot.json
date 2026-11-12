@@ -1,5 +1,5 @@
 {
-  "id": "c14c1e2f-8f83-4dfc-a1cb-48e1f23bf705",
+  "id": "4f3a4634-65ec-4db0-8efd-93ca7031f046",
   "prevId": "9bd636b2-d357-4f0d-b3ef-4e1ba3929539",
   "version": "7",
   "dialect": "postgresql",
@@ -1625,13 +1625,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "mode": {
-          "name": "mode",
-          "type": "transport_mode",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
         "seat_layout_id": {
           "name": "seat_layout_id",
           "type": "uuid",
@@ -1715,6 +1708,126 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.operating_zones": {
+      "name": "operating_zones",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "zone_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'coming_soon'"
+        },
+        "default_currency": {
+          "name": "default_currency",
+          "type": "currency",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'USD'"
+        },
+        "commission_rate": {
+          "name": "commission_rate",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "center": {
+          "name": "center",
+          "type": "geometry(point)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "radius_km": {
+          "name": "radius_km",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "operating_zones_name_key": {
+          "name": "operating_zones_name_key",
+          "columns": [
+            {
+              "expression": "lower(\"name\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "operating_zones_slug_key": {
+          "name": "operating_zones_slug_key",
+          "columns": [
+            {
+              "expression": "slug",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "operating_zones_commission_range": {
+          "name": "operating_zones_commission_range",
+          "value": "\"operating_zones\".\"commission_rate\" is null or (\"operating_zones\".\"commission_rate\" >= 0 and \"operating_zones\".\"commission_rate\" <= 100)"
+        },
+        "operating_zones_area": {
+          "name": "operating_zones_area",
+          "value": "(\"operating_zones\".\"center\" is null) = (\"operating_zones\".\"radius_km\" is null) and (\"operating_zones\".\"radius_km\" is null or \"operating_zones\".\"radius_km\" between 1 and 500)"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.route_fares": {
@@ -2094,13 +2207,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "mode": {
-          "name": "mode",
-          "type": "transport_mode",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
         "status": {
           "name": "status",
           "type": "route_status",
@@ -2248,6 +2354,12 @@
           "notNull": true,
           "default": true
         },
+        "zone_id": {
+          "name": "zone_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -2264,6 +2376,21 @@
         }
       },
       "indexes": {
+        "stops_zone_idx": {
+          "name": "stops_zone_idx",
+          "columns": [
+            {
+              "expression": "zone_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "stops_name_city_key": {
           "name": "stops_name_city_key",
           "columns": [
@@ -2308,6 +2435,19 @@
           "tableTo": "organizations",
           "columnsFrom": [
             "operator_organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "stops_zone_id_operating_zones_id_fk": {
+          "name": "stops_zone_id_operating_zones_id_fk",
+          "tableFrom": "stops",
+          "tableTo": "operating_zones",
+          "columnsFrom": [
+            "zone_id"
           ],
           "columnsTo": [
             "id"
@@ -4787,15 +4927,6 @@
         "declined"
       ]
     },
-    "public.transport_mode": {
-      "name": "transport_mode",
-      "schema": "public",
-      "values": [
-        "bus",
-        "car",
-        "motorcycle"
-      ]
-    },
     "public.vehicle_document_kind": {
       "name": "vehicle_document_kind",
       "schema": "public",
@@ -4837,6 +4968,15 @@
       "values": [
         "terminal",
         "stop"
+      ]
+    },
+    "public.zone_status": {
+      "name": "zone_status",
+      "schema": "public",
+      "values": [
+        "active",
+        "coming_soon",
+        "paused"
       ]
     },
     "public.booking_status": {

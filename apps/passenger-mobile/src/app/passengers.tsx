@@ -9,22 +9,19 @@ import {
   Screen,
   Segmented,
   Subheading,
-  useApi,
   useAuth,
   useCurrentUser,
   userMessage,
 } from '@vtp/mobile-core';
 import {
-  formatMoney,
   IDENTITY_DOCUMENT_TYPES,
-  packFits,
   type Booking,
-  type TripPack,
   type IdentityDocumentType,
   type PassengerInput,
 } from '@vtp/shared-types';
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
+import { PriceBreakdown } from '@/components/price-breakdown';
 import { useT } from '@/i18n/use-t';
 import { useBookingDraft } from '@/lib/booking-draft';
 
@@ -33,7 +30,7 @@ export default function PassengersScreen() {
   const user = useCurrentUser();
   const { api } = useAuth();
   const { trip, seats, clear } = useBookingDraft();
-  const { t, locale } = useT();
+  const { t } = useT();
   const documentLabels: Record<IdentityDocumentType, string> = {
     V: 'V',
     E: 'E',
@@ -48,26 +45,10 @@ export default function PassengersScreen() {
       documentNumber: '',
     })),
   );
+  const [contactPhone, setContactPhone] = useState(user.phone ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [payWith, setPayWith] = useState<string | null>(null);
-  // Trip packs only pay suburban departures of operators that accept them (ADR-028).
-  const packs = useApi<TripPack[]>(
-    trip?.service === 'suburban' && trip.acceptsTripPacks ? '/me/trip-packs' : null,
-  );
   if (!trip || !seats.length) return <Redirect href="/" />;
-  const usable = (packs.data ?? []).filter((pack) => packFits(pack, trip, seats.length));
-  // A pack that fits is the default: it is what the passenger bought it for.
-  const choice =
-    payWith && (payWith === 'money' || usable.some((p) => p.id === payWith))
-      ? payWith
-      : (usable[0]?.id ?? 'money');
-  const pack = usable.find((p) => p.id === choice) ?? null;
-  const total = formatMoney(
-    (Number(trip.fare!.amount) * passengers.length).toFixed(2),
-    trip.fare!.currency,
-    locale,
-  );
 
   const update = (index: number, patch: Partial<PassengerInput>) =>
     setPassengers((current) => current.map((p, i) => (i === index ? { ...p, ...patch } : p)));
@@ -85,8 +66,11 @@ export default function PassengersScreen() {
           serviceDate: trip.serviceDate,
           fromStopId: trip.from.id,
           toStopId: trip.to.id,
-          passengers,
-          ...(pack ? { tripPackId: pack.id } : {}),
+          // Open tickets (empty seat) go without a seat: the API numbers them.
+          passengers: passengers.map(({ seatNumber, ...rest }) =>
+            seatNumber ? { seatNumber, ...rest } : rest,
+          ),
+          ...(contactPhone.trim() ? { contactPhone: contactPhone.trim() } : {}),
         },
       });
       clear();
@@ -110,8 +94,10 @@ export default function PassengersScreen() {
       <Heading>{t.passengers.heading}</Heading>
       <Body muted>{t.passengers.intro}</Body>
       {passengers.map((passenger, index) => (
-        <Card key={passenger.seatNumber}>
-          <Subheading>{t.seat(passenger.seatNumber)}</Subheading>
+        <Card key={passenger.seatNumber || `open-${index}`}>
+          <Subheading>
+            {passenger.seatNumber ? t.seat(passenger.seatNumber) : t.passengerN(index + 1)}
+          </Subheading>
           <Field
             label={t.passengers.firstNames}
             value={passenger.firstName}
@@ -132,7 +118,7 @@ export default function PassengersScreen() {
             onChange={(documentType) => update(index, { documentType })}
           />
           <Field
-            label={t.passengers.documentNumberFor(passenger.seatNumber)}
+            label={t.passengers.documentNumberFor(passenger.seatNumber || String(index + 1))}
             value={passenger.documentNumber}
             onChangeText={(documentNumber) => update(index, { documentNumber })}
             keyboardType={passenger.documentType === 'P' ? 'default' : 'number-pad'}
@@ -141,27 +127,23 @@ export default function PassengersScreen() {
           />
         </Card>
       ))}
-      {usable.length ? (
-        <Segmented
-          label={t.passengers.payHow}
-          options={[
-            ...usable.map((p) => ({
-              value: p.id,
-              label: t.passengers.payPack(p.code, p.remaining),
-            })),
-            { value: 'money', label: t.passengers.payMoney(total) },
-          ]}
-          value={choice}
-          onChange={setPayWith}
-        />
-      ) : (
-        <Body>
-          {t.passengers.total}: {total}
-        </Body>
-      )}
+      <Field
+        label={t.passengers.contactPhone}
+        hint={t.passengers.contactHint}
+        value={contactPhone}
+        onChangeText={setContactPhone}
+        keyboardType="phone-pad"
+        maxLength={20}
+      />
+      <PriceBreakdown
+        label={t.passengers.total}
+        fares={(Number(trip.fare!.amount) * passengers.length).toFixed(2)}
+        rate={trip.serviceFeeRate}
+        currency={trip.fare!.currency}
+      />
       {error ? <Banner tone="error">{error}</Banner> : null}
       <Button
-        title={pack ? t.passengers.bookWithPack : t.passengers.hold}
+        title={t.passengers.hold}
         loading={busy}
         disabled={!complete}
         onPress={() => void hold()}

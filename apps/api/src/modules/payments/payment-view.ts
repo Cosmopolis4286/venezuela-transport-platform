@@ -5,7 +5,6 @@ export function toPayment(row: PaymentRow): Payment {
   return {
     id: row.id,
     bookingId: row.bookingId,
-    tripPackId: row.tripPackId,
     method: row.method,
     status: row.status,
     amount: row.amount,
@@ -29,9 +28,9 @@ export function toPayment(row: PaymentRow): Payment {
 }
 
 /**
- * The payment worth showing with a booking (or a trip pack): the one being paid or verified (or
- * the latest rejected) while it waits for the money, else the latest that took money. A pending
- * payment of something no longer waiting is stale (see `PaymentsService.voidStale`).
+ * The payment worth showing with a booking: the one being paid or verified (or the latest
+ * rejected) while the booking is held, else the latest that took money. A pending payment of a
+ * booking that is no longer held is stale (see `PaymentsService.voidStale`).
  */
 export function currentPayment(rows: PaymentRow[], bookingHeld: boolean): PaymentRow | undefined {
   const latest = (status: PaymentRow['status']) =>

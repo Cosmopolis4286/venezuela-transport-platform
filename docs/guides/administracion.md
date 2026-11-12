@@ -16,29 +16,34 @@ Los roles se otorgan desde el servidor, nunca desde la web:
   **Rechazar** o **Suspender** exige una nota que el dueño verá.
 - **Solicitudes KYC**: abre cada solicitud, descarga y revisa los documentos (cada descarga queda
   registrada), marca cada documento como aceptado o rechazado con el motivo y decide: aprobar,
-  pedir cambios o rechazar. Para conductores de una **línea de mototaxis**, verifica que la
-  licencia sea del grado que permite conducir motos.
+  pedir cambios o rechazar.
+
+## Buscar reserva (`/admin/bookings`)
+
+Para atender por WhatsApp o correo: con el código que envía el pasajero (`VTP-7K3QXA` o solo
+`7K3QXA`) ves el estado, el pago (con enlace a Pagos o Reembolsos si hace falta), la factura, los
+pasajeros y sus boletos, y cómo contactar al cliente. Cada búsqueda queda en la auditoría. Ver
+[atención por WhatsApp](whatsapp-soporte.md).
 
 ## Terminales y paradas (`/admin/stops`)
 
 Agrega los terminales y paradas que usan las rutas (nombre, ciudad, estado y, si la tienes, la
-ubicación). Desactivar una parada la saca de las búsquedas nuevas, sin romper las rutas que ya la
+ubicación). La zona se asigna sola por la ubicación; se puede elegir o cambiar a mano. Desactivar una parada la saca de las búsquedas nuevas, sin romper las rutas que ya la
 usan.
 
-## Servicios (`/admin/services`)
+## Zonas operativas (`/admin/zones`, solo administradores)
 
-Qué se vende: el servicio **entre ciudades** y cada **corredor suburbano** (ADR-029).
+Cada ciudad o región donde opera la plataforma. Para abrir una ciudad nueva:
 
-- **Corredores**: un corredor agrupa las paradas de un servicio suburbano (por ejemplo, Casacoima
-  – San Félix – Puerto Ordaz). Los revisores los crean y eligen sus paradas; un corredor nuevo
-  empieza **apagado**. No se puede quitar una parada que ya usa una ruta suburbana del corredor.
-- **Encender y apagar** (solo administradores): cada corredor por separado, y el servicio entre
-  ciudades en general o **solo en algunas ciudades** (no se venden salidas que suban o bajen
-  allí; tampoco taxis de esos terminales).
-- Apagar **solo detiene la venta**: los boletos pagados siguen valiendo y las empresas siguen
-  operando. Siempre debe quedar algo encendido.
-- La web y la app de pasajeros muestran el selector **Entre ciudades · Suburbano** solo cuando los
-  dos están encendidos. Los cambios tardan unos minutos en verse en la web.
+1. Crea la zona en **Próximamente**, con su moneda, su comisión (vacía usa la de la plataforma) y
+   el centro y radio del área (por ejemplo, 40 km).
+2. Carga sus terminales y paradas en **Terminales y paradas**: las que tienen ubicación dentro del
+   radio entran solas en la zona.
+3. Cuando las empresas tengan sus rutas publicadas, pulsa **Activar**. Desde ese momento se venden
+   pasajes y taxis allí.
+
+**Pausar** oculta la zona y detiene las ventas nuevas (por ejemplo, ante un paro); las reservas
+pagadas siguen valiendo. Las paradas sin zona venden como siempre.
 
 ## Pagos (`/admin/payments`, solo administradores)
 
@@ -67,17 +72,9 @@ regístralo en **Registrar un pago** con el tipo «Pago de la empresa a la plata
 ### Política general
 
 Comisión de la plataforma (hoy **8 %**) y **tramos de reembolso** (hoy 100 % con 48 h o más de
-anticipación, 50 % con 2 h o más, nada después) para las empresas sin política propia, y los
-**tramos suburbanos** (hoy 100 % con 24 h, 75 % con 2 h, 50 % con 30 min, nada después), que valen
-para las rutas suburbanas de todas las empresas. También la **cancelación de taxis y motos por
-tramo**: minutos sin costo después de que una línea toma el viaje (hoy 3) y la tasa después (hoy
-el 50 % de la tarifa), que el pasajero paga en su próximo viaje para la línea que salió a buscarlo.
-Las horas aceptan cuartos: 0,5 son 30 minutos. Un cambio
+anticipación, 50 % con 2 h o más, nada después) para las empresas sin política propia. Un cambio
 se aplica desde ese momento: las reservas ya pagadas conservan su comisión, y los tramos se leen
 al cancelar.
-
-**Tasas de cambio de los paquetes** (Paquetes de viajes): una tasa con más de 24 horas no se usa
-y el pago en bolívares deja de ofrecerse. Guárdalas al menos una vez al día, aunque no cambien.
 
 ### Una empresa
 
@@ -98,25 +95,6 @@ Abre la empresa en la lista para:
 
 La empresa ve cada pago en su portal.
 
-## Paquetes de viajes (`/admin/trip-packs`, solo administradores)
-
-- **Catálogo**: cada paquete es un tramo de un corredor (dos paradas; sirve en los dos sentidos), un
-  tipo de vehículo, una cantidad de viajes, un precio en US$ o Bs. y una vigencia (60 días por
-  defecto). **Dejar de vender** lo saca de la venta; los paquetes ya comprados siguen valiendo.
-  Cambiar un producto no cambia los paquetes ya comprados.
-- **Tope por viaje** (opcional): lo máximo que la plataforma le paga a una empresa por cada viaje
-  usado. Sin tope, se paga la tarifa de la empresa aunque la suba después de vendido el paquete;
-  ponlo igual o algo mayor que las tarifas actuales del tramo para no perder dinero.
-- **Tasas de cambio de la plataforma**: convierten el precio de los paquetes al cobrar (las
-  empresas tienen las suyas para sus boletos). Sin tasa de bolívares no se ofrece pago móvil ni
-  transferencia para paquetes en dólares.
-- **Empresas adheridas**: en **Liquidaciones → la empresa**, marca **Acepta paquetes de viajes**
-  después de acordarlo con ella. Solo sus rutas suburbanas aceptan paquetes; por cada viaje usado
-  gana su tarifa normal del tramo, menos la comisión.
-- Los pagos de paquetes llegan a las cuentas de la plataforma y aparecen en **Pagos** como "paquete
-  …"; se confirman o rechazan como los de las reservas. El dinero que llega para un paquete ya
-  anulado aparece en **Reembolsos**.
-
 ## Reembolsos (`/admin/refunds`, solo administradores)
 
 La cola muestra, de lo más antiguo a lo más nuevo, el dinero que debe volver a los pasajeros:
@@ -134,9 +112,23 @@ devolución. El pasajero recibe un aviso por push y correo.
 
 Para un rango de días: ventas y comisión de la plataforma por moneda, reembolsos enviados y los
 que esperan en la cola, usuarios nuevos, organizaciones activas por tipo y taxis pedidos,
-terminados y cancelados o vencidos. Si se venden paquetes de viajes, también: paquetes vendidos,
-viajes usados (y las tarifas que se les deben a las empresas por ellos), viajes vendidos que
-todavía no se usan (servicio que la plataforma debe) y viajes que vencieron sin usarse.
+terminados y cancelados o vencidos.
+
+## Facturación (`/admin/fiscal`, solo administradores)
+
+La plataforma factura su tarifa por servicio (IVA incluido); el pasaje lo factura cada empresa.
+Ver [fiscal.md](../architecture/fiscal.md).
+
+1. **Datos fiscales**: razón social, RIF, domicilio, tipo de contribuyente (ordinario o formal) e
+   IVA. Sin ellos no se puede emitir.
+2. **Tasa BCV**: carga la tasa oficial de cada día hábil (bolívares por dólar).
+3. **Facturas** (`/admin/fiscal/invoices`): cada pago deja un borrador. Créalo en el portal del
+   SENIAT con esos datos y anota el número de factura, el número de control y la fecha: el sistema
+   calcula base, IVA y total en bolívares. Si el comprador pide la factura a otro nombre, cámbialo
+   antes de emitir. Las notas de crédito (salida cancelada por la empresa) se emiten después de su
+   factura. Si el SENIAT anula un documento, anúlalo también aquí.
+4. **Libros** (`/admin/fiscal/books`): libro de ventas y de compras del mes, con descarga en CSV
+   para el contador. Las facturas de compra (hosting, servicios, etc.) se registran a mano.
 
 ## Tareas periódicas sugeridas
 
@@ -144,8 +136,10 @@ todavía no se usan (servicio que la plataforma debe) y viajes que vencieron sin
 | ------ | ----------------------------------------------------------------------------- |
 | Día    | Verificar los pagos informados (varias veces al día)                          |
 | Día    | Atender la cola de reembolsos y las revisiones pendientes                     |
+| Día    | Cargar la tasa BCV y emitir las facturas en borrador                          |
 | Semana | Pagar los saldos de las empresas (la frecuencia es una decisión de operación) |
 | Mes    | Revisar las reservas pagadas de cada empresa y la política general            |
+| Mes    | Descargar los libros de ventas y compras para la declaración de IVA           |
 
 ## Si algo falla
 

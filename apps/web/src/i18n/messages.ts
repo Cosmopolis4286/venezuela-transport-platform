@@ -14,10 +14,18 @@ const es = {
     operatorsBefore:
       '¿Tienes una empresa de transporte o una línea de taxis? Publica tus rutas desde el',
     operatorsLink: 'portal de operadores',
-    services: 'Tipo de viaje',
-    suburbanHeading: 'Tus viajes diarios en bus, taxi o moto',
-    suburbanIntro: (areas: string) => `Reserva tu puesto con anticipación en ${areas}.`,
-    suburbanIntroGeneric: 'Reserva tu puesto con anticipación para tus viajes cortos.',
+  },
+  support: {
+    download: 'Descargar la app',
+    appTitle: 'Descarga la app',
+    appIntro:
+      'Con la app reservas tu puesto o tu boleto abierto, pagas con pago móvil o transferencia y llevas tu boleto QR en el teléfono.',
+    appAndroid: 'Descargar para Android',
+    appSoon: 'La app para Android estará disponible muy pronto.',
+    appIphone:
+      'La app para iPhone llegará más adelante; mientras tanto puedes buscar salidas aquí en la web.',
+    whatsapp: 'Escríbenos por WhatsApp',
+    message: 'Hola, necesito ayuda con VTP.',
   },
   legal: {
     footer: 'Información legal',
@@ -50,11 +58,11 @@ const es = {
     seatsFree: (free: number, total: number) => `${free} de ${total} puestos libres`,
     route: (name: string) => `ruta ${name}`,
     priceAtCounter: 'Precio en taquilla',
+    serviceFee: (rate: string) => `+ ${rate} % de cargo por servicio`,
+    frequency: (minutes: number) => `Cada ${minutes} min · boleto abierto, sin puesto fijo`,
     dayOffset: (days: number) => ` (+${days} d)`,
     sameStop: 'Elige un destino distinto del origen.',
     dateRange: 'Elige una fecha entre hoy y los próximos 180 días.',
-    modes: 'Tipo de vehículo',
-    allModes: 'Todos',
   },
 };
 
@@ -72,10 +80,18 @@ const en: Messages = {
     intro: 'Compare schedules, prices and companies between terminals all over the country.',
     operatorsBefore: 'Do you run a transport company or a taxi line? Publish your routes from the',
     operatorsLink: 'operator portal',
-    services: 'Kind of trip',
-    suburbanHeading: 'Your daily trips by bus, taxi or motorcycle',
-    suburbanIntro: (areas) => `Book your seat in advance in ${areas}.`,
-    suburbanIntroGeneric: 'Book your seat in advance for your short trips.',
+  },
+  support: {
+    download: 'Get the app',
+    appTitle: 'Get the app',
+    appIntro:
+      'With the app you book your seat or open ticket, pay by mobile payment or transfer, and carry your QR ticket on your phone.',
+    appAndroid: 'Download for Android',
+    appSoon: 'The Android app will be available very soon.',
+    appIphone:
+      'The iPhone app will come later; meanwhile you can search departures here on the web.',
+    whatsapp: 'Message us on WhatsApp',
+    message: 'Hi, I need help with VTP.',
   },
   legal: {
     footer: 'Legal',
@@ -109,11 +125,11 @@ const en: Messages = {
     seatsFree: (free, total) => `${free} of ${total} seats available`,
     route: (name) => `route ${name}`,
     priceAtCounter: 'Price at the ticket office',
+    serviceFee: (rate) => `+ ${rate}% service fee`,
+    frequency: (minutes) => `Every ${minutes} min · open ticket, no fixed seat`,
     dayOffset: (days) => ` (+${days} d)`,
     sameStop: 'Choose a destination different from the origin.',
     dateRange: 'Choose a date between today and the next 180 days.',
-    modes: 'Kind of vehicle',
-    allModes: 'All',
   },
 };
 
@@ -130,10 +146,18 @@ const ptBR: Messages = {
     operatorsBefore:
       'Você tem uma empresa de transporte ou uma cooperativa de táxi? Publique suas rotas no',
     operatorsLink: 'portal de operadores',
-    services: 'Tipo de viagem',
-    suburbanHeading: 'Suas viagens diárias de ônibus, táxi ou moto',
-    suburbanIntro: (areas) => `Reserve seu lugar com antecedência em ${areas}.`,
-    suburbanIntroGeneric: 'Reserve seu lugar com antecedência para suas viagens curtas.',
+  },
+  support: {
+    download: 'Baixar o app',
+    appTitle: 'Baixe o app',
+    appIntro:
+      'Com o app você reserva seu assento ou bilhete aberto, paga por pagamento móvel ou transferência e leva seu bilhete QR no celular.',
+    appAndroid: 'Baixar para Android',
+    appSoon: 'O app para Android estará disponível em breve.',
+    appIphone:
+      'O app para iPhone virá depois; enquanto isso, você pode buscar partidas aqui na web.',
+    whatsapp: 'Fale conosco pelo WhatsApp',
+    message: 'Olá, preciso de ajuda com a VTP.',
   },
   legal: {
     footer: 'Informações legais',
@@ -167,11 +191,11 @@ const ptBR: Messages = {
     seatsFree: (free, total) => `${free} de ${total} assentos livres`,
     route: (name) => `rota ${name}`,
     priceAtCounter: 'Preço no guichê',
+    serviceFee: (rate) => `+ ${rate}% de taxa de serviço`,
+    frequency: (minutes) => `A cada ${minutes} min · bilhete aberto, sem assento fixo`,
     dayOffset: (days) => ` (+${days} d)`,
     sameStop: 'Escolha um destino diferente da origem.',
     dateRange: 'Escolha uma data entre hoje e os próximos 180 dias.',
-    modes: 'Tipo de veículo',
-    allModes: 'Todos',
   },
 };
 

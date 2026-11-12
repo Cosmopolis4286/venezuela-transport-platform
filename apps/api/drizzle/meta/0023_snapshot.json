@@ -1,6 +1,6 @@
 {
-  "id": "a6dea0da-09ab-45c1-87d1-aa97ba3b9f9d",
-  "prevId": "c14c1e2f-8f83-4dfc-a1cb-48e1f23bf705",
+  "id": "da78e44d-2ce3-496f-9db9-627f781f8629",
+  "prevId": "4f3a4634-65ec-4db0-8efd-93ca7031f046",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1625,13 +1625,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "mode": {
-          "name": "mode",
-          "type": "transport_mode",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
         "seat_layout_id": {
           "name": "seat_layout_id",
           "type": "uuid",
@@ -1717,34 +1710,60 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.network_settings": {
-      "name": "network_settings",
+    "public.operating_zones": {
+      "name": "operating_zones",
       "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "integer",
+          "type": "uuid",
           "primaryKey": true,
           "notNull": true,
-          "default": 1
+          "default": "gen_random_uuid()"
         },
-        "intercity_enabled": {
-          "name": "intercity_enabled",
-          "type": "boolean",
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "zone_status",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": true
+          "default": "'coming_soon'"
         },
-        "intercity_closed_cities": {
-          "name": "intercity_closed_cities",
-          "type": "jsonb",
+        "default_currency": {
+          "name": "default_currency",
+          "type": "currency",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'[]'::jsonb"
+          "default": "'USD'"
         },
-        "updated_by_user_id": {
-          "name": "updated_by_user_id",
-          "type": "uuid",
+        "commission_rate": {
+          "name": "commission_rate",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "center": {
+          "name": "center",
+          "type": "geometry(point)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "radius_km": {
+          "name": "radius_km",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
@@ -1763,29 +1782,50 @@
           "default": "now()"
         }
       },
-      "indexes": {},
-      "foreignKeys": {
-        "network_settings_updated_by_user_id_users_id_fk": {
-          "name": "network_settings_updated_by_user_id_users_id_fk",
-          "tableFrom": "network_settings",
-          "tableTo": "users",
-          "columnsFrom": [
-            "updated_by_user_id"
+      "indexes": {
+        "operating_zones_name_key": {
+          "name": "operating_zones_name_key",
+          "columns": [
+            {
+              "expression": "lower(\"name\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
           ],
-          "columnsTo": [
-            "id"
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "operating_zones_slug_key": {
+          "name": "operating_zones_slug_key",
+          "columns": [
+            {
+              "expression": "slug",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
-        "network_settings_single_row": {
-          "name": "network_settings_single_row",
-          "value": "\"network_settings\".\"id\" = 1"
+        "operating_zones_commission_range": {
+          "name": "operating_zones_commission_range",
+          "value": "\"operating_zones\".\"commission_rate\" is null or (\"operating_zones\".\"commission_rate\" >= 0 and \"operating_zones\".\"commission_rate\" <= 100)"
+        },
+        "operating_zones_area": {
+          "name": "operating_zones_area",
+          "value": "(\"operating_zones\".\"center\" is null) = (\"operating_zones\".\"radius_km\" is null) and (\"operating_zones\".\"radius_km\" is null or \"operating_zones\".\"radius_km\" between 1 and 500)"
         }
       },
       "isRLSEnabled": false
@@ -2167,27 +2207,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "mode": {
-          "name": "mode",
-          "type": "transport_mode",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "service": {
-          "name": "service",
-          "type": "route_service",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'intercity'"
-        },
-        "service_area_id": {
-          "name": "service_area_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "status": {
           "name": "status",
           "type": "route_status",
@@ -2254,19 +2273,6 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "routes_service_area_id_service_areas_id_fk": {
-          "name": "routes_service_area_id_service_areas_id_fk",
-          "tableFrom": "routes",
-          "tableTo": "service_areas",
-          "columnsFrom": [
-            "service_area_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
         "routes_created_by_users_id_fk": {
           "name": "routes_created_by_users_id_fk",
           "tableFrom": "routes",
@@ -2281,134 +2287,6 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "routes_service_area_check": {
-          "name": "routes_service_area_check",
-          "value": "(\"routes\".\"service\" = 'suburban') = (\"routes\".\"service_area_id\" is not null)"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.service_area_stops": {
-      "name": "service_area_stops",
-      "schema": "",
-      "columns": {
-        "service_area_id": {
-          "name": "service_area_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "stop_id": {
-          "name": "stop_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "service_area_stops_service_area_id_service_areas_id_fk": {
-          "name": "service_area_stops_service_area_id_service_areas_id_fk",
-          "tableFrom": "service_area_stops",
-          "tableTo": "service_areas",
-          "columnsFrom": [
-            "service_area_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "service_area_stops_stop_id_stops_id_fk": {
-          "name": "service_area_stops_stop_id_stops_id_fk",
-          "tableFrom": "service_area_stops",
-          "tableTo": "stops",
-          "columnsFrom": [
-            "stop_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "service_area_stops_service_area_id_stop_id_pk": {
-          "name": "service_area_stops_service_area_id_stop_id_pk",
-          "columns": [
-            "service_area_id",
-            "stop_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.service_areas": {
-      "name": "service_areas",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "active": {
-          "name": "active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "service_areas_name_key": {
-          "name": "service_areas_name_key",
-          "columns": [
-            {
-              "expression": "lower(\"name\")",
-              "asc": true,
-              "isExpression": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -2476,6 +2354,12 @@
           "notNull": true,
           "default": true
         },
+        "zone_id": {
+          "name": "zone_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -2492,6 +2376,21 @@
         }
       },
       "indexes": {
+        "stops_zone_idx": {
+          "name": "stops_zone_idx",
+          "columns": [
+            {
+              "expression": "zone_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "stops_name_city_key": {
           "name": "stops_name_city_key",
           "columns": [
@@ -2536,6 +2435,19 @@
           "tableTo": "organizations",
           "columnsFrom": [
             "operator_organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "stops_zone_id_operating_zones_id_fk": {
+          "name": "stops_zone_id_operating_zones_id_fk",
+          "tableFrom": "stops",
+          "tableTo": "operating_zones",
+          "columnsFrom": [
+            "zone_id"
           ],
           "columnsTo": [
             "id"
@@ -2789,6 +2701,18 @@
           "type": "numeric(12, 2)",
           "primaryKey": false,
           "notNull": true
+        },
+        "service_fee": {
+          "name": "service_fee",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "service_fee_rate": {
+          "name": "service_fee_rate",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false
         },
         "currency": {
           "name": "currency",
@@ -5015,15 +4939,6 @@
         "declined"
       ]
     },
-    "public.transport_mode": {
-      "name": "transport_mode",
-      "schema": "public",
-      "values": [
-        "bus",
-        "car",
-        "motorcycle"
-      ]
-    },
     "public.vehicle_document_kind": {
       "name": "vehicle_document_kind",
       "schema": "public",
@@ -5039,14 +4954,6 @@
       "values": [
         "USD",
         "VES"
-      ]
-    },
-    "public.route_service": {
-      "name": "route_service",
-      "schema": "public",
-      "values": [
-        "intercity",
-        "suburban"
       ]
     },
     "public.route_status": {
@@ -5073,6 +4980,15 @@
       "values": [
         "terminal",
         "stop"
+      ]
+    },
+    "public.zone_status": {
+      "name": "zone_status",
+      "schema": "public",
+      "values": [
+        "active",
+        "coming_soon",
+        "paused"
       ]
     },
     "public.booking_status": {

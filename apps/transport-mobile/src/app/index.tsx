@@ -3,6 +3,7 @@ import {
   ORGANIZATION_ROLE_LABELS,
   ORGANIZATION_STATUS_LABELS,
   ORGANIZATION_TYPE_LABELS,
+  runsRoutes,
   type DriverTrip,
   type OrganizationMembershipSummary,
   type ProviderApplication,
@@ -18,6 +19,7 @@ import {
   Row,
   Screen,
   Subheading,
+  SupportButton,
   formatDate,
   statusTone,
   useApi,
@@ -166,15 +168,26 @@ export default function Home() {
                 tone={statusTone(organization.status)}
               />
             </Row>
-            {/* Taxi and motorcycle lines ride on demand (ADR-028): their drivers take requests. */}
             {organization.status === 'active' &&
-            (organization.type === 'taxi_line' || organization.type === 'moto_line') &&
+            organization.type === 'taxi_line' &&
+            permissions.includes('trips.drive') ? (
+              <Button title="Solicitudes de taxi" onPress={() => router.push('/taxi')} />
+            ) : null}
+            {organization.status === 'active' &&
+            runsRoutes(organization.type) &&
             permissions.includes('trips.drive') ? (
               <Button
-                title={
-                  organization.type === 'moto_line' ? 'Solicitudes de moto' : 'Solicitudes de taxi'
+                title="Ventas en efectivo"
+                variant="secondary"
+                onPress={() =>
+                  router.push({
+                    pathname: '/cash',
+                    params: {
+                      organizationId: organization.id,
+                      name: organization.tradeName ?? organization.legalName,
+                    },
+                  })
                 }
-                onPress={() => router.push('/taxi')}
               />
             ) : null}
             {organization.status === 'active' && permissions.includes('tickets.validate') ? (
@@ -230,8 +243,10 @@ export default function Home() {
         <Banner tone="error">{application.error.userMessage}</Banner>
       ) : null}
 
+      <Button variant="secondary" title="Mis cobros" onPress={() => router.push('/earnings')} />
       <Button variant="secondary" title="Cerrar sesión" onPress={() => void signOut()} />
       <DeleteAccount />
+      <SupportButton />
     </Screen>
   );
 }

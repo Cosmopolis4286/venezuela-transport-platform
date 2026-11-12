@@ -3,7 +3,7 @@
 Qué hace hoy la plataforma, qué viene después y qué falta. Se actualiza con cada pull request que
 lo cambia; el historial de cambios está en el [CHANGELOG](../CHANGELOG.md).
 
-**Estado (2026-11-01): en desarrollo, sin desplegar.** Funcionan de punta a punta, con un
+**Estado (2026-11-12): lista para el piloto de la primera versión (web + Android), sin desplegar.** Funcionan de punta a punta, con un
 proveedor de pagos simulado:
 
 - la venta de boletos: búsqueda, puestos en el mapa, pago, QR y abordaje;
@@ -13,7 +13,15 @@ proveedor de pagos simulado:
   de pagar) y los reembolsos;
 - las notificaciones por push (pendiente del proyecto de EAS) y correo;
 - los taxis desde y hacia los terminales;
-- para el pasajero, en español, inglés y portugués de Brasil.
+- para el pasajero, en español, inglés y portugués de Brasil;
+- el servicio urbano y suburbano por frecuencia, con boleto abierto y ventas en efectivo
+  (ADR-032/033);
+- la facturación de la tarifa por servicio en borrador y los libros de ventas y compras
+  (ADR-031).
+
+**Primera versión (v1):** web para buscar y app Android para comprar, con un piloto en una ruta
+suburbana. Qué contratar y en qué orden: [guía de lanzamiento](deployment/launch-guide.md); cómo
+probarlo: [guion del piloto](guides/piloto-suburbano.md).
 
 Nada está listo todavía para usuarios reales ni dinero real; ver
 [Antes de producción](#antes-de-producción). Lo que necesita una decisión del dueño del producto
@@ -55,17 +63,15 @@ Leyenda: ✅ listo · 🟡 parcial · ⏭️ siguiente · ⬜ pendiente
 
 ## Próximos pasos
 
-En orden; cada uno es un pull request.
+En orden. La v1 no agrega funciones: lo que falta es contratar, configurar y probar.
 
-1. ⏭️ **Despliegue de prueba**: servidor, dominio, HTTPS y copias de seguridad
-   ([preparación del VPS](deployment/vps-preparation.md)), con la cuenta SMTP y el proyecto de EAS.
-   Necesita las decisiones de la tabla de abajo (tiene costo).
-2. ✅ **Transporte suburbano y paquetes de viajes** (Casacoima – San Félix – Puerto Ordaz;
-   ADR-028/029/030), según el [plan](architecture/suburban.md#plan-por-pull-requests): tipo de
-   vehículo, servicios que se encienden por corredor, líneas de mototaxis, horarios por
-   frecuencia, tramos de reembolso suburbanos, paquetes, taxis y motos bajo demanda por tramo con
-   tasa de cancelación, y los textos legales (pendientes de revisión de un abogado).
-3. **Cobro de los taxis en la app**, si se decide (los paquetes ya lo cubren para el suburbano).
+1. ⏭️ **Lanzamiento** según la [guía](deployment/launch-guide.md): dominio, VPS, correo, copias de
+   seguridad, datos de la plataforma y app Android en prueba cerrada (tiene costo; lo contrata el
+   dueño del producto).
+2. **Revisiones** del abogado y del contador, con sus cambios aplicados.
+3. **Piloto suburbano** según el [guion](guides/piloto-suburbano.md).
+4. Después de la v1, según lo que muestre el piloto: app de iPhone, monedero y pago al subir,
+   ubicación en vivo de las unidades, pases y descuentos, pagos automáticos.
 
 ## Pendientes menores
 
@@ -172,6 +178,8 @@ Lo que falta (y lo ya resuelto):
 - [x] Liquidaciones y cola de reembolsos (ADR-024).
 - [x] Comisión de la plataforma y política de reembolsos (ADR-025), editables en la web.
 - [x] Reportes para las empresas y métricas de la plataforma.
+- [x] Varias ciudades: zonas operativas que se activan desde `/admin/zones` (ADR-028); falta
+      usar «paradas cerca de mí» en la app de pasajeros (permiso de ubicación).
 - [ ] Servidor, HTTPS, copias de seguridad con restauración probada, monitoreo
       ([preparación del VPS](deployment/vps-preparation.md)); alertas de errores por correo, guía
       de [monitoreo gratuito](deployment/monitoring.md), scripts de

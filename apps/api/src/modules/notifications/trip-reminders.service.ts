@@ -4,13 +4,11 @@ import {
   type OnApplicationBootstrap,
   type OnApplicationShutdown,
 } from '@nestjs/common';
-import { longDate, toNetworkIso, TRIP_PACK_EXPIRY_NOTICE_DAYS } from '@vtp/shared-types';
-import { and, eq, gt, inArray, isNull, lte } from 'drizzle-orm';
+import { and, eq, gt, inArray, isNull, lte, sql } from 'drizzle-orm';
 import { AppConfigService } from '../../config/app-config.service.js';
 import { DatabaseService } from '../../database/database.service.js';
 import { bookings, trips } from '../bookings/bookings.schema.js';
-import { routes, stops } from '../network/network.schema.js';
-import { tripPacks } from '../trip-packs/trip-packs.schema.js';
+import { routes, routeSchedules, stops } from '../network/network.schema.js';
 import { departureText } from './format.js';
 import { NotificationsService } from './notifications.service.js';
 
@@ -34,13 +32,10 @@ export class TripRemindersService implements OnApplicationBootstrap, OnApplicati
 
   onApplicationBootstrap(): void {
     // Tests call sweep() themselves.
-    if (this.config.get('NODE_ENV') === 'test') return;
+    if (this.config.get('NODE_ENV') === 'test' || !this.config.get('TRIP_REMINDER_HOURS')) return;
     this.timer = setInterval(() => {
       this.sweep().catch((error: unknown) =>
         this.logger.error(`Trip reminder sweep failed: ${(error as Error).message}`),
-      );
-      this.sweepPacks().catch((error: unknown) =>
-        this.logger.error(`Trip pack reminder sweep failed: ${(error as Error).message}`),
       );
     }, SWEEP_EVERY_MS);
     this.timer.unref();
@@ -63,6 +58,8 @@ export class TripRemindersService implements OnApplicationBootstrap, OnApplicati
           isNull(bookings.reminderSentAt),
           gt(bookings.departsAt, now),
           lte(bookings.departsAt, new Date(now.getTime() + hours * 3_600_000)),
+          // Open tickets (frequency service) have no departure time to remind of (ADR-032).
+          sql`not exists (select 1 from ${trips} join ${routeSchedules} on ${routeSchedules.id} = ${trips.scheduleId} where ${trips.id} = ${bookings.tripId} and ${routeSchedules.headwayMinutes} is not null)`,
         ),
       )
       .returning({
@@ -91,45 +88,6 @@ export class TripRemindersService implements OnApplicationBootstrap, OnApplicati
         app: 'passenger',
         reference: { key: 'bookingId', id: booking.id },
         text: (m, locale) => m.tripReminder(route, departureText(booking.departsAt, locale), from),
-      });
-    }
-    return due.length;
-  }
-
-  /**
-   * Reminds passengers of packs with trips left that expire within
-   * `TRIP_PACK_EXPIRY_NOTICE_DAYS` (once per pack); returns how many were reminded.
-   */
-  async sweepPacks(now = new Date()): Promise<number> {
-    const due = await this.database.db
-      .update(tripPacks)
-      .set({ expiryNoticeSentAt: now })
-      .where(
-        and(
-          eq(tripPacks.status, 'active'),
-          gt(tripPacks.remaining, 0),
-          isNull(tripPacks.expiryNoticeSentAt),
-          gt(tripPacks.expiresAt, now),
-          lte(
-            tripPacks.expiresAt,
-            new Date(now.getTime() + TRIP_PACK_EXPIRY_NOTICE_DAYS * 86_400_000),
-          ),
-        ),
-      )
-      .returning();
-    for (const pack of due) {
-      this.notifications.send({
-        kind: 'trip_pack_expiring',
-        userIds: [pack.userId],
-        app: 'passenger',
-        email: true,
-        reference: { key: 'tripPackId', id: pack.id },
-        text: (m, locale) =>
-          m.tripPackExpiring(
-            pack.code,
-            pack.remaining,
-            longDate(toNetworkIso(pack.expiresAt!), locale),
-          ),
       });
     }
     return due.length;

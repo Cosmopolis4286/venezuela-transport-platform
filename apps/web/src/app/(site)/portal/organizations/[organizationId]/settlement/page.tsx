@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import {
   PayoutLine,
+  DriverBalances,
   SettlementBalances,
   SettlementEntries,
 } from '@/components/portal/settlement-summary';
@@ -56,18 +57,26 @@ async function Settlement({
         </Link>
         <h1 className="text-2xl font-semibold">Liquidaciones</h1>
         <p className="text-sm text-muted-foreground">
-          Por cada reserva pagada, la empresa gana la tarifa menos la comisión, en la moneda de la
-          tarifa. Si cobra la plataforma, le transfiere ese saldo; si cobra la empresa, la empresa
-          le paga la comisión a la plataforma.
+          Por cada reserva pagada, la empresa gana su tarifa completa, en la moneda de la tarifa; el
+          pasajero paga además el cargo por servicio de la plataforma. Si cobra la plataforma, le
+          transfiere ese saldo; si cobra la empresa, la empresa le paga el cargo por servicio.
         </p>
       </div>
 
       <Card>
         <CardTitle>Saldo</CardTitle>
-        <SettlementBalances
-          settlement={settlement}
-          onDemand={['taxi_line', 'moto_line'].includes(organization.type)}
-        />
+        <SettlementBalances settlement={settlement} />
+      </Card>
+
+      <Card>
+        <div className="flex flex-col gap-1">
+          <CardTitle>Conductores</CardTitle>
+          <CardDescription>
+            Lo que ganaron tus conductores en las rutas que les pagan a ellos. La plataforma les
+            paga directamente a la cuenta que indican en la app de transportistas.
+          </CardDescription>
+        </div>
+        <DriverBalances drivers={settlement.drivers} />
       </Card>
 
       <Card>

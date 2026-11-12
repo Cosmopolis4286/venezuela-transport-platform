@@ -17,7 +17,6 @@ export const COMMISSION_PATTERN = /^(100(\.0{1,2})?|\d{1,2}(\.\d{1,2})?)$/;
  * last one nothing is refunded. The platform keeps its commission (ADR-025).
  */
 export interface RefundTier {
-  /** Whole hours or quarters of an hour (0.5 = 30 minutes). */
   hoursBefore: number;
   percent: number;
 }
@@ -30,34 +29,12 @@ export const DEFAULT_REFUND_TIERS: readonly RefundTier[] = [
   { hoursBefore: 2, percent: 50 },
 ];
 
-/**
- * Suburban routes (decided by the product owner): 100 % up to 24 h before, 75 % up to 2 h, 50 % up
- * to 30 minutes, and nothing in the last 30 minutes.
- */
-export const DEFAULT_SUBURBAN_REFUND_TIERS: readonly RefundTier[] = [
-  { hoursBefore: 24, percent: 100 },
-  { hoursBefore: 2, percent: 75 },
-  { hoursBefore: 0.5, percent: 50 },
-];
-
-/** "48 h", "2 h", "30 min", "1 h 30 min" */
-export function formatHoursBefore(hours: number): string {
-  const total = Math.round(hours * 60);
-  const h = Math.floor(total / 60);
-  const m = total % 60;
-  if (!h) return `${m} min`;
-  return m ? `${h} h ${m} min` : `${h} h`;
-}
-
-/**
- * Why a list of tiers is invalid, or null: 1–4 tiers, hours in quarters of an hour (0–720)
- * strictly decreasing.
- */
+/** Why a list of tiers is invalid, or null: 1–4 tiers, whole hours (0–720) strictly decreasing. */
 export function refundTiersProblem(tiers: readonly RefundTier[]): string | null {
   if (tiers.length < 1 || tiers.length > MAX_REFUND_TIERS) return 'Use between 1 and 4 tiers';
   for (const [i, tier] of tiers.entries()) {
-    if (!Number.isInteger(tier.hoursBefore * 4) || tier.hoursBefore < 0 || tier.hoursBefore > 720)
-      return 'hoursBefore must be between 0 and 720 hours, in quarters of an hour (0.5 = 30 min)';
+    if (!Number.isInteger(tier.hoursBefore) || tier.hoursBefore < 0 || tier.hoursBefore > 720)
+      return 'hoursBefore must be a whole number of hours between 0 and 720';
     if (!Number.isInteger(tier.percent) || tier.percent < 0 || tier.percent > 100)
       return 'percent must be a whole number between 0 and 100';
     if (i > 0 && tier.hoursBefore >= tiers[i - 1]!.hoursBefore)
@@ -84,26 +61,8 @@ export type PaymentCollection = (typeof PAYMENT_COLLECTIONS)[number];
 export interface SettlementPolicy {
   /** Percentage, e.g. `"8.00"`. */
   commissionRate: string;
-  /** Intercity routes; an operator can have its own (`SetOrganizationPolicyRequest`). */
   refundTiers: RefundTier[];
-  /** Suburban routes, for every operator (ADR-028). */
-  suburbanRefundTiers: RefundTier[];
-  /** Cancelling a taxi or motorcycle ride a line already took (stretch rides). */
-  rideCancellation: RideCancellationPolicy;
 }
-
-/**
- * Cancelling a stretch ride after a line took it (decided by the product owner): free for
- * `freeMinutes` after it was taken (and up to 30 minutes before a ride booked for later); later,
- * the passenger owes `feePercent` of the line's fare, paid in cash on the next taxi or motorcycle
- * ride, for the line that went out. Trips paid with a pack go back to it either way.
- */
-export interface RideCancellationPolicy {
-  freeMinutes: number;
-  feePercent: number;
-}
-
-export const DEFAULT_RIDE_CANCELLATION: RideCancellationPolicy = { freeMinutes: 3, feePercent: 50 };
 
 export const PAYOUT_METHODS = ['bank_transfer', 'pago_movil', 'usdt'] as const;
 export type PayoutMethod = (typeof PAYOUT_METHODS)[number];
@@ -129,6 +88,11 @@ export interface SettlementBalance {
   /** What the operator paid the platform (its commission on what it collected). */
   received: string;
   /**
+   * Fares of routes paid to their drivers (ADR-030): not part of `earned` or `balance`; see
+   * `OrganizationSettlement.drivers`.
+   */
+  forDrivers: string;
+  /**
    * `earned - collected - paidOut + received`: still owed to the operator, or, when negative,
    * what the operator owes the platform.
    */
@@ -144,33 +108,54 @@ export interface OrganizationSettlement {
   /** Refund tiers applied to this operator's cancellations, and its own ones if any. */
   refundTiers: RefundTier[];
   refundTiersOverride: RefundTier[] | null;
-  /** The platform's tiers for suburban routes (operators have no override). */
-  suburbanRefundTiers: RefundTier[];
-  rideCancellation: RideCancellationPolicy;
-  /** Its departures accept trip packs; the platform pays it its fare for each trip used. */
-  acceptsTripPacks: boolean;
   /** Who receives this operator's passengers' payments. */
   paymentCollection: PaymentCollection;
   /** One per currency with activity, USD first. */
   balances: SettlementBalance[];
+  /** What drivers of this organization earned on routes paid to drivers (ADR-030). */
+  drivers: DriverBalance[];
 }
 
 /**
- * One paid booking in an operator's ledger; its amounts are frozen at confirmation. A taxi or
- * motorcycle ride paid with a trip pack is an entry too (`taxiRideId`; `bookingCode` is then
- * `TAXI-…` and `route.name` describes the stretch).
+ * A driver's earnings with one organization in one currency. `driver` is null for sales whose
+ * trip has no driver assigned yet: they are paid once dispatch assigns one.
  */
+export interface DriverBalance {
+  driver: { id: string; name: string } | null;
+  currency: Currency;
+  earned: string;
+  paidOut: string;
+  balance: string;
+  /** Where the driver wants to be paid; null if the driver has not set it. */
+  payoutAccount: DriverPayoutAccount | null;
+}
+
+/** `PUT /me/payout-account`: where a driver is paid (ADR-030). */
+export interface DriverPayoutAccount {
+  method: PayoutMethod;
+  /** Bank (pago móvil, transfer) or network (USDT). */
+  bank: string;
+  /** Phone (pago móvil), account number (transfer) or wallet address (USDT). */
+  account: string;
+  /** Holder's ID document, e.g. V-12345678. */
+  holderId: string;
+  holderName: string;
+}
+
+/** `GET /me/earnings`: a driver's balances with each organization. */
+export interface DriverEarnings {
+  balances: (Omit<DriverBalance, 'driver' | 'payoutAccount'> & {
+    organization: { id: string; name: string };
+  })[];
+  payoutAccount: DriverPayoutAccount | null;
+}
+
+/** One paid booking in an operator's ledger; its amounts are frozen at confirmation. */
 export interface SettlementEntry {
   id: string;
-  /** Exactly one of the two is set. */
-  bookingId: string | null;
-  taxiRideId: string | null;
-  /**
-   * `cancellation` entries are negative: the refund taken back when a passenger cancelled.
-   * `ride_cancellation_fee`: a late-cancelled ride's fee, earned by the line that went out, or
-   * collected in cash by the line of the passenger's next ride (it owes it to the platform).
-   */
-  kind: 'booking' | 'cancellation' | 'ride_cancellation_fee';
+  bookingId: string;
+  /** `cancellation` entries are negative: the refund taken back when a passenger cancelled. */
+  kind: 'booking' | 'cancellation';
   /** Who received the passenger's money. */
   collectedBy: PaymentCollection;
   bookingCode: string;
@@ -192,6 +177,8 @@ export type PayoutDirection = (typeof PAYOUT_DIRECTIONS)[number];
 export interface Payout {
   id: string;
   organizationId: string;
+  /** Set when the payout went to one of the organization's drivers. */
+  driver: { id: string; name: string } | null;
   direction: PayoutDirection;
   currency: Currency;
   amount: string;
@@ -217,22 +204,8 @@ export interface AdminSettlementSummary extends OrganizationSettlement {
   organization: { id: string; name: string; type: OrganizationType };
 }
 
-/** `PUT /admin/settlement-policy` — the platform defaults. Omitting the suburban tiers keeps them. */
-export type UpdateSettlementPolicyRequest = Omit<
-  SettlementPolicy,
-  'suburbanRefundTiers' | 'rideCancellation'
-> & {
-  suburbanRefundTiers?: RefundTier[];
-  rideCancellation?: RideCancellationPolicy;
-};
-
-/** The tiers that apply to a booking of a route of `service`. */
-export function refundTiersForService(
-  policy: Pick<SettlementPolicy, 'refundTiers' | 'suburbanRefundTiers'>,
-  service: 'intercity' | 'suburban',
-): RefundTier[] {
-  return service === 'suburban' ? policy.suburbanRefundTiers : policy.refundTiers;
-}
+/** `PUT /admin/settlement-policy` — the platform defaults. */
+export type UpdateSettlementPolicyRequest = SettlementPolicy;
 
 /** `PUT /admin/organizations/:id/policy` — null fields go back to the platform default. */
 export interface SetOrganizationPolicyRequest {
@@ -240,8 +213,6 @@ export interface SetOrganizationPolicyRequest {
   refundTiers: RefundTier[] | null;
   /** Omitted: unchanged. */
   paymentCollection?: PaymentCollection;
-  /** Its departures accept trip packs (ADR-028). Omitted: unchanged. */
-  acceptsTripPacks?: boolean;
 }
 
 /**
@@ -250,6 +221,8 @@ export interface SetOrganizationPolicyRequest {
  */
 export interface CreatePayoutRequest {
   direction?: PayoutDirection;
+  /** Pay one of the organization's drivers instead of the organization (ADR-030). */
+  driverUserId?: string;
   currency: Currency;
   amount: string;
   method: PayoutMethod;
@@ -265,13 +238,9 @@ export interface VoidPayoutRequest {
 /** A payment whose money must go back to the payer (`GET /admin/refunds`). */
 export interface RefundDuePayment {
   paymentId: string;
-  /** Exactly one of the two is set. */
-  bookingId: string | null;
-  tripPackId: string | null;
-  /** The booking's or the trip pack's code. */
+  bookingId: string;
   bookingCode: string;
-  /** Null for trip packs: the platform sold them. */
-  organization: { id: string; name: string } | null;
+  organization: { id: string; name: string };
   payer: { name: string | null; email: string | null; phone: string | null };
   method: PaymentMethod;
   currency: PaymentCurrency;
@@ -301,12 +270,6 @@ export interface CancellationQuote {
   /** In the currency the passenger paid with; null when nothing is refunded. */
   refund: { amount: string; currency: PaymentCurrency } | null;
   policy: RefundTier[];
-  /**
-   * Bookings paid with a trip pack: how many trips go back to the pack if cancelled now (all of
-   * them up to 30 minutes before boarding while the pack has not expired, ADR-028); no money is
-   * refunded.
-   */
-  tripPack: { code: string; tripsBack: number } | null;
 }
 
 /** `POST /admin/refunds/:paymentId` — the reference of the transfer that sent the money back. */

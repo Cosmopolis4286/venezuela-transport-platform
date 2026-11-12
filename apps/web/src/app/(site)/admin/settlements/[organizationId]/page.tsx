@@ -13,6 +13,7 @@ import { ActionForm, SubmitButton } from '@/components/portal/action-form';
 import { RefundTierFields } from '@/components/portal/refund-policy';
 import {
   PayoutLine,
+  DriverBalances,
   SettlementBalances,
   SettlementEntries,
 } from '@/components/portal/settlement-summary';
@@ -69,9 +70,54 @@ async function OrganizationSettlementView({
 
       <Card>
         <CardTitle>Saldo</CardTitle>
-        <SettlementBalances
-          settlement={settlement}
-          onDemand={['taxi_line', 'moto_line'].includes(settlement.organization.type)}
+        <SettlementBalances settlement={settlement} />
+      </Card>
+
+      <Card>
+        <div className="flex flex-col gap-1">
+          <CardTitle>Conductores</CardTitle>
+          <CardDescription>
+            Rutas que les pagan a sus conductores (ADR-030). Haz la transferencia a la cuenta que
+            indicó cada conductor y regístrala aquí; no se le puede pagar más que su saldo.
+          </CardDescription>
+        </div>
+        <DriverBalances
+          drivers={settlement.drivers}
+          pay={(row) => (
+            <ActionForm
+              action={createPayout}
+              hidden={{
+                ...hidden,
+                driverUserId: row.driver!.id,
+                currency: row.currency,
+                direction: 'to_operator',
+              }}
+              resetOnSuccess
+            >
+              <div className="grid gap-2 sm:grid-cols-4">
+                <Input
+                  name="amount"
+                  inputMode="decimal"
+                  required
+                  defaultValue={row.balance}
+                  aria-label={`Monto para ${row.driver!.name}`}
+                />
+                <Select
+                  name="method"
+                  defaultValue={row.payoutAccount?.method ?? 'pago_movil'}
+                  aria-label="Medio"
+                >
+                  {PAYOUT_METHODS.map((method) => (
+                    <option key={method} value={method}>
+                      {PAYOUT_METHOD_LABELS[method]}
+                    </option>
+                  ))}
+                </Select>
+                <Input name="reference" required maxLength={120} placeholder="Referencia" />
+                <SubmitButton size="sm">Registrar pago al conductor</SubmitButton>
+              </div>
+            </ActionForm>
+          )}
         />
       </Card>
 
@@ -118,19 +164,6 @@ async function OrganizationSettlementView({
               <option value="operator">La empresa, en sus propias cuentas</option>
             </Select>
           </Field>
-          <label className="flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="acceptsTripPacks"
-              className="mt-1"
-              defaultChecked={settlement.acceptsTripPacks}
-            />
-            <span>
-              Acepta paquetes de viajes en sus rutas suburbanas. La plataforma le paga su tarifa
-              normal del tramo, menos la comisión, por cada viaje usado. Actívalo después de
-              acordarlo con la empresa.
-            </span>
-          </label>
           <div>
             <SubmitButton variant="outline">Guardar política</SubmitButton>
           </div>

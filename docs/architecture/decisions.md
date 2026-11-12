@@ -441,72 +441,152 @@ verifica en 6 horas deja vencer el apartado y, si el dinero llegó, se reembolsa
 ve el pasajero son de la plataforma: la revisión legal de cobrar por cuenta de terceros (ADR-018)
 sigue pendiente antes de operar con dinero real.
 
-## ADR-028: Transporte suburbano por tipo de vehículo y paquetes de viajes vendidos por la plataforma
+## ADR-028: Varias ciudades con zonas operativas en una sola base de datos
 
-**Decisión.** La plataforma atiende también el transporte suburbano, empezando por el corredor
-Casacoima – San Félix – Puerto Ordaz. Decidido por el dueño del producto (2026-11-08):
+**Decisión.** Una **zona operativa** (`operating_zones`) es una ciudad o región (por ejemplo, «Eje
+Casacoima – San Félix», «Maturín»). Cada parada pertenece a una zona o a ninguna; las rutas,
+tarifas, horarios, reservas y taxis siguen colgando de las paradas, así que no cambian. La zona
+tiene un **estado** que se cambia con un clic en `/admin/zones`: `active` (vende), `coming_soon`
+(se muestra pero no vende) o `paused` (oculta). Además guarda la **moneda propuesta** para las
+tarifas, una **comisión** opcional para los viajes que suben en ella y un centro con radio: las
+paradas nuevas dentro de ese radio entran solas en la zona. Las paradas sin zona venden como
+antes. La comisión se resuelve así: la de la empresa, si tiene; si no, la de la zona donde sube
+el pasajero; si no, la de la plataforma. Ver [network.md](network.md#zonas-operativas).
 
-- Cada ruta y cada vehículo tienen un **tipo** (`bus`, `car`, `motorcycle`), así cada tipo tiene
-  sus propias tarifas por tramo. Las motos las operan **líneas de mototaxis** (`moto_line`), un
-  tipo de organización nuevo.
-- Los horarios pueden ser **por frecuencia** (cada N minutos entre dos horas).
-- Taxis y motos son **híbridos**: salidas con horario que se reservan como un bus, y viajes **bajo
-  demanda** por tramo, para ahora o para una hora, con tarifa fija por tramo.
-- La **plataforma vende paquetes de viajes** de un **tramo fijo** y un tipo de vehículo, que
-  **vencen** a los días que fije cada paquete (**60 por defecto**) y sirven con cualquier empresa
-  adherida. Al reservar con un paquete se descuenta un viaje por puesto y la reserva queda pagada.
-- Se cancela con devolución hasta **30 minutos antes** del abordaje; antes de eso la devolución es
-  **escalonada** (tramos de reembolso en minutos para las reservas pagadas directo; el viaje vuelve
-  al paquete; tramos por vigencia restante para devolver un paquete).
-- La empresa **gana cada viaje cuando se usa** (precio por viaje menos su comisión, en el libro
-  del ADR-024); los viajes vencidos se los queda la plataforma.
+**Por qué.** Abrir Maturín, Ciudad Bolívar o Puerto Ordaz es cargar sus paradas y activar la
+zona, sin tocar código ni separar bases de datos. La geografía ya está en PostGIS (ubicación de
+las paradas), así que «paradas cerca de mí» (`GET /stops/nearby`) es una consulta con índice. Una
+sola base con una columna de zona es lo más simple de mantener para una persona y permite buscar
+viajes entre zonas (Caracas – San Félix).
 
-Diseño completo en [suburban.md](suburban.md).
+**Compromisos.** Una zona es un círculo, no un polígono; basta para ciudades y se puede cambiar
+después sin migrar datos de las paradas. No hay microservicios ni réplicas automáticas: una sola
+API con PostgreSQL atiende con holgura el volumen de varias ciudades en un VPS; cuando las
+mediciones lo pidan, la API ya puede correr varias copias detrás de Caddy (el límite de
+peticiones pasaría a Redis) y la búsqueda de salidas se puede cachear. Las zonas no reemplazan a
+las tasas de cambio de cada empresa ni a sus cuentas de cobro.
 
-**Por qué.** En los corredores suburbanos la gente viaja todos los días el mismo tramo: un paquete
-le asegura el puesto y el precio, y a la plataforma le da ingresos por adelantado. Vender desde la
-plataforma deja usar el mismo paquete con varias empresas del tramo, que es lo que espera el
-pasajero. Un tipo por ruta reutiliza las tarifas por tramo sin cambiar su modelo.
+## ADR-029: El cargo de la plataforma es un recargo que paga el pasajero
 
-**Compromisos.** La plataforma recibe dinero por viajes que prestan otros (más peso para la
-revisión legal del ADR-018) y debe llevar la cuenta de los viajes vendidos sin usar. Un viaje no se
-devuelve a medias, así que con paquete el escalonado de la cancelación tiene solo dos tramos. Los
-pagos dejan de pertenecer siempre a una reserva (`payments.trip_pack_id`).
+**Decisión** (del dueño del producto). La plataforma cobra un **cargo por servicio encima de la
+tarifa**: el pasajero paga la tarifa más el cargo, y la empresa gana su tarifa completa. Es un
+porcentaje (15 % por defecto) que se resuelve igual que la antigua comisión: el de la empresa, si
+tiene; si no, el de la zona donde sube el pasajero; si no, el general. Se fija al apartar los
+puestos (`bookings.service_fee`, `service_fee_rate`) y se muestra antes de apartar y de pagar
+(búsqueda, puestos, pasajeros y reserva). Si cancela el pasajero, los tramos de reembolso se
+aplican a la tarifa y el cargo no se devuelve; si cancela la empresa, el pasajero recibe todo y
+la empresa asume el cargo. El libro de liquidaciones conserva su forma: `gross` es lo pagado,
+`commission` el cargo y `earned` la tarifa. Ver [settlements.md](settlements.md).
 
-## ADR-029: Servicios interurbano y suburbano que se encienden y apagan por corredor
+**Por qué.** Así la empresa cobra lo mismo que en taquilla, lo que facilita sumar empresas, y la
+plataforma se financia con un cargo visible para el pasajero.
 
-**Decisión.** Decidido por el dueño del producto (2026-11-08): cada ruta pertenece a un
-**servicio**, interurbano o suburbano, que **elige la empresa** al crearla; una ruta suburbana
-pertenece a un **corredor** (grupo de paradas que define la plataforma). Un administrador enciende
-y apaga el interurbano (en general o por ciudad) y cada corredor suburbano. Apagar **solo detiene
-la venta**: lo vendido (boletos y paquetes) se respeta. La API aplica el estado en la búsqueda, las
-reservas y las compras (`SERVICE_DISABLED`), y las apps lo leen de `GET /platform/services` para
-mostrar un selector **Entre ciudades · Suburbano** solo cuando los dos existen. Ver
-[suburban.md](suburban.md#0-dos-servicios-que-se-encienden-y-apagan-interurbano-y-suburbano).
+**Compromisos.** El precio que paga el pasajero sube respecto de la taquilla, así que el cargo debe
+verse siempre antes de pagar (ley de precios justos) y figurar en los Términos (versión
+2026-11-08). La plataforma debe facturar su cargo por separado; la revisión legal debe confirmarlo
+junto con el cobro por cuenta de terceros (ADR-018). Las reservas anteriores conservan la comisión
+dentro de la tarifa.
 
-**Por qué.** Lanzar el suburbano en un corredor sin tocar lo interurbano, y poder abrir otras
-ciudades o cerrar una que no funcione, sin desplegar código. Con un solo servicio encendido la
-interfaz queda igual de simple que hoy.
+## ADR-030: Las tarifas se le pagan a la línea o al conductor, según la ruta
 
-**Compromisos.** Un interruptor más que mirar en cada consulta de venta. Que la empresa elija el
-servicio depende de que lo marque bien; el personal de la plataforma lo revisa al aprobar sus
-rutas suburbanas (el corredor ya limita las paradas posibles).
+**Decisión** (del dueño del producto). Cada ruta es interurbana o urbana/suburbana y elige quién
+cobra sus tarifas: por defecto, la línea en las interurbanas y el conductor de cada viaje en las
+urbanas y suburbanas; la empresa puede cambiarlo en cada ruta. El libro anota a quién corresponde
+cada venta (`settlement_entries.payee`) y el conductor se resuelve por el viaje, de modo que una
+venta hecha antes de asignar conductor le llega al que se asigne. La plataforma les paga a los
+conductores (`payouts.driver_user_id`) a la cuenta que cada uno registra en la app. Si cobra la
+empresa (ADR-027), todo se le acredita a ella y ella paga a sus conductores. Ver
+[settlements.md](settlements.md#pago-a-la-línea-o-al-conductor-adr-030).
 
-## ADR-030: Tasa por cancelar tarde un taxi o una moto que una línea ya tomó
+**Por qué.** En el transporte urbano y suburbano venezolano el conductor suele ser dueño de su
+unidad y cobra su pasaje; en el interurbano cobra la línea. Un solo modelo configurable por ruta
+cubre ambos sin duplicar el libro.
 
-**Decisión.** Decidido por el dueño del producto (2026-11-12), en lugar de "el viaje del paquete
-se pierde": cancelar un viaje por tramo es **gratis** antes de que una línea lo tome, durante los
-primeros **3 minutos** después y, si es programado, hasta 30 minutos antes de la hora. Después, el
-pasajero debe una **tasa del 50 % de la tarifa** de la línea, pague en efectivo o con paquete (el
-viaje del paquete vuelve siempre). Los minutos y el porcentaje los configura un administrador. La
-tasa se paga **en efectivo al conductor del próximo viaje** de taxi o moto y es de **la línea que
-salió**: si el próximo viaje es con otra línea, la plataforma se la descuenta a esa y se la paga a
-la primera en las liquidaciones, menos la comisión. Ver [taxis.md](taxis.md).
+**Compromisos.** Pagarle a un conductor es pagar por cuenta de la empresa: la revisión legal debe
+confirmarlo junto con el cobro por cuenta de terceros (ADR-018), y las obligaciones laborales y
+fiscales entre la empresa y sus conductores siguen siendo de la empresa. Los pagos a conductores
+son manuales, como los de las empresas, hasta que haya proveedores de pago con dispersión.
 
-**Por qué.** Justo para las partes: la línea que salió cobra algo por el viaje perdido, y el
-pasajero con paquete no pierde todo el viaje por un cambio de planes. Cobrarla en efectivo en el
-siguiente viaje funciona igual con pasajeros que pagan en efectivo, que no tienen saldo con la
-plataforma.
+## ADR-031: La plataforma factura su tarifa por servicio; en modo borrador hasta tener imprenta digital
 
-**Compromisos.** Si el pasajero no vuelve a pedir un taxi o una moto, la tasa no se cobra. El
-conductor del siguiente viaje cobra dinero que no es de su línea; las liquidaciones lo compensan.
+**Decisión** (del dueño del producto). La plataforma emite facturas solo por su tarifa por
+servicio (el recargo de ADR-029), con el IVA incluido en ese monto; el pasaje lo factura cada
+empresa. Cada pago crea un **borrador** de factura al primer pasajero (`invoices`), en la misma
+transacción que el libro de liquidaciones. Mientras no haya una imprenta digital autorizada
+contratada (`INVOICE_ISSUER=draft`), el personal emite cada documento en el portal gratuito del
+SENIAT y anota su número y número de control; el día de emisión fija la tasa BCV (`bcv_rates`) y
+los montos en bolívares, que no cambian después. Si la empresa cancela la salida, el borrador se
+anula o, si ya se emitió, se crea una nota de crédito, y la empresa recibe una factura por el cargo
+que asume. El tipo de contribuyente (ordinario o formal) y la alícuota se configuran; un
+contribuyente formal registra sus ventas como no gravadas. Los libros de ventas y compras se
+generan por mes y se descargan en CSV. Ver [fiscal.md](fiscal.md).
+
+**Por qué.** El dueño opera como firma personal con cuenta jurídica emprendedor. La Providencia
+SNAT/2026/00093 permite emitir por el portal del SENIAT, por imprenta digital o por máquina fiscal;
+el portal no cuesta nada y alcanza para el volumen inicial. Una interfaz (`InvoiceIssuer`) deja
+lista la imprenta digital sin cambiar el resto.
+
+**Compromisos.** El contador debe validar la alícuota, que el pasaje esté exento o fuera del
+alcance de la plataforma, el formato de los libros y si aplica el IGTF. Las retenciones de IVA
+que hagan compradores que sean contribuyentes especiales todavía no se registran (columna en
+cero). En modo borrador emitir es trabajo manual: con más volumen conviene contratar la imprenta.
+
+## ADR-032: Servicio urbano y suburbano por frecuencia, con boleto abierto
+
+**Decisión** (del dueño del producto). Un horario puede ser **por frecuencia**: sale una unidad
+cada `headway_minutes` desde `departure_time` hasta `last_departure_time`, el mismo día. Para esos
+horarios se vende un **boleto abierto** para el día y el tramo, válido en cualquier unidad de la
+ruta desde una hora antes de la primera hasta que llega la última, sin elegir puesto. El viaje
+(`trips`) representa el día de servicio; su capacidad es `puestos por unidad × unidades del día`, y
+la API numera los boletos (1, 2, 3…) con los mismos números de puesto internos, así que el índice
+que impide la doble venta, los conteos y la lista de pasajeros no cambian. Si la ruta le paga al
+conductor (ADR-030), cobra el conductor que valida el boleto (`bookings.boarding_driver_user_id`),
+y por eso los conductores pueden validar boletos. Ver [bookings.md](bookings.md#boleto-abierto-servicio-por-frecuencia-adr-032).
+
+**Por qué.** En el transporte urbano y suburbano las unidades salen cada pocos minutos, la gente
+viaja de pie y no reserva puesto; apartar un puesto en una salida fija no tenía sentido.
+Reutilizar el viaje y los números de puesto evita un segundo modelo de ventas.
+
+**Compromisos.** El reembolso por cancelación se calcula contra la primera unidad del día: una vez
+empezado el servicio, el boleto ya no se cancela. No hay recordatorio de salida. Varias unidades
+comparten el viaje, así que la asignación de vehículo y conductor del despacho no describe cada
+unidad; el cobro sigue al conductor que valida.
+
+## ADR-033: Ventas en efectivo registradas por el conductor, solo para reportes
+
+**Decisión** (del dueño del producto). En el urbano y suburbano muchos pasajeros siguen pagando en
+efectivo. El conductor anota en la app de transportistas la ruta, el tramo y cuántos pasajeros le
+pagaron (`cash_sales`). El monto lo calcula la API con la tarifa publicada del tramo, así que no se
+escribe a mano. Esas ventas no llevan cargo de la plataforma, no entran en la liquidación ni en la
+facturación, y solo cuentan en el reporte de ventas de la empresa, separadas de las ventas por la
+app. Un registro equivocado lo anula quien lo hizo, el mismo día; nada se borra.
+
+**Por qué.** Sin ellas los reportes de las rutas suburbanas solo ven una parte de los pasajeros, y
+la empresa no puede planificar frecuencias ni comparar unidades.
+
+**Compromisos.** Es lo que el conductor declara: no se puede verificar contra el dinero. El
+efectivo es un asunto entre la empresa y sus conductores; la plataforma no lo custodia.
+
+## ADR-034: Comprar sin registrarse (cuenta de invitado en el teléfono)
+
+**Decisión** (del dueño del producto). En la app de pasajeros se puede reservar y pagar sin crear
+una cuenta. Al tocar "Continuar sin crear cuenta" la app pide `POST /auth/guest` y guarda la
+sesión de un usuario **invitado** (`users.guest`, sin correo, teléfono ni contraseña) en el
+almacenamiento seguro del teléfono; desde ahí todo funciona igual (reservas, pagos, boletos,
+avisos push, taxis). Al reservar se puede dejar un teléfono o WhatsApp de contacto
+(`bookings.contact_phone`), que el soporte ve. El invitado se vuelve cuenta normal con
+`POST /me/account` (correo, contraseña y nombre) sin perder nada; si inicia sesión en una cuenta
+que ya existía, la app llama `POST /me/claim-guest` con el token del invitado y sus reservas,
+pagos, taxis y avisos pasan a esa cuenta (el invitado se cierra). Los invitados no crean empresas
+ni solicitudes KYC (`ACCOUNT_REQUIRED`). Los invitados sin compras se borran al mes.
+
+**Por qué.** Buena parte de los pasajeros del urbano y suburbano tiene poca experiencia digital:
+pedir correo y contraseña antes de comprar los hace desistir. El historial no se ata a un número de
+teléfono porque no hay verificación por SMS: unir viajes solo con el número permitiría quedarse
+con los de otra persona; el token del teléfono prueba que ese teléfono los compró.
+
+**Compromisos.** Si se borra la app o se pierde el teléfono sin haber creado la cuenta, los
+boletos no se recuperan desde la app; el soporte los encuentra por código de reserva y
+documento. Un invitado puede crear varias cuentas para apartar más puestos: lo frenan el límite
+por IP de los endpoints de acceso y la caducidad de los apartados. Términos (2.1.1) y Privacidad
+actualizados (versión 2026-11-12).

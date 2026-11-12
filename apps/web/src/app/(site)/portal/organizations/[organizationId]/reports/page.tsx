@@ -113,8 +113,7 @@ async function Reports({
                       {formatPaymentAmount(t.earned, t.currency)}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {t.bookings} reservas · {t.seats} puestos
-                      {t.packSeats ? ` (${t.packSeats} con paquete de viajes)` : ''} · vendido{' '}
+                      {t.bookings} reservas · {t.seats} puestos · vendido{' '}
                       {formatPaymentAmount(t.gross, t.currency)} · comisión{' '}
                       {formatPaymentAmount(t.commission, t.currency)}
                       {t.cancellations
@@ -146,6 +145,37 @@ async function Reports({
               />
             </>
           )}
+        </Card>
+      ) : null}
+
+      {sales && sales.cash.totals.length ? (
+        <Card>
+          <div className="flex flex-col gap-1">
+            <CardTitle>Efectivo cobrado por los conductores</CardTitle>
+            <CardDescription>
+              Pasajeros que pagaron en efectivo y que los conductores anotaron en la app. Es dinero
+              que no pasa por la plataforma: no lleva comisión ni entra en la liquidación.
+            </CardDescription>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {sales.cash.totals.map((t) => (
+              <div key={t.currency} className="rounded-lg border p-4">
+                <p className="text-sm text-muted-foreground">Efectivo ({t.currency})</p>
+                <p className="text-2xl font-semibold tabular-nums">
+                  {formatPaymentAmount(t.amount, t.currency)}
+                </p>
+                <p className="text-sm text-muted-foreground">{t.passengers} pasajeros</p>
+              </div>
+            ))}
+          </div>
+          <Table
+            head={['Ruta', 'Pasajeros', 'Efectivo']}
+            rows={sales.cash.byRoute.map((r) => [
+              r.route.name,
+              r.passengers,
+              formatPaymentAmount(r.amount, r.currency),
+            ])}
+          />
         </Card>
       ) : null}
 

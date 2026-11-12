@@ -20,7 +20,6 @@ import type {
   PaymentAccount,
   PaymentOption,
   PaymentReview,
-  TripPack,
 } from '@vtp/shared-types';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { CurrentAuth, ReqMeta } from '../identity/auth.decorators.js';
@@ -71,24 +70,6 @@ export class MyPaymentsController {
     return this.payments.create(auth, bookingId, body.method, meta);
   }
 
-  @Get('trip-packs/:packId/payment-options')
-  packOptions(
-    @CurrentAuth() auth: Authenticated,
-    @Param('packId', ParseUUIDPipe) packId: string,
-  ): Promise<PaymentOption[]> {
-    return this.payments.packOptions(auth, packId);
-  }
-
-  @Post('trip-packs/:packId/payments')
-  createForPack(
-    @CurrentAuth() auth: Authenticated,
-    @Param('packId', ParseUUIDPipe) packId: string,
-    @Body() body: CreatePaymentDto,
-    @ReqMeta() meta: RequestMeta,
-  ): Promise<Payment> {
-    return this.payments.createForPack(auth, packId, body.method, meta);
-  }
-
   /** Manual payments: "I paid", with the operation number; staff verify it. */
   @Post('payments/:paymentId/report')
   @HttpCode(HttpStatus.OK)
@@ -97,7 +78,7 @@ export class MyPaymentsController {
     @Param('paymentId', ParseUUIDPipe) paymentId: string,
     @Body() body: ReportPaymentDto,
     @ReqMeta() meta: RequestMeta,
-  ): Promise<Booking | TripPack> {
+  ): Promise<Booking> {
     return this.payments.report(auth, paymentId, body.operationNumber, meta);
   }
 
@@ -108,7 +89,7 @@ export class MyPaymentsController {
     @CurrentAuth() auth: Authenticated,
     @Param('paymentId', ParseUUIDPipe) paymentId: string,
     @Body() body: SimulatePaymentDto,
-  ): Promise<Booking | TripPack> {
+  ): Promise<Booking> {
     if (!this.payments.simulatorEnabled) {
       throw new ApiException('NOT_FOUND', 'Payment not found', HttpStatus.NOT_FOUND);
     }
@@ -148,21 +129,6 @@ export class ExchangeRatesController {
 @Controller({ path: 'admin', version: '1' })
 export class AdminPaymentsController {
   constructor(private readonly payments: PaymentsService) {}
-
-  /** The platform's rates, for what it sells itself (trip packs). */
-  @Get('exchange-rates')
-  platformRates(): Promise<ExchangeRate[]> {
-    return this.payments.platformRates();
-  }
-
-  @Put('exchange-rates')
-  replacePlatformRates(
-    @Body() body: ReplaceExchangeRatesDto,
-    @CurrentAuth() auth: Authenticated,
-    @ReqMeta() meta: RequestMeta,
-  ): Promise<ExchangeRate[]> {
-    return this.payments.replacePlatformRates(body, auth, meta);
-  }
 
   @Get('payment-accounts')
   accounts(): Promise<PaymentAccount[]> {

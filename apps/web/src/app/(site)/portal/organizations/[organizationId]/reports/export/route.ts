@@ -36,7 +36,6 @@ export async function GET(
           'Para la empresa',
           'Canceladas',
           'Devuelto',
-          'Puestos con paquete',
         ],
         ...report.byRoute.map((r) => [
           r.route.name,
@@ -48,7 +47,18 @@ export async function GET(
           Number(r.earned),
           r.cancellations,
           Number(r.refunded),
-          r.packSeats,
+        ]),
+        // Cash paid to drivers (ADR-033): passengers in "Puestos", no commission.
+        ...report.cash.byRoute.map((r) => [
+          `${r.route.name} (efectivo)`,
+          r.currency,
+          0,
+          r.passengers,
+          Number(r.amount),
+          0,
+          Number(r.amount),
+          0,
+          0,
         ]),
       ]);
     } else {

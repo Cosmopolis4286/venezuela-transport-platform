@@ -3,6 +3,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import {
   todayInVenezuela,
+  withServiceFee,
   type AuthResponse,
   type Booking,
   type OccupancyReport,
@@ -243,8 +244,9 @@ describe.runIf(expectDatabase)('Reports (e2e)', () => {
         .send({ qr: first!.ticket!.qr })
         .expect(200);
 
-      // --- Sales: paid minus cancelled, with the platform's default commission (8 % unless an
-      // admin changed it; read it to stay independent).
+      // --- Sales: three bookings paid, one refunded in full. Each passenger paid the 25.00 fare
+      // plus the platform's default service fee on top (15 % unless an admin changed it; read it
+      // to stay independent). The refund gives back the fare; the fees stay (ADR-029).
       const sales = (
         await http()
           .get(`${reportsUrl}/sales`)
@@ -255,24 +257,24 @@ describe.runIf(expectDatabase)('Reports (e2e)', () => {
       const policy = (
         await http().get(`${org}/settlement`).set('Authorization', owner.auth).expect(200)
       ).body as { commissionRate: string };
-      const commissionPerSeat = (25 * Number(policy.commissionRate)) / 100;
+      const feePerSeat = Number(withServiceFee('25.00', policy.commissionRate).fee);
+      const gross = (50 + 3 * feePerSeat).toFixed(2);
       expect(sales.totals).toEqual([
         {
           currency: 'USD',
           bookings: 2,
           seats: 2,
-          gross: '50.00',
-          commission: (2 * commissionPerSeat).toFixed(2),
-          earned: (50 - 2 * commissionPerSeat).toFixed(2),
+          gross,
+          commission: (3 * feePerSeat).toFixed(2),
+          earned: '50.00',
           cancellations: 1,
           refunded: '25.00',
-          packSeats: 0,
         },
       ]);
       expect(sales.byRoute).toEqual([
         expect.objectContaining({ route: { id: route.id, name: 'Valencia – Mérida' }, seats: 2 }),
       ]);
-      expect(sales.byDay).toEqual([expect.objectContaining({ date: today, gross: '50.00' })]);
+      expect(sales.byDay).toEqual([expect.objectContaining({ date: today, gross })]);
 
       // --- Occupancy: by service date of the departure.
       const occupancy = (

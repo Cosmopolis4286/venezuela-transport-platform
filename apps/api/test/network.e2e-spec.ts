@@ -175,17 +175,7 @@ describe.runIf(expectDatabase)('Transport network (e2e)', () => {
         stops: stopsList([caracas, 0], [valencia, 120], [maracaibo, 600]),
       }).expect(201)
     ).body as Route;
-    expect(route).toMatchObject({ status: 'draft', mode: 'bus' });
-    // A bus company runs buses only (ADR-028).
-    expect(
-      (
-        await createRoute({
-          name: 'En taxi',
-          mode: 'car',
-          stops: stopsList([caracas, 0], [maracaibo, 600]),
-        }).expect(409)
-      ).body.error.reason,
-    ).toBe('TRANSPORT_MODE_NOT_ALLOWED');
+    expect(route.status).toBe('draft');
     expect(route.stops.map((s) => [s.stop.city, s.minutesFromOrigin])).toEqual([
       ['Caracas', 0],
       ['Valencia', 120],
@@ -221,7 +211,6 @@ describe.runIf(expectDatabase)('Transport network (e2e)', () => {
     expect(listed).toEqual([
       expect.objectContaining({
         id: route.id,
-        mode: 'bus',
         stopCount: 3,
         scheduleCount: 0,
         origin: expect.objectContaining({ id: caracas.id }),
@@ -334,17 +323,8 @@ describe.runIf(expectDatabase)('Transport network (e2e)', () => {
         fare: { amount: '30.00', currency: 'USD' },
         operator: expect.objectContaining({ id: organization.id }),
         route: { id: route.id, name: 'Caracas – Maracaibo' },
-        mode: 'bus',
       }),
     ]);
-    // Filtering by kind of vehicle.
-    const byMode = (mode: string) =>
-      http()
-        .get('/api/v1/search/departures')
-        .query({ from: caracas.id, to: maracaibo.id, date: tomorrow, mode });
-    expect((await byMode('bus').expect(200)).body).toHaveLength(1);
-    expect((await byMode('motorcycle').expect(200)).body).toEqual([]);
-    await byMode('plane').expect(400);
     // Valencia is reached at midnight: that service belongs to the previous day's departure.
     const fromValencia = (await search(valencia, maracaibo, addDays(tomorrow, 1)).expect(200))
       .body as Departure[];

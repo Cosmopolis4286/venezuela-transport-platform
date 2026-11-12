@@ -21,7 +21,6 @@ import { eq, sql } from 'drizzle-orm';
 import request from 'supertest';
 import { DatabaseService } from '../src/database/database.service.js';
 import { trips as tripsTable } from '../src/modules/bookings/bookings.schema.js';
-import { vehicles } from '../src/modules/fleet/fleet.schema.js';
 import { notifications } from '../src/modules/notifications/notifications.schema.js';
 import { NotificationsService } from '../src/modules/notifications/notifications.service.js';
 import { users } from '../src/modules/identity/identity.schema.js';
@@ -222,7 +221,6 @@ describe.runIf(expectDatabase)('Dispatch (e2e)', () => {
       expect(bus).toMatchObject({
         plate: 'AB123CD',
         label: 'Unidad 12',
-        mode: 'bus',
         seatLayout: { id: sleeper.id, capacity: 30 },
         active: true,
       });
@@ -235,11 +233,6 @@ describe.runIf(expectDatabase)('Dispatch (e2e)', () => {
       const spare = (await addVehicle(owner.auth, { plate: 'SP001AA' }).expect(201))
         .body as FleetVehicle;
       await addVehicle(owner.auth, { plate: 'ZZ111ZZ', seatLayoutId: randomUUID() }).expect(404);
-      // A bus company only runs buses (ADR-028).
-      expect(
-        (await addVehicle(owner.auth, { plate: 'MT123AB', mode: 'motorcycle' }).expect(409)).body
-          .error.reason,
-      ).toBe('TRANSPORT_MODE_NOT_ALLOWED');
       const listed = (
         await http().get(`${org}/vehicles`).set('Authorization', agent.auth).expect(200)
       ).body as FleetVehicle[];
@@ -328,12 +321,6 @@ describe.runIf(expectDatabase)('Dispatch (e2e)', () => {
         'VEHICLE_LAYOUT_MISMATCH',
       );
       expect(await reason(assign(afternoon, bus.id, null).expect(409))).toBe('VEHICLE_BUSY');
-      // A vehicle of another mode never runs this bus route.
-      await db.update(vehicles).set({ mode: 'car' }).where(eq(vehicles.id, spare.id));
-      expect(await reason(assign(afternoon, spare.id, null).expect(409))).toBe(
-        'VEHICLE_MODE_MISMATCH',
-      );
-      await db.update(vehicles).set({ mode: 'bus' }).where(eq(vehicles.id, spare.id));
       expect(await reason(assign(afternoon, spare.id, driver.user.id).expect(409))).toBe(
         'DRIVER_BUSY',
       );

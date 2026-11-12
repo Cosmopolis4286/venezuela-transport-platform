@@ -26,16 +26,17 @@ En la página de la organización:
 
 1. **Mapas de puestos**: crea el de cada tipo de bus (hay plantillas).
 2. **Rutas → Nueva ruta**: nombre y paradas en orden, con los minutos desde el origen. Las paradas
-   salen del catálogo de VTP; si falta un terminal, pídeselo a la administración. Si VTP tiene
-   corredores suburbanos, eliges también el **servicio**: entre ciudades o **suburbano**, y en ese
-   caso el corredor (solo puedes usar sus paradas). El servicio no cambia después.
+   salen del catálogo de VTP; si falta un terminal, pídeselo a la administración.
 3. **Tarifas** por tramo (US$ o Bs.).
 4. **Horarios**: hora de salida, días de la semana, vigencia, clase de servicio y mapa de puestos.
-   Para **salidas frecuentes**, llena también "Repetir cada" y "Hasta las" (por ejemplo, cada 15
-   minutos hasta las 20:00): se crean todas de una vez y se ven como una sola línea, que puedes
-   pausar o eliminar entera.
-5. **Publicar** la ruta: desde ese momento aparece en las búsquedas.
-6. **Tasas de cambio**: bolívares y reales por dólar. Sin una tasa, ese medio de pago no se ofrece
+   En rutas **urbanas o suburbanas** puedes poner una **frecuencia** (por ejemplo, cada 15
+   minutos) y la **última salida**: se vende un **boleto abierto** para el día, válido en
+   cualquier unidad, sin puesto ni mapa. "Puestos" es entonces la capacidad de una unidad.
+5. **Tipo de servicio y cobro**: interurbana o urbana/suburbana, y quién cobra. Por defecto, las
+   interurbanas le pagan a la empresa y las urbanas o suburbanas al conductor de cada viaje; puedes
+   cambiarlo en cada ruta (vale para las ventas desde ese momento).
+6. **Publicar** la ruta: desde ese momento aparece en las búsquedas.
+7. **Tasas de cambio**: bolívares y reales por dólar. Sin una tasa, ese medio de pago no se ofrece
    para tarifas en dólares.
 
 ## 4. El día de la salida
@@ -55,25 +56,12 @@ En la página de la organización:
   "Llegó…".
 - Los inspectores escanean los boletos con la app de transportistas ([guía](conductores.md)).
 
-## Líneas de mototaxis
-
-Publican **rutas suburbanas** dentro de un corredor de VTP, igual que en el paso 3, con dos
-diferencias: cada salida es **una moto con un pasajero** (no hay mapas de puestos ni cantidad de
-puestos que elegir) y no hay taxis de terminal. En **Vehículos** registras las placas de las motos
-y sus documentos; en el despacho asignas moto y conductor a cada salida.
-
 ## 5. Taxis (líneas de taxis)
 
 1. **Taxis → Terminales**: elige en qué terminales opera tu línea.
 2. El tablero muestra las solicitudes de esos terminales. Un despachador puede asignar una a un
    conductor y vehículo con su tarifa, o tus conductores la toman desde su app.
 3. Por ahora el pasajero le paga al conductor; la plataforma no cobra los taxis.
-4. **Viajes por tramo (suburbano)**: en **Taxis** (o **Mototaxis**), carga tus **tarifas por
-   tramo**: dos paradas de un corredor y el monto, en los dos sentidos. Tus conductores ven las
-   solicitudes de esos tramos (ahora o programadas) y al tomarlas se cobra tu tarifa, sin
-   escribirla. Un viaje programado que tomas no te impide tomar otros hasta la hora de recoger.
-   Si tu línea **acepta paquetes de viajes** (lo activa VTP), también ves los viajes pagados con
-   paquete ("Pagado con paquete": no cobres); VTP te paga tu tarifa del tramo al terminarlos.
 
 ## 6. Cobros y liquidaciones
 
@@ -104,6 +92,8 @@ En **Reportes** (empresas de autobuses) eliges un rango de días y ves:
 
 - **Ventas** (dueño y administrador): lo vendido, la comisión y lo que gana la empresa, por ruta y
   por día, con las cancelaciones y lo devuelto. Cuadra con las liquidaciones.
+- **Efectivo cobrado por los conductores**: los pasajeros que tus conductores anotaron como pagados
+  en efectivo, por ruta. No lleva comisión ni entra en la liquidación.
 - **Ocupación** (quien puede ver los viajes): por cada salida con reservas, la capacidad, los
   puestos vendidos, cuántos abordaron y el porcentaje de ocupación, y los totales por ruta.
 

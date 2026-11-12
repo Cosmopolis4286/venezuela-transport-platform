@@ -32,41 +32,33 @@ const CURRENCY_NAMES: Record<Payment['currency'], string> = {
 /** While a payment is pending, the booking is reloaded this often to pick up the confirmation. */
 const POLL_MS = 5000;
 
-/** What is being paid: a held booking or a trip pack waiting for its payment. */
-export interface PaymentSubject {
-  /** `/me/bookings/<id>` or `/me/trip-packs/<id>`: its options and payments hang from it. */
-  path: string;
-  payment: Payment | null;
-  /** Currency of the fare or of the pack's price. */
-  currency: Booking['total']['currency'];
-}
-
 /**
- * Paying a held booking or a trip pack: choose a method (amounts already converted), then follow
- * the instructions. Automatic providers confirm on their own; with manual payments the passenger
- * reports the operation number and staff verify it (ADR-027). The screen polls.
+ * Paying a held booking: choose a method (amounts already converted with the operator's rate),
+ * then follow the instructions. Automatic providers confirm on their own; with manual payments
+ * the passenger reports the operation number and staff verify it (ADR-027). The screen polls.
  */
-export function PaymentPanel<T>({
-  subject,
-  onUpdate,
+export function PaymentPanel({
+  booking,
+  onBooking,
   reload,
 }: {
-  subject: PaymentSubject;
-  /** Receives the booking or the pack after reporting or simulating a payment. */
-  onUpdate: (value: T) => void;
+  booking: Booking;
+  onBooking: (booking: Booking) => void;
   reload: () => Promise<void>;
 }) {
   const { api } = useAuth();
   const { t } = useT();
-  const pending = subject.payment?.status === 'pending' ? subject.payment : null;
-  const reported = subject.payment?.status === 'reported' ? subject.payment : null;
-  const rejected = subject.payment?.status === 'rejected' ? subject.payment : null;
+  const pending = booking.payment?.status === 'pending' ? booking.payment : null;
+  const reported = booking.payment?.status === 'reported' ? booking.payment : null;
+  const rejected = booking.payment?.status === 'rejected' ? booking.payment : null;
   const [choosing, setChoosing] = useState(false);
   const [operation, setOperation] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const showOptions = (!pending && !reported) || choosing;
-  const options = useApi<PaymentOption[]>(showOptions ? `${subject.path}/payment-options` : null);
+  const options = useApi<PaymentOption[]>(
+    showOptions ? `/me/bookings/${booking.id}/payment-options` : null,
+  );
 
   const waiting = Boolean(pending ?? reported);
   useEffect(() => {
@@ -89,7 +81,7 @@ export function PaymentPanel<T>({
 
   const choose = (method: PaymentMethod) =>
     run(method, async () => {
-      await api.request<Payment>(`${subject.path}/payments`, {
+      await api.request<Payment>(`/me/bookings/${booking.id}/payments`, {
         method: 'POST',
         body: { method },
       });
@@ -99,8 +91,8 @@ export function PaymentPanel<T>({
 
   const report = (payment: Payment) =>
     run('report', async () => {
-      onUpdate(
-        await api.request<T>(`/me/payments/${payment.id}/report`, {
+      onBooking(
+        await api.request<Booking>(`/me/payments/${payment.id}/report`, {
           method: 'POST',
           body: { operationNumber: operation.trim() },
         }),
@@ -110,12 +102,14 @@ export function PaymentPanel<T>({
 
   const simulate = (payment: Payment) =>
     run('simulate', async () => {
-      onUpdate(await api.request<T>(`/me/payments/${payment.id}/simulate`, { method: 'POST' }));
+      onBooking(
+        await api.request<Booking>(`/me/payments/${payment.id}/simulate`, { method: 'POST' }),
+      );
     });
 
   return (
     <View style={{ gap: 12 }}>
-      {subject.payment?.status === 'refund_due' ? (
+      {booking.payment?.status === 'refund_due' ? (
         <Banner tone="warning">{t.payment.mismatch}</Banner>
       ) : null}
       {rejected?.rejectionReason ? (
@@ -124,7 +118,7 @@ export function PaymentPanel<T>({
       {reported ? (
         <>
           <Banner tone="info">{t.payment.reported(reported.payerReference ?? '')}</Banner>
-          <PaymentInstructions payment={reported} fareCurrency={subject.currency} />
+          <PaymentInstructions payment={reported} fareCurrency={booking.total.currency} />
           {error ? <Banner tone="error">{error}</Banner> : null}
           <Button
             title={t.payment.check}
@@ -135,7 +129,7 @@ export function PaymentPanel<T>({
         </>
       ) : null}
       {pending && !choosing ? (
-        <PaymentInstructions payment={pending} fareCurrency={subject.currency} />
+        <PaymentInstructions payment={pending} fareCurrency={booking.total.currency} />
       ) : null}
       {error && !reported ? <Banner tone="error">{error}</Banner> : null}
       {reported ? null : pending && !choosing ? (

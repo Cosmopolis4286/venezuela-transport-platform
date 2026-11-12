@@ -1,13 +1,10 @@
 import 'server-only';
 import {
   apiErrorText,
-  openServices,
-  SERVICES,
   type Departure,
   type Locale,
-  type Service,
-  type ServicesStatus,
   type Stop,
+  type SupportContact,
 } from '@vtp/shared-types';
 import { cacheLife } from 'next/cache';
 import { connection } from 'next/server';
@@ -29,34 +26,20 @@ export async function getStops(): Promise<Stop[]> {
   return cachedStops();
 }
 
-/** Which services are on sale (ADR-029). Public, cached for a few minutes like the stops. */
-async function cachedServices(): Promise<ServicesStatus> {
+async function cachedSupport(): Promise<SupportContact> {
   'use cache';
   cacheLife('minutes');
-  return apiRequest<ServicesStatus>('/platform/services', { auth: false });
+  return apiRequest<SupportContact>('/support', { auth: false });
 }
 
-export interface ServiceChoice {
-  status: ServicesStatus;
-  /** The services passengers can choose; a selector is shown only for two. */
-  open: Service[];
-  /** The one to show: the requested one if it is open, else the first open one. */
-  current: Service;
-}
-
-/** The service a page shows, from its `?service=` parameter. */
-export async function getServiceChoice(requested: string): Promise<ServiceChoice> {
+/** Support WhatsApp and app download link; both null when not configured or the API is down. */
+export async function getSupport(): Promise<SupportContact> {
   await connection();
-  const status = await cachedServices();
-  const open = openServices(status);
-  const wanted = (SERVICES as readonly string[]).includes(requested)
-    ? (requested as Service)
-    : null;
-  return {
-    status,
-    open,
-    current: wanted && open.includes(wanted) ? wanted : (open[0] ?? 'intercity'),
-  };
+  try {
+    return await cachedSupport();
+  } catch {
+    return { whatsapp: null, androidApp: null };
+  }
 }
 
 export type DepartureSearch =
@@ -68,10 +51,9 @@ export async function searchDepartures(
   to: string,
   date: string,
   locale: Locale,
-  service?: Service,
 ): Promise<DepartureSearch> {
   const t = MESSAGES[locale].results;
-  const query = new URLSearchParams({ from, to, date, ...(service ? { service } : {}) });
+  const query = new URLSearchParams({ from, to, date });
   try {
     return {
       departures: await apiRequest<Departure[]>(`/search/departures?${query}`, { auth: false }),

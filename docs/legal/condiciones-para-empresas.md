@@ -3,7 +3,7 @@
 Versión {{version}} · Vigente desde {{fecha_vigencia}}
 
 Estas Condiciones regulan la relación entre {{razon_social}}, RIF {{rif}} («{{nombre_comercial}}»)
-y cada empresa de transporte de pasajeros, línea de taxis, línea de mototaxis o terminal que se registra en la
+y cada empresa de transporte de pasajeros, línea de taxis o terminal que se registra en la
 Plataforma (la «Empresa»). Completan los [Términos y Condiciones de Uso](terminos) y la [Política
 de Privacidad](privacidad). La persona que registra la Empresa declara que tiene facultades
 suficientes para obligarla.
@@ -52,26 +52,36 @@ documentos (KYC) hecha por {{nombre_comercial}}; la Empresa decide si los incorp
 verificación de {{nombre_comercial}} no sustituye la responsabilidad de la Empresa sobre la
 idoneidad de su personal.
 
-## 4. Ventas, comisión y liquidación
+## 4. Ventas, cargo por servicio y liquidación
 
-4.1. **Comisión.** Por cada reserva pagada, {{nombre_comercial}} cobra una comisión sobre la
-tarifa, del porcentaje acordado con la Empresa o, en su defecto, del porcentaje general vigente
-que se muestra en el portal (hoy, 8 %). La comisión vigente al confirmar el pago queda fija para
-esa reserva. Los cambios de comisión se avisan con al menos 30 días de anticipación y aplican
-solo a las reservas pagadas después.
+4.1. **Cargo por servicio.** La Empresa recibe su **tarifa completa**. {{nombre_comercial}} cobra al
+pasajero, **además de la tarifa**, un cargo por servicio: un porcentaje de la tarifa acordado con
+la Empresa o, en su defecto, el fijado para la ciudad o zona, o el porcentaje general vigente que
+se muestra en el portal (hoy, 15 %). El cargo vigente al apartar los puestos queda fijo para esa
+reserva. Los cambios se avisan con al menos 30 días de anticipación y aplican solo a las reservas
+hechas después.
 
 4.2. **Quién cobra.** Según lo acordado con cada Empresa:
 
 - **Cobra la plataforma (por defecto):** los pasajeros pagan a las cuentas de
-  {{nombre_comercial}}, que recibe el dinero **por cuenta de la Empresa** y le paga lo ganado
-  (tarifa menos comisión) en la moneda de la tarifa, con la frecuencia y por el medio acordados.
+  {{nombre_comercial}}, que recibe la tarifa **por cuenta de la Empresa** y le paga lo ganado
+  (la tarifa completa) en la moneda de la tarifa, con la frecuencia y por el medio acordados.
   Cada pago a la Empresa queda registrado con su referencia.
 - **Cobra la Empresa:** los pasajeros pagan a las cuentas que la Empresa registra en la
   Plataforma; la Empresa verifica los pagos, hace los reembolsos que correspondan y paga a
-  {{nombre_comercial}} la comisión de cada reserva pagada en el plazo acordado (en su defecto,
+  {{nombre_comercial}} el cargo por servicio de cada reserva pagada en el plazo acordado (en su defecto,
   dentro de los 15 días siguientes al cierre de cada mes).
 
-4.3. **Estado de cuenta.** El portal muestra en todo momento lo vendido, la comisión, lo ganado,
+4.2.1. **Pago a la línea o al conductor.** En cada ruta, la Empresa elige quién recibe las
+tarifas que cobra la plataforma: la propia Empresa o línea, o el conductor que el despacho asigna
+a cada viaje. Salvo que la Empresa elija otra cosa, las rutas **interurbanas** se le pagan a la
+Empresa y las **urbanas o suburbanas** al conductor. Cuando se le paga al conductor,
+{{nombre_comercial}} le transfiere lo ganado en sus viajes a la cuenta que él mismo indica, y ese
+pago cancela, por esas tarifas, lo que {{nombre_comercial}} le debía a la Empresa; la relación
+entre la Empresa y sus conductores (remuneración, aportes, retenciones) sigue siendo de la Empresa.
+Si cobra la Empresa, ella les paga a sus conductores.
+
+4.3. **Estado de cuenta.** El portal muestra en todo momento lo pagado por los pasajeros, el cargo por servicio, lo ganado,
 lo cobrado por la Empresa, los pagos en cada sentido y el saldo. Las diferencias deben
 reportarse dentro de los 30 días siguientes al cierre del mes; después, el estado de cuenta se
 tiene por aceptado, salvo error material.
@@ -79,41 +89,18 @@ tiene por aceptado, salvo error material.
 4.4. **Tasas de cambio.** La Empresa fija las tasas con las que se convierten sus tarifas a otras
 monedas y responde por ellas.
 
-4.5. **Servicios y rutas suburbanas.** La Empresa indica si cada ruta es interurbana o suburbana;
-una ruta suburbana pertenece a un corredor que define {{nombre_comercial}}, y su personal lo
-revisa. {{nombre_comercial}} puede abrir o cerrar la venta de cada servicio por ciudad o corredor;
-lo ya vendido se respeta y la Empresa debe prestar esos viajes.
-
-4.6. **Paquetes de viajes.** Los paquetes los vende y cobra {{nombre_comercial}} por su cuenta. La
-Empresa acepta paquetes solo si {{nombre_comercial}} la habilita para ello. Una Empresa habilitada
-acepta como pagados los viajes que los pasajeros paguen con un paquete en sus salidas o viajes del
-tramo y tipo de vehículo del paquete, y por cada viaje usado gana **su tarifa vigente de ese
-tramo menos la comisión**, aunque el precio por viaje del paquete sea otro: la diferencia la pone
-o la gana {{nombre_comercial}}. Si el paquete tiene un **tope por viaje**, la Empresa gana su tarifa
-hasta ese tope; {{nombre_comercial}} informa los topes vigentes a las Empresas que aceptan paquetes. Si un viaje vuelve al paquete por una cancelación a tiempo, se
-anula también lo ganado por él.
-
-4.7. **Taxis y mototaxis por tramo.** Las líneas de taxis y de mototaxis publican tarifas fijas
-por tramo, en su tipo de vehículo, y las respetan: el pasajero las ve antes de pedir. Una moto
-lleva a un solo pasajero, con casco. Cuando un pasajero cancela tarde un viaje que la línea ya
-había aceptado, la línea tiene derecho a la **tasa de cancelación** que fija la Política de
-Cancelación y Reembolsos (menos la comisión). El conductor del siguiente viaje del pasajero cobra
-la tasa en efectivo junto con su tarifa; si ese conductor es de otra línea, {{nombre_comercial}}
-le descuenta la tasa a esa línea en su estado de cuenta y se la acredita a la línea que salió.
-Las líneas se obligan a cobrar las tasas que la Plataforma les indique.
-
 ## 5. Cancelaciones y reembolsos
 
-5.1. En sus rutas interurbanas, la Empresa fija su política de reembolso por cancelación del
-pasajero dentro de los límites que acepta la Plataforma; mientras no fije una propia, aplica la
-general. En las rutas suburbanas aplica la escala general de {{nombre_comercial}} para todas las
-Empresas. La política se muestra al pasajero antes de pagar.
+5.1. La Empresa fija su política de reembolso por cancelación del pasajero dentro de los límites
+que acepta la Plataforma; mientras no fije una propia, aplica la general. La política se muestra
+al pasajero antes de pagar.
 
-5.2. Cuando un pasajero cancela, el reembolso se descuenta de lo ganado por la Empresa y
-{{nombre_comercial}} conserva su comisión.
+5.2. Cuando un pasajero cancela, el reembolso (sobre la tarifa) se descuenta de lo ganado por la
+Empresa; el cargo por servicio no se reembolsa y lo conserva {{nombre_comercial}}.
 
-5.3. Si la **Empresa cancela una salida**, todos sus pasajeros reciben el **reembolso completo**,
-{{nombre_comercial}} conserva su comisión y la Empresa debe informar el motivo. La Empresa debe
+5.3. Si la **Empresa cancela una salida**, todos sus pasajeros reciben el **reembolso completo**
+(tarifa y cargo por servicio); {{nombre_comercial}} conserva su cargo por servicio, que asume la
+Empresa, y la Empresa debe informar el motivo. La Empresa debe
 cancelar con la mayor anticipación posible y avisar por la Plataforma.
 
 5.4. Los reembolsos los hace quien recibió el dinero (sección 4.2), por el mismo medio, en un

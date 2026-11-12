@@ -1,12 +1,7 @@
 import type { TaxiRequest } from '@vtp/shared-types';
-import { feesNotice, parseFare, requestSummary, rideRoute } from './taxi-board';
+import { parseFare, requestSummary, rideRoute } from './taxi-board';
 
 const request = {
-  kind: 'terminal',
-  mode: 'car',
-  scheduledFor: null,
-  paidWithPack: false,
-  feesDue: [] as TaxiRequest['feesDue'],
   direction: 'from_terminal',
   terminal: { name: 'Terminal La Bandera' },
   address: 'Av. Bolívar, Los Teques',
@@ -30,26 +25,6 @@ describe('taxi board labels', () => {
     );
   });
 
-  it('shows stretch rides with their stops, vehicle and time', () => {
-    const stretch = {
-      ...request,
-      kind: 'stretch',
-      direction: null,
-      terminal: null,
-      from: { city: 'San Félix' },
-      to: { city: 'Puerto Ordaz' },
-      mode: 'motorcycle',
-      passengers: 1,
-    } as unknown as TaxiRequest;
-    expect(rideRoute(stretch)).toBe('San Félix → Puerto Ordaz · buscar en Av. Bolívar, Los Teques');
-    expect(requestSummary(stretch, Date.parse(request.requestedAt))).toBe(
-      'Moto ahora · 1 pasajero · recién pedido',
-    );
-    expect(requestSummary({ ...stretch, scheduledFor: '2026-11-12T10:30:00.000Z' })).toBe(
-      'Moto · para el 12/11 06:30 · 1 pasajero',
-    );
-  });
-
   it('parses fares typed by drivers', () => {
     expect(parseFare('8')).toBe('8.00');
     expect(parseFare('8,5')).toBe('8.50');
@@ -57,15 +32,5 @@ describe('taxi board labels', () => {
     expect(parseFare('0')).toBeNull();
     expect(parseFare('8.555')).toBeNull();
     expect(parseFare('ocho')).toBeNull();
-  });
-
-  it('tells the driver to collect pending cancellation fees', () => {
-    expect(feesNotice([])).toBeNull();
-    expect(
-      feesNotice([
-        { amount: '1.00', currency: 'USD' },
-        { amount: '0.50', currency: 'USD' },
-      ]),
-    ).toMatch(/^Cobra además .*1,50.* de una cancelación anterior/);
   });
 });

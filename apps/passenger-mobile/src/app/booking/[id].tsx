@@ -8,6 +8,7 @@ import {
   Row,
   Screen,
   Subheading,
+  SupportButton,
   useApi,
   useAuth,
   useColors,
@@ -26,6 +27,8 @@ import {
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
+import { InvoicePanel } from '@/components/invoice-panel';
+import { PriceBreakdown } from '@/components/price-breakdown';
 import { PaymentPanel } from '@/components/payment-panel';
 import { QrCode } from '@/components/qr-code';
 import { useT } from '@/i18n/use-t';
@@ -72,6 +75,9 @@ export default function BookingScreen() {
   const refundText = (payment: NonNullable<Booking['payment']>) =>
     formatPaymentAmount(payment.refundAmount ?? payment.amount, payment.currency, locale);
   const extraDays = daysBetween(data.trip.departsAt, data.trip.arrivesAt);
+  // Open tickets (frequency service) are numbered for the day, not tied to a seat.
+  const open = data.trip.headwayMinutes !== null;
+  const seatLabel = (number: string) => (open ? t.ticket(number) : t.seat(number));
 
   const cancel = async () => {
     setBusy(true);
@@ -100,13 +106,7 @@ export default function BookingScreen() {
       {status === 'held' && data.payment?.status !== 'reported' ? (
         <Banner tone="warning">{t.booking.held(formatClock(secondsLeft))}</Banner>
       ) : null}
-      {status === 'confirmed' ? (
-        <Banner tone="success">
-          {data.tripPack
-            ? `${t.booking.paidWithPack(data.tripPack.code)} ${t.booking.showQr}`
-            : t.booking.confirmed}
-        </Banner>
-      ) : null}
+      {status === 'confirmed' ? <Banner tone="success">{t.booking.confirmed}</Banner> : null}
       {status === 'expired' ? <Banner tone="error">{t.booking.expired}</Banner> : null}
       {refundDue ? <Banner tone="warning">{t.booking.refundDue}</Banner> : null}
       {refunded ? <Banner tone="info">{t.booking.refunded}</Banner> : null}
@@ -134,11 +134,21 @@ export default function BookingScreen() {
         <Heading>
           {data.from.city} → {data.to.city}
         </Heading>
-        <Body>
-          {longDate(data.trip.departsAt, locale)} · {localTime(data.trip.departsAt)} →{' '}
-          {localTime(data.trip.arrivesAt)}
-          {extraDays ? t.dayOffset(extraDays) : ''}
-        </Body>
+        {open ? (
+          <Body>
+            {t.booking.openTicket(
+              longDate(data.trip.departsAt, locale),
+              localTime(data.trip.departsAt),
+              localTime(data.trip.arrivesAt),
+            )}
+          </Body>
+        ) : (
+          <Body>
+            {longDate(data.trip.departsAt, locale)} · {localTime(data.trip.departsAt)} →{' '}
+            {localTime(data.trip.arrivesAt)}
+            {extraDays ? t.dayOffset(extraDays) : ''}
+          </Body>
+        )}
         <Body muted>
           {data.operator.tradeName ?? data.operator.legalName} ·{' '}
           {shared.serviceClass[data.trip.serviceClass]}
@@ -148,26 +158,14 @@ export default function BookingScreen() {
         </Body>
       </Card>
 
-      {data.tripPack && status === 'cancelled' && !operatorCancelled ? (
-        <Banner tone="info">{t.booking.cancelledPack(data.tripPack.code)}</Banner>
-      ) : null}
       {status === 'held' || status === 'confirmed' ? (
         <Body muted>
-          {t.booking.policy}:{' '}
-          {data.tripPack ? t.booking.packPolicy : policyText(t, data.refundPolicy)}
+          {t.booking.policy}: {policyText(t, data.refundPolicy)}
         </Body>
       ) : null}
 
       {status === 'held' ? (
-        <PaymentPanel<Booking>
-          subject={{
-            path: `/me/bookings/${data.id}`,
-            payment: data.payment,
-            currency: data.total.currency,
-          }}
-          onUpdate={booking.mutate}
-          reload={booking.reload}
-        />
+        <PaymentPanel booking={data} onBooking={booking.mutate} reload={booking.reload} />
       ) : null}
 
       <Subheading>{status === 'confirmed' ? t.booking.tickets : t.booking.passengers}</Subheading>
@@ -175,7 +173,7 @@ export default function BookingScreen() {
         p.ticket ? (
           <Card key={p.seatNumber}>
             <Row>
-              <Badge label={t.seat(p.seatNumber)} />
+              <Badge label={seatLabel(p.seatNumber)} />
               {p.ticket.boardedAt ? <Badge label={t.booking.boarded} tone="success" /> : null}
             </Row>
             <Heading>
@@ -190,16 +188,30 @@ export default function BookingScreen() {
           </Card>
         ) : (
           <Row key={p.seatNumber}>
-            <Badge label={t.seat(p.seatNumber)} />
+            <Badge label={seatLabel(p.seatNumber)} />
             <Body>
               {p.firstName} {p.lastName} · {p.documentType}-{p.documentNumber}
             </Body>
           </Row>
         ),
       )}
-      <Body>
-        {t.booking.total}: {formatMoney(data.total.amount, data.total.currency, locale)}
-      </Body>
+      {data.serviceFee ? (
+        <>
+          <PriceBreakdown
+            label={t.booking.total}
+            fares={data.fares}
+            rate={data.serviceFee.rate}
+            fee={data.serviceFee.amount}
+            total={data.total.amount}
+            currency={data.total.currency}
+          />
+          {Number(data.serviceFee.amount) > 0 ? <Body muted>{t.fees.notRefunded}</Body> : null}
+        </>
+      ) : (
+        <Body>
+          {t.booking.total}: {formatMoney(data.total.amount, data.total.currency, locale)}
+        </Body>
+      )}
       {data.payment?.status === 'confirmed' ? (
         <Body muted>
           {t.booking.paidWith(
@@ -209,6 +221,8 @@ export default function BookingScreen() {
           )}
         </Body>
       ) : null}
+      <InvoicePanel booking={data} onChange={(b) => booking.mutate(b)} />
+      <SupportButton bookingCode={data.code} />
       {error ? <Banner tone="error">{error}</Banner> : null}
       {status === 'held' ? (
         <Button
@@ -288,12 +302,6 @@ function CancelPaid({
       <Subheading>{t.booking.cancelPaid}</Subheading>
       {!quote.cancellable ? (
         <Body>{t.booking.notCancellable}</Body>
-      ) : quote.tripPack ? (
-        <Body>
-          {quote.tripPack.tripsBack
-            ? t.booking.cancelPackBack(quote.tripPack.tripsBack, quote.tripPack.code)
-            : t.booking.cancelPackLost}
-        </Body>
       ) : quote.refund ? (
         <Body>
           {t.booking.cancelQuote(
@@ -305,7 +313,7 @@ function CancelPaid({
         <Body>{t.booking.cancelNoRefund}</Body>
       )}
       <Body muted>
-        {t.booking.policy}: {quote.tripPack ? t.booking.packPolicy : policyText(t, quote.policy)}
+        {t.booking.policy}: {policyText(t, quote.policy)}
       </Body>
       {error ? <Banner tone="error">{error}</Banner> : null}
       {quote.cancellable ? (

@@ -1,5 +1,3 @@
-import type { TransportMode } from './network.js';
-
 /**
  * Seat layouts: the seat map of a type of vehicle an operator runs (a 2-2 coach, a 2-1 sleeper,
  * a double-decker, a por puesto car). Schedules reference a layout so passengers can pick seats.
@@ -178,8 +176,6 @@ export interface FleetVehicle {
   plate: string;
   /** Free text for staff, e.g. "Unidad 12 · Encava 610". */
   label: string | null;
-  /** Set when the vehicle is registered; it only runs routes of the same mode. */
-  mode: TransportMode;
   seatLayout: { id: string; name: string; capacity: number } | null;
   /** Inactive vehicles keep their past trips but cannot be assigned again. */
   active: boolean;
@@ -237,8 +233,6 @@ export function worstDocumentStatus(
 /** `POST /organizations/:id/vehicles` and `PATCH …/:vehicleId` (all optional on PATCH). */
 export interface VehicleInput {
   plate: string;
-  /** Only on creation; defaults to the organization's first mode (`modesFor`). */
-  mode?: TransportMode;
   label?: string | null;
   seatLayoutId?: string | null;
   active?: boolean;

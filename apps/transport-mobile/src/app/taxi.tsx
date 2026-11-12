@@ -24,7 +24,7 @@ import {
 } from '@vtp/shared-types';
 import { useEffect, useState } from 'react';
 import { RefreshControl } from 'react-native';
-import { parseFare, requestSummary, rideRoute, feesNotice } from '@/lib/taxi-board';
+import { parseFare, requestSummary, rideRoute } from '@/lib/taxi-board';
 import { useRefreshOnFocus } from '@/lib/use-refresh-on-focus';
 
 /** New requests and the current ride's status are reloaded this often. */
@@ -42,7 +42,6 @@ export default function TaxiScreen() {
   useRefreshOnFocus(reload);
   const [taking, setTaking] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [pickupCode, setPickupCode] = useState('');
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
 
   // Pause polling while the driver is filling in the fare.
@@ -67,20 +66,8 @@ export default function TaxiScreen() {
     }
   };
 
-  const step = (
-    ride: OperatorTaxiRide,
-    name: 'pickup' | 'complete' | 'release',
-    text: string,
-    body?: { feesCollected: boolean } | { pickupCode: string },
-  ) =>
-    run(
-      () =>
-        api.request(`/me/taxi/rides/${ride.id}/${name}`, {
-          method: 'POST',
-          ...(body ? { body } : {}),
-        }),
-      text,
-    );
+  const step = (ride: OperatorTaxiRide, name: 'pickup' | 'complete' | 'release', text: string) =>
+    run(() => api.request(`/me/taxi/rides/${ride.id}/${name}`, { method: 'POST' }), text);
 
   const data = board.data;
   const current = data?.current;
@@ -111,40 +98,12 @@ export default function TaxiScreen() {
               {vehicleName(current.vehicle)} · Tarifa{' '}
               {formatMoney(current.fare.amount, current.fare.currency)}
             </Body>
-            {feesNotice(current.feesDue) ? (
-              <Banner tone="warning">{feesNotice(current.feesDue)}</Banner>
-            ) : null}
-            {current.paidWithPack ? (
-              <Banner tone="info">
-                Pagado con paquete de viajes: no le cobres al pasajero. La plataforma le paga la
-                tarifa a tu línea.
-              </Banner>
-            ) : null}
             {current.status === 'accepted' ? (
               <>
-                {/* Paid with a pack: the passenger tells the code shown in their app. */}
-                {current.paidWithPack ? (
-                  <Field
-                    label="Código del pasajero"
-                    placeholder="4 dígitos de su app"
-                    value={pickupCode}
-                    onChangeText={setPickupCode}
-                    keyboardType="number-pad"
-                    maxLength={4}
-                  />
-                ) : null}
                 <Button
                   title="Pasajero a bordo"
                   loading={busy}
-                  disabled={current.paidWithPack && !/^\d{4}$/.test(pickupCode)}
-                  onPress={() =>
-                    void step(
-                      current,
-                      'pickup',
-                      'Buen viaje.',
-                      current.paidWithPack ? { pickupCode } : undefined,
-                    )
-                  }
+                  onPress={() => void step(current, 'pickup', 'Buen viaje.')}
                 />
                 <Button
                   variant="secondary"
@@ -156,63 +115,24 @@ export default function TaxiScreen() {
                 />
               </>
             ) : (
-              <>
-                <Button
-                  title={
-                    current.feesDue.length ? 'Terminar viaje (cobré la tasa)' : 'Terminar viaje'
-                  }
-                  loading={busy}
-                  onPress={() => void step(current, 'complete', 'Viaje terminado.')}
-                />
-                {/* The passenger did not pay the earlier fee: it stays owed, the line owes nothing. */}
-                {current.feesDue.length ? (
-                  <Button
-                    variant="secondary"
-                    title="Terminar sin cobrar la tasa"
-                    disabled={busy}
-                    onPress={() =>
-                      void step(
-                        current,
-                        'complete',
-                        'Viaje terminado. La tasa queda pendiente para el próximo viaje del pasajero.',
-                        { feesCollected: false },
-                      )
-                    }
-                  />
-                ) : null}
-              </>
+              <Button
+                title="Terminar viaje"
+                loading={busy}
+                onPress={() => void step(current, 'complete', 'Viaje terminado.')}
+              />
             )}
           </Card>
         </>
-      ) : null}
-      {data?.upcoming.length ? (
-        <>
-          <Heading>Viajes programados</Heading>
-          {data.upcoming.map((ride) => (
-            <Card key={ride.id}>
-              <Body>{rideRoute(ride)}</Body>
-              <Body muted>{requestSummary(ride)}</Body>
-              <Body muted>
-                {[ride.passenger.firstName, ride.passenger.lastName].filter(Boolean).join(' ') ||
-                  'Pasajero'}
-                {ride.passenger.phone ? ` · ${localPhone(ride.passenger.phone)}` : ''} ·{' '}
-                {formatMoney(ride.fare.amount, ride.fare.currency)}
-              </Body>
-            </Card>
-          ))}
-        </>
-      ) : null}
-      {!current && data ? (
+      ) : data ? (
         <>
           <Heading>Solicitudes de taxi</Heading>
           {data.lines.length === 0 ? (
             <Body muted>
-              Solo los conductores de una línea de taxis o de mototaxis activa ven las solicitudes.
+              Solo los conductores de una línea de taxi activa ven las solicitudes de los
+              terminales.
             </Body>
           ) : data.requests.length === 0 ? (
-            <Body muted>
-              No hay solicitudes en tus terminales ni en tus tramos. Esta lista se actualiza sola.
-            </Body>
+            <Body muted>No hay solicitudes en tus terminales. Esta lista se actualiza sola.</Body>
           ) : (
             data.requests.map((request) => (
               <RequestCard
@@ -257,8 +177,8 @@ function RequestCard({
   onAccept: (body: {
     organizationId: string;
     vehicleId: string;
-    fareAmount?: string;
-    fareCurrency?: Currency;
+    fareAmount: string;
+    fareCurrency: Currency;
   }) => Promise<void>;
 }) {
   const [lineId, setLineId] = useState(board.lines[0]?.organization.id ?? '');
@@ -267,16 +187,12 @@ function RequestCard({
   const [fare, setFare] = useState('');
   const [currency, setCurrency] = useState<Currency>('USD');
   const amount = parseFare(fare);
-  // Stretch rides cost the line's fixed fare for the stretch: nothing to type (ADR-028).
-  const fixedFare = request.kind === 'stretch';
   const vehicle = line?.vehicles.find((v) => v.id === vehicleId) ?? line?.vehicles[0];
 
   return (
     <Card>
       <Body>{rideRoute(request)}</Body>
       <Body muted>{requestSummary(request)}</Body>
-      {request.paidWithPack ? <Badge label="Pagado con paquete" tone="success" /> : null}
-      {feesNotice(request.feesDue) ? <Body muted>{feesNotice(request.feesDue)}</Body> : null}
       {request.passengerFirstName || request.notes ? (
         <Body muted>{[request.passengerFirstName, request.notes].filter(Boolean).join(' · ')}</Body>
       ) : null}
@@ -308,39 +224,34 @@ function RequestCard({
           ) : (
             <Banner tone="warning">Tu línea no tiene vehículos activos registrados.</Banner>
           )}
-          {fixedFare ? (
-            <Body muted>Se cobra la tarifa de tu línea para este tramo.</Body>
-          ) : (
-            <>
-              <Segmented
-                label="Moneda"
-                options={CURRENCY_OPTIONS}
-                value={currency}
-                onChange={setCurrency}
-              />
-              <Field
-                label="Tarifa"
-                placeholder="8,00"
-                keyboardType="decimal-pad"
-                value={fare}
-                onChangeText={setFare}
-                error={
-                  fare && !amount
-                    ? 'Escribe un monto mayor que cero, con hasta dos decimales.'
-                    : undefined
-                }
-              />
-            </>
-          )}
+          <Segmented
+            label="Moneda"
+            options={CURRENCY_OPTIONS}
+            value={currency}
+            onChange={setCurrency}
+          />
+          <Field
+            label="Tarifa"
+            placeholder="8,00"
+            keyboardType="decimal-pad"
+            value={fare}
+            onChangeText={setFare}
+            error={
+              fare && !amount
+                ? 'Escribe un monto mayor que cero, con hasta dos decimales.'
+                : undefined
+            }
+          />
           <Button
             title="Tomar el viaje"
             loading={busy}
-            disabled={(!fixedFare && !amount) || !vehicle}
+            disabled={!amount || !vehicle}
             onPress={() =>
               void onAccept({
                 organizationId: line.organization.id,
                 vehicleId: vehicle!.id,
-                ...(fixedFare ? {} : { fareAmount: amount!, fareCurrency: currency }),
+                fareAmount: amount!,
+                fareCurrency: currency,
               })
             }
           />

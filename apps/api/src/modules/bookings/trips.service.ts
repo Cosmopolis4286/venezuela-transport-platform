@@ -1,16 +1,14 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import {
-  serviceOpen,
-  type Service,
-  type TransportMode,
-  type StopSummary,
-  type TripAvailability,
-} from '@vtp/shared-types';
+import type { StopSummary, TripAvailability } from '@vtp/shared-types';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService, type Transaction } from '../../database/database.service.js';
 import { seatLayouts } from '../fleet/fleet.schema.js';
-import { occurrenceOnServiceDate, type Occurrence } from '../network/departures.js';
+import {
+  occurrenceOnServiceDate,
+  scheduleCapacity,
+  type Occurrence,
+} from '../network/departures.js';
 import {
   routeFares,
   routes,
@@ -18,8 +16,6 @@ import {
   routeStops,
   type RouteScheduleRow,
 } from '../network/network.schema.js';
-import { ServicesService } from '../network/services.service.js';
-import { policyFor } from '../settlements/ledger.js';
 import { StopsService } from '../network/stops.service.js';
 import { organizations } from '../organizations/organizations.schema.js';
 import {
@@ -29,14 +25,13 @@ import {
   type TripLayout,
   type TripRow,
 } from './bookings.schema.js';
+import { commissionFor } from '../settlements/ledger.js';
 import { occupiesSeat } from './occupancy.js';
 
 /** Everything needed to show or book one departure between two stops. */
 export interface DepartureContext {
   schedule: RouteScheduleRow;
   route: { id: string; name: string };
-  /** Its service and corridor, to check that sales are on (ADR-029). */
-  sale: { service: Service; serviceAreaId: string | null; mode: TransportMode };
   operator: TripAvailability['operator'];
   from: StopSummary;
   to: StopSummary;
@@ -54,27 +49,7 @@ export class TripsService {
   constructor(
     private readonly database: DatabaseService,
     private readonly stops: StopsService,
-    private readonly services: ServicesService,
   ) {}
-
-  /** `409 SERVICE_DISABLED` when the departure's service or corridor is switched off. */
-  assertOnSale(context: DepartureContext): Promise<void> {
-    return this.services.assertOpen({
-      service: context.sale.service,
-      serviceAreaId: context.sale.serviceAreaId,
-      from: context.from,
-      to: context.to,
-    });
-  }
-
-  private async onSale(context: DepartureContext): Promise<boolean> {
-    return serviceOpen(await this.services.status(), {
-      service: context.sale.service,
-      serviceAreaId: context.sale.serviceAreaId,
-      from: context.from,
-      to: context.to,
-    });
-  }
 
   /**
    * Resolves a published departure: active schedule on an active route of an active organization,
@@ -90,7 +65,6 @@ export class TripsService {
       .select({
         schedule: routeSchedules,
         route: { id: routes.id, name: routes.name, status: routes.status },
-        sale: { service: routes.service, serviceAreaId: routes.serviceAreaId, mode: routes.mode },
         operator: {
           id: organizations.id,
           type: organizations.type,
@@ -162,7 +136,6 @@ export class TripsService {
     return {
       schedule: row.schedule,
       route,
-      sale: row.sale,
       operator,
       from: stops.get(fromStopId)!,
       to: stops.get(toStopId)!,
@@ -202,14 +175,13 @@ export class TripsService {
       arrivesAt: context.occurrence.arrivesAt,
       serviceClass: context.schedule.serviceClass,
       layout,
-      capacity: trip ? trip.capacity : context.schedule.seats,
+      capacity: trip ? trip.capacity : scheduleCapacity(context.schedule),
       takenSeats: taken.map((t) => t.seatNumber).sort(compareSeats),
       fare: context.fare,
-      bookable: isBookable(context) && trip?.status !== 'cancelled' && (await this.onSale(context)),
-      mode: context.sale.mode,
-      service: context.sale.service,
-      serviceAreaId: context.sale.serviceAreaId,
-      acceptsTripPacks: (await policyFor(this.database.db, context.operator.id)).acceptsTripPacks,
+      serviceFeeRate: await commissionFor(this.database.db, context.operator.id, fromStopId),
+      bookable: isBookable(context) && trip?.status !== 'cancelled',
+      headwayMinutes: context.schedule.headwayMinutes,
+      lastDepartsAt: context.occurrence.lastDepartsAt,
     };
   }
 
@@ -259,7 +231,7 @@ export class TripsService {
         serviceDate: occurrence.serviceDate,
         departsAt: new Date(`${occurrence.serviceDate}T${departureTime}:00-04:00`),
         layout: context.layout,
-        capacity: schedule.seats,
+        capacity: scheduleCapacity(schedule),
       })
       .onConflictDoNothing({ target: [trips.scheduleId, trips.serviceDate] });
     const [trip] = await tx
@@ -270,9 +242,13 @@ export class TripsService {
   }
 }
 
-/** Bookable while the vehicle has not left the boarding stop and there is a price. */
+/**
+ * Bookable while the vehicle has not left the boarding stop (on a frequency service, until the
+ * last unit of the day leaves it) and there is a price.
+ */
 export function isBookable(context: DepartureContext, now = Date.now()): boolean {
-  return context.fare !== null && Date.parse(context.occurrence.departsAt) > now;
+  const leaves = context.occurrence.lastDepartsAt ?? context.occurrence.departsAt;
+  return context.fare !== null && Date.parse(leaves) > now;
 }
 
 /** Seat numbers that exist on a trip: the map's, or `1`…`capacity`. */

@@ -3,8 +3,8 @@ import { AuditModule } from '../audit/audit.module.js';
 import { IdentityModule } from '../identity/identity.module.js';
 import { NetworkModule } from '../network/network.module.js';
 import { OrganizationsModule } from '../organizations/organizations.module.js';
-import { TripPacksModule } from '../trip-packs/trip-packs.module.js';
 import {
+  AdminBookingsController,
   BookingsController,
   OrganizationTicketsController,
   OrganizationTripsController,
@@ -15,8 +15,13 @@ import { TripsService } from './trips.service.js';
 
 /** Trips (one schedule on one date), seat holds, passenger lists and ticket validation. */
 @Module({
-  imports: [IdentityModule, AuditModule, OrganizationsModule, NetworkModule, TripPacksModule],
-  controllers: [BookingsController, OrganizationTripsController, OrganizationTicketsController],
+  imports: [IdentityModule, AuditModule, OrganizationsModule, NetworkModule],
+  controllers: [
+    BookingsController,
+    OrganizationTripsController,
+    OrganizationTicketsController,
+    AdminBookingsController,
+  ],
   providers: [TripsService, BookingsService, TicketsService],
   exports: [TripsService, BookingsService],
 })

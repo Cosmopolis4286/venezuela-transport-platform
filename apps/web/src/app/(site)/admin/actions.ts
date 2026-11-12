@@ -76,6 +76,8 @@ export async function createStop(_: FormState, form: FormData): Promise<FormStat
         address: text(form, 'address') || undefined,
         latitude: coordinate(form, 'latitude'),
         longitude: coordinate(form, 'longitude'),
+        // Empty: the API picks the zone from the location.
+        ...zoneField(form),
       },
     });
   } catch (error) {
@@ -86,6 +88,26 @@ export async function createStop(_: FormState, form: FormData): Promise<FormStat
   }
   refresh();
   return { success: 'Parada agregada al catálogo.' };
+}
+
+/** '' = automatic (omitted), 'none' = no zone, otherwise the zone id. */
+function zoneField(form: FormData): { zoneId?: string | null } {
+  const zone = text(form, 'zoneId');
+  if (!zone) return {};
+  return { zoneId: zone === 'none' ? null : zone };
+}
+
+export async function setStopZone(_: FormState, form: FormData): Promise<FormState> {
+  try {
+    await apiRequest(`/admin/stops/${encodeURIComponent(text(form, 'stopId'))}`, {
+      method: 'PATCH',
+      body: { zoneId: text(form, 'zoneId') === 'none' ? null : text(form, 'zoneId') },
+    });
+  } catch (error) {
+    return failure(error);
+  }
+  refresh();
+  return { success: 'Zona actualizada.' };
 }
 
 export async function setStopActive(_: FormState, form: FormData): Promise<FormState> {
@@ -99,68 +121,4 @@ export async function setStopActive(_: FormState, form: FormData): Promise<FormS
   }
   refresh();
   return {};
-}
-
-const cities = (value: string): { city: string; state: string }[] => {
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    return Array.isArray(parsed) ? (parsed as { city: string; state: string }[]) : [];
-  } catch {
-    return [];
-  }
-};
-
-/** Intercity on/off and closed cities (ADR-029). `closed` is the JSON list to save. */
-export async function saveIntercity(_: FormState, form: FormData): Promise<FormState> {
-  const closed = cities(text(form, 'closed'));
-  const add = text(form, 'addCity');
-  if (add) {
-    const [city, state] = add.split('|');
-    if (city && state) closed.push({ city, state });
-  }
-  try {
-    await apiRequest('/admin/services/intercity', {
-      method: 'PUT',
-      body: { enabled: text(form, 'enabled') === 'true', closedCities: closed },
-    });
-  } catch (error) {
-    return formFailure(error);
-  }
-  refresh();
-  return { success: 'Servicio entre ciudades actualizado.' };
-}
-
-const stopIds = (form: FormData) => form.getAll('stopId').map(String);
-
-export async function createServiceArea(_: FormState, form: FormData): Promise<FormState> {
-  try {
-    await apiRequest('/admin/service-areas', {
-      method: 'POST',
-      body: { name: text(form, 'name'), stopIds: stopIds(form) },
-    });
-  } catch (error) {
-    return formFailure(error, {
-      VALIDATION_FAILED: 'Escribe el nombre y elige al menos dos paradas.',
-    });
-  }
-  refresh();
-  return { success: 'Corredor creado. Está apagado hasta que un administrador lo encienda.' };
-}
-
-export async function updateServiceArea(_: FormState, form: FormData): Promise<FormState> {
-  const active = text(form, 'active');
-  try {
-    await apiRequest(`/admin/service-areas/${encodeURIComponent(text(form, 'areaId'))}`, {
-      method: 'PATCH',
-      body: active
-        ? { active: active === 'true' }
-        : { name: text(form, 'name'), stopIds: stopIds(form) },
-    });
-  } catch (error) {
-    return formFailure(error, {
-      VALIDATION_FAILED: 'Escribe el nombre y elige al menos dos paradas.',
-    });
-  }
-  refresh();
-  return { success: active ? undefined : 'Corredor guardado.' };
 }

@@ -276,7 +276,8 @@ describe.runIf(expectDatabase)('Manual payments (e2e)', () => {
       expect(first).toMatchObject({
         manual: true,
         simulated: false,
-        amount: '730.00',
+        // 2 × 20.00 + the 15 % service fee on top (ADR-029) = 46.00 at 18.25 Bs/US$.
+        amount: '839.50',
         currency: 'VES',
       });
       expect(first.instructions).toEqual([
@@ -348,12 +349,20 @@ describe.runIf(expectDatabase)('Manual payments (e2e)', () => {
       // --- Second try: found, the booking is confirmed and the operator earns it.
       const second = (await pay(ana.auth, held.id, 'pago_movil').expect(201)).body as Payment;
       await report(ana.auth, second.id, '009988776655').expect(200);
-      const confirmed = (
-        await asAdmin(http().post(`/api/v1/admin/payments/${second.id}/confirm`))
-          .send({})
-          .expect(200)
-      ).body as Payment;
-      expect(confirmed.status).toBe('confirmed');
+      // Two simultaneous staff confirmations must still confirm once and create one ledger entry.
+      const confirmations = await Promise.all([
+        asAdmin(http().post(`/api/v1/admin/payments/${second.id}/confirm`)).send({}),
+        asAdmin(http().post(`/api/v1/admin/payments/${second.id}/confirm`)).send({}),
+      ]);
+      expect(confirmations.map((response) => response.status).sort()).toEqual(
+        expect.arrayContaining([200]),
+      );
+      expect(
+        confirmations.every((response) => response.status === 200 || response.status === 409),
+      ).toBe(true);
+      for (const response of confirmations.filter((item) => item.status === 200)) {
+        expect((response.body as Payment).status).toBe('confirmed');
+      }
       const paid = (
         await http()
           .get(`/api/v1/me/bookings/${held.id}`)
@@ -466,14 +475,15 @@ describe.runIf(expectDatabase)('Manual payments (e2e)', () => {
         .where(eq(settlementEntries.bookingId, own.id));
       expect(entry).toMatchObject({
         collectedBy: 'operator',
-        gross: '20.00',
+        // The passenger paid the company 20.00 + the 2.00 service fee (ADR-029).
+        gross: '22.00',
         commission: '2.00',
-        earned: '18.00',
+        earned: '20.00',
       });
 
       // It now owes the commission: no payout; it pays the platform back at most what it owes.
       const owing = await balanceUsd();
-      expect(Number(owing.collected) - Number(before.collected)).toBeCloseTo(20);
+      expect(Number(owing.collected) - Number(before.collected)).toBeCloseTo(22);
       expect(Number(owing.balance) - Number(before.balance)).toBeCloseTo(-2);
       const settle = (body: object) =>
         asAdmin(http().post(`/api/v1/admin/organizations/${organization.id}/payouts`)).send({

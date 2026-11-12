@@ -1,13 +1,9 @@
-import { randomUUID } from 'node:crypto';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
-  modesFor,
-  SCHEDULE_SERIES_LIMITS,
-  seriesTimes,
-  type ScheduleSeriesInput,
-  MOTORCYCLE_SEATS,
+  isTimeOfDay,
+  MAX_HEADWAY_MINUTES,
+  MIN_HEADWAY_MINUTES,
   runsRoutes,
-  servicesFor,
   type Fare,
   type Route,
   type RouteInput,
@@ -15,6 +11,7 @@ import {
   type RouteSummary,
   type Schedule,
   type ScheduleInput,
+  defaultPayee,
 } from '@vtp/shared-types';
 import { and, asc, count, eq, inArray } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
@@ -34,11 +31,9 @@ import {
   type RouteScheduleRow,
 } from './network.schema.js';
 import { isCalendarDate } from './departures.js';
-import { ServicesService } from './services.service.js';
 import { toSummary } from './stops.service.js';
 
-/** Frequency series add one schedule per departure, so suburban routes need room for many. */
-const MAX_SCHEDULES_PER_ROUTE = 300;
+const MAX_SCHEDULES_PER_ROUTE = 100;
 
 /** Allowed status changes. A route never goes back to draft once published. */
 const STATUS_TRANSITIONS: Record<RouteStatus, RouteStatus[]> = {
@@ -59,7 +54,6 @@ export class RoutesService {
     private readonly database: DatabaseService,
     private readonly audit: AuditService,
     private readonly fleet: FleetService,
-    private readonly services: ServicesService,
   ) {}
 
   async list(organizationId: string): Promise<RouteSummary[]> {
@@ -86,8 +80,6 @@ export class RoutesService {
       return {
         id: route.id,
         name: route.name,
-        mode: route.mode,
-        service: route.service,
         status: route.status,
         origin: toSummary(own[0]!.stop),
         destination: toSummary(own.at(-1)!.stop),
@@ -109,41 +101,19 @@ export class RoutesService {
   ): Promise<Route> {
     if (!runsRoutes(access.organization.type)) {
       throw conflict(
-        'Only bus companies, taxi lines and motorcycle taxi lines publish routes',
+        'Only bus companies and taxi lines publish routes',
         'ORGANIZATION_TYPE_NOT_ALLOWED',
       );
     }
-    const allowed = modesFor(access.organization.type);
-    const mode = input.mode ?? allowed[0]!;
-    if (!allowed.includes(mode)) {
-      throw conflict(
-        'This organization does not run that kind of vehicle',
-        'TRANSPORT_MODE_NOT_ALLOWED',
-      );
-    }
-    const services = servicesFor(access.organization.type);
-    const service = input.service ?? services[0]!;
-    if (!services.includes(service)) {
-      throw conflict(
-        'This organization cannot publish routes of that service',
-        'SERVICE_NOT_ALLOWED',
-      );
-    }
-    const serviceAreaId = service === 'suburban' ? (input.serviceAreaId ?? null) : null;
-    if (service === 'suburban' && !serviceAreaId) {
-      throw conflict('Choose the corridor of the suburban route', 'SERVICE_AREA_REQUIRED');
-    }
     await this.assertStops(input.stops);
-    await this.assertInArea(serviceAreaId, input.stops);
     const route = await this.database.db.transaction(async (tx) => {
       const [row] = await tx
         .insert(routes)
         .values({
           organizationId: access.organization.id,
           name: input.name.trim(),
-          mode,
-          service,
-          serviceAreaId,
+          scope: input.scope ?? 'interurban',
+          payeeOverride: input.payeeOverride ?? null,
           createdBy: actor.user.id,
         })
         .returning();
@@ -158,19 +128,23 @@ export class RoutesService {
   async update(
     access: OrganizationAccess,
     routeId: string,
-    input: Partial<Omit<RouteInput, 'mode' | 'service' | 'serviceAreaId'>>,
+    input: Partial<RouteInput>,
     actor: Authenticated,
     meta: RequestMeta,
   ): Promise<Route> {
     const route = await this.requireRoute(access, routeId);
-    if (input.stops) {
-      await this.assertStops(input.stops);
-      await this.assertInArea(route.serviceAreaId, input.stops);
-    }
+    if (input.stops) await this.assertStops(input.stops);
     let droppedFares = 0;
     await this.database.db.transaction(async (tx) => {
-      if (input.name) {
-        await tx.update(routes).set({ name: input.name.trim() }).where(eq(routes.id, route.id));
+      if (input.name || input.scope || input.payeeOverride !== undefined) {
+        await tx
+          .update(routes)
+          .set({
+            ...(input.name ? { name: input.name.trim() } : {}),
+            ...(input.scope ? { scope: input.scope } : {}),
+            ...(input.payeeOverride !== undefined ? { payeeOverride: input.payeeOverride } : {}),
+          })
+          .where(eq(routes.id, route.id));
       }
       if (input.stops) {
         await tx.delete(routeStops).where(eq(routeStops.routeId, route.id));
@@ -197,6 +171,8 @@ export class RoutesService {
     });
     await this.record('route.updated', route, actor, meta, {
       stopsReplaced: Boolean(input.stops),
+      ...(input.scope ? { scope: input.scope } : {}),
+      ...(input.payeeOverride !== undefined ? { payeeOverride: input.payeeOverride } : {}),
       droppedFares,
     });
     return this.load(route);
@@ -317,7 +293,13 @@ export class RoutesService {
       .where(eq(routeSchedules.routeId, route.id))) as [{ total: number }];
     if (total >= MAX_SCHEDULES_PER_ROUTE)
       throw conflict('This route has too many schedules', 'TOO_MANY_SCHEDULES');
-    const seating = await this.seating(access, route, input.seatLayoutId ?? null, input.seats);
+    const seating = await this.seating(access, input.seatLayoutId ?? null, input.seats);
+    const frequency = frequencyOf(
+      input.departureTime,
+      input.headwayMinutes ?? null,
+      input.lastDepartureTime ?? null,
+      seating.seatLayoutId,
+    );
     const [schedule] = await this.database.db
       .insert(routeSchedules)
       .values({
@@ -328,119 +310,11 @@ export class RoutesService {
         validUntil: input.validUntil ?? null,
         serviceClass: input.serviceClass,
         ...seating,
+        ...frequency,
         active: input.active ?? true,
       })
       .returning();
     await this.record('route.schedule_created', route, actor, meta, { scheduleId: schedule!.id });
-    return this.load(route);
-  }
-
-  /**
-   * Adds one schedule per departure of a frequency series (e.g. 05:00 to 20:00 every 15 minutes),
-   * all with the same `seriesId`.
-   */
-  async addSeries(
-    access: OrganizationAccess,
-    routeId: string,
-    input: ScheduleSeriesInput,
-    actor: Authenticated,
-    meta: RequestMeta,
-  ): Promise<Route> {
-    const route = await this.requireRoute(access, routeId);
-    assertWindow(input.validFrom, input.validUntil ?? null);
-    const times = seriesTimes(input.firstDeparture, input.lastDeparture, input.everyMinutes);
-    if (times.length < 2) {
-      throw invalid('The last departure must allow at least two departures after the first');
-    }
-    if (times.length > SCHEDULE_SERIES_LIMITS.maxDepartures) {
-      throw conflict('This series has too many departures', 'TOO_MANY_SCHEDULES');
-    }
-    const [{ total }] = (await this.database.db
-      .select({ total: count() })
-      .from(routeSchedules)
-      .where(eq(routeSchedules.routeId, route.id))) as [{ total: number }];
-    if (total + times.length > MAX_SCHEDULES_PER_ROUTE)
-      throw conflict('This route has too many schedules', 'TOO_MANY_SCHEDULES');
-    const seating = await this.seating(access, route, input.seatLayoutId ?? null, input.seats);
-    const seriesId = randomUUID();
-    await this.database.db.insert(routeSchedules).values(
-      times.map((departureTime) => ({
-        routeId: route.id,
-        departureTime,
-        daysOfWeek: normalizeDays(input.daysOfWeek),
-        validFrom: input.validFrom,
-        validUntil: input.validUntil ?? null,
-        serviceClass: input.serviceClass,
-        ...seating,
-        seriesId,
-      })),
-    );
-    await this.record('route.schedule_series_created', route, actor, meta, {
-      seriesId,
-      departures: times.length,
-      everyMinutes: input.everyMinutes,
-    });
-    return this.load(route);
-  }
-
-  /** Pauses or resumes every departure of a series. */
-  async setSeriesActive(
-    access: OrganizationAccess,
-    routeId: string,
-    seriesId: string,
-    active: boolean,
-    actor: Authenticated,
-    meta: RequestMeta,
-  ): Promise<Route> {
-    const route = await this.requireRoute(access, routeId);
-    const updated = await this.database.db
-      .update(routeSchedules)
-      .set({ active, updatedAt: new Date() })
-      .where(and(eq(routeSchedules.routeId, route.id), eq(routeSchedules.seriesId, seriesId)))
-      .returning({ id: routeSchedules.id });
-    if (!updated.length) throw notFound('Schedule series not found');
-    await this.record('route.schedule_series_updated', route, actor, meta, { seriesId, active });
-    return this.load(route);
-  }
-
-  /** Deletes the departures of a series nobody booked; the booked ones are paused instead. */
-  async removeSeries(
-    access: OrganizationAccess,
-    routeId: string,
-    seriesId: string,
-    actor: Authenticated,
-    meta: RequestMeta,
-  ): Promise<Route> {
-    const route = await this.requireRoute(access, routeId);
-    const members = await this.database.db
-      .select({ id: routeSchedules.id })
-      .from(routeSchedules)
-      .where(and(eq(routeSchedules.routeId, route.id), eq(routeSchedules.seriesId, seriesId)));
-    if (!members.length) throw notFound('Schedule series not found');
-    const ids = members.map((m) => m.id);
-    const booked = new Set(
-      (
-        await this.database.db
-          .selectDistinct({ scheduleId: trips.scheduleId })
-          .from(trips)
-          .where(inArray(trips.scheduleId, ids))
-      ).map((t) => t.scheduleId),
-    );
-    const free = ids.filter((id) => !booked.has(id));
-    await this.database.db.transaction(async (tx) => {
-      if (free.length) await tx.delete(routeSchedules).where(inArray(routeSchedules.id, free));
-      if (booked.size) {
-        await tx
-          .update(routeSchedules)
-          .set({ active: false, updatedAt: new Date() })
-          .where(inArray(routeSchedules.id, [...booked]));
-      }
-    });
-    await this.record('route.schedule_series_deleted', route, actor, meta, {
-      seriesId,
-      deleted: free.length,
-      paused: booked.size,
-    });
     return this.load(route);
   }
 
@@ -459,9 +333,16 @@ export class RoutesService {
     assertWindow(validFrom, validUntil);
     const seating = await this.seating(
       access,
-      route,
       input.seatLayoutId === undefined ? current.seatLayoutId : input.seatLayoutId,
       input.seats ?? current.seats,
+    );
+    const frequency = frequencyOf(
+      input.departureTime ?? current.departureTime.slice(0, 5),
+      input.headwayMinutes === undefined ? current.headwayMinutes : input.headwayMinutes,
+      input.lastDepartureTime === undefined
+        ? (current.lastDepartureTime?.slice(0, 5) ?? null)
+        : input.lastDepartureTime,
+      seating.seatLayoutId,
     );
     await this.database.db
       .update(routeSchedules)
@@ -472,6 +353,7 @@ export class RoutesService {
         validUntil,
         ...(input.serviceClass ? { serviceClass: input.serviceClass } : {}),
         ...seating,
+        ...frequency,
         ...(input.active === undefined ? {} : { active: input.active }),
       })
       .where(eq(routeSchedules.id, current.id));
@@ -503,25 +385,12 @@ export class RoutesService {
     return this.load(route);
   }
 
-  /**
-   * With a seat layout the schedule takes its capacity; without one, `seats` is required. A
-   * motorcycle departure carries one passenger, without a seat map.
-   */
+  /** With a seat layout the schedule takes its capacity; without one, `seats` is required. */
   private async seating(
     access: OrganizationAccess,
-    route: RouteRow,
     seatLayoutId: string | null,
     seats: number | undefined,
   ): Promise<{ seatLayoutId: string | null; seats: number }> {
-    if (route.mode === 'motorcycle') {
-      if (seatLayoutId || (seats !== undefined && seats !== MOTORCYCLE_SEATS)) {
-        throw conflict(
-          'A motorcycle carries one passenger and has no seat map',
-          'MOTORCYCLE_ONE_PASSENGER',
-        );
-      }
-      return { seatLayoutId: null, seats: MOTORCYCLE_SEATS };
-    }
     if (seatLayoutId) {
       const layout = await this.fleet.require(access.organization.id, seatLayoutId);
       return { seatLayoutId: layout.id, seats: layout.capacity };
@@ -567,18 +436,6 @@ export class RoutesService {
       throw invalid('Every stop must exist in the catalog and be active');
   }
 
-  /** Every stop of a suburban route belongs to its corridor. */
-  private async assertInArea(serviceAreaId: string | null, list: RouteInput['stops']) {
-    if (!serviceAreaId) return;
-    const inArea = await this.services.areaStopIds(serviceAreaId);
-    if (list.some((s) => !inArea.has(s.stopId))) {
-      throw conflict(
-        'Every stop of a suburban route must belong to its corridor',
-        'ROUTE_OUTSIDE_SERVICE_AREA',
-      );
-    }
-  }
-
   private async writeStops(tx: Transaction, routeId: string, list: RouteInput['stops']) {
     await tx.insert(routeStops).values(
       list.map((stop, sequence) => ({
@@ -612,10 +469,10 @@ export class RoutesService {
       id: row.id,
       organizationId: row.organizationId,
       name: row.name,
-      mode: row.mode,
-      service: row.service,
-      serviceAreaId: row.serviceAreaId,
       status: row.status,
+      scope: row.scope,
+      payeeOverride: row.payeeOverride,
+      payee: row.payeeOverride ?? defaultPayee(row.scope),
       stops: stopRows.map(({ routeStop, stop }) => ({
         stop: toSummary(stop),
         sequence: routeStop.sequence,
@@ -660,6 +517,38 @@ function normalizeDays(days: number[]): number[] {
   return [...new Set(days)].sort((a, b) => a - b);
 }
 
+/**
+ * Frequency service (ADR-032): both fields or neither, a headway in range, the last unit on the
+ * same day after the first, and no seat map (open tickets have no seat).
+ */
+function frequencyOf(
+  departureTime: string,
+  headwayMinutes: number | null,
+  lastDepartureTime: string | null,
+  seatLayoutId: string | null,
+): { headwayMinutes: number | null; lastDepartureTime: string | null } {
+  if (headwayMinutes === null && lastDepartureTime === null) {
+    return { headwayMinutes: null, lastDepartureTime: null };
+  }
+  if (headwayMinutes === null || lastDepartureTime === null) {
+    throw invalid('Send headwayMinutes and lastDepartureTime together, or neither');
+  }
+  if (
+    !Number.isInteger(headwayMinutes) ||
+    headwayMinutes < MIN_HEADWAY_MINUTES ||
+    headwayMinutes > MAX_HEADWAY_MINUTES
+  ) {
+    throw invalid(
+      `headwayMinutes must be between ${MIN_HEADWAY_MINUTES} and ${MAX_HEADWAY_MINUTES}`,
+    );
+  }
+  if (!isTimeOfDay(lastDepartureTime) || lastDepartureTime < departureTime.slice(0, 5)) {
+    throw invalid('lastDepartureTime must be on the same day, at or after departureTime');
+  }
+  if (seatLayoutId) throw invalid('A frequency schedule sells open tickets: remove the seat map');
+  return { headwayMinutes, lastDepartureTime };
+}
+
 function assertWindow(validFrom: string, validUntil: string | null) {
   if (!isCalendarDate(validFrom)) throw invalid('validFrom is not a valid date');
   if (validUntil !== null) {
@@ -678,7 +567,8 @@ export function toSchedule(row: RouteScheduleRow): Schedule {
     serviceClass: row.serviceClass,
     seats: row.seats,
     seatLayoutId: row.seatLayoutId,
+    headwayMinutes: row.headwayMinutes,
+    lastDepartureTime: row.lastDepartureTime?.slice(0, 5) ?? null,
     active: row.active,
-    seriesId: row.seriesId,
   };
 }

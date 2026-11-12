@@ -273,20 +273,21 @@ describe.runIf(expectDatabase)('Cancelling paid bookings (e2e)', () => {
         status: 'cancelled',
         payment: { id: earlyPayment.id, status: 'refund_due', refundAmount: '912.50' },
       });
-      // The platform keeps its commission: the operator gives back what it earned (23.00) and
-      // the 2.00 commission covers the rest of the full refund.
+      // The tiers refund the fare (25.00, Bs. 912,50 of the Bs. 985,50 paid); the 2.00 service
+      // fee paid on top is not refunded (ADR-029), so the operator gives back exactly its fare.
+      expect(earlyPayment.amount).toBe('985.50');
       expect(await cancellationEntry(early.id)).toMatchObject({
         seats: -1,
         gross: '-25.00',
         commissionRate: '8.00',
-        commission: '-2.00',
-        earned: '-23.00',
+        commission: '0.00',
+        earned: '-25.00',
       });
       await cancel(early).expect(409);
       // The seat is free again.
       const again = await book(['1']);
 
-      // --- Ten hours before: half back; the operator keeps 25 - 2 - 12.50 = 10.50.
+      // --- Ten hours before: half the fare back; the operator keeps 25 - 12.50 = 12.50.
       const late = await book(['2']);
       await payWith(late, 'usdt');
       await departsIn(late, '10 hours');
@@ -350,18 +351,19 @@ describe.runIf(expectDatabase)('Cancelling paid bookings (e2e)', () => {
       expect(((await quote(gone).expect(200)).body as CancellationQuote).cancellable).toBe(false);
       await cancel(gone).expect(409);
 
-      // --- The operator's balance: 5 paid bookings (25.00 each, 2.00 commission), minus the
-      // full refund (25.00, of which 2.00 commission) and the half refund (12.50).
+      // --- The operator's balance: 5 paid bookings (25.00 fare + 2.00 service fee each), minus
+      // the full fare refund (25.00) and the half one (12.50). The fees stay with the platform.
       expect((await settlement()).balances).toEqual([
         {
           currency: 'USD',
-          gross: '87.50',
-          commission: '8.00',
-          earned: '79.50',
+          gross: '97.50',
+          commission: '10.00',
+          earned: '87.50',
           collected: '0.00',
           paidOut: '0.00',
           received: '0.00',
-          balance: '79.50',
+          forDrivers: '0.00',
+          balance: '87.50',
         },
       ]);
       void again;
@@ -385,7 +387,8 @@ describe.runIf(expectDatabase)('Cancelling paid bookings (e2e)', () => {
       ).body as RefundDuePayment[];
       expect(queue.find((r) => r.paymentId === earlyPayment.id)).toMatchObject({
         cancellation: true,
-        amount: '912.50',
+        // Paid 985.50 (fare + service fee); the fare is refunded.
+        amount: '985.50',
         refundAmount: '912.50',
         currency: 'VES',
       });
@@ -439,7 +442,8 @@ describe.runIf(expectDatabase)('Cancelling paid bookings (e2e)', () => {
         .expect(409)
         .expect((res) => expect(res.body.error.reason).toBe('TRIP_CANCELLED'));
 
-      // Paid: refunded in full; the platform keeps its commission (the operator pays it).
+      // Paid: refunded in full, fares and service fee (54.00); the platform keeps its fee, so the
+      // operator pays it (ADR-029).
       const paidView = (
         await http()
           .get(`/api/v1/me/bookings/${paidOne.id}`)
@@ -449,7 +453,7 @@ describe.runIf(expectDatabase)('Cancelling paid bookings (e2e)', () => {
       expect(paidView).toMatchObject({
         status: 'cancelled',
         trip: { cancellation: { reason: 'La unidad tuvo una falla mecánica.' } },
-        payment: { status: 'refund_due', refundAmount: '50.00', currency: 'USDT' },
+        payment: { status: 'refund_due', refundAmount: '54.00', currency: 'USDT' },
       });
       expect(
         await db
@@ -465,7 +469,7 @@ describe.runIf(expectDatabase)('Cancelling paid bookings (e2e)', () => {
               eq(settlementEntries.kind, 'cancellation'),
             ),
           ),
-      ).toEqual([{ gross: '-50.00', commission: '0.00', earned: '-50.00' }]);
+      ).toEqual([{ gross: '-54.00', commission: '0.00', earned: '-54.00' }]);
       const heldView = (
         await http()
           .get(`/api/v1/me/bookings/${heldOne.id}`)

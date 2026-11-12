@@ -8,7 +8,6 @@ import { pushDevices } from '../notifications/notifications.schema.js';
 import { memberships } from '../organizations/organizations.schema.js';
 import { payments } from '../payments/payments.schema.js';
 import { taxiRides } from '../taxi/taxi.schema.js';
-import { tripPacks } from '../trip-packs/trip-packs.schema.js';
 import { otpChallenges, sessions, users } from './identity.schema.js';
 import type { Authenticated, RequestMeta } from './sessions.service.js';
 
@@ -86,28 +85,6 @@ export class AccountDeletionService {
         }
       }
 
-      // Unpaid trip packs are cancelled; paid ones lose their unused trips (packs are not
-      // refunded, ADR-028).
-      const unpaidPacks = await tx
-        .update(tripPacks)
-        .set({ status: 'cancelled', paymentDueAt: null, updatedAt: new Date() })
-        .where(and(eq(tripPacks.userId, userId), eq(tripPacks.status, 'pending_payment')))
-        .returning({ id: tripPacks.id });
-      if (unpaidPacks.length) {
-        await tx
-          .update(payments)
-          .set({ status: 'cancelled' })
-          .where(
-            and(
-              inArray(
-                payments.tripPackId,
-                unpaidPacks.map((p) => p.id),
-              ),
-              eq(payments.status, 'pending'),
-            ),
-          );
-      }
-
       // Unpaid holds are released, as if the person cancelled them.
       const held = await tx
         .update(bookings)
@@ -147,6 +124,17 @@ export class AccountDeletionService {
         .set({ revokedAt: new Date(), revokedReason: 'account_deleted' })
         .where(eq(sessions.userId, userId));
       await tx.delete(pushDevices).where(eq(pushDevices.userId, userId));
+      // Fiscal documents (`invoices`) keep the buyer's name and ID: the tax code requires keeping
+      // issued invoices, and a paid booking's draft is issued all the same (ADR-031).
+      await tx
+        .update(bookings)
+        .set({
+          billingName: null,
+          billingIdType: null,
+          billingIdNumber: null,
+          billingAddress: null,
+        })
+        .where(eq(bookings.userId, userId));
       await tx.delete(memberships).where(eq(memberships.userId, userId));
       await tx
         .update(users)

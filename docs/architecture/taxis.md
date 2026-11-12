@@ -78,78 +78,9 @@ solo si está verificado.
 Eventos de auditoría: `taxi_ride.requested`, `.accepted`, `.picked_up`, `.completed`,
 `.cancelled`, `.released`, `taxi_terminals.replaced`.
 
-## Viajes por tramo, bajo demanda (ADR-028)
-
-Además de los taxis de terminal, un pasajero del servicio suburbano pide un **taxi o una moto entre
-dos paradas de un corredor** (`taxi_rides.kind = 'stretch'`), **ahora o para una hora** (hasta 7
-días adelante):
-
-- Escribe la dirección de recogida **cerca de la parada de origen** (sin mapa ni GPS: la línea
-  decide si llega). Una moto lleva un pasajero.
-- Cada línea de taxis o de mototaxis publica sus **tarifas fijas por tramo** (`on_demand_fares`,
-  en los dos sentidos, en su propio tipo de vehículo; portal → Taxis o Mototaxis). El pasajero ve
-  antes de pedir el rango de tarifas por vehículo (`GET /taxi/stretch-options`), y la línea que
-  toma el viaje cobra la suya: el conductor no escribe la tarifa.
-- Solo las líneas con tarifa para ese tramo y vehículo ven la solicitud (y reciben el aviso). Un
-  viaje programado se ofrece **desde que se pide** y vence 20 minutos después de la hora pedida si
-  nadie lo toma.
-- Un viaje **programado y aceptado no ocupa** al conductor ni al vehículo hasta que recoge al
-  pasajero: el conductor sigue tomando viajes para ahora, y en su app aparece en "Viajes
-  programados". El tablero lo muestra como su viaje actual desde 30 minutos antes.
-- Si el corredor se apaga (ADR-029), no se piden viajes nuevos y no se muestran las tarifas.
-- Se paga **al conductor** o **con un paquete de viajes** del tramo y vehículo (`tripPackId`):
-  - pedir el viaje gasta un viaje del paquete por pasajero (en la misma transacción);
-  - los viajes vuelven al paquete si nadie toma la solicitud o si el pasajero cancela (siempre;
-    una cancelación tardía cuesta la tasa de abajo, ADR-030);
-  - solo las líneas que **aceptan paquetes** (política de la empresa) ven y toman esos viajes, y
-    el conductor ve "Pagado con paquete" (no cobra);
-  - el pasajero ve un **código de recogida** de 4 dígitos (`pickupCode`) y el conductor debe
-    escribirlo para iniciar el viaje (`POST …/pickup` con `pickupCode`); tras 5 intentos
-    equivocados se bloquea (`TAXI_PICKUP_CODE_LOCKED`). Así una línea no puede cobrarle a la
-    plataforma viajes de paquete que no hizo;
-  - al terminar el viaje, la línea gana su tarifa del tramo menos su comisión: una entrada del
-    libro de liquidaciones con `taxi_ride_id` (código `TAXI-…` en sus movimientos).
-
-### Cancelar un viaje que una línea ya tomó (ADR-030)
-
-- **Gratis** antes de que una línea lo tome, durante los primeros **3 minutos** después de que lo
-  toma y, en un viaje programado, hasta **30 minutos antes** de la hora pedida. Los minutos y el
-  porcentaje los fija un administrador en Liquidaciones → Política general
-  (`platform_settings.ride_free_cancel_minutes`, `ride_cancel_fee_percent`).
-- Después, el pasajero debe una **tasa del 50 % de la tarifa de la línea**
-  (`ride_cancellation_fees`), pague en efectivo o con paquete (el viaje del paquete vuelve igual).
-  La app le muestra hasta qué hora cancela gratis y cuánto costaría después
-  (`freeCancellationUntil`, `lateCancellationFee`).
-- La tasa se paga **en efectivo al conductor de su próximo viaje** de taxi o moto (por tramo o de
-  terminal): la ve antes de pedir (`GET /me/taxi-fees`) y en el viaje (`feesDue`); el conductor y
-  el despachador la ven en la solicitud. Al terminar ese viaje la tasa queda cobrada.
-- La tasa es de **la línea que salió a buscarlo**. En el libro, filas `ride_cancellation_fee` con
-  el `taxi_ride_id` del viaje cancelado: si la cobró la misma línea, una fila cobrada por ella
-  (debe solo la comisión); si la cobró otra, la primera gana la tasa menos su comisión (cobrada
-  por la plataforma) y la segunda tiene una fila cobrada por ella sin ganancia, que le resta la
-  tasa de su saldo.
-- **Si el conductor se retrasa**, cancelar vuelve a ser gratis: no hay tasa si no lo recogió
-  20 minutos después de tomarlo o de la hora pedida (`RIDE_PICKUP_GRACE_MINUTES`,
-  `lateCancellationEndsAt`). No hay estado "llegué": es la forma simple de no cobrarle al
-  pasajero cuando el conductor no aparece.
-- **Viajes abandonados**: un viaje tomado que no se recoge en 2 horas (desde que se tomó o desde la
-  hora pedida) se cancela solo, sin tasa y devolviendo los viajes del paquete; uno en curso que
-  no se termina en 6 horas se da por terminado (con su ganancia y sus tasas). Así el pasajero no
-  queda bloqueado (`RIDE_ABANDONED_HOURS`).
-- Si el pasajero no paga la tasa, el conductor termina con **Terminar sin cobrar la tasa**
-  (`POST …/complete` con `feesCollected: false`): queda pendiente para el siguiente viaje y a su
-  línea no se le descuenta.
-- Si el pasajero no vuelve a pedir un viaje, la tasa queda pendiente (no hay cobro forzoso).
-
-| Método y ruta                                     | Quién                          |
-| ------------------------------------------------- | ------------------------------ |
-| `GET /taxi/stretch-options?from=&to=`             | Público — tarifas por vehículo |
-| `GET /me/taxi-fees`                               | El pasajero — tasas pendientes |
-| `GET`/`PUT /organizations/:id/taxi/stretch-fares` | Miembros / `routes.manage`     |
-
 ## Todavía no
 
-Cobro del taxi dentro de la plataforma, tarifas fijas por zona para los taxis de terminal,
-ubicación en vivo del taxi y del pasajero en un mapa, avisos push de cada cambio de estado (hoy:
-solicitud nueva y aceptada), recordatorio al conductor antes de un viaje programado y
-calificaciones.
+Cobro del taxi dentro de la plataforma, tarifas fijas por zona, ubicación en vivo del taxi y del
+pasajero en un mapa, avisos push de cada cambio de estado (hoy: solicitud nueva y aceptada),
+calificaciones y viajes
+que no pasan por un terminal.

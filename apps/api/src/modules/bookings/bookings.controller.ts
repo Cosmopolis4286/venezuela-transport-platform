@@ -7,10 +7,12 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type {
+  AdminBookingLookup,
   Booking,
   CancellationQuote,
   TicketValidation,
@@ -20,6 +22,7 @@ import type {
   TripSummary,
 } from '@vtp/shared-types';
 import { CurrentAuth, Public, ReqMeta } from '../identity/auth.decorators.js';
+import { RequirePlatformRole } from '../identity/platform-role.guard.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import {
   CurrentOrganization,
@@ -28,6 +31,7 @@ import {
 } from '../organizations/organization-access.js';
 import {
   CreateBookingDto,
+  SetBookingBillingDto,
   TripQueryDto,
   TripsDateQueryDto,
   ValidateTicketDto,
@@ -87,6 +91,16 @@ export class BookingsController {
   }
 
   @ApiBearerAuth()
+  @Put('me/bookings/:bookingId/billing')
+  billing(
+    @CurrentAuth() auth: Authenticated,
+    @Param('bookingId', ParseUUIDPipe) bookingId: string,
+    @Body() body: SetBookingBillingDto,
+  ): Promise<Booking> {
+    return this.bookings.setBilling(auth.user.id, bookingId, body.billing);
+  }
+
+  @ApiBearerAuth()
   @Post('me/bookings/:bookingId/cancel')
   @HttpCode(HttpStatus.OK)
   cancel(
@@ -95,6 +109,24 @@ export class BookingsController {
     @ReqMeta() meta: RequestMeta,
   ): Promise<Booking> {
     return this.bookings.cancelMine(auth, bookingId, meta);
+  }
+}
+
+/** Platform staff: find a booking by the code a passenger sends to support. */
+@ApiTags('admin')
+@ApiBearerAuth()
+@RequirePlatformRole('reviewer')
+@Controller({ path: 'admin/bookings', version: '1' })
+export class AdminBookingsController {
+  constructor(private readonly bookings: BookingsService) {}
+
+  @Get('by-code/:code')
+  byCode(
+    @Param('code') code: string,
+    @CurrentAuth() auth: Authenticated,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<AdminBookingLookup> {
+    return this.bookings.findByCode(code, auth, meta);
   }
 }
 

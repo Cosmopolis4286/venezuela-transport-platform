@@ -10,16 +10,18 @@ import { BookingsModule } from './modules/bookings/bookings.module.js';
 import { DispatchModule } from './modules/dispatch/dispatch.module.js';
 import { FleetModule } from './modules/fleet/fleet.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { SupportModule } from './modules/support/support.module.js';
 import { IdentityModule } from './modules/identity/identity.module.js';
 import { NetworkModule } from './modules/network/network.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { OnboardingModule } from './modules/onboarding/onboarding.module.js';
 import { OrganizationsModule } from './modules/organizations/organizations.module.js';
 import { PaymentsModule } from './modules/payments/payments.module.js';
-import { TripPacksModule } from './modules/trip-packs/trip-packs.module.js';
 import { RetentionModule } from './modules/retention/retention.module.js';
 import { ReportsModule } from './modules/reports/reports.module.js';
 import { SettlementsModule } from './modules/settlements/settlements.module.js';
+import { FiscalModule } from './modules/fiscal/fiscal.module.js';
+import { CashSalesModule } from './modules/cash-sales/cash-sales.module.js';
 import { TaxiModule } from './modules/taxi/taxi.module.js';
 import { MailModule } from './mail/mail.module.js';
 import { StorageModule } from './storage/storage.module.js';
@@ -46,15 +48,17 @@ import { StorageModule } from './storage/storage.module.js';
     NotificationsModule,
     // Feature modules (see docs/architecture/overview.md) are registered below.
     HealthModule,
+    SupportModule,
     IdentityModule,
     OrganizationsModule,
     OnboardingModule,
     FleetModule,
     NetworkModule,
     BookingsModule,
-    TripPacksModule,
     PaymentsModule,
     SettlementsModule,
+    FiscalModule,
+    CashSalesModule,
     ReportsModule,
     DispatchModule,
     TaxiModule,

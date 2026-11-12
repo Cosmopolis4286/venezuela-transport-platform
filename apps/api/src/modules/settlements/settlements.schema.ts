@@ -1,6 +1,5 @@
 import { sql } from 'drizzle-orm';
 import {
-  boolean,
   check,
   index,
   jsonb,
@@ -8,7 +7,6 @@ import {
   numeric,
   pgEnum,
   pgTable,
-  smallint,
   text,
   timestamp,
   uniqueIndex,
@@ -18,22 +16,15 @@ import {
   PAYMENT_COLLECTIONS,
   PAYOUT_DIRECTIONS,
   PAYOUT_METHODS,
-  DEFAULT_RIDE_CANCELLATION,
-  DEFAULT_SUBURBAN_REFUND_TIERS,
   type RefundTier,
 } from '@vtp/shared-types';
 import { bookings } from '../bookings/bookings.schema.js';
 import { timestamps, users } from '../identity/identity.schema.js';
-import { currency } from '../network/network.schema.js';
+import { currency, payee } from '../network/network.schema.js';
 import { organizations } from '../organizations/organizations.schema.js';
-import { taxiRides } from '../taxi/taxi.schema.js';
 
 export const payoutMethod = pgEnum('payout_method', PAYOUT_METHODS);
-export const settlementEntryKind = pgEnum('settlement_entry_kind', [
-  'booking',
-  'cancellation',
-  'ride_cancellation_fee',
-]);
+export const settlementEntryKind = pgEnum('settlement_entry_kind', ['booking', 'cancellation']);
 export const paymentCollection = pgEnum('payment_collection', PAYMENT_COLLECTIONS);
 export const payoutDirection = pgEnum('payout_direction', PAYOUT_DIRECTIONS);
 
@@ -45,15 +36,6 @@ export const platformSettings = pgTable(
     /** Percentage, e.g. 8.00. */
     commissionRate: numeric({ precision: 5, scale: 2 }).notNull(),
     refundTiers: jsonb().$type<RefundTier[]>().notNull(),
-    /** Suburban routes (ADR-028); operators have no suburban override. */
-    suburbanRefundTiers: jsonb()
-      .$type<RefundTier[]>()
-      .notNull()
-      .default([...DEFAULT_SUBURBAN_REFUND_TIERS]),
-    /** Cancelling a stretch ride a line took: free for these minutes after it was taken. */
-    rideFreeCancelMinutes: smallint().notNull().default(DEFAULT_RIDE_CANCELLATION.freeMinutes),
-    /** Later, this percentage of the line's fare, paid on the next ride. */
-    rideCancelFeePercent: smallint().notNull().default(DEFAULT_RIDE_CANCELLATION.feePercent),
     updatedByUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
     ...timestamps,
   },
@@ -69,8 +51,6 @@ export const organizationPolicies = pgTable('organization_policies', {
   refundTiers: jsonb().$type<RefundTier[]>(),
   /** Null: the platform collects (ADR-027). */
   paymentCollection: paymentCollection(),
-  /** Its departures accept trip packs; the platform pays it its fare per trip used (ADR-028). */
-  acceptsTripPacks: boolean().notNull().default(false),
   updatedByUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
   ...timestamps,
 });
@@ -78,7 +58,6 @@ export const organizationPolicies = pgTable('organization_policies', {
 /**
  * What one paid booking earned its operator, written in the same transaction that confirms the
  * booking. Amounts are in the fare currency and never change; a future refund adds its own entry.
- * A taxi or motorcycle ride paid with a trip pack earns too (`taxi_ride_id`, ADR-028).
  */
 export const settlementEntries = pgTable(
   'settlement_entries',
@@ -87,17 +66,18 @@ export const settlementEntries = pgTable(
     organizationId: uuid()
       .notNull()
       .references(() => organizations.id, { onDelete: 'restrict' }),
-    /** Exactly one of the two is set. */
-    bookingId: uuid().references(() => bookings.id, { onDelete: 'restrict' }),
-    taxiRideId: uuid().references(() => taxiRides.id, { onDelete: 'restrict' }),
-    /**
-     * `booking` when it was paid; `cancellation` (negative amounts) when the passenger cancelled;
-     * `ride_cancellation_fee` for a late-cancelled ride (its `taxi_ride_id`): earned by the line
-     * that went out and, when another line collected it in cash, owed by that line.
-     */
+    bookingId: uuid()
+      .notNull()
+      .references(() => bookings.id, { onDelete: 'restrict' }),
+    /** `booking` when it was paid; `cancellation` (negative amounts) when the passenger cancelled. */
     kind: settlementEntryKind().notNull().default('booking'),
     /** Who received the passenger's money: with `operator`, the operator owes the commission. */
     collectedBy: paymentCollection().notNull().default('platform'),
+    /**
+     * Who earns `earned` (ADR-030): the organization, or the driver of the booking's trip (found
+     * through the trip, so a driver assigned after the sale still gets it).
+     */
+    payee: payee().notNull().default('organization'),
     seats: integer().notNull(),
     currency: currency().notNull(),
     gross: numeric({ precision: 12, scale: 2 }).notNull(),
@@ -109,16 +89,6 @@ export const settlementEntries = pgTable(
   (t) => [
     // A booking is earned once, even if a provider reports the money twice, and cancelled once.
     uniqueIndex('settlement_entries_booking_kind_key').on(t.bookingId, t.kind),
-    // A cancellation fee may have two entries: the line that earns it and the one that collected it.
-    uniqueIndex('settlement_entries_taxi_ride_kind_org_key').on(
-      t.taxiRideId,
-      t.kind,
-      t.organizationId,
-    ),
-    check(
-      'settlement_entries_subject_check',
-      sql`(${t.bookingId} is null) <> (${t.taxiRideId} is null)`,
-    ),
     index('settlement_entries_organization_idx').on(t.organizationId, t.createdAt),
   ],
 );
@@ -133,6 +103,8 @@ export const payouts = pgTable(
       .references(() => organizations.id, { onDelete: 'restrict' }),
     /** `from_operator`: the operator paid the platform its commission. */
     direction: payoutDirection().notNull().default('to_operator'),
+    /** Set when the platform paid one of the organization's drivers (ADR-030). */
+    driverUserId: uuid().references(() => users.id, { onDelete: 'restrict' }),
     currency: currency().notNull(),
     amount: numeric({ precision: 12, scale: 2 }).notNull(),
     method: payoutMethod().notNull(),
@@ -146,6 +118,19 @@ export const payouts = pgTable(
   },
   (t) => [index('payouts_organization_idx').on(t.organizationId, t.createdAt)],
 );
+
+/** Where each driver wants to be paid (ADR-030); entered by the driver in the transport app. */
+export const driverPayoutAccounts = pgTable('driver_payout_accounts', {
+  userId: uuid()
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  method: payoutMethod().notNull(),
+  bank: text().notNull(),
+  account: text().notNull(),
+  holderId: text().notNull(),
+  holderName: text().notNull(),
+  ...timestamps,
+});
 
 export type SettlementEntryRow = typeof settlementEntries.$inferSelect;
 export type PayoutRow = typeof payouts.$inferSelect;

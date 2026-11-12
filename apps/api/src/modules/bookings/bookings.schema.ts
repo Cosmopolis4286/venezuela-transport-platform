@@ -19,7 +19,6 @@ import { currency, routes, routeSchedules, stops } from '../network/network.sche
 import { vehicles } from '../fleet/fleet.schema.js';
 import { identityDocumentType } from '../onboarding/onboarding.schema.js';
 import { organizations } from '../organizations/organizations.schema.js';
-import { tripPacks } from '../trip-packs/trip-packs.schema.js';
 
 export const bookingStatus = pgEnum('booking_status', BOOKING_STATUSES);
 export const tripStatus = pgEnum('trip_status', ['scheduled', 'cancelled']);
@@ -90,22 +89,43 @@ export const bookings = pgTable(
     /** Boarding and arrival times of this passenger's segment, frozen at booking. */
     departsAt: timestamp({ withTimezone: true }).notNull(),
     arrivesAt: timestamp({ withTimezone: true }).notNull(),
-    /** Fare per passenger and total, frozen when the seats were held. */
+    /**
+     * Fare per passenger and what the passenger pays in total (fares + service fee), frozen when
+     * the seats were held.
+     */
     fareAmount: numeric({ precision: 12, scale: 2 }).notNull(),
     totalAmount: numeric({ precision: 12, scale: 2 }).notNull(),
+    /**
+     * The platform's service fee, charged on top of the fares (ADR-029), and its rate. Null on
+     * bookings made before the fee existed: their commission came out of the fare.
+     */
+    serviceFee: numeric({ precision: 12, scale: 2 }),
+    serviceFeeRate: numeric({ precision: 5, scale: 2 }),
     currency: currency().notNull(),
     expiresAt: timestamp({ withTimezone: true }),
     confirmedAt: timestamp({ withTimezone: true }),
     cancelledAt: timestamp({ withTimezone: true }),
+    /**
+     * Open tickets (frequency service): who validated it first. A route paid to drivers pays this
+     * driver, since the day's trip has many units (ADR-032).
+     */
+    boardingDriverUserId: uuid().references(() => users.id, { onDelete: 'restrict' }),
+    /** Phone or WhatsApp the buyer left to be reached (guests have no e-mail). */
+    contactPhone: text(),
+    /**
+     * Who the service-fee invoice is for when the passenger asked for another name (ADR-031);
+     * null: the first passenger. `billingIdType` is V, E, J, G or P.
+     */
+    billingName: text(),
+    billingIdType: text(),
+    billingIdNumber: text(),
+    billingAddress: text(),
     /** Set when the passenger got the trip reminder (notifications), so it is sent once. */
     reminderSentAt: timestamp({ withTimezone: true }),
-    /** Paid with this trip pack (one trip per seat) instead of money (ADR-028). */
-    tripPackId: uuid().references(() => tripPacks.id, { onDelete: 'restrict' }),
     ...timestamps,
   },
   (t) => [
     uniqueIndex('bookings_code_key').on(t.code),
-    index('bookings_trip_pack_idx').on(t.tripPackId, t.status),
     index('bookings_user_idx').on(t.userId, t.createdAt),
     index('bookings_trip_status_idx').on(t.tripId, t.status),
   ],

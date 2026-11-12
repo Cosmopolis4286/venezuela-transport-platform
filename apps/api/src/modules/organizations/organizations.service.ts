@@ -1,4 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { assertNotGuest } from '../identity/guest.service.js';
 import {
   ROLE_PERMISSIONS,
   roleAllowedFor,
@@ -53,6 +54,7 @@ export class OrganizationsService {
     input: CreateOrganizationRequest,
     meta: RequestMeta,
   ): Promise<OrganizationMembershipSummary> {
+    assertNotGuest(auth);
     const values = {
       type: input.type,
       rif: this.requireRif(input.rif),

@@ -1,5 +1,7 @@
-# Weekly, grouped dependency updates. See docs/development/repository-workflow.md
-# ("Dependency updates") for how to review them.
+# Version-update PRs are OFF (open-pull-requests-limit: 0 in every block), by the owner's
+# decision: dependencies are updated by hand, in one PR, when the maintainer chooses
+# (`pnpm outdated`, see docs/development/repository-workflow.md). To turn them back on, raise
+# the limits. Security alerts are separate (Settings → Code security) and are not affected.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -8,7 +10,7 @@ updates:
       interval: weekly
       day: monday
       timezone: America/Caracas
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     groups:
       # Expo pins exact native-module versions per SDK; upgrade them together with
       # `npx expo install --fix`, never piecemeal.
@@ -31,6 +33,10 @@ updates:
       - dependency-name: react-dom
         update-types: [version-update:semver-major, version-update:semver-minor]
       - dependency-name: react-native
+      # ESLint 10 breaks eslint-plugin-react (used by eslint-config-next and eslint-config-expo):
+      # "contextOrFilename.getFilename is not a function". Retry when both configs support it.
+      - dependency-name: eslint
+        update-types: [version-update:semver-major]
       # Node types follow the runtime (Node 24, see .nvmrc); bump the major with the runtime.
       - dependency-name: '@types/node'
         update-types: [version-update:semver-major]
@@ -39,11 +45,14 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    open-pull-requests-limit: 0
   - package-ecosystem: docker-compose
     directories: ['/', '/infrastructure/docker/production']
     schedule:
       interval: monthly
+    open-pull-requests-limit: 0
   - package-ecosystem: docker
     directory: /infrastructure/docker/production
     schedule:
       interval: monthly
+    open-pull-requests-limit: 0

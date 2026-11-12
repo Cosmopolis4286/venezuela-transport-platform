@@ -27,25 +27,26 @@ export default async function AdminSettlementsPage() {
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold">Liquidaciones</h1>
         <p className="text-sm text-muted-foreground">
-          Lo que la plataforma le debe a cada empresa por los boletos pagados (tarifa menos
-          comisión). Abre una empresa para fijar su comisión o registrar un pago.
+          Lo que la plataforma le debe a cada empresa por los boletos pagados (la tarifa completa;
+          el cargo por servicio que paga el pasajero es de la plataforma). Abre una empresa para
+          fijar su cargo o registrar un pago.
         </p>
       </div>
       <Card>
         <div className="flex flex-col gap-1">
           <CardTitle>Política general</CardTitle>
           <CardDescription>
-            Para las empresas sin política propia. Hoy: comisión{' '}
+            Para las empresas sin política propia. Hoy: cargo por servicio{' '}
             {policy.commissionRate.replace('.', ',')} % · reembolso{' '}
-            {describeRefundTiers(policy.refundTiers)}; en rutas suburbanas,{' '}
-            {describeRefundTiers(policy.suburbanRefundTiers)}; taxis y motos por tramo: cancelar es
-            gratis {policy.rideCancellation.freeMinutes} min después de que una línea lo toma, luego
-            cuesta el {policy.rideCancellation.feePercent} % de la tarifa. Los cambios se aplican
-            desde ahora.
+            {describeRefundTiers(policy.refundTiers)}. Los cambios se aplican desde ahora.
           </CardDescription>
         </div>
         <ActionForm action={setPlatformPolicy}>
-          <Field label="Comisión (%)" htmlFor="commissionRate">
+          <Field
+            label="Cargo por servicio (%)"
+            htmlFor="commissionRate"
+            hint="Lo paga el pasajero además de la tarifa"
+          >
             <Input
               id="commissionRate"
               name="commissionRate"
@@ -55,42 +56,7 @@ export default async function AdminSettlementsPage() {
               defaultValue={policy.commissionRate}
             />
           </Field>
-          <p className="text-sm font-medium">Reembolso en rutas entre ciudades</p>
           <RefundTierFields tiers={policy.refundTiers} />
-          <p className="text-sm font-medium">Reembolso en rutas suburbanas (todas las empresas)</p>
-          <RefundTierFields tiers={policy.suburbanRefundTiers} prefix="suburban" />
-          <p className="text-sm font-medium">Cancelación de taxis y motos por tramo</p>
-          <p className="text-sm text-muted-foreground">
-            Gratis durante unos minutos después de que una línea toma el viaje (y hasta 30 min antes
-            de un viaje programado), y también si el conductor no lo recoge en 20 min. Si no, el
-            pasajero paga una tasa en su próximo viaje, para la línea que salió a buscarlo.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <Field label="Minutos sin costo" htmlFor="freeMinutes">
-              <Input
-                id="freeMinutes"
-                name="freeMinutes"
-                type="number"
-                min={0}
-                max={60}
-                className="w-32"
-                required
-                defaultValue={policy.rideCancellation.freeMinutes}
-              />
-            </Field>
-            <Field label="Tasa (% de la tarifa)" htmlFor="feePercent">
-              <Input
-                id="feePercent"
-                name="feePercent"
-                type="number"
-                min={0}
-                max={100}
-                className="w-32"
-                required
-                defaultValue={policy.rideCancellation.feePercent}
-              />
-            </Field>
-          </div>
           <div>
             <SubmitButton variant="outline">Guardar política general</SubmitButton>
           </div>

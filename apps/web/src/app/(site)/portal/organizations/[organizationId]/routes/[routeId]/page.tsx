@@ -1,17 +1,19 @@
 import {
+  PAYEE_LABELS,
+  PAYEES,
+  ROUTE_SCOPE_LABELS,
+  ROUTE_SCOPES,
   CURRENCIES,
   DAY_OF_WEEK_LABELS,
   ROUTE_STATUS_LABELS,
-  SERVICE_LABELS,
-  TRANSPORT_MODE_LABELS,
   SERVICE_CLASS_LABELS,
+  MAX_HEADWAY_MINUTES,
+  MIN_HEADWAY_MINUTES,
   SERVICE_CLASSES,
   formatDuration,
   type OrganizationMembershipSummary,
   type Route,
-  type Schedule,
   type SeatLayout,
-  type ServiceArea,
   type Stop,
 } from '@vtp/shared-types';
 import Link from 'next/link';
@@ -29,12 +31,11 @@ import {
   changeRouteStatus,
   deleteRoute,
   deleteSchedule,
-  deleteSeries,
   saveFares,
   setScheduleActive,
-  setSeriesActive,
   setScheduleLayout,
   updateRoute,
+  setRoutePayee,
 } from '../actions';
 
 export default function RoutePage({
@@ -90,10 +91,6 @@ async function RouteDetail({
           <Badge variant={statusVariant(route.status === 'draft' ? 'pending' : route.status)}>
             {ROUTE_STATUS_LABELS[route.status]}
           </Badge>
-          <Badge variant="outline">{TRANSPORT_MODE_LABELS[route.mode]}</Badge>
-          {route.service === 'suburban' ? (
-            <Badge variant="outline">{SERVICE_LABELS.suburban}</Badge>
-          ) : null}
         </div>
         <p className="text-sm text-muted-foreground">
           {origin.stop.city} → {destination.stop.city} · {route.stops.length} paradas ·{' '}
@@ -102,6 +99,51 @@ async function RouteDetail({
       </div>
 
       {canManage ? <Publish route={route} hidden={hidden} /> : null}
+
+      <Card>
+        <div className="flex flex-col gap-1">
+          <CardTitle>Tipo de servicio y cobro</CardTitle>
+          <CardDescription>
+            {ROUTE_SCOPE_LABELS[route.scope]} · cobra: <strong>{PAYEE_LABELS[route.payee]}</strong>
+            {route.payeeOverride ? ' (elegido para esta ruta)' : ' (por defecto)'}. Por defecto, las
+            rutas interurbanas le pagan a la empresa o línea y las urbanas o suburbanas al conductor
+            asignado a cada viaje. Si tu empresa cobra con sus propias cuentas, les pagas tú a tus
+            conductores. El cambio vale para las ventas desde ahora.
+          </CardDescription>
+        </div>
+        {canManage ? (
+          <ActionForm action={setRoutePayee} hidden={hidden}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Tipo de servicio" htmlFor="scope">
+                <Select id="scope" name="scope" defaultValue={route.scope}>
+                  {ROUTE_SCOPES.map((scope) => (
+                    <option key={scope} value={scope}>
+                      {ROUTE_SCOPE_LABELS[scope]}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Quién cobra" htmlFor="payeeOverride">
+                <Select
+                  id="payeeOverride"
+                  name="payeeOverride"
+                  defaultValue={route.payeeOverride ?? ''}
+                >
+                  <option value="">Según el tipo de servicio</option>
+                  {PAYEES.map((payee) => (
+                    <option key={payee} value={payee}>
+                      {PAYEE_LABELS[payee]}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+            <div>
+              <SubmitButton variant="outline">Guardar cobro</SubmitButton>
+            </div>
+          </ActionForm>
+        ) : null}
+      </Card>
 
       <Card>
         <CardTitle>Recorrido</CardTitle>
@@ -175,11 +217,7 @@ function Publish({ route, hidden }: { route: Route; hidden: Record<string, strin
 }
 
 async function EditStops({ route, hidden }: { route: Route; hidden: Record<string, string> }) {
-  const [catalog, areas] = await Promise.all([
-    apiFetch<Stop[]>('/stops'),
-    route.serviceAreaId ? apiFetch<ServiceArea[]>('/service-areas') : Promise.resolve([]),
-  ]);
-  const area = areas.find((a) => a.id === route.serviceAreaId);
+  const catalog = await apiFetch<Stop[]>('/stops');
   // Keep the route's own stops selectable even if one was deactivated later.
   const known = new Set(catalog.map((s) => s.id));
   const stops = [...catalog, ...route.stops.map((s) => s.stop).filter((s) => !known.has(s.id))];
@@ -196,7 +234,6 @@ async function EditStops({ route, hidden }: { route: Route; hidden: Record<strin
         })),
       }}
       submitLabel="Guardar recorrido"
-      areaStopIds={area?.stops.map((s) => s.id)}
     />
   );
 }
@@ -315,156 +352,79 @@ function Schedules({
         <p className="text-sm text-muted-foreground">Aún no hay horarios.</p>
       ) : (
         <ul className="flex flex-col divide-y">
-          {seriesOf(route.schedules).map((group) => (
-            <SeriesItem key={group.seriesId} group={group} hidden={hidden} canManage={canManage} />
-          ))}
-          {route.schedules
-            .filter((s) => !s.seriesId)
-            .map((schedule) => (
-              <li
-                key={schedule.id}
-                className="flex flex-wrap items-center justify-between gap-3 py-3"
-              >
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium">
-                      {schedule.departureTime} → {arrivalTime(schedule.departureTime)}
-                    </p>
-                    <Badge variant="outline">{SERVICE_CLASS_LABELS[schedule.serviceClass]}</Badge>
-                    {schedule.active ? null : <Badge variant="secondary">Inactivo</Badge>}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {daysLabel(schedule.daysOfWeek)} · {schedule.seats} puestos
-                    {schedule.seatLayoutId ? ` (${layoutName(schedule.seatLayoutId)})` : ''} · desde{' '}
-                    {schedule.validFrom}
-                    {schedule.validUntil ? ` hasta ${schedule.validUntil}` : ''}
+          {route.schedules.map((schedule) => (
+            <li
+              key={schedule.id}
+              className="flex flex-wrap items-center justify-between gap-3 py-3"
+            >
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-medium">
+                    {schedule.headwayMinutes
+                      ? `Cada ${schedule.headwayMinutes} min, de ${schedule.departureTime} a ${schedule.lastDepartureTime}`
+                      : `${schedule.departureTime} → ${arrivalTime(schedule.departureTime)}`}
                   </p>
+                  {schedule.headwayMinutes ? <Badge>Boleto abierto</Badge> : null}
+                  <Badge variant="outline">{SERVICE_CLASS_LABELS[schedule.serviceClass]}</Badge>
+                  {schedule.active ? null : <Badge variant="secondary">Inactivo</Badge>}
                 </div>
-                {canManage ? (
-                  <div className="flex gap-2">
-                    {layouts.length ? (
-                      <ActionForm
-                        action={setScheduleLayout}
-                        hidden={{ ...hidden, scheduleId: schedule.id }}
-                        className="flex-row"
-                      >
-                        <Select
-                          name="seatLayoutId"
-                          defaultValue={schedule.seatLayoutId ?? ''}
-                          aria-label={`Mapa de puestos de las ${schedule.departureTime}`}
-                          className="w-56"
-                        >
-                          <LayoutOptions layouts={layouts} />
-                        </Select>
-                        <SubmitButton size="sm" variant="outline">
-                          Asignar
-                        </SubmitButton>
-                      </ActionForm>
-                    ) : null}
+                <p className="text-sm text-muted-foreground">
+                  {daysLabel(schedule.daysOfWeek)} · {schedule.seats} puestos
+                  {schedule.headwayMinutes ? ' por unidad' : ''}
+                  {schedule.seatLayoutId ? ` (${layoutName(schedule.seatLayoutId)})` : ''} · desde{' '}
+                  {schedule.validFrom}
+                  {schedule.validUntil ? ` hasta ${schedule.validUntil}` : ''}
+                </p>
+              </div>
+              {canManage ? (
+                <div className="flex gap-2">
+                  {layouts.length ? (
                     <ActionForm
-                      action={setScheduleActive}
-                      hidden={{
-                        ...hidden,
-                        scheduleId: schedule.id,
-                        active: String(!schedule.active),
-                      }}
-                    >
-                      <SubmitButton size="sm" variant="outline">
-                        {schedule.active ? 'Pausar' : 'Activar'}
-                      </SubmitButton>
-                    </ActionForm>
-                    <ActionForm
-                      action={deleteSchedule}
+                      action={setScheduleLayout}
                       hidden={{ ...hidden, scheduleId: schedule.id }}
+                      className="flex-row"
                     >
-                      <SubmitButton size="sm" variant="ghost">
-                        Eliminar
+                      <Select
+                        name="seatLayoutId"
+                        defaultValue={schedule.seatLayoutId ?? ''}
+                        aria-label={`Mapa de puestos de las ${schedule.departureTime}`}
+                        className="w-56"
+                      >
+                        <LayoutOptions layouts={layouts} />
+                      </Select>
+                      <SubmitButton size="sm" variant="outline">
+                        Asignar
                       </SubmitButton>
                     </ActionForm>
-                  </div>
-                ) : null}
-              </li>
-            ))}
+                  ) : null}
+                  <ActionForm
+                    action={setScheduleActive}
+                    hidden={{
+                      ...hidden,
+                      scheduleId: schedule.id,
+                      active: String(!schedule.active),
+                    }}
+                  >
+                    <SubmitButton size="sm" variant="outline">
+                      {schedule.active ? 'Pausar' : 'Activar'}
+                    </SubmitButton>
+                  </ActionForm>
+                  <ActionForm
+                    action={deleteSchedule}
+                    hidden={{ ...hidden, scheduleId: schedule.id }}
+                  >
+                    <SubmitButton size="sm" variant="ghost">
+                      Eliminar
+                    </SubmitButton>
+                  </ActionForm>
+                </div>
+              ) : null}
+            </li>
+          ))}
         </ul>
       )}
-      {canManage ? (
-        <AddSchedule hidden={hidden} layouts={layouts} motorcycle={route.mode === 'motorcycle'} />
-      ) : null}
+      {canManage ? <AddSchedule hidden={hidden} layouts={layouts} /> : null}
     </Card>
-  );
-}
-
-interface SeriesGroup {
-  seriesId: string;
-  schedules: Schedule[];
-}
-
-/** Frequency series, each shown as one line instead of dozens of departures. */
-function seriesOf(schedules: Schedule[]): SeriesGroup[] {
-  const groups = new Map<string, Schedule[]>();
-  for (const schedule of schedules) {
-    if (!schedule.seriesId) continue;
-    groups.set(schedule.seriesId, [...(groups.get(schedule.seriesId) ?? []), schedule]);
-  }
-  return [...groups].map(([seriesId, list]) => ({
-    seriesId,
-    schedules: list.sort((a, b) => a.departureTime.localeCompare(b.departureTime)),
-  }));
-}
-
-function SeriesItem({
-  group,
-  hidden,
-  canManage,
-}: {
-  group: SeriesGroup;
-  hidden: Record<string, string>;
-  canManage: boolean;
-}) {
-  const first = group.schedules[0]!;
-  const last = group.schedules.at(-1)!;
-  const [h1, m1] = first.departureTime.split(':').map(Number);
-  const [h2, m2] = (group.schedules[1] ?? first).departureTime.split(':').map(Number);
-  const every = h2! * 60 + m2! - (h1! * 60 + m1!);
-  const active = group.schedules.filter((s) => s.active).length;
-  return (
-    <li className="flex flex-wrap items-center justify-between gap-3 py-3">
-      <div>
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="font-medium">
-            {first.departureTime} a {last.departureTime} · cada {every} min
-          </p>
-          <Badge variant="outline">{group.schedules.length} salidas</Badge>
-          {active === 0 ? (
-            <Badge variant="secondary">Pausadas</Badge>
-          ) : active < group.schedules.length ? (
-            <Badge variant="secondary">{group.schedules.length - active} pausadas</Badge>
-          ) : null}
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {daysLabel(first.daysOfWeek)} · {first.seats} {first.seats === 1 ? 'puesto' : 'puestos'}{' '}
-          por salida · desde {first.validFrom}
-          {first.validUntil ? ` hasta ${first.validUntil}` : ''}
-        </p>
-      </div>
-      {canManage ? (
-        <div className="flex gap-2">
-          <ActionForm
-            action={setSeriesActive}
-            hidden={{ ...hidden, seriesId: group.seriesId, active: String(active === 0) }}
-          >
-            <SubmitButton size="sm" variant="outline">
-              {active === 0 ? 'Activar todas' : 'Pausar todas'}
-            </SubmitButton>
-          </ActionForm>
-          <ActionForm action={deleteSeries} hidden={{ ...hidden, seriesId: group.seriesId }}>
-            <SubmitButton size="sm" variant="ghost">
-              Eliminar
-            </SubmitButton>
-          </ActionForm>
-        </div>
-      ) : null}
-    </li>
   );
 }
 
@@ -484,59 +444,51 @@ function LayoutOptions({ layouts }: { layouts: SeatLayout[] }) {
 function AddSchedule({
   hidden,
   layouts,
-  motorcycle,
 }: {
   hidden: Record<string, string>;
   layouts: SeatLayout[];
-  /** One passenger per motorcycle: no class, seat map or seat count to choose. */
-  motorcycle: boolean;
 }) {
   return (
     <details className="rounded-md border p-3">
       <summary className="cursor-pointer text-sm font-medium">Agregar horario</summary>
       <ActionForm action={addSchedule} hidden={hidden} className="mt-3" resetOnSuccess>
         <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Hora de salida" htmlFor="departureTime" hint="La primera, si se repite.">
+          <Field label="Hora de salida" htmlFor="departureTime">
             <Input id="departureTime" name="departureTime" type="time" required />
           </Field>
+          <Field label="Servicio" htmlFor="serviceClass">
+            <Select id="serviceClass" name="serviceClass" defaultValue="standard">
+              {SERVICE_CLASSES.map((c) => (
+                <option key={c} value={c}>
+                  {SERVICE_CLASS_LABELS[c]}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Mapa de puestos" htmlFor="seatLayoutId">
+            <Select id="seatLayoutId" name="seatLayoutId" defaultValue={layouts[0]?.id ?? ''}>
+              <LayoutOptions layouts={layouts} />
+            </Select>
+          </Field>
+          <Field label="Puestos" htmlFor="seats" hint="Solo si no eliges un mapa.">
+            <Input id="seats" name="seats" type="number" min={1} max={100} />
+          </Field>
           <Field
-            label="Repetir cada (min, opcional)"
-            htmlFor="everyMinutes"
-            hint="Para salidas frecuentes, p. ej. 15."
+            label="Frecuencia en minutos (opcional)"
+            htmlFor="headwayMinutes"
+            hint="Urbano o suburbano: sale una unidad cada N minutos y se vende boleto abierto, sin puesto ni mapa."
           >
-            <Input id="everyMinutes" name="everyMinutes" type="number" min={5} max={240} />
+            <Input
+              id="headwayMinutes"
+              name="headwayMinutes"
+              type="number"
+              min={MIN_HEADWAY_MINUTES}
+              max={MAX_HEADWAY_MINUTES}
+            />
           </Field>
-          <Field label="Hasta las (opcional)" htmlFor="lastDeparture" hint="Última salida posible.">
-            <Input id="lastDeparture" name="lastDeparture" type="time" />
+          <Field label="Última salida" htmlFor="lastDepartureTime" hint="Solo con frecuencia.">
+            <Input id="lastDepartureTime" name="lastDepartureTime" type="time" />
           </Field>
-          {motorcycle ? (
-            <>
-              <input type="hidden" name="serviceClass" value="standard" />
-              <p className="self-end text-sm text-muted-foreground">
-                Cada salida es una moto con un pasajero.
-              </p>
-            </>
-          ) : (
-            <>
-              <Field label="Servicio" htmlFor="serviceClass">
-                <Select id="serviceClass" name="serviceClass" defaultValue="standard">
-                  {SERVICE_CLASSES.map((c) => (
-                    <option key={c} value={c}>
-                      {SERVICE_CLASS_LABELS[c]}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Mapa de puestos" htmlFor="seatLayoutId">
-                <Select id="seatLayoutId" name="seatLayoutId" defaultValue={layouts[0]?.id ?? ''}>
-                  <LayoutOptions layouts={layouts} />
-                </Select>
-              </Field>
-              <Field label="Puestos" htmlFor="seats" hint="Solo si no eliges un mapa.">
-                <Input id="seats" name="seats" type="number" min={1} max={100} />
-              </Field>
-            </>
-          )}
           <Field label="Desde" htmlFor="validFrom">
             <Input id="validFrom" name="validFrom" type="date" required />
           </Field>

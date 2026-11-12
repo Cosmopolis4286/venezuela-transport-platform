@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { normalizeWhatsapp } from '@vtp/shared-types';
 
 const booleanString = z
   .enum(['true', 'false', '1', '0', ''])
@@ -114,6 +115,24 @@ export const envSchema = z
      * payment off.
      */
     PAYMENT_PROVIDER: z.enum(['simulated', 'manual', 'disabled']).optional(),
+    /**
+     * Who numbers the platform's service-fee invoices (ADR-031). `draft`: staff issue each one in
+     * the SENIAT portal and type its numbers. `digital_printer`: an authorized digital printer's
+     * API (not contracted yet: issuing answers 503 until its adapter exists).
+     */
+    INVOICE_ISSUER: z.enum(['draft', 'digital_printer']).default('draft'),
+    /**
+     * Optional. Support WhatsApp number (international, e.g. +58 412 123 4567), shown as a
+     * "Write to us on WhatsApp" button in the web and the apps. Public: it is not a secret.
+     */
+    SUPPORT_WHATSAPP: z
+      .string()
+      .default('')
+      .refine((value) => !value || normalizeWhatsapp(value) !== null, {
+        message: 'SUPPORT_WHATSAPP must be an international number with 8 to 15 digits',
+      }),
+    /** Optional. Download page of the Android passenger app (APK or Google Play), https only. */
+    ANDROID_APP_URL: z.union([z.url({ protocol: /^https$/ }), z.literal('')]).default(''),
 
     REDIS_URL: z
       .union([z.url({ protocol: /^rediss?$/ }), z.literal('')])

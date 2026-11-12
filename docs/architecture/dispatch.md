@@ -27,8 +27,6 @@ se crea su viaje ([reservas](bookings.md)) con la copia del mapa de puestos, igu
 primera reserva. Reglas:
 
 - El vehículo es de la organización y está **activo**.
-- El vehículo debe ser del **mismo tipo** que la ruta (bus, carro o moto); si no,
-  `409 VEHICLE_MODE_MISMATCH`. El tablero solo ofrece los vehículos que encajan.
 - Si el vehículo y la salida tienen mapa de puestos, deben ser **el mismo**: los pasajeros
   eligieron sus puestos en ese mapa. Un vehículo sin mapa sirve para cualquier salida.
 - El conductor es un miembro cuyo rol conduce (`trips.drive`: conductor o dueño).

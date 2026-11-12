@@ -1,1 +1,0 @@
-ALTER TYPE "public"."organization_type" ADD VALUE 'moto_line' BEFORE 'terminal';

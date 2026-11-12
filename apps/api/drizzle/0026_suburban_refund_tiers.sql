@@ -1,1 +1,0 @@
-ALTER TABLE "platform_settings" ADD COLUMN "suburban_refund_tiers" jsonb DEFAULT '[{"hoursBefore":24,"percent":100},{"hoursBefore":2,"percent":75},{"hoursBefore":0.5,"percent":50}]'::jsonb NOT NULL;

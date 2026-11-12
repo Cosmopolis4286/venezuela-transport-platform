@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   COMMISSION_PATTERN,
   DEFAULT_REFUND_TIERS,
-  DEFAULT_SUBURBAN_REFUND_TIERS,
-  formatHoursBefore,
   refundPercentFor,
   refundTiersProblem,
 } from './settlements.js';
@@ -47,8 +45,7 @@ describe('refundTiersProblem', () => {
       ]),
     ).not.toBeNull();
     expect(refundTiersProblem([{ hoursBefore: 24, percent: 101 }])).not.toBeNull();
-    expect(refundTiersProblem([{ hoursBefore: 1.1, percent: 50 }])).not.toBeNull();
-    expect(refundTiersProblem([{ hoursBefore: 1.5, percent: 50 }])).toBeNull();
+    expect(refundTiersProblem([{ hoursBefore: 1.5, percent: 50 }])).not.toBeNull();
     expect(refundTiersProblem([{ hoursBefore: 800, percent: 50 }])).not.toBeNull();
   });
 });
@@ -61,22 +58,5 @@ describe('COMMISSION_PATTERN', () => {
     for (const bad of ['101', '8.555', '-1', '100.01', 'abc', '']) {
       expect(COMMISSION_PATTERN.test(bad)).toBe(false);
     }
-  });
-});
-
-describe('suburban refund tiers', () => {
-  it('refund in steps down to 30 minutes and nothing after', () => {
-    expect(refundTiersProblem(DEFAULT_SUBURBAN_REFUND_TIERS)).toBeNull();
-    expect(refundPercentFor(DEFAULT_SUBURBAN_REFUND_TIERS, 30)).toBe(100);
-    expect(refundPercentFor(DEFAULT_SUBURBAN_REFUND_TIERS, 3)).toBe(75);
-    expect(refundPercentFor(DEFAULT_SUBURBAN_REFUND_TIERS, 0.5)).toBe(50);
-    expect(refundPercentFor(DEFAULT_SUBURBAN_REFUND_TIERS, 0.49)).toBe(0);
-    expect(refundTiersProblem([{ hoursBefore: 0.4, percent: 50 }])).not.toBeNull();
-  });
-
-  it('shows hours and minutes', () => {
-    expect(formatHoursBefore(48)).toBe('48 h');
-    expect(formatHoursBefore(0.5)).toBe('30 min');
-    expect(formatHoursBefore(1.25)).toBe('1 h 15 min');
   });
 });

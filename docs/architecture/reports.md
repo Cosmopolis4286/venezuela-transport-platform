@@ -28,25 +28,19 @@ En el portal: **Reportes**, en la página de la empresa de autobuses, con el ran
 ruta de la web que convierte el JSON de la API en una hoja de cálculo: UTF-8 con BOM para Excel,
 y las celdas que parecen fórmulas se neutralizan).
 
+### Efectivo (ADR-033)
+
+`SalesReport.cash` suma lo que los conductores anotaron como cobrado en efectivo
+(`POST /organizations/:id/cash-sales`), por moneda y por ruta, según el día en que se anotó y sin
+los registros anulados. Va aparte de las ventas por la app: no lleva comisión ni se liquida. El
+CSV de ventas lo agrega como filas "Ruta (efectivo)".
+
 ## Para la plataforma
 
 `GET /admin/metrics` (solo administradores): ventas y comisión de toda la plataforma por moneda,
 reembolsos enviados en el rango y los que esperan en la cola, usuarios nuevos, organizaciones
 activas por tipo y taxis pedidos, terminados y cancelados o vencidos. En el panel:
 **Métricas** (`/admin/metrics`).
-
-### Paquetes de viajes
-
-Las ventas de cada empresa incluyen `packSeats`: cuántos de sus puestos se pagaron con paquetes
-(también en el CSV). Las métricas de la plataforma traen `tripPacks` (ADR-028):
-
-- **vendidos**: paquetes pagados en el rango, con sus viajes y lo que se cobró, por moneda;
-- **usados**: viajes usados en el rango (menos los devueltos) y las tarifas que se les deben a las
-  empresas por ellos;
-- **por usar**: viajes vendidos que siguen en paquetes activos hoy, valorados al precio por viaje
-  de cada paquete (el servicio que la plataforma todavía debe);
-- **vencidos**: viajes que se perdieron en paquetes vencidos en el rango (su dinero queda para la
-  plataforma).
 
 ## Todavía no
 

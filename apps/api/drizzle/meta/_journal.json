@@ -159,92 +159,57 @@
     {
       "idx": 22,
       "version": "7",
-      "when": 1794137125605,
-      "tag": "0022_transport_modes",
+      "when": 1794135699699,
+      "tag": "0022_operating_zones",
       "breakpoints": true
     },
     {
       "idx": 23,
       "version": "7",
-      "when": 1794153429758,
-      "tag": "0023_services_and_corridors",
+      "when": 1794137480894,
+      "tag": "0023_service_fee",
       "breakpoints": true
     },
     {
       "idx": 24,
       "version": "7",
-      "when": 1794154354792,
-      "tag": "0024_moto_lines",
+      "when": 1794153925642,
+      "tag": "0024_payees",
       "breakpoints": true
     },
     {
       "idx": 25,
       "version": "7",
-      "when": 1794171120432,
-      "tag": "0025_schedule_series",
+      "when": 1794174046156,
+      "tag": "0025_fiscal",
       "breakpoints": true
     },
     {
       "idx": 26,
       "version": "7",
-      "when": 1794173530233,
-      "tag": "0026_suburban_refund_tiers",
+      "when": 1794405938544,
+      "tag": "0026_booking_billing",
       "breakpoints": true
     },
     {
       "idx": 27,
       "version": "7",
-      "when": 1794174289582,
-      "tag": "0027_trip_packs",
+      "when": 1794424656155,
+      "tag": "0027_frequency_service",
       "breakpoints": true
     },
     {
       "idx": 28,
       "version": "7",
-      "when": 1794225433485,
-      "tag": "0028_trip_pack_bookings",
+      "when": 1794442149519,
+      "tag": "0028_cash_sales",
       "breakpoints": true
     },
     {
       "idx": 29,
       "version": "7",
-      "when": 1794406134802,
-      "tag": "0029_on_demand_stretch_rides",
-      "breakpoints": true
-    },
-    {
-      "idx": 30,
-      "version": "7",
-      "when": 1794424075827,
-      "tag": "0030_trip_pack_rides",
-      "breakpoints": true
-    },
-    {
-      "idx": 31,
-      "version": "7",
-      "when": 1794441809610,
-      "tag": "0031_ride_cancellation_fees",
-      "breakpoints": true
-    },
-    {
-      "idx": 32,
-      "version": "7",
-      "when": 1794511530956,
-      "tag": "0032_trip_pack_expiry_notice",
-      "breakpoints": true
-    },
-    {
-      "idx": 33,
-      "version": "7",
-      "when": 1794511684677,
-      "tag": "0033_trip_pack_max_fare",
-      "breakpoints": true
-    },
-    {
-      "idx": 34,
-      "version": "7",
-      "when": 1794511867742,
-      "tag": "0034_taxi_pickup_code",
+      "when": 1794511925787,
+      "tag": "0029_guest_checkout",
       "breakpoints": true
     }
   ]

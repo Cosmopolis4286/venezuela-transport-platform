@@ -7,6 +7,8 @@ Por dónde empezar según lo que necesites.
 - [Guía del pasajero](guides/pasajeros.md): comprar, pagar, cancelar, pedir un taxi.
 - [Guía para empresas](guides/empresas.md): portal, rutas, despacho, taxis, liquidaciones.
 - [Guía para conductores e inspectores](guides/conductores.md): app de transportistas.
+- [Guion del piloto suburbano](guides/piloto-suburbano.md): la prueba con gente real antes de abrir.
+- [Atención por WhatsApp](guides/whatsapp-soporte.md): mensajes automáticos, respuestas rápidas y qué hacer en cada caso.
 - [Manual de administración](guides/administracion.md): revisiones, políticas, pagos a empresas,
   reembolsos.
 - [Glosario](glossary.md).
@@ -31,8 +33,8 @@ Por dónde empezar según lo que necesites.
 - [Red: paradas, rutas, tarifas, horarios](architecture/network.md) ·
   [Flota: mapas de puestos y vehículos](architecture/fleet.md)
 - [Reservas](architecture/bookings.md) · [Pagos y boletos](architecture/payments.md) ·
-  [Liquidaciones y reembolsos](architecture/settlements.md)
-- [Transporte suburbano y paquetes de viajes](architecture/suburban.md) (diseño, sin implementar)
+  [Liquidaciones y reembolsos](architecture/settlements.md) ·
+  [Facturación y libros fiscales](architecture/fiscal.md)
 - [Despacho](architecture/dispatch.md) · [Taxis](architecture/taxis.md) ·
   [Notificaciones](architecture/notifications.md) · [Reportes](architecture/reports.md)
 - [Portal web](architecture/web-portal.md) · [Apps móviles](architecture/mobile-apps.md) ·
@@ -48,6 +50,7 @@ Por dónde empezar según lo que necesites.
 
 ## Despliegue
 
-- [Preparación del VPS](deployment/vps-preparation.md) · [Monitoreo](deployment/monitoring.md) ·
+- [Guía de lanzamiento de la v1](deployment/launch-guide.md) ·
+  [Preparación del VPS](deployment/vps-preparation.md) · [Monitoreo](deployment/monitoring.md) ·
   [Copias de seguridad](deployment/backups.md) ·
   [Revisión de seguridad](deployment/security-review.md)

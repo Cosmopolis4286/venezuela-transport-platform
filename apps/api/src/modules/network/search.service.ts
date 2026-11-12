@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { serviceOpen, type Departure, type Service, type TransportMode } from '@vtp/shared-types';
+import type { Departure } from '@vtp/shared-types';
 import { and, eq, gt, inArray } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { ApiException } from '../../common/errors/api.exception.js';
@@ -7,9 +7,15 @@ import { DatabaseService } from '../../database/database.service.js';
 import { trips } from '../bookings/bookings.schema.js';
 import { takenSeatCounts } from '../bookings/occupancy.js';
 import { organizations } from '../organizations/organizations.schema.js';
-import { addDays, isCalendarDate, occurrencesOn, todayInVenezuela } from './departures.js';
+import {
+  addDays,
+  isCalendarDate,
+  occurrencesOn,
+  scheduleCapacity,
+  todayInVenezuela,
+} from './departures.js';
+import { commissionFor } from '../settlements/ledger.js';
 import { routeFares, routes, routeSchedules, routeStops } from './network.schema.js';
-import { ServicesService } from './services.service.js';
 import { StopsService } from './stops.service.js';
 
 /** How far ahead passengers can search. */
@@ -20,20 +26,13 @@ export class SearchService {
   constructor(
     private readonly database: DatabaseService,
     private readonly stops: StopsService,
-    private readonly services: ServicesService,
   ) {}
 
   /**
    * Departures from `from` to `to` on `date` (local), computed from the published schedules of
    * active routes of active organizations. Nothing is stored per trip yet.
    */
-  async departures(
-    from: string,
-    to: string,
-    date: string,
-    mode?: TransportMode,
-    service?: Service,
-  ): Promise<Departure[]> {
+  async departures(from: string, to: string, date: string): Promise<Departure[]> {
     if (from === to) throw invalid('Choose different stops for origin and destination');
     if (!isCalendarDate(date)) throw invalid('date is not a valid date');
     const today = todayInVenezuela();
@@ -41,15 +40,15 @@ export class SearchService {
       throw invalid(`Search between today and ${SEARCH_HORIZON_DAYS} days ahead`);
     }
 
+    // Zones that are coming soon or paused sell nothing (ADR-028).
+    if (!(await this.stops.areServed([from, to]))) return [];
+
     const boarding = alias(routeStops, 'boarding');
     const alighting = alias(routeStops, 'alighting');
     const rows = await this.database.db
       .select({
         schedule: routeSchedules,
         route: { id: routes.id, name: routes.name },
-        mode: routes.mode,
-        service: routes.service,
-        serviceAreaId: routes.serviceAreaId,
         operator: {
           id: organizations.id,
           type: organizations.type,
@@ -65,15 +64,7 @@ export class SearchService {
         alighting,
         and(eq(alighting.routeId, boarding.routeId), gt(alighting.sequence, boarding.sequence)),
       )
-      .innerJoin(
-        routes,
-        and(
-          eq(routes.id, boarding.routeId),
-          eq(routes.status, 'active'),
-          mode ? eq(routes.mode, mode) : undefined,
-          service ? eq(routes.service, service) : undefined,
-        ),
-      )
+      .innerJoin(routes, and(eq(routes.id, boarding.routeId), eq(routes.status, 'active')))
       .innerJoin(
         organizations,
         and(eq(organizations.id, routes.organizationId), eq(organizations.status, 'active')),
@@ -94,20 +85,9 @@ export class SearchService {
     if (!rows.length) return [];
 
     const stops = await this.stops.summaries([from, to]);
-    // Services switched off are not on sale (ADR-029).
-    const status = await this.services.status();
-    const open = rows.filter((row) =>
-      serviceOpen(status, {
-        service: row.service,
-        serviceAreaId: row.serviceAreaId,
-        from: stops.get(from)!,
-        to: stops.get(to)!,
-      }),
-    );
-    if (!open.length) return [];
     const taken = await takenSeatCounts(
       this.database.db,
-      open.map((row) => row.schedule.id),
+      rows.map((row) => row.schedule.id),
     );
     // Departures the operator cancelled are not offered.
     const cancelled = new Set(
@@ -119,24 +99,23 @@ export class SearchService {
             and(
               inArray(
                 trips.scheduleId,
-                open.map((row) => row.schedule.id),
+                rows.map((row) => row.schedule.id),
               ),
               eq(trips.status, 'cancelled'),
             ),
           )
       ).map((t) => `${t.scheduleId}:${t.serviceDate}`),
     );
-    const now = Date.now();
-    const departures: Departure[] = open.flatMap((row) =>
+    // The service fee each operator's passengers pay on top of the fare here (ADR-029).
+    const feeRates = new Map<string, string>();
+    for (const operatorId of new Set(rows.map((row) => row.operator.id))) {
+      feeRates.set(operatorId, await commissionFor(this.database.db, operatorId, from));
+    }
+    const departures: Departure[] = rows.flatMap((row) =>
       occurrencesOn(date, row.schedule, row.fromOffset, row.toOffset)
-        // Departures that already left the boarding stop cannot be booked: not listed.
-        .filter((trip) => Date.parse(trip.departsAt) > now)
         .filter((trip) => !cancelled.has(`${row.schedule.id}:${trip.serviceDate}`))
         .map((trip) => ({
           scheduleId: row.schedule.id,
-          mode: row.mode,
-          service: row.service,
-          serviceAreaId: row.serviceAreaId,
           serviceDate: trip.serviceDate,
           operator: row.operator,
           route: row.route,
@@ -146,12 +125,16 @@ export class SearchService {
           arrivesAt: trip.arrivesAt,
           durationMinutes: trip.durationMinutes,
           serviceClass: row.schedule.serviceClass,
-          seats: row.schedule.seats,
+          seats: scheduleCapacity(row.schedule),
           seatsAvailable: Math.max(
             0,
-            row.schedule.seats - (taken.get(`${row.schedule.id}:${trip.serviceDate}`) ?? 0),
+            scheduleCapacity(row.schedule) -
+              (taken.get(`${row.schedule.id}:${trip.serviceDate}`) ?? 0),
           ),
           fare: row.fare?.amount && row.fare.currency ? (row.fare as Departure['fare']) : null,
+          serviceFeeRate: feeRates.get(row.operator.id)!,
+          headwayMinutes: row.schedule.headwayMinutes,
+          lastDepartsAt: trip.lastDepartsAt,
         })),
     );
     // Same offset everywhere, so the ISO strings sort chronologically.

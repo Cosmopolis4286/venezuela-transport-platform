@@ -6,7 +6,6 @@ import {
   geometry,
   index,
   integer,
-  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -19,21 +18,57 @@ import {
 } from 'drizzle-orm/pg-core';
 import {
   CURRENCIES,
+  PAYEES,
+  ROUTE_SCOPES,
   ROUTE_STATUSES,
   SERVICE_CLASSES,
-  SERVICES,
   STOP_KINDS,
-  type CityRef,
+  ZONE_STATUSES,
 } from '@vtp/shared-types';
 import { timestamps, users } from '../identity/identity.schema.js';
-import { seatLayouts, transportMode } from '../fleet/fleet.schema.js';
+import { seatLayouts } from '../fleet/fleet.schema.js';
 import { organizations } from '../organizations/organizations.schema.js';
 
 export const stopKind = pgEnum('stop_kind', STOP_KINDS);
 export const routeStatus = pgEnum('route_status', ROUTE_STATUSES);
 export const currency = pgEnum('currency', CURRENCIES);
 export const serviceClass = pgEnum('service_class', SERVICE_CLASSES);
-export const routeService = pgEnum('route_service', SERVICES);
+export const zoneStatus = pgEnum('zone_status', ZONE_STATUSES);
+export const routeScope = pgEnum('route_scope', ROUTE_SCOPES);
+export const payee = pgEnum('payee', PAYEES);
+
+/**
+ * Cities or regions the platform operates in (ADR-028). Everything stays in one database; a zone
+ * only decides whether its stops sell, their default currency and an optional commission.
+ */
+export const operatingZones = pgTable(
+  'operating_zones',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    name: text().notNull(),
+    slug: text().notNull(),
+    status: zoneStatus().notNull().default('coming_soon'),
+    defaultCurrency: currency().notNull().default('USD'),
+    /** Percentage, e.g. 15.00; null uses the platform rate. */
+    commissionRate: numeric({ precision: 5, scale: 2 }),
+    /** Centre of the area (WGS 84) and its radius: new stops inside are assigned to the zone. */
+    center: geometry({ type: 'point', mode: 'xy', srid: 4326 }),
+    radiusKm: integer(),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex('operating_zones_name_key').on(sql`lower(${t.name})`),
+    uniqueIndex('operating_zones_slug_key').on(t.slug),
+    check(
+      'operating_zones_commission_range',
+      sql`${t.commissionRate} is null or (${t.commissionRate} >= 0 and ${t.commissionRate} <= 100)`,
+    ),
+    check(
+      'operating_zones_area',
+      sql`(${t.center} is null) = (${t.radiusKm} is null) and (${t.radiusKm} is null or ${t.radiusKm} between 1 and 500)`,
+    ),
+  ],
+);
 
 /** Terminals and roadside stops. Shared reference data curated by platform staff. */
 export const stops = pgTable(
@@ -49,51 +84,15 @@ export const stops = pgTable(
     location: geometry({ type: 'point', mode: 'xy', srid: 4326 }),
     operatorOrganizationId: uuid().references(() => organizations.id, { onDelete: 'set null' }),
     active: boolean().notNull().default(true),
+    /** Null = not assigned to a zone yet (sells as if its zone were active). */
+    zoneId: uuid().references(() => operatingZones.id, { onDelete: 'set null' }),
     ...timestamps,
   },
   (t) => [
+    index('stops_zone_idx').on(t.zoneId),
     uniqueIndex('stops_name_city_key').on(sql`lower(${t.name})`, sql`lower(${t.city})`),
     index('stops_location_idx').using('gist', t.location),
   ],
-);
-
-/** A suburban corridor (ADR-029): a named group of stops whose sales open and close together. */
-export const serviceAreas = pgTable(
-  'service_areas',
-  {
-    id: uuid().primaryKey().defaultRandom(),
-    name: text().notNull(),
-    /** New corridors start switched off; only platform admins switch them. */
-    active: boolean().notNull().default(false),
-    ...timestamps,
-  },
-  (t) => [uniqueIndex('service_areas_name_key').on(sql`lower(${t.name})`)],
-);
-
-export const serviceAreaStops = pgTable(
-  'service_area_stops',
-  {
-    serviceAreaId: uuid()
-      .notNull()
-      .references(() => serviceAreas.id, { onDelete: 'cascade' }),
-    stopId: uuid()
-      .notNull()
-      .references(() => stops.id, { onDelete: 'restrict' }),
-  },
-  (t) => [primaryKey({ columns: [t.serviceAreaId, t.stopId] })],
-);
-
-/** Intercity on/off switches (ADR-029). A single row (`id = 1`), created on first write. */
-export const networkSettings = pgTable(
-  'network_settings',
-  {
-    id: integer().primaryKey().default(1),
-    intercityEnabled: boolean().notNull().default(true),
-    intercityClosedCities: jsonb().$type<CityRef[]>().notNull().default([]),
-    updatedByUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
-    ...timestamps,
-  },
-  (t) => [check('network_settings_single_row', sql`${t.id} = 1`)],
 );
 
 /** A line run by a bus company or taxi line: an ordered list of stops. */
@@ -105,23 +104,14 @@ export const routes = pgTable(
       .notNull()
       .references(() => organizations.id, { onDelete: 'cascade' }),
     name: text().notNull(),
-    /** Bus, car or motorcycle (ADR-028); fixed when the route is created. */
-    mode: transportMode().notNull(),
-    /** Intercity or suburban (ADR-029); fixed when the route is created. */
-    service: routeService().notNull().default('intercity'),
-    /** Corridor of a suburban route; null for intercity ones. */
-    serviceAreaId: uuid().references(() => serviceAreas.id, { onDelete: 'restrict' }),
     status: routeStatus().notNull().default('draft'),
+    /** Interurban routes pay the line, suburban ones the driver, unless `payee_override` (ADR-030). */
+    scope: routeScope().notNull().default('interurban'),
+    payeeOverride: payee(),
     createdBy: uuid().references(() => users.id, { onDelete: 'set null' }),
     ...timestamps,
   },
-  (t) => [
-    index('routes_organization_idx').on(t.organizationId, t.status),
-    check(
-      'routes_service_area_check',
-      sql`(${t.service} = 'suburban') = (${t.serviceAreaId} is not null)`,
-    ),
-  ],
+  (t) => [index('routes_organization_idx').on(t.organizationId, t.status)],
 );
 
 export const routeStops = pgTable(
@@ -184,25 +174,29 @@ export const routeSchedules = pgTable(
     seats: integer().notNull(),
     /** When set, `seats` mirrors the layout's capacity. */
     seatLayoutId: uuid().references(() => seatLayouts.id, { onDelete: 'restrict' }),
+    /** Frequency service: a unit every N minutes until `lastDepartureTime` (open tickets). */
+    headwayMinutes: smallint(),
+    lastDepartureTime: time(),
     active: boolean().notNull().default(true),
-    /** Groups the departures of a frequency series (`ScheduleSeriesInput`). */
-    seriesId: uuid(),
     ...timestamps,
   },
   (t) => [
     index('route_schedules_route_idx').on(t.routeId),
-    index('route_schedules_series_idx').on(t.seriesId),
     check('route_schedules_seats_check', sql`${t.seats} between 1 and 100`),
     check(
       'route_schedules_validity_check',
       sql`${t.validUntil} is null or ${t.validUntil} >= ${t.validFrom}`,
     ),
+    check(
+      'route_schedules_frequency_check',
+      sql`(${t.headwayMinutes} is null and ${t.lastDepartureTime} is null) or (${t.headwayMinutes} between 3 and 180 and ${t.lastDepartureTime} >= ${t.departureTime} and ${t.seatLayoutId} is null)`,
+    ),
   ],
 );
 
 export type StopRow = typeof stops.$inferSelect;
+export type OperatingZoneRow = typeof operatingZones.$inferSelect;
 export type RouteRow = typeof routes.$inferSelect;
 export type RouteStopRow = typeof routeStops.$inferSelect;
 export type RouteFareRow = typeof routeFares.$inferSelect;
 export type RouteScheduleRow = typeof routeSchedules.$inferSelect;
-export type ServiceAreaRow = typeof serviceAreas.$inferSelect;

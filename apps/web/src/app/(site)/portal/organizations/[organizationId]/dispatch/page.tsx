@@ -117,10 +117,9 @@ async function Dispatch({
             {board.departures.map((departure) => {
               const fitting = board.vehicles.filter(
                 (v) =>
-                  v.mode === departure.mode &&
-                  (!v.seatLayoutId ||
-                    !departure.seatLayoutId ||
-                    v.seatLayoutId === departure.seatLayoutId),
+                  !v.seatLayoutId ||
+                  !departure.seatLayoutId ||
+                  v.seatLayoutId === departure.seatLayoutId,
               );
               // Keep the current vehicle selectable even if it no longer fits or is inactive.
               const vehicles =
@@ -239,8 +238,9 @@ async function Dispatch({
                             >
                               <p className="text-sm text-muted-foreground">
                                 Se cancelan las {departure.soldSeats + departure.heldSeats} plazas
-                                vendidas o apartadas; las pagadas se reembolsan completas y la
-                                empresa asume la comisión. Avisamos a cada pasajero con el motivo.
+                                vendidas o apartadas; las pagadas se reembolsan completas (tarifa y
+                                cargo por servicio) y la empresa asume el cargo. Avisamos a cada
+                                pasajero con el motivo.
                               </p>
                               <div className="flex flex-wrap items-end gap-2">
                                 <Input

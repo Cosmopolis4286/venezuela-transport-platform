@@ -31,6 +31,11 @@ export interface UserProfile {
   platformRole: 'admin' | 'reviewer' | null;
   /** Version of the Terms and Privacy Policy the user accepted (`LEGAL_VERSION`), or null. */
   termsVersion: string | null;
+  /**
+   * A guest (ADR-034): created by the passenger app to buy without registering. Its trips stay on
+   * the phone and move to the person's account when they register or sign in there.
+   */
+  guest: boolean;
   createdAt: string;
 }
 
@@ -57,6 +62,29 @@ export interface RegisterRequest {
   client: AuthClient;
   /** Must be true: the person accepts the current Terms and Privacy Policy. */
   acceptTerms: true;
+}
+
+/** `POST /api/v1/auth/guest`: buy without registering (passenger app). */
+export interface GuestRequest {
+  client: AuthClient;
+  /** Must be true: the person accepts the current Terms and Privacy Policy. */
+  acceptTerms: true;
+}
+
+/** `POST /api/v1/me/account`: a guest becomes a normal account, keeping its trips. */
+export interface UpgradeGuestRequest {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+}
+
+/**
+ * `POST /api/v1/me/claim-guest`: after signing in to an existing account on a phone that bought as
+ * a guest, its trips move to that account. The guest's access token proves the phone holds it.
+ */
+export interface ClaimGuestRequest {
+  guestAccessToken: string;
 }
 
 /** `POST /api/v1/auth/login` */

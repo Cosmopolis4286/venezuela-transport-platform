@@ -11,21 +11,12 @@ import {
   useAuth,
   userMessage,
 } from '@vtp/mobile-core';
-import {
-  formatMoney,
-  longDate,
-  networkClock,
-  taxiRideHint,
-  toNetworkIso,
-  vehicleName,
-  type TaxiRide,
-} from '@vtp/shared-types';
+import { formatMoney, taxiRideHint, vehicleName, type TaxiRide } from '@vtp/shared-types';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { RefreshControl } from 'react-native';
-import { useFeeTotal } from '@/components/pending-fees';
 import { useT } from '@/i18n/use-t';
-import { driverLine, isOpenRide, ridePlace } from '@/lib/taxi';
+import { driverLine, isOpenRide } from '@/lib/taxi';
 import { formatClock, useSecondsLeft } from '@/lib/use-countdown';
 
 /** While the ride is open, it is reloaded this often to show the taxi as soon as one takes it. */
@@ -51,17 +42,6 @@ export default function TaxiRideScreen() {
   const data = ride.data;
   const open = data ? isOpenRide(data) : false;
   const secondsLeft = useSecondsLeft(data?.status === 'requested' ? data.expiresAt : null);
-  // Cancelling a ride a line took is free until then; afterwards it costs a fee (next ride).
-  const freeSecondsLeft = useSecondsLeft(
-    data?.status === 'accepted' ? data.freeCancellationUntil : null,
-  );
-  const lateSecondsLeft = useSecondsLeft(
-    data?.status === 'accepted' ? data.lateCancellationEndsAt : null,
-  );
-  const feesDue = useFeeTotal(data?.feesDue ?? []);
-  const lateFee = data?.lateCancellationFee
-    ? formatMoney(data.lateCancellationFee.amount, data.lateCancellationFee.currency, locale)
-    : null;
 
   useEffect(() => {
     if (!open) return;
@@ -88,36 +68,16 @@ export default function TaxiRideScreen() {
       {ride.error ? <Banner tone="error">{ride.error.userMessage}</Banner> : null}
       {data ? (
         <>
-          <Heading>{ridePlace(data, t, shared)}</Heading>
-          {data.scheduledFor ? (
-            <Body>
-              {t.ride.scheduled(
-                `${longDate(toNetworkIso(data.scheduledFor), locale)}, ${networkClock(data.scheduledFor)}`,
-              )}
-            </Body>
-          ) : null}
+          <Heading>{shared.taxiDirection[data.direction]}</Heading>
           <Badge label={shared.taxiRideStatus[data.status]} tone={TONES[data.status]} />
           <Body>{taxiRideHint(data, locale)}</Body>
-          {data.tripPack ? (
-            <Banner tone="success">{t.ride.paidWithPack(data.tripPack.code)}</Banner>
-          ) : null}
-          {data.pickupCode && data.status === 'accepted' ? (
-            <Card>
-              <Subheading>{t.ride.pickupCode}</Subheading>
-              <Heading>{data.pickupCode.split('').join(' ')}</Heading>
-              <Body muted>{t.ride.pickupCodeHint}</Body>
-            </Card>
-          ) : null}
-          {/* A ride booked for later has no countdown worth showing. */}
-          {data.status === 'requested' && !data.scheduledFor ? (
+          {data.status === 'requested' ? (
             <Body muted>{t.taxi.waitsFor(formatClock(secondsLeft))}</Body>
           ) : null}
 
           {data.vehicle ? (
             <Card>
-              <Subheading>
-                {data.mode === 'motorcycle' ? t.taxi.yourMoto : t.taxi.yourTaxi}
-              </Subheading>
+              <Subheading>{t.taxi.yourTaxi}</Subheading>
               <Body>{t.taxi.plate(vehicleName(data.vehicle))}</Body>
               <Body>{driverLine(data.driver, t.taxi.driver)}</Body>
               {data.organization ? (
@@ -132,46 +92,23 @@ export default function TaxiRideScreen() {
           ) : null}
 
           <Card>
-            {data.terminal ? (
-              <>
-                <Body>
-                  {(data.direction === 'from_terminal' ? t.taxi.from : t.taxi.to)(
-                    data.terminal.name,
-                    data.terminal.city,
-                  )}
-                </Body>
-                <Body muted>
-                  {(data.direction === 'from_terminal' ? t.taxi.destination : t.taxi.pickup)(
-                    data.address,
-                  )}
-                </Body>
-              </>
-            ) : (
-              <>
-                <Body>
-                  {data.from?.name} → {data.to?.name}
-                </Body>
-                <Body muted>{t.taxi.pickup(data.address)}</Body>
-              </>
-            )}
+            <Body>
+              {(data.direction === 'from_terminal' ? t.taxi.from : t.taxi.to)(
+                data.terminal.name,
+                data.terminal.city,
+              )}
+            </Body>
+            <Body muted>
+              {(data.direction === 'from_terminal' ? t.taxi.destination : t.taxi.pickup)(
+                data.address,
+              )}
+            </Body>
             <Body muted>
               {t.taxi.people(data.passengers)}
               {data.notes ? ` · ${data.notes}` : ''}
             </Body>
           </Card>
 
-          {feesDue ? <Banner tone="warning">{t.ride.feesDue(feesDue)}</Banner> : null}
-          {data.status === 'accepted' && lateFee && data.freeCancellationUntil ? (
-            freeSecondsLeft > 0 ? (
-              <Body muted>
-                {t.ride.freeCancelUntil(networkClock(data.freeCancellationUntil), lateFee)}
-              </Body>
-            ) : lateSecondsLeft > 0 ? (
-              <Banner tone="warning">{t.ride.lateCancel(lateFee)}</Banner>
-            ) : (
-              <Body muted>{t.ride.driverLate}</Body>
-            )
-          ) : null}
           {error ? <Banner tone="error">{error}</Banner> : null}
           {data.status === 'requested' || data.status === 'accepted' ? (
             <Button

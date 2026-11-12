@@ -1,40 +1,20 @@
-import {
-  Badge,
-  Banner,
-  Body,
-  Button,
-  Card,
-  Row,
-  Screen,
-  useApi,
-  useColors,
-} from '@vtp/mobile-core';
+import { Badge, Banner, Body, Card, Row, Screen, useApi, useColors } from '@vtp/mobile-core';
 import { localTime, longDate, type Booking } from '@vtp/shared-types';
 import { router } from 'expo-router';
 import { ActivityIndicator, Pressable, RefreshControl, Text } from 'react-native';
 import { useT } from '@/i18n/use-t';
 import { BOOKING_TONE } from '@/lib/booking-labels';
-import { useSearch } from '@/lib/search-context';
 
 export default function MyBookings() {
   const colors = useColors();
   const { t, shared, locale } = useT();
   const bookings = useApi<Booking[]>('/me/bookings');
-  // Trip packs live next to the trips, not in a tab of their own (ADR-029).
-  const { openServices } = useSearch();
   return (
     <Screen
       refreshControl={
         <RefreshControl refreshing={bookings.loading} onRefresh={() => void bookings.reload()} />
       }
     >
-      {openServices.includes('suburban') ? (
-        <Button
-          variant="secondary"
-          title={t.packs.mine}
-          onPress={() => router.push('/trip-packs')}
-        />
-      ) : null}
       {bookings.error ? <Banner tone="error">{bookings.error.userMessage}</Banner> : null}
       {bookings.loading && !bookings.data ? <ActivityIndicator color={colors.text} /> : null}
       {bookings.data?.length === 0 ? <Body muted>{t.bookings.none}</Body> : null}

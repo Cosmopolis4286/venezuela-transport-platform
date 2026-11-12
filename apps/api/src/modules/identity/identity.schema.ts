@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  boolean,
   check,
   index,
   integer,
@@ -50,15 +51,20 @@ export const users = pgTable(
     termsAcceptedAt: timestamp({ withTimezone: true }),
     /** Set when the person deleted the account (`status = deleted`, personal data erased). */
     deletedAt: timestamp({ withTimezone: true }),
+    /**
+     * A guest of the passenger app (ADR-034): no e-mail, phone or password; its session lives on
+     * one phone. Becomes a normal account (keeping its trips) when the person registers.
+     */
+    guest: boolean().notNull().default(false),
     ...timestamps,
   },
   (t) => [
     uniqueIndex('users_email_key').on(t.email),
     uniqueIndex('users_phone_key').on(t.phone),
-    // A deleted account keeps no contact (its personal data was erased).
+    // A deleted account keeps no contact (its personal data was erased); a guest never had one.
     check(
       'users_contact_present',
-      sql`${t.email} is not null or ${t.phone} is not null or ${t.deletedAt} is not null`,
+      sql`${t.email} is not null or ${t.phone} is not null or ${t.deletedAt} is not null or ${t.guest}`,
     ),
   ],
 );

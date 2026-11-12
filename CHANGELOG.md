@@ -11,82 +11,60 @@ pull request.
 
 ## Sin publicar
 
-### Agregado
-
-- **Código de recogida** en los viajes de taxi o moto pagados con paquete: el pasajero lo ve en
-  su app y el conductor lo escribe para iniciar el viaje (5 intentos), para que no se cobren a la
-  plataforma viajes que no ocurrieron.
-- **Tope por viaje en los paquetes** (opcional, en el catálogo del admin): lo máximo que la
-  plataforma le paga a una empresa por cada viaje usado, para no perder dinero si sube su tarifa.
-- **Aviso de paquete por vencer**: 3 días antes, si le quedan viajes (push y correo).
-- **«Terminar sin cobrar la tasa»** en la app de conductores: si el pasajero no paga una tasa de
-  cancelación pendiente, sigue debiéndola y a la línea no se le descuenta.
-- Máximo **2 paquetes esperando pago** por usuario.
-- **Blindaje del suburbano para la primera versión**: sin tasa de cancelación si el conductor no
-  recoge al pasajero en 20 minutos; los viajes de taxi o moto abandonados se cierran solos (no
-  bloquean al pasajero y devuelven los viajes del paquete); los paquetes no se cobran en
-  bolívares con una tasa de la plataforma de más de 24 horas.
-- **Textos legales del suburbano** (versión 2026-11-12, se pide aceptarlos de nuevo): servicios
-  interurbano y suburbano, paquetes de viajes (vigencia, uso, sin reembolso), escala de reembolso
-  suburbana, taxis y mototaxis por tramo con su tasa de cancelación, y en las condiciones para
-  empresas, paquetes aceptados, tarifas por tramo y compensación de las tasas. Siguen siendo
-  borradores para revisión de un abogado.
-- **Tasa por cancelar tarde un taxi o una moto por tramo** (ADR-030): gratis 3 minutos después de
-  que una línea toma el viaje (y hasta 30 minutos antes de uno programado); después, el 50 % de la
-  tarifa, que el pasajero paga en efectivo en su próximo viaje para la línea que salió (las
-  liquidaciones lo compensan si la cobra otra línea). Minutos y porcentaje configurables en
-  Liquidaciones → Política general. Los viajes pagados con paquete vuelven siempre al paquete.
-- **Pagar el taxi o la moto por tramo con un paquete de viajes**: un viaje por pasajero, gastado al
-  pedir y devuelto si nadie lo toma o se cancela a tiempo. Solo lo ven y toman las líneas que
-  aceptan paquetes; al terminar, la línea gana su tarifa del tramo (el libro de liquidaciones
-  admite viajes de taxi).
-- **Taxi o moto por tramo, bajo demanda**: en el suburbano, el pasajero pide un taxi o una moto
-  entre dos paradas de su corredor, ahora o para una hora, y ve el precio antes de pedir. Las
-  líneas de taxis y de mototaxis publican tarifas fijas por tramo (portal → Taxis/Mototaxis) y
-  ven solo las solicitudes de sus tramos; al tomarlas se cobra su tarifa. Un viaje programado
-  aceptado no ocupa al conductor hasta la hora de recoger.
-- **Reportes de paquetes de viajes**: en Métricas, paquetes vendidos, viajes usados (con las
-  tarifas que se les deben a las empresas), viajes por usar y viajes vencidos; en los reportes de
-  cada empresa, cuántos puestos se pagaron con paquetes (también en el CSV).
-- **Reservar con un paquete de viajes**: en la app, "¿Cómo pagas?" ofrece los paquetes que sirven
-  para la salida; la reserva queda pagada al instante (un viaje por puesto). Hasta 4 reservas
-  futuras por paquete y una por salida. Cancelar hasta 30 minutos antes devuelve el viaje al
-  paquete. La empresa gana su tarifa normal del tramo; un administrador activa qué empresas
-  aceptan paquetes (Liquidaciones → empresa).
-
 ### Cambiado
 
-- La búsqueda de salidas ya no muestra las que partieron (importa con salidas frecuentes).
-- **Paquetes de viajes (pantallas)**: en la app de pasajeros, **Paquetes de viajes** (desde el
-  inicio suburbano y desde Mis viajes) para comprar, pagar y ver los paquetes; en el panel,
-  **Paquetes** con el catálogo y las tasas de cambio de la plataforma. El panel de pago de la app
-  sirve ahora para reservas y paquetes. Con más de dos corredores, el inicio suburbano no los
-  enumera.
-- **Paquetes de viajes (API)**: catálogo de la plataforma por corredor y tramo
-  (`/admin/trip-pack-products`), productos en venta (`GET /trip-pack-products`), compra
-  (`POST /me/trip-packs`) y pago con las tasas de la plataforma (`/admin/exchange-rates`). Un pago
-  es ahora de una reserva o de un paquete; al pagarse, el paquete se activa por su vigencia (60
-  días por defecto) y el pasajero recibe un aviso. Los paquetes sin pagar se anulan a las 24 horas.
-- **Reembolsos suburbanos**: las rutas suburbanas usan su propia política (100 % con 24 h, 75 %
-  con 2 h, 50 % con 30 min, nada en los últimos 30 minutos), editable en Administración →
-  Liquidaciones. Los tramos admiten cuartos de hora y se muestran como "30 min".
-- **Salidas frecuentes**: "de 05:00 a 20:00 cada 15 minutos" crea un horario por salida agrupados
-  en una serie (`POST …/schedule-series`), que el portal muestra en una línea y se pausa o elimina
-  entera. Hasta 300 horarios por ruta.
-- **Líneas de mototaxis** (`moto_line`, ADR-028): un tipo de organización nuevo con los roles de
-  una línea de taxis. Publican solo rutas suburbanas de moto; cada salida lleva un pasajero y no
-  usa mapa de puestos (`MOTORCYCLE_ONE_PASSENGER`). El portal les oculta los mapas de puestos, y
-  los reportes y las liquidaciones incluyen a todas las empresas que publican rutas.
-- **Servicios entre ciudades y suburbano** (ADR-029): cada ruta es de uno u otro (lo elige la
-  empresa); las suburbanas pertenecen a un **corredor**. En **Administración → Servicios** se
-  crean los corredores y se encienden o apagan por separado, y el servicio entre ciudades en
-  general o por ciudad; apagar solo detiene la venta (`SERVICE_DISABLED`). La web y la app de
-  pasajeros muestran el selector **Entre ciudades · Suburbano** solo con los dos encendidos; el
-  buscador suburbano ofrece solo las paradas del corredor. `GET /platform/services` es público.
-- **Tipo de vehículo** (bus, taxi o moto) en cada ruta y cada vehículo (ADR-028): cada tipo
-  tiene sus propias tarifas; la búsqueda se filtra por tipo (`mode`) en la web y la app de
-  pasajeros; el despacho solo asigna vehículos del tipo de la ruta (`VEHICLE_MODE_MISMATCH`).
-  Primer paso del [transporte suburbano](docs/architecture/suburban.md).
+- **Pago a la línea o al conductor** (ADR-030): cada ruta es interurbana o urbana/suburbana y
+  elige quién cobra (por defecto, la línea en las interurbanas y el conductor en las urbanas y
+  suburbanas). Los conductores ven su saldo y registran dónde cobrar en **Mis cobros** (app de
+  transportistas); la plataforma les paga desde la liquidación de la empresa.
+- **El cargo de la plataforma ahora lo paga el pasajero encima de la tarifa** (ADR-029, 15 %
+  por defecto): la empresa recibe su tarifa completa. Se muestra en la búsqueda (web y app) y
+  desglosado al elegir puestos, al apartar y en la reserva. Si cancela el pasajero, se reembolsa
+  según los tramos sobre la tarifa y el cargo no se devuelve; si cancela la empresa, se devuelve
+  todo y la empresa asume el cargo. Términos, política de reembolsos y condiciones para empresas
+  actualizados (versión 2026-11-08: los usuarios aceptan de nuevo).
+
+### Agregado
+
+- **Comprar sin registrarse** (ADR-034): en la app de pasajeros, "Continuar sin crear cuenta"
+  guarda una cuenta de invitado en el teléfono con sus viajes y boletos. "Crear mi cuenta" la
+  convierte en cuenta normal sin perder nada, e iniciar sesión en una cuenta existente le pasa los
+  viajes. Teléfono o WhatsApp de contacto opcional al reservar (lo ve el soporte). Términos y
+  Privacidad actualizados (versión 2026-11-12: los usuarios aceptan de nuevo).
+- **Atención por WhatsApp**: búsqueda de reservas por código para el personal
+  (`/admin/bookings`, auditada, con el contacto del cliente y enlace para escribirle), página
+  `/es/app` con un enlace fijo de descarga de la app (`ANDROID_APP_URL`) y la
+  [guía de atención](docs/guides/whatsapp-soporte.md) con mensaje de bienvenida, ausencia y
+  respuestas rápidas listas para copiar.
+- **Botón "Escríbenos por WhatsApp"** en la web (pie de página), la app de pasajeros (Mi cuenta y
+  cada reserva, con el código ya escrito) y la app de transportistas. El número sale de
+  `SUPPORT_WHATSAPP` en la API (`GET /api/v1/support`): se cambia sin publicar las apps y, vacío,
+  oculta el botón. Solo abre un chat; no automatiza nada.
+- **Ventas en efectivo** (ADR-033): el conductor anota en la app de transportistas cuántos
+  pasajeros le pagaron en efectivo por ruta y tramo; el monto sale de la tarifa publicada. Puede
+  anular un registro equivocado el mismo día. El reporte de ventas del portal (y su CSV) lo muestra
+  aparte: no lleva comisión ni se liquida.
+- **Servicio urbano y suburbano por frecuencia** (ADR-032): un horario puede salir cada N
+  minutos hasta una última salida. Se vende un **boleto abierto** para el día, sin elegir puesto,
+  válido en cualquier unidad de la ruta. Los conductores ahora pueden validar boletos y, si la ruta
+  les paga, cobra quien valida. Portal (campos de frecuencia), búsqueda web y app de pasajeros en
+  tres idiomas.
+- **Factura a otro nombre y número de factura en la app de pasajeros**: en la reserva el pasajero
+  puede pedir la factura del cargo por servicio a otro nombre o RIF hasta que se emita, y ve su
+  número, número de control y fecha una vez emitida.
+- **Facturación de la tarifa por servicio** (ADR-031): cada pago crea un borrador de factura
+  (IVA incluido) que el personal emite en el portal del SENIAT y anota en `/admin/fiscal`; montos
+  en bolívares con la tasa BCV del día. Notas de crédito y factura a la empresa cuando cancela una
+  salida. Libros de ventas y compras por mes con descarga CSV. Tipo de contribuyente (ordinario o
+  formal) configurable y `INVOICE_ISSUER` preparado para una imprenta digital autorizada.
+- **Despliegue listo para usar** (rescatado del borrador #54): imágenes publicadas en GHCR tras
+  cada CI verde en `main` (se activa con la variable `VTP_API_DOMAIN`), `deploy.sh`, y la API con
+  un rol de base de datos de mínimos privilegios (`vtp_app`) separado del dueño que migra. Prueba
+  de dos confirmaciones simultáneas del mismo pago.
+- **Varias ciudades: zonas operativas** (ADR-028). Cada ciudad o región se crea en
+  `/admin/zones` y se activa, se marca como próxima o se pausa con un clic; solo las zonas activas
+  venden pasajes y taxis. Cada zona puede tener su comisión y su moneda, y las paradas nuevas
+  entran solas en su zona por la ubicación. Nuevo `GET /stops/nearby` para «paradas cerca de mí».
 - **Copias de seguridad cifradas** con `infrastructure/backup/backup.sh` (base de datos y
   documentos KYC, 7 diarias, 4 semanales, 6 mensuales, copia opcional a otro proveedor) y
   `restore-check.sh` para probar la restauración ([guía](docs/deployment/backups.md)).
@@ -97,11 +75,6 @@ pull request.
 
 ### Corregido
 
-- Los reportes contaban como venta la tasa de cancelación que una línea cobraba para otra, y la
-  sumaban a las tarifas de los viajes usados con paquete.
-- **Los mototaxistas no tenían acceso al tablero de solicitudes** en la app de conductores (solo
-  llegaban desde una notificación); y los viajes en moto ya no dicen «Tu taxi» ni «Cancelar el
-  taxi».
 - Los formularios de inicio de sesión y de registro conservan lo escrito tras un error.
 - Caddy permitía solo 1 MB por petición a la API: los documentos KYC no se podrían subir.
 - `nodemailer` actualizado a 10.3.1 (avisos de seguridad).

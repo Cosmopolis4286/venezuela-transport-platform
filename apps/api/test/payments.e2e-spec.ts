@@ -214,8 +214,14 @@ describe.runIf(expectDatabase)('Payments and tickets (e2e)', () => {
       const held = await book(ana.auth, ['1', '2']);
       expect(held.payment).toBeNull();
       expect(held.passengers.every((p) => p.ticket === null)).toBe(true);
+      // 2 × 20.00 fares + the platform's 15 % service fee on top (ADR-029) = 46.00 to pay.
+      expect(held).toMatchObject({
+        fares: '40.00',
+        serviceFee: { amount: '6.00', rate: '15.00' },
+        total: { amount: '46.00' },
+      });
       expect((await options(ana.auth, held.id).expect(200)).body).toEqual([
-        { method: 'usdt', amount: '40.00', currency: 'USDT', rate: null },
+        { method: 'usdt', amount: '46.00', currency: 'USDT', rate: null },
       ]);
 
       // --- The operator sets its rates.
@@ -253,10 +259,10 @@ describe.runIf(expectDatabase)('Payments and tickets (e2e)', () => {
         ['BRL', '5.4321'],
       ]);
       expect((await options(ana.auth, held.id).expect(200)).body as PaymentOption[]).toEqual([
-        { method: 'pago_movil', amount: '1460.00', currency: 'VES', rate: '36.500000' },
-        { method: 'bank_transfer', amount: '1460.00', currency: 'VES', rate: '36.500000' },
-        { method: 'pix', amount: '217.28', currency: 'BRL', rate: '5.432100' },
-        { method: 'usdt', amount: '40.00', currency: 'USDT', rate: null },
+        { method: 'pago_movil', amount: '1679.00', currency: 'VES', rate: '36.500000' },
+        { method: 'bank_transfer', amount: '1679.00', currency: 'VES', rate: '36.500000' },
+        { method: 'pix', amount: '249.88', currency: 'BRL', rate: '5.432100' },
+        { method: 'usdt', amount: '46.00', currency: 'USDT', rate: null },
       ]);
 
       // --- Paying: one pending payment at a time; switching method voids the previous one.
@@ -268,7 +274,7 @@ describe.runIf(expectDatabase)('Payments and tickets (e2e)', () => {
       expect(pix).toMatchObject({
         method: 'pix',
         status: 'pending',
-        amount: '217.28',
+        amount: '249.88',
         currency: 'BRL',
         simulated: true,
         expiresAt: held.expiresAt,
@@ -327,7 +333,7 @@ describe.runIf(expectDatabase)('Payments and tickets (e2e)', () => {
       // --- Money that arrives just after the hold ran out still confirms if the seats are free.
       const late = await book(luis.auth, ['3']);
       const latePayment = (await pay(luis.auth, late.id, 'usdt').expect(201)).body as Payment;
-      expect(latePayment).toMatchObject({ amount: '20.00', currency: 'USDT', rate: null });
+      expect(latePayment).toMatchObject({ amount: '23.00', currency: 'USDT', rate: null });
       await db
         .update(bookings)
         .set({ expiresAt: sql`now() - interval '1 minute'` })

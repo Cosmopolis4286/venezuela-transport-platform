@@ -10,12 +10,12 @@ import { failure, text } from '@/lib/server/form-actions';
 
 const decimal = (form: FormData, name: string) => text(form, name).replace(',', '.');
 
-/** Tiers typed in rows `<prefix>Hours:N` / `<prefix>Percent:N`; empty rows are skipped. */
-function tiersFrom(form: FormData, prefix = 'tier'): RefundTier[] {
+/** Tiers typed in rows `tierHours:N` / `tierPercent:N`; empty rows are skipped. */
+function tiersFrom(form: FormData): RefundTier[] {
   const tiers: RefundTier[] = [];
   for (let i = 0; i < MAX_REFUND_TIERS; i++) {
-    const hours = text(form, `${prefix}Hours:${i}`).replace(',', '.');
-    const percent = text(form, `${prefix}Percent:${i}`);
+    const hours = text(form, `tierHours:${i}`);
+    const percent = text(form, `tierPercent:${i}`);
     if (!hours && !percent) continue;
     tiers.push({ hoursBefore: Number(hours), percent: Number(percent) });
   }
@@ -24,22 +24,14 @@ function tiersFrom(form: FormData, prefix = 'tier'): RefundTier[] {
 
 const POLICY_RULES = {
   VALIDATION_FAILED:
-    'Revisa la política: comisión entre 0 y 100 con hasta dos decimales; de 1 a 4 tramos con horas distintas (0 a 720, en cuartos de hora: 0,5 son 30 minutos) y porcentajes enteros de 0 a 100; cancelación de taxis y motos: de 0 a 60 minutos gratis y una tasa entera de 0 a 100 %.',
+    'Revisa la política: comisión entre 0 y 100 con hasta dos decimales; de 1 a 4 tramos con horas enteras distintas (0 a 720) y porcentajes enteros de 0 a 100.',
 };
 
 export async function setPlatformPolicy(_: FormState, form: FormData): Promise<FormState> {
   try {
     await apiRequest('/admin/settlement-policy', {
       method: 'PUT',
-      body: {
-        commissionRate: decimal(form, 'commissionRate'),
-        refundTiers: tiersFrom(form),
-        suburbanRefundTiers: tiersFrom(form, 'suburban'),
-        rideCancellation: {
-          freeMinutes: Number(form.get('freeMinutes')),
-          feePercent: Number(form.get('feePercent')),
-        },
-      },
+      body: { commissionRate: decimal(form, 'commissionRate'), refundTiers: tiersFrom(form) },
     });
   } catch (error) {
     return failure(error, POLICY_RULES);
@@ -61,7 +53,6 @@ export async function setOrganizationPolicy(_: FormState, form: FormData): Promi
           refundTiers: ownTiers ? tiersFrom(form) : null,
           paymentCollection:
             text(form, 'paymentCollection') === 'operator' ? 'operator' : 'platform',
-          acceptsTripPacks: form.get('acceptsTripPacks') === 'on',
         },
       },
     );
@@ -80,6 +71,7 @@ export async function createPayout(_: FormState, form: FormData): Promise<FormSt
         method: 'POST',
         body: {
           direction: text(form, 'direction') === 'from_operator' ? 'from_operator' : 'to_operator',
+          driverUserId: text(form, 'driverUserId') || undefined,
           currency: text(form, 'currency'),
           amount: decimal(form, 'amount'),
           method: text(form, 'method'),

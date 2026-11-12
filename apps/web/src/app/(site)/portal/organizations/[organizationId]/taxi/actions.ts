@@ -1,11 +1,6 @@
 'use server';
 
-import type {
-  AssignTaxiRideRequest,
-  Currency,
-  OnDemandMode,
-  ReplaceOnDemandFaresRequest,
-} from '@vtp/shared-types';
+import type { AssignTaxiRideRequest, Currency } from '@vtp/shared-types';
 import { refresh } from 'next/cache';
 import type { FormState } from '@/lib/form-state';
 import { apiRequest } from '@/lib/server/api';
@@ -34,12 +29,11 @@ export async function saveTaxiTerminals(_: FormState, form: FormData): Promise<F
 }
 
 export async function assignTaxiRide(_: FormState, form: FormData): Promise<FormState> {
-  // Stretch rides have no fare fields: the line's fixed fare for the stretch applies.
-  const fareAmount = text(form, 'fareAmount').replace(',', '.');
   const body: AssignTaxiRideRequest = {
     driverUserId: text(form, 'driverUserId'),
     vehicleId: text(form, 'vehicleId'),
-    ...(fareAmount ? { fareAmount, fareCurrency: text(form, 'fareCurrency') as Currency } : {}),
+    fareAmount: text(form, 'fareAmount').replace(',', '.'),
+    fareCurrency: text(form, 'fareCurrency') as Currency,
   };
   try {
     await apiRequest(`${taxiPath(form)}/rides/${encodeURIComponent(text(form, 'rideId'))}/assign`, {
@@ -50,7 +44,7 @@ export async function assignTaxiRide(_: FormState, form: FormData): Promise<Form
     return taxiFailure(error);
   }
   refresh();
-  return { success: 'Viaje asignado.' };
+  return { success: 'Taxi asignado.' };
 }
 
 export async function releaseTaxiRide(_: FormState, form: FormData): Promise<FormState> {
@@ -64,32 +58,4 @@ export async function releaseTaxiRide(_: FormState, form: FormData): Promise<For
   }
   refresh();
   return { success: 'Viaje liberado: vuelve a las solicitudes.' };
-}
-
-/** Rows `a:N`, `b:N`, `amount:N`, `currency:N`; a row without both stops and an amount is dropped. */
-export async function saveStretchFares(_: FormState, form: FormData): Promise<FormState> {
-  const mode = text(form, 'mode') as OnDemandMode;
-  const fares: ReplaceOnDemandFaresRequest['fares'] = [];
-  for (let i = 0; form.has(`a:${i}`); i++) {
-    const a = text(form, `a:${i}`);
-    const b = text(form, `b:${i}`);
-    const amount = text(form, `amount:${i}`).replace(',', '.');
-    if (!a || !b || !amount) continue;
-    fares.push({
-      stopIds: [a, b],
-      mode,
-      amount,
-      currency: text(form, `currency:${i}`) as Currency,
-    });
-  }
-  try {
-    await apiRequest(`${taxiPath(form)}/stretch-fares`, { method: 'PUT', body: { fares } });
-  } catch (error) {
-    return failure(error, {
-      VALIDATION_FAILED:
-        'Revisa las tarifas: dos paradas distintas, montos mayores que cero con hasta dos decimales, y un solo monto por tramo.',
-    });
-  }
-  refresh();
-  return { success: 'Tarifas guardadas.' };
 }

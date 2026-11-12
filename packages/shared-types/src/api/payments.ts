@@ -1,4 +1,3 @@
-import type { TripPackStatus } from './trip-packs.js';
 import { DEFAULT_LOCALE, INTL_LOCALES, type Locale } from '../i18n/locales.js';
 import { SHARED_MESSAGES } from '../i18n/shared-messages.js';
 import type { Currency, StopSummary } from './network.js';
@@ -19,12 +18,6 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> =
 /** Currencies money is received in. USDT is valued 1:1 against the US dollar. */
 export const PAYMENT_CURRENCIES = ['VES', 'BRL', 'USDT'] as const;
 export type PaymentCurrency = (typeof PAYMENT_CURRENCIES)[number];
-
-/**
- * The platform's rates (trip packs) older than this are not used: the method that needs one is
- * not offered until an admin saves the rates again, so packs are never sold at a stale rate.
- */
-export const PLATFORM_RATE_MAX_HOURS = 24;
 
 export const PAYMENT_METHOD_CURRENCY: Record<PaymentMethod, PaymentCurrency> = {
   pago_movil: 'VES',
@@ -91,9 +84,7 @@ export interface CreatePaymentRequest {
 
 export interface Payment {
   id: string;
-  /** What is being paid: a booking, or a trip pack (exactly one is set). */
-  bookingId: string | null;
-  tripPackId: string | null;
+  bookingId: string;
   method: PaymentMethod;
   status: PaymentStatus;
   amount: string;
@@ -190,7 +181,6 @@ export function paymentAccountProblem(
 /** `GET /admin/payments/review` — a reported payment waiting for staff. */
 export interface PaymentReview {
   payment: Payment;
-  /** Null for a trip pack payment (`tripPack`). */
   booking: {
     id: string;
     code: string;
@@ -199,11 +189,8 @@ export interface PaymentReview {
     departsAt: string;
     /** Until when the seats stay held. */
     expiresAt: string | null;
-  } | null;
-  /** A trip pack the platform sells; null for a booking. */
-  tripPack: { id: string; code: string; description: string; status: TripPackStatus } | null;
-  /** Null for trip packs: the platform sells them. */
-  operator: { id: string; name: string } | null;
+  };
+  operator: { id: string; name: string };
   payer: { name: string; email: string | null; phone: string | null };
 }
 
