@@ -1,5 +1,8 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
+  isTimeOfDay,
+  MAX_HEADWAY_MINUTES,
+  MIN_HEADWAY_MINUTES,
   runsRoutes,
   type Fare,
   type Route,
@@ -291,6 +294,12 @@ export class RoutesService {
     if (total >= MAX_SCHEDULES_PER_ROUTE)
       throw conflict('This route has too many schedules', 'TOO_MANY_SCHEDULES');
     const seating = await this.seating(access, input.seatLayoutId ?? null, input.seats);
+    const frequency = frequencyOf(
+      input.departureTime,
+      input.headwayMinutes ?? null,
+      input.lastDepartureTime ?? null,
+      seating.seatLayoutId,
+    );
     const [schedule] = await this.database.db
       .insert(routeSchedules)
       .values({
@@ -301,6 +310,7 @@ export class RoutesService {
         validUntil: input.validUntil ?? null,
         serviceClass: input.serviceClass,
         ...seating,
+        ...frequency,
         active: input.active ?? true,
       })
       .returning();
@@ -326,6 +336,14 @@ export class RoutesService {
       input.seatLayoutId === undefined ? current.seatLayoutId : input.seatLayoutId,
       input.seats ?? current.seats,
     );
+    const frequency = frequencyOf(
+      input.departureTime ?? current.departureTime.slice(0, 5),
+      input.headwayMinutes === undefined ? current.headwayMinutes : input.headwayMinutes,
+      input.lastDepartureTime === undefined
+        ? (current.lastDepartureTime?.slice(0, 5) ?? null)
+        : input.lastDepartureTime,
+      seating.seatLayoutId,
+    );
     await this.database.db
       .update(routeSchedules)
       .set({
@@ -335,6 +353,7 @@ export class RoutesService {
         validUntil,
         ...(input.serviceClass ? { serviceClass: input.serviceClass } : {}),
         ...seating,
+        ...frequency,
         ...(input.active === undefined ? {} : { active: input.active }),
       })
       .where(eq(routeSchedules.id, current.id));
@@ -498,6 +517,38 @@ function normalizeDays(days: number[]): number[] {
   return [...new Set(days)].sort((a, b) => a - b);
 }
 
+/**
+ * Frequency service (ADR-032): both fields or neither, a headway in range, the last unit on the
+ * same day after the first, and no seat map (open tickets have no seat).
+ */
+function frequencyOf(
+  departureTime: string,
+  headwayMinutes: number | null,
+  lastDepartureTime: string | null,
+  seatLayoutId: string | null,
+): { headwayMinutes: number | null; lastDepartureTime: string | null } {
+  if (headwayMinutes === null && lastDepartureTime === null) {
+    return { headwayMinutes: null, lastDepartureTime: null };
+  }
+  if (headwayMinutes === null || lastDepartureTime === null) {
+    throw invalid('Send headwayMinutes and lastDepartureTime together, or neither');
+  }
+  if (
+    !Number.isInteger(headwayMinutes) ||
+    headwayMinutes < MIN_HEADWAY_MINUTES ||
+    headwayMinutes > MAX_HEADWAY_MINUTES
+  ) {
+    throw invalid(
+      `headwayMinutes must be between ${MIN_HEADWAY_MINUTES} and ${MAX_HEADWAY_MINUTES}`,
+    );
+  }
+  if (!isTimeOfDay(lastDepartureTime) || lastDepartureTime < departureTime.slice(0, 5)) {
+    throw invalid('lastDepartureTime must be on the same day, at or after departureTime');
+  }
+  if (seatLayoutId) throw invalid('A frequency schedule sells open tickets: remove the seat map');
+  return { headwayMinutes, lastDepartureTime };
+}
+
 function assertWindow(validFrom: string, validUntil: string | null) {
   if (!isCalendarDate(validFrom)) throw invalid('validFrom is not a valid date');
   if (validUntil !== null) {
@@ -516,6 +567,8 @@ export function toSchedule(row: RouteScheduleRow): Schedule {
     serviceClass: row.serviceClass,
     seats: row.seats,
     seatLayoutId: row.seatLayoutId,
+    headwayMinutes: row.headwayMinutes,
+    lastDepartureTime: row.lastDepartureTime?.slice(0, 5) ?? null,
     active: row.active,
   };
 }

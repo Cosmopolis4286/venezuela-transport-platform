@@ -156,13 +156,17 @@ export class SettlementsService {
   ): Promise<Map<string, DriverBalance[]>> {
     const result = new Map<string, DriverBalance[]>();
     if (!organizationIds.length && !driverUserId) return result;
+    // The trip's driver, or on an open ticket the driver who validated it (ADR-032).
+    const driver = sql<
+      string | null
+    >`coalesce(${bookings.boardingDriverUserId}, ${trips.driverUserId})`;
     const scope = driverUserId
-      ? eq(trips.driverUserId, driverUserId)
+      ? sql`${driver} = ${driverUserId}`
       : inArray(settlementEntries.organizationId, organizationIds);
     const earned = await db
       .select({
         organizationId: settlementEntries.organizationId,
-        driverId: trips.driverUserId,
+        driverId: driver,
         currency: settlementEntries.currency,
         earned: total(settlementEntries.earned),
       })
@@ -170,7 +174,7 @@ export class SettlementsService {
       .innerJoin(bookings, eq(bookings.id, settlementEntries.bookingId))
       .innerJoin(trips, eq(trips.id, bookings.tripId))
       .where(and(eq(settlementEntries.payee, 'driver'), scope))
-      .groupBy(settlementEntries.organizationId, trips.driverUserId, settlementEntries.currency);
+      .groupBy(settlementEntries.organizationId, driver, settlementEntries.currency);
     const paid = await db
       .select({
         organizationId: payouts.organizationId,

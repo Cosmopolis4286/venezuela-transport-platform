@@ -249,7 +249,10 @@ describe.runIf(expectDatabase)('Organizations (e2e)', () => {
       const [membership] = (
         await http().get('/api/v1/me/organizations').set('Authorization', driver.auth).expect(200)
       ).body as OrganizationMembershipSummary[];
-      expect(membership).toMatchObject({ role: 'driver', permissions: ['trips.drive'] });
+      expect(membership).toMatchObject({
+        role: 'driver',
+        permissions: ['trips.drive', 'tickets.validate'],
+      });
 
       // Drivers can see their organization but not manage it.
       await http()

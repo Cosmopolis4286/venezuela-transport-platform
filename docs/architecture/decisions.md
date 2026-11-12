@@ -530,3 +530,24 @@ lista la imprenta digital sin cambiar el resto.
 alcance de la plataforma, el formato de los libros y si aplica el IGTF. Las retenciones de IVA
 que hagan compradores que sean contribuyentes especiales todavía no se registran (columna en
 cero). En modo borrador emitir es trabajo manual: con más volumen conviene contratar la imprenta.
+
+## ADR-032: Servicio urbano y suburbano por frecuencia, con boleto abierto
+
+**Decisión** (del dueño del producto). Un horario puede ser **por frecuencia**: sale una unidad
+cada `headway_minutes` desde `departure_time` hasta `last_departure_time`, el mismo día. Para esos
+horarios se vende un **boleto abierto** para el día y el tramo, válido en cualquier unidad de la
+ruta desde una hora antes de la primera hasta que llega la última, sin elegir puesto. El viaje
+(`trips`) representa el día de servicio; su capacidad es `puestos por unidad × unidades del día`, y
+la API numera los boletos (1, 2, 3…) con los mismos números de puesto internos, así que el índice
+que impide la doble venta, los conteos y la lista de pasajeros no cambian. Si la ruta le paga al
+conductor (ADR-030), cobra el conductor que valida el boleto (`bookings.boarding_driver_user_id`),
+y por eso los conductores pueden validar boletos. Ver [bookings.md](bookings.md#boleto-abierto-servicio-por-frecuencia-adr-032).
+
+**Por qué.** En el transporte urbano y suburbano las unidades salen cada pocos minutos, la gente
+viaja de pie y no reserva puesto; apartar un puesto en una salida fija no tenía sentido.
+Reutilizar el viaje y los números de puesto evita un segundo modelo de ventas.
+
+**Compromisos.** El reembolso por cancelación se calcula contra la primera unidad del día: una vez
+empezado el servicio, el boleto ya no se cancela. No hay recordatorio de salida. Varias unidades
+comparten el viaje, así que la asignación de vehículo y conductor del despacho no describe cada
+unidad; el cobro sigue al conductor que valida.

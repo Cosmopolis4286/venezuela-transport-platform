@@ -1,4 +1,4 @@
-import { NETWORK_UTC_OFFSET } from '@vtp/shared-types';
+import { frequencyRuns, NETWORK_UTC_OFFSET } from '@vtp/shared-types';
 
 const MINUTES_PER_DAY = 1440;
 /** Longest allowed trip, so a search only has to look a few service days back. */
@@ -10,6 +10,9 @@ export interface ScheduleWindow {
   daysOfWeek: number[];
   validFrom: string;
   validUntil: string | null;
+  /** Frequency service (ADR-032): a unit every `headwayMinutes` until `lastDepartureTime`. */
+  headwayMinutes?: number | null;
+  lastDepartureTime?: string | null;
 }
 
 export interface Occurrence {
@@ -19,6 +22,41 @@ export interface Occurrence {
   departsAt: string;
   arrivesAt: string;
   durationMinutes: number;
+  /** Frequency service: the last unit of the day at the boarding stop, and its arrival. */
+  lastDepartsAt: string | null;
+  lastArrivesAt: string | null;
+}
+
+/** How many passengers a departure takes: one unit, or every unit of a frequency day. */
+export function scheduleCapacity(schedule: ScheduleWindow & { seats: number }): number {
+  return (
+    schedule.seats *
+    frequencyRuns(
+      schedule.departureTime.slice(0, 5),
+      schedule.lastDepartureTime?.slice(0, 5) ?? null,
+      schedule.headwayMinutes ?? null,
+    )
+  );
+}
+
+/** First and last unit of the day at the stops (null `last…` for a single departure). */
+function window(
+  serviceDate: string,
+  schedule: ScheduleWindow,
+  fromOffset: number,
+  toOffset: number,
+): Omit<Occurrence, 'serviceDate' | 'durationMinutes'> {
+  const start = minutesOfDay(schedule.departureTime);
+  const last =
+    schedule.headwayMinutes && schedule.lastDepartureTime
+      ? minutesOfDay(schedule.lastDepartureTime)
+      : null;
+  return {
+    departsAt: localTimestamp(serviceDate, start + fromOffset),
+    arrivesAt: localTimestamp(serviceDate, start + toOffset),
+    lastDepartsAt: last === null ? null : localTimestamp(serviceDate, last + fromOffset),
+    lastArrivesAt: last === null ? null : localTimestamp(serviceDate, last + toOffset),
+  };
 }
 
 /** `YYYY-MM-DD` plus `days`, on the calendar (no time zone involved). */
@@ -85,8 +123,7 @@ export function occurrencesOn(
   return [
     {
       serviceDate,
-      departsAt: localTimestamp(serviceDate, atStop),
-      arrivesAt: localTimestamp(serviceDate, start + toOffset),
+      ...window(serviceDate, schedule, fromOffset, toOffset),
       durationMinutes: toOffset - fromOffset,
     },
   ];
@@ -100,11 +137,9 @@ export function occurrenceOnServiceDate(
   toOffset: number,
 ): Occurrence | null {
   if (!runsOn(schedule, serviceDate)) return null;
-  const start = minutesOfDay(schedule.departureTime);
   return {
     serviceDate,
-    departsAt: localTimestamp(serviceDate, start + fromOffset),
-    arrivesAt: localTimestamp(serviceDate, start + toOffset),
+    ...window(serviceDate, schedule, fromOffset, toOffset),
     durationMinutes: toOffset - fromOffset,
   };
 }

@@ -7,7 +7,13 @@ import { DatabaseService } from '../../database/database.service.js';
 import { trips } from '../bookings/bookings.schema.js';
 import { takenSeatCounts } from '../bookings/occupancy.js';
 import { organizations } from '../organizations/organizations.schema.js';
-import { addDays, isCalendarDate, occurrencesOn, todayInVenezuela } from './departures.js';
+import {
+  addDays,
+  isCalendarDate,
+  occurrencesOn,
+  scheduleCapacity,
+  todayInVenezuela,
+} from './departures.js';
 import { commissionFor } from '../settlements/ledger.js';
 import { routeFares, routes, routeSchedules, routeStops } from './network.schema.js';
 import { StopsService } from './stops.service.js';
@@ -119,13 +125,16 @@ export class SearchService {
           arrivesAt: trip.arrivesAt,
           durationMinutes: trip.durationMinutes,
           serviceClass: row.schedule.serviceClass,
-          seats: row.schedule.seats,
+          seats: scheduleCapacity(row.schedule),
           seatsAvailable: Math.max(
             0,
-            row.schedule.seats - (taken.get(`${row.schedule.id}:${trip.serviceDate}`) ?? 0),
+            scheduleCapacity(row.schedule) -
+              (taken.get(`${row.schedule.id}:${trip.serviceDate}`) ?? 0),
           ),
           fare: row.fare?.amount && row.fare.currency ? (row.fare as Departure['fare']) : null,
           serviceFeeRate: feeRates.get(row.operator.id)!,
+          headwayMinutes: row.schedule.headwayMinutes,
+          lastDepartsAt: trip.lastDepartsAt,
         })),
     );
     // Same offset everywhere, so the ISO strings sort chronologically.

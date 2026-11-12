@@ -99,8 +99,14 @@ async function DepartureCard({ departure }: { departure: Departure }) {
       <div className="flex items-baseline gap-2 text-lg font-semibold tabular-nums">
         <time dateTime={departure.departsAt}>{localTime(departure.departsAt)}</time>
         <span className="text-sm font-normal text-muted-foreground">
-          → {localTime(departure.arrivesAt)}
-          {extraDays ? t.results.dayOffset(extraDays) : ''}
+          {departure.lastDepartsAt ? (
+            <>– {localTime(departure.lastDepartsAt)}</>
+          ) : (
+            <>
+              → {localTime(departure.arrivesAt)}
+              {extraDays ? t.results.dayOffset(extraDays) : ''}
+            </>
+          )}
         </span>
       </div>
       <div className="flex flex-col gap-1">
@@ -113,8 +119,11 @@ async function DepartureCard({ departure }: { departure: Departure }) {
         </div>
         <p className="text-sm text-muted-foreground">
           {departure.from.name} → {departure.to.name} · {formatDuration(departure.durationMinutes)}{' '}
-          · {t.results.seatsFree(departure.seatsAvailable, departure.seats)} ·{' '}
-          {t.results.route(departure.route.name)}
+          ·{' '}
+          {departure.headwayMinutes
+            ? t.results.frequency(departure.headwayMinutes)
+            : t.results.seatsFree(departure.seatsAvailable, departure.seats)}{' '}
+          · {t.results.route(departure.route.name)}
         </p>
       </div>
       <p className="text-lg font-semibold sm:text-right">

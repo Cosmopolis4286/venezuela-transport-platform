@@ -74,6 +74,9 @@ export default function BookingScreen() {
   const refundText = (payment: NonNullable<Booking['payment']>) =>
     formatPaymentAmount(payment.refundAmount ?? payment.amount, payment.currency, locale);
   const extraDays = daysBetween(data.trip.departsAt, data.trip.arrivesAt);
+  // Open tickets (frequency service) are numbered for the day, not tied to a seat.
+  const open = data.trip.headwayMinutes !== null;
+  const seatLabel = (number: string) => (open ? t.ticket(number) : t.seat(number));
 
   const cancel = async () => {
     setBusy(true);
@@ -130,11 +133,21 @@ export default function BookingScreen() {
         <Heading>
           {data.from.city} → {data.to.city}
         </Heading>
-        <Body>
-          {longDate(data.trip.departsAt, locale)} · {localTime(data.trip.departsAt)} →{' '}
-          {localTime(data.trip.arrivesAt)}
-          {extraDays ? t.dayOffset(extraDays) : ''}
-        </Body>
+        {open ? (
+          <Body>
+            {t.booking.openTicket(
+              longDate(data.trip.departsAt, locale),
+              localTime(data.trip.departsAt),
+              localTime(data.trip.arrivesAt),
+            )}
+          </Body>
+        ) : (
+          <Body>
+            {longDate(data.trip.departsAt, locale)} · {localTime(data.trip.departsAt)} →{' '}
+            {localTime(data.trip.arrivesAt)}
+            {extraDays ? t.dayOffset(extraDays) : ''}
+          </Body>
+        )}
         <Body muted>
           {data.operator.tradeName ?? data.operator.legalName} ·{' '}
           {shared.serviceClass[data.trip.serviceClass]}
@@ -159,7 +172,7 @@ export default function BookingScreen() {
         p.ticket ? (
           <Card key={p.seatNumber}>
             <Row>
-              <Badge label={t.seat(p.seatNumber)} />
+              <Badge label={seatLabel(p.seatNumber)} />
               {p.ticket.boardedAt ? <Badge label={t.booking.boarded} tone="success" /> : null}
             </Row>
             <Heading>
@@ -174,7 +187,7 @@ export default function BookingScreen() {
           </Card>
         ) : (
           <Row key={p.seatNumber}>
-            <Badge label={t.seat(p.seatNumber)} />
+            <Badge label={seatLabel(p.seatNumber)} />
             <Body>
               {p.firstName} {p.lastName} · {p.documentType}-{p.documentNumber}
             </Body>

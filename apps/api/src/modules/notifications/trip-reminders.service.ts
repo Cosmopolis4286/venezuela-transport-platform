@@ -4,11 +4,11 @@ import {
   type OnApplicationBootstrap,
   type OnApplicationShutdown,
 } from '@nestjs/common';
-import { and, eq, gt, inArray, isNull, lte } from 'drizzle-orm';
+import { and, eq, gt, inArray, isNull, lte, sql } from 'drizzle-orm';
 import { AppConfigService } from '../../config/app-config.service.js';
 import { DatabaseService } from '../../database/database.service.js';
 import { bookings, trips } from '../bookings/bookings.schema.js';
-import { routes, stops } from '../network/network.schema.js';
+import { routes, routeSchedules, stops } from '../network/network.schema.js';
 import { departureText } from './format.js';
 import { NotificationsService } from './notifications.service.js';
 
@@ -58,6 +58,8 @@ export class TripRemindersService implements OnApplicationBootstrap, OnApplicati
           isNull(bookings.reminderSentAt),
           gt(bookings.departsAt, now),
           lte(bookings.departsAt, new Date(now.getTime() + hours * 3_600_000)),
+          // Open tickets (frequency service) have no departure time to remind of (ADR-032).
+          sql`not exists (select 1 from ${trips} join ${routeSchedules} on ${routeSchedules.id} = ${trips.scheduleId} where ${trips.id} = ${bookings.tripId} and ${routeSchedules.headwayMinutes} is not null)`,
         ),
       )
       .returning({

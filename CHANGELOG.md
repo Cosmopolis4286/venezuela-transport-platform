@@ -26,6 +26,11 @@ pull request.
 
 ### Agregado
 
+- **Servicio urbano y suburbano por frecuencia** (ADR-032): un horario puede salir cada N
+  minutos hasta una última salida. Se vende un **boleto abierto** para el día, sin elegir puesto,
+  válido en cualquier unidad de la ruta. Los conductores ahora pueden validar boletos y, si la ruta
+  les paga, cobra quien valida. Portal (campos de frecuencia), búsqueda web y app de pasajeros en
+  tres idiomas.
 - **Factura a otro nombre y número de factura en la app de pasajeros**: en la reserva el pasajero
   puede pedir la factura del cargo por servicio a otro nombre o RIF hasta que se emita, y ve su
   número, número de control y fecha una vez emitida.

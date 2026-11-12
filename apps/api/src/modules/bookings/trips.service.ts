@@ -4,7 +4,11 @@ import { and, asc, eq, inArray } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService, type Transaction } from '../../database/database.service.js';
 import { seatLayouts } from '../fleet/fleet.schema.js';
-import { occurrenceOnServiceDate, type Occurrence } from '../network/departures.js';
+import {
+  occurrenceOnServiceDate,
+  scheduleCapacity,
+  type Occurrence,
+} from '../network/departures.js';
 import {
   routeFares,
   routes,
@@ -171,11 +175,13 @@ export class TripsService {
       arrivesAt: context.occurrence.arrivesAt,
       serviceClass: context.schedule.serviceClass,
       layout,
-      capacity: trip ? trip.capacity : context.schedule.seats,
+      capacity: trip ? trip.capacity : scheduleCapacity(context.schedule),
       takenSeats: taken.map((t) => t.seatNumber).sort(compareSeats),
       fare: context.fare,
       serviceFeeRate: await commissionFor(this.database.db, context.operator.id, fromStopId),
       bookable: isBookable(context) && trip?.status !== 'cancelled',
+      headwayMinutes: context.schedule.headwayMinutes,
+      lastDepartsAt: context.occurrence.lastDepartsAt,
     };
   }
 
@@ -225,7 +231,7 @@ export class TripsService {
         serviceDate: occurrence.serviceDate,
         departsAt: new Date(`${occurrence.serviceDate}T${departureTime}:00-04:00`),
         layout: context.layout,
-        capacity: schedule.seats,
+        capacity: scheduleCapacity(schedule),
       })
       .onConflictDoNothing({ target: [trips.scheduleId, trips.serviceDate] });
     const [trip] = await tx
@@ -236,9 +242,13 @@ export class TripsService {
   }
 }
 
-/** Bookable while the vehicle has not left the boarding stop and there is a price. */
+/**
+ * Bookable while the vehicle has not left the boarding stop (on a frequency service, until the
+ * last unit of the day leaves it) and there is a price.
+ */
 export function isBookable(context: DepartureContext, now = Date.now()): boolean {
-  return context.fare !== null && Date.parse(context.occurrence.departsAt) > now;
+  const leaves = context.occurrence.lastDepartsAt ?? context.occurrence.departsAt;
+  return context.fare !== null && Date.parse(leaves) > now;
 }
 
 /** Seat numbers that exist on a trip: the map's, or `1`…`capacity`. */

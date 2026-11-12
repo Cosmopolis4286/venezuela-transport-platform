@@ -10,7 +10,7 @@ import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService } from '../../database/database.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
-import { routes } from '../network/network.schema.js';
+import { routes, routeSchedules } from '../network/network.schema.js';
 import { StopsService } from '../network/stops.service.js';
 import type { OrganizationAccess } from '../organizations/organization-access.js';
 import { bookingPassengers, bookings, trips } from './bookings.schema.js';
@@ -18,6 +18,23 @@ import { bookingPassengers, bookings, trips } from './bookings.schema.js';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** A ticket is accepted from 12 hours before to 12 hours after the passenger's boarding time. */
 const BOARDING_WINDOW_MS = 12 * 3600_000;
+/** An open ticket (frequency service) is accepted from 1 hour before the first unit to the last. */
+const OPEN_TICKET_EARLY_MS = 3600_000;
+
+/** Whether `now` falls in the ticket's boarding window. */
+export function inBoardingWindow(
+  booking: { departsAt: Date; arrivesAt: Date },
+  open: boolean,
+  now: number,
+): boolean {
+  if (open) {
+    return (
+      now >= booking.departsAt.getTime() - OPEN_TICKET_EARLY_MS &&
+      now <= booking.arrivesAt.getTime()
+    );
+  }
+  return Math.abs(now - booking.departsAt.getTime()) <= BOARDING_WINDOW_MS;
+}
 
 const ticketNotFound = () =>
   new ApiException('NOT_FOUND', 'Ticket not found for this organization', HttpStatus.NOT_FOUND);
@@ -48,22 +65,25 @@ export class TicketsService {
         booking: bookings,
         trip: { serviceDate: trips.serviceDate },
         route: { id: routes.id, name: routes.name },
+        headwayMinutes: routeSchedules.headwayMinutes,
       })
       .from(bookingPassengers)
       .innerJoin(bookings, eq(bookings.id, bookingPassengers.bookingId))
       .innerJoin(trips, eq(trips.id, bookingPassengers.tripId))
       .innerJoin(routes, eq(routes.id, trips.routeId))
+      .innerJoin(routeSchedules, eq(routeSchedules.id, trips.scheduleId))
       .where(and(ticketMatch(input), eq(trips.organizationId, access.organization.id)))
       .orderBy(desc(bookingPassengers.active))
       .limit(1);
     if (!row) throw ticketNotFound();
     const { passenger, booking } = row;
+    const open = row.headwayMinutes !== null;
 
     let result: TicketValidation['result'];
     let boardedAt = passenger.boardedAt;
     if (booking.status !== 'confirmed' || !passenger.active) {
       result = 'not_paid';
-    } else if (Math.abs(now - booking.departsAt.getTime()) > BOARDING_WINDOW_MS) {
+    } else if (!inBoardingWindow(booking, open, now)) {
       result = 'other_departure';
     } else {
       const [boarded] = await this.database.db
@@ -74,6 +94,14 @@ export class TicketsService {
       if (boarded) {
         result = 'boarded';
         boardedAt = boarded.boardedAt;
+        // On a frequency day many units run the same trip: the first driver who validates the
+        // ticket is the one a route paid to drivers pays (ADR-032).
+        if (open) {
+          await this.database.db
+            .update(bookings)
+            .set({ boardingDriverUserId: auth.user.id })
+            .where(and(eq(bookings.id, booking.id), isNull(bookings.boardingDriverUserId)));
+        }
         await this.audit.record({
           action: 'ticket.boarded',
           actorUserId: auth.user.id,

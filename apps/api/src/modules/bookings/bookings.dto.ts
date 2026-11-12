@@ -16,6 +16,7 @@ import {
   ArrayMinSize,
   IsArray,
   IsIn,
+  IsOptional,
   IsString,
   IsUUID,
   Length,
@@ -45,10 +46,11 @@ export class TripQueryDto {
 }
 
 export class PassengerDto implements PassengerInput {
-  @ApiProperty({ example: '12' })
+  @ApiPropertyOptional({ example: '12', description: 'Omitted on open tickets (frequency)' })
+  @IsOptional()
   @IsString()
   @Length(1, 4)
-  seatNumber!: string;
+  seatNumber?: string;
 
   @ApiProperty({ example: 'María' })
   @IsString()

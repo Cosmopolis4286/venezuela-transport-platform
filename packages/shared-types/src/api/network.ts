@@ -128,6 +128,13 @@ export interface Schedule {
   seats: number;
   /** Seat map passengers choose from; `seats` then equals its capacity. */
   seatLayoutId: string | null;
+  /**
+   * Frequency service (urban and suburban): a unit leaves every `headwayMinutes` from
+   * `departureTime` to `lastDepartureTime`. Passengers buy an open ticket for the day, valid on
+   * any unit, without choosing a seat; `seats` is the capacity of one unit. Null: one departure.
+   */
+  headwayMinutes: number | null;
+  lastDepartureTime: string | null;
   active: boolean;
 }
 
@@ -141,7 +148,32 @@ export interface ScheduleInput {
   /** Required without a seat layout; with one, the layout's capacity is used. */
   seats?: number;
   seatLayoutId?: string | null;
+  /** Both or neither; frequency schedules have no seat layout. */
+  headwayMinutes?: number | null;
+  lastDepartureTime?: string | null;
   active?: boolean;
+}
+
+/** Minutes between units on a frequency schedule. */
+export const MIN_HEADWAY_MINUTES = 3;
+export const MAX_HEADWAY_MINUTES = 180;
+
+/**
+ * Units a frequency schedule runs in a day (`HH:MM` times on the same day), so the day's open
+ * tickets are capped at `seats × runs`. 1 for a single departure.
+ */
+export function frequencyRuns(
+  departureTime: string,
+  lastDepartureTime: string | null,
+  headwayMinutes: number | null,
+): number {
+  if (!lastDepartureTime || !headwayMinutes) return 1;
+  const minutes = (time: string) => {
+    const [h = 0, m = 0] = time.split(':').map(Number);
+    return h * 60 + m;
+  };
+  const span = minutes(lastDepartureTime) - minutes(departureTime);
+  return span < 0 ? 1 : Math.floor(span / headwayMinutes) + 1;
 }
 
 /**
@@ -244,6 +276,12 @@ export interface Departure {
   fare: Pick<Fare, 'amount' | 'currency'> | null;
   /** Platform service fee (percentage, e.g. "15.00") charged on top of the fare (ADR-029). */
   serviceFeeRate: string;
+  /**
+   * Frequency service: a unit every `headwayMinutes` from `departsAt` (the first) to
+   * `lastDepartsAt` (the last), at the boarding stop; the ticket is open for the day.
+   */
+  headwayMinutes: number | null;
+  lastDepartsAt: string | null;
 }
 
 /**

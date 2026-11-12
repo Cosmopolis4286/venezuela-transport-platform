@@ -34,17 +34,21 @@ En la pantalla del viaje, toca **Marcar salida** cuando el autobús deja el term
 2 horas antes de la hora programada) y **Marcar llegada** al terminar. La empresa ve el estado en
 su tablero, y desde la salida los pasajeros ya no pueden cancelar.
 
-## 4. Validar boletos (inspectores)
+## 4. Validar boletos (inspectores y conductores)
+
+En rutas urbanas y suburbanas el **conductor** también valida: el pasajero muestra su **boleto
+abierto**, que sirve para cualquier unidad de la ruta ese día. Si la ruta le paga al conductor, el
+pasaje se acredita a quien valida el boleto y aparece en **Mis cobros**.
 
 **Validar boletos** abre la cámara: apunta al código QR del pasajero. Si no se puede leer, escribe
 el código de reserva y el número de puesto. El resultado sale al instante:
 
-| Resultado                           | Qué hacer                                                       |
-| ----------------------------------- | --------------------------------------------------------------- |
-| **Boleto válido: puede abordar**    | Queda marcado como abordado                                     |
-| **Este boleto ya se usó**           | Dice a qué hora abordó: puede ser una copia                     |
-| **Boleto no pagado**                | La reserva está apartada, cancelada o vencida: no puede abordar |
-| **Este boleto es para otra salida** | El viaje sale a más de 12 horas de ahora (dice cuándo)          |
+| Resultado                           | Qué hacer                                                                                                                |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| **Boleto válido: puede abordar**    | Queda marcado como abordado                                                                                              |
+| **Este boleto ya se usó**           | Dice a qué hora abordó: puede ser una copia                                                                              |
+| **Boleto no pagado**                | La reserva está apartada, cancelada o vencida: no puede abordar                                                          |
+| **Este boleto es para otra salida** | El viaje sale a más de 12 horas de ahora (dice cuándo); un boleto abierto es de otro día o fuera del horario de servicio |
 
 ## 5. Taxis (taxistas)
 

@@ -113,11 +113,10 @@ export class BookingsService {
     input: CreateBookingRequest,
     meta: RequestMeta,
   ): Promise<Booking> {
-    const seats = input.passengers.map((p) => p.seatNumber.trim().toUpperCase());
-    if (!seats.length || seats.length > MAX_SEATS_PER_BOOKING) {
+    const passengerCount = input.passengers.length;
+    if (!passengerCount || passengerCount > MAX_SEATS_PER_BOOKING) {
       throw invalid(`Book between 1 and ${MAX_SEATS_PER_BOOKING} seats`);
     }
-    if (new Set(seats).size !== seats.length) throw invalid('Each seat can be chosen only once');
     await this.stops.assertServed([input.fromStopId, input.toStopId]);
 
     const context = await this.trips.resolve(
@@ -126,6 +125,18 @@ export class BookingsService {
       input.fromStopId,
       input.toStopId,
     );
+    // Frequency service (ADR-032): an open ticket for the day, numbered here; no seat to choose.
+    const open = context.schedule.headwayMinutes !== null;
+    const chosen = input.passengers.map((p) => p.seatNumber?.trim().toUpperCase() ?? '');
+    if (open && chosen.some(Boolean)) {
+      throw invalid('This service sells open tickets: leave seatNumber out');
+    }
+    if (!open) {
+      if (chosen.some((seat) => !seat)) throw invalid('Choose a seat for each passenger');
+      if (new Set(chosen).size !== chosen.length) {
+        throw invalid('Each seat can be chosen only once');
+      }
+    }
     if (!context.fare)
       throw conflict('This trip cannot be booked online yet', 'DEPARTURE_NOT_BOOKABLE');
     if (!isBookable(context))
@@ -150,7 +161,7 @@ export class BookingsService {
     }
 
     const holdMinutes = this.config.get('BOOKING_HOLD_MINUTES');
-    const fares = fromCents(cents(fare.amount) * seats.length);
+    const fares = fromCents(cents(fare.amount) * passengerCount);
     // The platform's service fee goes on top of the fares (ADR-029), frozen with the hold.
     const serviceFeeRate = await commissionFor(
       this.database.db,
@@ -159,16 +170,19 @@ export class BookingsService {
     );
     const { fee: serviceFee, total } = withServiceFee(fares, serviceFeeRate);
     let booking: BookingRow | undefined;
-    for (let attempt = 0; !booking && attempt < 3; attempt++) {
+    for (let attempt = 0; !booking && attempt < 5; attempt++) {
       try {
         booking = await this.database.db.transaction(async (tx) => {
           const trip = await this.trips.getOrCreate(tx, context);
           if (trip.status !== 'scheduled')
             throw conflict('This departure was cancelled', 'DEPARTURE_NOT_BOOKABLE');
+          await expireHolds(tx, { tripId: trip.id });
           const valid = seatNumbersOf(trip);
+          const seats = open
+            ? await this.freeTicketNumbers(tx, trip.id, valid, passengerCount)
+            : chosen;
           const unknown = seats.find((seat) => !valid.has(seat));
           if (unknown) throw invalid(`Seat ${unknown} does not exist on this vehicle`);
-          await expireHolds(tx, { tripId: trip.id });
 
           const [row] = await tx
             .insert(bookings)
@@ -179,7 +193,8 @@ export class BookingsService {
               fromStopId: input.fromStopId,
               toStopId: input.toStopId,
               departsAt: new Date(context.occurrence.departsAt),
-              arrivesAt: new Date(context.occurrence.arrivesAt),
+              // An open ticket is valid until the last unit of the day arrives.
+              arrivesAt: new Date(context.occurrence.lastArrivesAt ?? context.occurrence.arrivesAt),
               fareAmount: fare.amount,
               totalAmount: total,
               serviceFee,
@@ -204,12 +219,17 @@ export class BookingsService {
         });
       } catch (error) {
         const constraint = uniqueViolation(error);
+        // Two open tickets numbered at once: number them again.
+        if (constraint === 'booking_passengers_active_seat_key' && open) continue;
         if (constraint === 'booking_passengers_active_seat_key') {
           throw conflict('One of the seats was just taken, choose another', 'SEAT_TAKEN');
         }
         if (constraint !== 'bookings_code_key') throw error;
         // Code collision: retry with a new code.
       }
+    }
+    if (!booking && open) {
+      throw conflict('Many tickets were sold at once, try again', 'RELOAD_AND_RETRY');
     }
     if (!booking) throw new Error('Could not generate a unique booking code');
     await this.audit.record({
@@ -218,7 +238,7 @@ export class BookingsService {
       targetType: 'booking',
       targetId: booking.id,
       ip: meta.ip,
-      metadata: { tripId: booking.tripId, seats: seats.length },
+      metadata: { tripId: booking.tripId, seats: passengerCount, open },
     });
     return (await this.toBookings([booking]))[0]!;
   }
@@ -236,6 +256,28 @@ export class BookingsService {
 
   async getMine(userId: string, bookingId: string): Promise<Booking> {
     return (await this.toBookings([await this.requireMine(userId, bookingId)]))[0]!;
+  }
+
+  /** The lowest ticket numbers of the day nobody holds, or 409 when the day is sold out. */
+  private async freeTicketNumbers(
+    tx: Transaction,
+    tripId: string,
+    valid: Set<string>,
+    count: number,
+  ): Promise<string[]> {
+    const taken = new Set(
+      (
+        await tx
+          .select({ seatNumber: bookingPassengers.seatNumber })
+          .from(bookingPassengers)
+          .where(and(eq(bookingPassengers.tripId, tripId), eq(bookingPassengers.active, true)))
+      ).map((row) => row.seatNumber),
+    );
+    const free = [...valid].filter((n) => !taken.has(n)).sort(compareSeats);
+    if (free.length < count) {
+      throw conflict('There are no tickets left for this day', 'DEPARTURE_NOT_BOOKABLE');
+    }
+    return free.slice(0, count);
   }
 
   /**
@@ -624,6 +666,7 @@ export class BookingsService {
         trip: trips,
         route: { id: routes.id, name: routes.name },
         serviceClass: routeSchedules.serviceClass,
+        headwayMinutes: routeSchedules.headwayMinutes,
         operator: {
           id: organizations.id,
           type: organizations.type,
@@ -697,6 +740,7 @@ export class BookingsService {
           departsAt: toNetworkIso(booking.departsAt),
           arrivesAt: toNetworkIso(booking.arrivesAt),
           serviceClass: trip.serviceClass,
+          headwayMinutes: trip.headwayMinutes,
           cancellation:
             trip.trip.status === 'cancelled'
               ? { reason: trip.trip.cancellationReason ?? '' }

@@ -5,6 +5,7 @@ import {
   isCalendarDate,
   occurrenceOnServiceDate,
   occurrencesOn,
+  scheduleCapacity,
   todayInVenezuela,
 } from './departures.js';
 
@@ -19,6 +20,8 @@ describe('occurrencesOn', () => {
         departsAt: '2026-10-19T08:30:00-04:00',
         arrivesAt: '2026-10-19T17:00:00-04:00',
         durationMinutes: 510,
+        lastDepartsAt: null,
+        lastArrivesAt: null,
       },
     ]);
   });
@@ -37,6 +40,8 @@ describe('occurrencesOn', () => {
         departsAt: '2026-10-19T01:00:00-04:00',
         arrivesAt: '2026-10-19T05:00:00-04:00',
         durationMinutes: 240,
+        lastDepartsAt: null,
+        lastArrivesAt: null,
       },
     ]);
     // On Sunday itself that service is not at the stop yet.
@@ -51,6 +56,29 @@ describe('occurrencesOn', () => {
     expect(occurrencesOn('2026-10-19', window, 0, 60)).toEqual([]);
     expect(occurrencesOn('2026-10-21', window, 0, 60)).toHaveLength(1);
     expect(occurrencesOn('2026-10-22', window, 0, 60)).toEqual([]);
+  });
+});
+
+describe('frequency service', () => {
+  it('gives the first and last unit at the stops and the capacity of the day', () => {
+    const everyQuarter = {
+      ...daily,
+      departureTime: '05:00:00',
+      headwayMinutes: 15,
+      lastDepartureTime: '20:00:00',
+    };
+    expect(occurrencesOn('2026-10-19', everyQuarter, 10, 40)).toEqual([
+      {
+        serviceDate: '2026-10-19',
+        departsAt: '2026-10-19T05:10:00-04:00',
+        arrivesAt: '2026-10-19T05:40:00-04:00',
+        lastDepartsAt: '2026-10-19T20:10:00-04:00',
+        lastArrivesAt: '2026-10-19T20:40:00-04:00',
+        durationMinutes: 30,
+      },
+    ]);
+    expect(scheduleCapacity({ ...everyQuarter, seats: 30 })).toBe(30 * 61);
+    expect(scheduleCapacity({ ...daily, departureTime: '08:00', seats: 42 })).toBe(42);
   });
 });
 

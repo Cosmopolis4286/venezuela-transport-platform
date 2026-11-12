@@ -30,7 +30,7 @@ Un rol por persona en cada organización. Una persona puede pertenecer a varias 
 | `fleet.manage` (mapas de puestos)                                            |  ✅   |  ✅   |            |              |        |           |
 | `bookings.view` (viajes y lista de pasajeros)                                |  ✅   |  ✅   |     ✅     |      ✅      |        |    ✅     |
 | `tickets.sell`                                                               |  ✅   |  ✅   |            |      ✅      |        |           |
-| `tickets.validate` (escanear boletos)                                        |  ✅   |  ✅   |            |              |        |    ✅     |
+| `tickets.validate` (escanear boletos)                                        |  ✅   |  ✅   |            |              |   ✅   |    ✅     |
 | `trips.drive`                                                                |  ✅   |       |            |              |   ✅   |           |
 | `finance.view` (saldo y liquidaciones)                                       |  ✅   |  ✅   |            |              |        |           |
 | `finance.manage` (cuentas, verificar pagos y reembolsos si cobra la empresa) |  ✅   |  ✅   |            |              |        |           |

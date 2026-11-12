@@ -29,6 +29,9 @@ En la página de la organización:
    salen del catálogo de VTP; si falta un terminal, pídeselo a la administración.
 3. **Tarifas** por tramo (US$ o Bs.).
 4. **Horarios**: hora de salida, días de la semana, vigencia, clase de servicio y mapa de puestos.
+   En rutas **urbanas o suburbanas** puedes poner una **frecuencia** (por ejemplo, cada 15
+   minutos) y la **última salida**: se vende un **boleto abierto** para el día, válido en
+   cualquier unidad, sin puesto ni mapa. "Puestos" es entonces la capacidad de una unidad.
 5. **Tipo de servicio y cobro**: interurbana o urbana/suburbana, y quién cobra. Por defecto, las
    interurbanas le pagan a la empresa y las urbanas o suburbanas al conductor de cada viaje; puedes
    cambiarlo en cada ruta (vale para las ventas desde ese momento).
