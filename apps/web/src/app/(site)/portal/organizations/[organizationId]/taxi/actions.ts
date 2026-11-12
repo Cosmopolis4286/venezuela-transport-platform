@@ -50,7 +50,7 @@ export async function assignTaxiRide(_: FormState, form: FormData): Promise<Form
     return taxiFailure(error);
   }
   refresh();
-  return { success: 'Taxi asignado.' };
+  return { success: 'Viaje asignado.' };
 }
 
 export async function releaseTaxiRide(_: FormState, form: FormData): Promise<FormState> {

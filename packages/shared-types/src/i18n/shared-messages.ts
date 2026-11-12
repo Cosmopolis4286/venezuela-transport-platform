@@ -69,7 +69,7 @@ const es: SharedMessages = {
   taxiDirection: { from_terminal: 'Desde el terminal', to_terminal: 'Hacia el terminal' },
   taxiRideStatus: {
     requested: 'Buscando taxi',
-    accepted: 'Taxi asignado',
+    accepted: 'Conductor asignado',
     in_progress: 'En camino',
     completed: 'Terminado',
     cancelled: 'Cancelado',
@@ -225,7 +225,7 @@ const en: SharedMessages = {
   taxiDirection: { from_terminal: 'From the terminal', to_terminal: 'To the terminal' },
   taxiRideStatus: {
     requested: 'Looking for a taxi',
-    accepted: 'Taxi assigned',
+    accepted: 'Driver assigned',
     in_progress: 'On the way',
     completed: 'Completed',
     cancelled: 'Cancelled',
@@ -384,7 +384,7 @@ const ptBR: SharedMessages = {
   taxiDirection: { from_terminal: 'Saindo do terminal', to_terminal: 'Indo para o terminal' },
   taxiRideStatus: {
     requested: 'Procurando táxi',
-    accepted: 'Táxi a caminho',
+    accepted: 'Motorista a caminho',
     in_progress: 'Em viagem',
     completed: 'Concluída',
     cancelled: 'Cancelada',

@@ -62,8 +62,8 @@ export default async function AdminSettlementsPage() {
           <p className="text-sm font-medium">Cancelación de taxis y motos por tramo</p>
           <p className="text-sm text-muted-foreground">
             Gratis durante unos minutos después de que una línea toma el viaje (y hasta 30 min antes
-            de un viaje programado). Después, el pasajero paga una tasa en su próximo viaje, para la
-            línea que salió a buscarlo.
+            de un viaje programado), y también si el conductor no lo recoge en 20 min. Si no, el
+            pasajero paga una tasa en su próximo viaje, para la línea que salió a buscarlo.
           </p>
           <div className="flex flex-wrap gap-3">
             <Field label="Minutos sin costo" htmlFor="freeMinutes">

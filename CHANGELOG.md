@@ -88,6 +88,9 @@ pull request.
 
 ### Corregido
 
+- **Los mototaxistas no tenían acceso al tablero de solicitudes** en la app de conductores (solo
+  llegaban desde una notificación); y los viajes en moto ya no dicen «Tu taxi» ni «Cancelar el
+  taxi».
 - Los formularios de inicio de sesión y de registro conservan lo escrito tras un error.
 - Caddy permitía solo 1 MB por petición a la API: los documentos KYC no se podrían subir.
 - `nodemailer` actualizado a 10.3.1 (avisos de seguridad).

@@ -48,7 +48,8 @@ el código de reserva y el número de puesto. El resultado sale al instante:
 
 ## 5. Taxis (taxistas)
 
-1. **Taxis** muestra las solicitudes de los terminales donde opera tu línea (te llega un aviso
+1. En el inicio, **Solicitudes de taxi** (o **Solicitudes de moto** si tu línea es de mototaxis)
+   muestra las solicitudes de los terminales y tramos donde opera tu línea (te llega un aviso
    cuando hay una nueva).
 2. **Tomar el viaje**: elige el vehículo, escribe la tarifa y confirma con **Tomar**. Si otra línea fue más rápida, la app te lo
    dice.

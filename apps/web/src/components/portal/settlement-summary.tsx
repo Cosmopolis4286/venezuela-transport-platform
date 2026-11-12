@@ -49,9 +49,10 @@ export function SettlementBalances({
         <p className="text-sm text-muted-foreground">
           Taxis y motos por tramo: si el pasajero cancela más de{' '}
           {settlement.rideCancellation.freeMinutes} min después de que la línea tomó el viaje, debe
-          una tasa del {settlement.rideCancellation.feePercent} % de la tarifa. La cobra en efectivo
-          el conductor de su próximo viaje; si es de otra línea, se la descontamos a esa y se la
-          pagamos a la que salió a buscarlo, menos la comisión.
+          una tasa del {settlement.rideCancellation.feePercent} % de la tarifa (salvo que el
+          conductor no lo haya recogido en 20 min). La cobra en efectivo el conductor de su próximo
+          viaje; si es de otra línea, se la descontamos a esa y se la pagamos a la que salió a
+          buscarlo, menos la comisión.
         </p>
       ) : null}
       {settlement.acceptsTripPacks ? (

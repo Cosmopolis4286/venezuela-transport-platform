@@ -108,7 +108,9 @@ export default function TaxiRideScreen() {
 
           {data.vehicle ? (
             <Card>
-              <Subheading>{t.taxi.yourTaxi}</Subheading>
+              <Subheading>
+                {data.mode === 'motorcycle' ? t.taxi.yourMoto : t.taxi.yourTaxi}
+              </Subheading>
               <Body>{t.taxi.plate(vehicleName(data.vehicle))}</Body>
               <Body>{driverLine(data.driver, t.taxi.driver)}</Body>
               {data.organization ? (
