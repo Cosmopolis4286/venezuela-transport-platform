@@ -103,6 +103,10 @@ días adelante):
     una cancelación tardía cuesta la tasa de abajo, ADR-030);
   - solo las líneas que **aceptan paquetes** (política de la empresa) ven y toman esos viajes, y
     el conductor ve "Pagado con paquete" (no cobra);
+  - el pasajero ve un **código de recogida** de 4 dígitos (`pickupCode`) y el conductor debe
+    escribirlo para iniciar el viaje (`POST …/pickup` con `pickupCode`); tras 5 intentos
+    equivocados se bloquea (`TAXI_PICKUP_CODE_LOCKED`). Así una línea no puede cobrarle a la
+    plataforma viajes de paquete que no hizo;
   - al terminar el viaje, la línea gana su tarifa del tramo menos su comisión: una entrada del
     libro de liquidaciones con `taxi_ride_id` (código `TAXI-…` en sus movimientos).
 

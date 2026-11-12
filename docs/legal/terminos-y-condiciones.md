@@ -187,7 +187,8 @@ aceptan paquetes, en el tramo y tipo de vehículo del paquete:
 
 - en autobús, al reservar: la reserva queda pagada sin costo adicional. Cada paquete puede tener
   a la vez hasta 4 reservas futuras sin usar, y una sola por salida;
-- en taxi o moto por tramo, al pedir el viaje: el conductor no cobra la tarifa;
+- en taxi o moto por tramo, al pedir el viaje: el conductor no cobra la tarifa, y el pasajero le
+  dice al subir el código de recogida que le muestra la Plataforma;
 - si una reserva hecha con paquete se cancela con 30 minutos o más antes de la hora de viaje, el
   viaje vuelve al paquete (si no venció); con menos, se pierde. Un viaje de taxi o moto vuelve al
   paquete si nadie lo acepta o si el pasajero lo cancela (sección 6.4).

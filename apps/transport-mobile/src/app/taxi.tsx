@@ -42,6 +42,7 @@ export default function TaxiScreen() {
   useRefreshOnFocus(reload);
   const [taking, setTaking] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pickupCode, setPickupCode] = useState('');
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
 
   // Pause polling while the driver is filling in the fare.
@@ -70,7 +71,7 @@ export default function TaxiScreen() {
     ride: OperatorTaxiRide,
     name: 'pickup' | 'complete' | 'release',
     text: string,
-    body?: { feesCollected: boolean },
+    body?: { feesCollected: boolean } | { pickupCode: string },
   ) =>
     run(
       () =>
@@ -121,10 +122,29 @@ export default function TaxiScreen() {
             ) : null}
             {current.status === 'accepted' ? (
               <>
+                {/* Paid with a pack: the passenger tells the code shown in their app. */}
+                {current.paidWithPack ? (
+                  <Field
+                    label="Código del pasajero"
+                    placeholder="4 dígitos de su app"
+                    value={pickupCode}
+                    onChangeText={setPickupCode}
+                    keyboardType="number-pad"
+                    maxLength={4}
+                  />
+                ) : null}
                 <Button
                   title="Pasajero a bordo"
                   loading={busy}
-                  onPress={() => void step(current, 'pickup', 'Buen viaje.')}
+                  disabled={current.paidWithPack && !/^\d{4}$/.test(pickupCode)}
+                  onPress={() =>
+                    void step(
+                      current,
+                      'pickup',
+                      'Buen viaje.',
+                      current.paidWithPack ? { pickupCode } : undefined,
+                    )
+                  }
                 />
                 <Button
                   variant="secondary"

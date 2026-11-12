@@ -177,6 +177,9 @@ const es: SharedMessages = {
     TAXI_RIDE_NOT_CANCELLABLE: 'Este taxi ya no se puede cancelar.',
     TAXI_RIDE_NOT_RELEASABLE: 'Solo se puede liberar un viaje que aún no ha empezado.',
     TAXI_RIDE_WRONG_STEP: 'El viaje cambió de estado. Actualiza la pantalla.',
+    TAXI_PICKUP_CODE_WRONG: 'Ese no es el código del pasajero. Pídele que te lo muestre en su app.',
+    TAXI_PICKUP_CODE_LOCKED:
+      'Demasiados intentos con el código. Libera el viaje o pide ayuda a soporte.',
     TAXI_LINE_INACTIVE: 'La línea de taxi no está activa.',
     NOT_A_TAXI_LINE: 'Solo las líneas de taxi atienden solicitudes de taxi.',
     COLLECTION_EXCEEDS_DEBT:
@@ -337,6 +340,8 @@ const en: SharedMessages = {
     TAXI_RIDE_NOT_CANCELLABLE: 'This taxi can no longer be cancelled.',
     TAXI_RIDE_NOT_RELEASABLE: 'Only a ride that has not started can be released.',
     TAXI_RIDE_WRONG_STEP: 'The ride changed. Refresh the screen.',
+    TAXI_PICKUP_CODE_WRONG: "That is not the passenger's code. Ask them to show it in their app.",
+    TAXI_PICKUP_CODE_LOCKED: 'Too many tries with the code. Release the ride or contact support.',
     TAXI_LINE_INACTIVE: 'The taxi company is not active.',
     NOT_A_TAXI_LINE: 'Only taxi companies take taxi requests.',
     COLLECTION_EXCEEDS_DEBT:
@@ -495,6 +500,9 @@ const ptBR: SharedMessages = {
     TAXI_RIDE_NOT_CANCELLABLE: 'Este táxi não pode mais ser cancelado.',
     TAXI_RIDE_NOT_RELEASABLE: 'Só é possível liberar uma viagem que ainda não começou.',
     TAXI_RIDE_WRONG_STEP: 'A viagem mudou de status. Atualize a tela.',
+    TAXI_PICKUP_CODE_WRONG: 'Esse não é o código do passageiro. Peça que ele o mostre no app.',
+    TAXI_PICKUP_CODE_LOCKED:
+      'Muitas tentativas com o código. Libere a viagem ou fale com o suporte.',
     TAXI_LINE_INACTIVE: 'A cooperativa de táxi não está ativa.',
     NOT_A_TAXI_LINE: 'Só cooperativas de táxi atendem pedidos de táxi.',
     COLLECTION_EXCEEDS_DEBT: 'O valor é maior do que a empresa deve à plataforma nessa moeda.',

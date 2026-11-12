@@ -11,6 +11,7 @@ import {
   type AcceptTaxiRideRequest,
   type AssignTaxiRideRequest,
   type CompleteTaxiRideRequest,
+  type PickUpTaxiRideRequest,
   type Currency,
   type ReplaceTaxiTerminalsRequest,
   type RequestTaxiRequest,
@@ -186,4 +187,11 @@ export class CompleteTaxiRideDto implements CompleteTaxiRideRequest {
   @IsOptional()
   @IsBoolean()
   feesCollected?: boolean;
+}
+
+export class PickUpTaxiRideDto implements PickUpTaxiRideRequest {
+  @ApiPropertyOptional({ example: '0427', description: 'Required for rides paid with a pack' })
+  @IsOptional()
+  @Matches(/^\d{4}$/, { message: 'pickupCode must be 4 digits' })
+  pickupCode?: string;
 }

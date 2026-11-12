@@ -53,7 +53,8 @@ el código de reserva y el número de puesto. El resultado sale al instante:
    cuando hay una nueva).
 2. **Tomar el viaje**: elige el vehículo, escribe la tarifa y confirma con **Tomar**. Si otra línea fue más rápida, la app te lo
    dice.
-3. Al recoger al pasajero, **Pasajero a bordo**; al llegar, **Terminar viaje**. Si no puedes
+3. Al recoger al pasajero, **Pasajero a bordo** (si el viaje está **pagado con paquete**, pídele
+   el código de 4 dígitos que ve en su app y escríbelo: sin él no se puede iniciar); al llegar, **Terminar viaje**. Si no puedes
    hacerlo, **No puedo hacer este viaje** lo devuelve a las solicitudes.
 4. El pasajero te paga directamente. Si la solicitud dice **«Cobra además … de una cancelación
    anterior»**, cóbrale también esa tasa en efectivo: es de la línea que salió a buscarlo antes

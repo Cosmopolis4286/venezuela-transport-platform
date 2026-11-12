@@ -106,6 +106,11 @@ export interface TaxiRide {
   /** The trip pack that pays it; null: the passenger pays the driver. */
   tripPack: { id: string; code: string } | null;
   /**
+   * Rides paid with a pack: the passenger tells the driver this code at pickup, and the driver
+   * types it to start the ride (so a line cannot claim pack rides that never happened).
+   */
+  pickupCode: string | null;
+  /**
    * Stretch rides a line took: cancelling is free until this instant; afterwards it costs
    * `lateCancellationFee`, paid on the next ride. Null when cancelling is free anyway.
    */
@@ -241,6 +246,14 @@ export interface StretchOption {
 export interface CompleteTaxiRideRequest {
   feesCollected?: boolean;
 }
+
+/** `POST /me/taxi/rides/:id/pickup`. `pickupCode`: required for rides paid with a pack. */
+export interface PickUpTaxiRideRequest {
+  pickupCode?: string;
+}
+
+/** Wrong pickup codes a ride accepts before it is locked. */
+export const PICKUP_CODE_MAX_ATTEMPTS = 5;
 
 /** `GET /me/taxi-fees`: late-cancellation fees the passenger still owes (paid on the next ride). */
 export interface PendingRideFee {

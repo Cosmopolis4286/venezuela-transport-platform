@@ -93,6 +93,9 @@ export const taxiRides = pgTable(
     scheduledFor: timestamp({ withTimezone: true }),
     /** Stretch rides paid with this trip pack: one trip per passenger, spent when asked. */
     tripPackId: uuid().references(() => tripPacks.id, { onDelete: 'restrict' }),
+    /** Paid with a pack: the code the passenger tells the driver at pickup (4 digits). */
+    pickupCode: text(),
+    pickupCodeAttempts: smallint().notNull().default(0),
     address: text().notNull(),
     notes: text(),
     passengers: smallint().notNull(),

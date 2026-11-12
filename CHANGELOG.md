@@ -13,6 +13,9 @@ pull request.
 
 ### Agregado
 
+- **Código de recogida** en los viajes de taxi o moto pagados con paquete: el pasajero lo ve en
+  su app y el conductor lo escribe para iniciar el viaje (5 intentos), para que no se cobren a la
+  plataforma viajes que no ocurrieron.
 - **Tope por viaje en los paquetes** (opcional, en el catálogo del admin): lo máximo que la
   plataforma le paga a una empresa por cada viaje usado, para no perder dinero si sube su tarifa.
 - **Aviso de paquete por vencer**: 3 días antes, si le quedan viajes (push y correo).

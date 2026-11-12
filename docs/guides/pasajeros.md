@@ -90,7 +90,8 @@ la parada de origen. La primera línea que lo toma cobra su tarifa del tramo; le
 conductor. Una moto lleva un solo pasajero.
 
 Si tienes un **paquete de viajes** de ese tramo y vehículo, en **¿Cómo pagas?** puedes usarlo: no
-le pagas al conductor. Si nadie lo toma o lo cancelas, el viaje vuelve a tu paquete.
+le pagas al conductor. Cuando una línea lo toma, la app te muestra un **código de recogida** de 4
+dígitos: díselo al conductor al subir. Si nadie lo toma o lo cancelas, el viaje vuelve a tu paquete.
 
 **Cancelar**: es gratis antes de que una línea tome el viaje, durante los 3 minutos siguientes y,
 si lo pediste para más tarde, hasta 30 minutos antes de la hora. La app te muestra hasta qué hora.

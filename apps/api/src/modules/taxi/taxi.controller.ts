@@ -32,6 +32,7 @@ import {
 import {
   AcceptTaxiRideDto,
   CompleteTaxiRideDto,
+  PickUpTaxiRideDto,
   AssignTaxiRideDto,
   ReplaceTaxiTerminalsDto,
   RequestTaxiDto,
@@ -131,9 +132,10 @@ export class TaxiDriverController {
   pickup(
     @CurrentAuth() auth: Authenticated,
     @Param('rideId', ParseUUIDPipe) rideId: string,
+    @Body() body: PickUpTaxiRideDto,
     @ReqMeta() meta: RequestMeta,
   ): Promise<OperatorTaxiRide | null> {
-    return this.taxi.driverStep(auth, rideId, 'pickup', meta);
+    return this.taxi.driverStep(auth, rideId, 'pickup', meta, { pickupCode: body.pickupCode });
   }
 
   @Post('rides/:rideId/complete')
@@ -144,7 +146,9 @@ export class TaxiDriverController {
     @Body() body: CompleteTaxiRideDto,
     @ReqMeta() meta: RequestMeta,
   ): Promise<OperatorTaxiRide | null> {
-    return this.taxi.driverStep(auth, rideId, 'complete', meta, body.feesCollected ?? true);
+    return this.taxi.driverStep(auth, rideId, 'complete', meta, {
+      feesCollected: body.feesCollected,
+    });
   }
 
   @Post('rides/:rideId/release')

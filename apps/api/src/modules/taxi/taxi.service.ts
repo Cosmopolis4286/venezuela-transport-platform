@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   cityIn,
@@ -17,6 +18,7 @@ import {
   type Currency,
   type DriverTaxiBoard,
   type OperatorTaxiRide,
+  PICKUP_CODE_MAX_ATTEMPTS,
   type PendingRideFee,
   type RideCancellationPolicy,
   type RequestTaxiRequest,
@@ -26,7 +28,7 @@ import {
   type TaxiRide,
   type TaxiTerminal,
 } from '@vtp/shared-types';
-import { and, asc, count, desc, eq, gt, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNull, lt, lte, ne, or, sql } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import {
   DatabaseService,
@@ -420,6 +422,7 @@ export class TaxiService {
           .insert(taxiRides)
           .values({
             tripPackId: packId,
+            pickupCode: packId ? String(randomInt(0, 10_000)).padStart(4, '0') : null,
             kind: 'stretch',
             passengerUserId: auth.user.id,
             fromStopId,
@@ -739,8 +742,9 @@ export class TaxiService {
     rideId: string,
     step: 'pickup' | 'complete' | 'release',
     meta: RequestMeta,
-    feesCollected = true,
+    options: { feesCollected?: boolean; pickupCode?: string } = {},
   ): Promise<OperatorTaxiRide | null> {
+    const feesCollected = options.feesCollected ?? true;
     const [ride] = await this.database.db
       .select()
       .from(taxiRides)
@@ -749,6 +753,9 @@ export class TaxiService {
     if (step === 'release') {
       await this.releaseRide(ride, auth, meta);
       return null;
+    }
+    if (step === 'pickup' && ride.pickupCode && ride.status === 'accepted') {
+      await this.checkPickupCode(ride, options.pickupCode, auth, meta);
     }
     const now = new Date();
     const row = await this.database.db.transaction(async (tx) => {
@@ -1012,6 +1019,39 @@ export class TaxiService {
     return (await this.toOperatorRides([row]))[0]!;
   }
 
+  /**
+   * A ride paid with a pack starts only with the passenger's code. Wrong tries are counted
+   * atomically; after `PICKUP_CODE_MAX_ATTEMPTS` the code is locked (the ride can be released,
+   * and an abandoned one closes on its own, giving the trip back to the pack).
+   */
+  private async checkPickupCode(
+    ride: TaxiRideRow,
+    code: string | undefined,
+    auth: Authenticated,
+    meta: RequestMeta,
+  ) {
+    if (ride.pickupCodeAttempts >= PICKUP_CODE_MAX_ATTEMPTS) {
+      throw conflict('Too many wrong pickup codes', 'TAXI_PICKUP_CODE_LOCKED');
+    }
+    if (code?.trim() === ride.pickupCode) return;
+    const [counted] = await this.database.db
+      .update(taxiRides)
+      .set({ pickupCodeAttempts: sql`${taxiRides.pickupCodeAttempts} + 1` })
+      .where(
+        and(eq(taxiRides.id, ride.id), lt(taxiRides.pickupCodeAttempts, PICKUP_CODE_MAX_ATTEMPTS)),
+      )
+      .returning({ attempts: taxiRides.pickupCodeAttempts });
+    await this.record('taxi_ride.pickup_code_wrong', ride, auth, meta, {
+      attempts: counted?.attempts ?? PICKUP_CODE_MAX_ATTEMPTS,
+    });
+    throw conflict(
+      'That is not the passenger pickup code',
+      counted && counted.attempts < PICKUP_CODE_MAX_ATTEMPTS
+        ? 'TAXI_PICKUP_CODE_WRONG'
+        : 'TAXI_PICKUP_CODE_LOCKED',
+    );
+  }
+
   /** An accepted ride goes back to the terminal's requests, with a fresh wait. */
   private async releaseRide(ride: TaxiRideRow, actor: Authenticated, meta: RequestMeta) {
     const [row] = await this.database.db
@@ -1240,6 +1280,9 @@ export class TaxiService {
         tripPack: ride.tripPackId
           ? { id: ride.tripPackId, code: packCodes.get(ride.tripPackId) ?? '' }
           : null,
+        // Only while it matters: before pickup.
+        pickupCode:
+          ride.status === 'requested' || ride.status === 'accepted' ? ride.pickupCode : null,
         address: ride.address,
         notes: ride.notes,
         passengers: ride.passengers,

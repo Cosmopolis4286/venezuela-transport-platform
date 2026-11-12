@@ -426,7 +426,17 @@ describe.runIf(expectDatabase)('On-demand stretch rides (e2e)', () => {
           .send(body ?? {})
           .expect(200);
       await step('accept', { organizationId: organization.id, vehicleId: vehicle.id });
-      await step('pickup');
+      // Paid with a pack: the ride starts only with the code the passenger sees in the app.
+      expect(ride.pickupCode).toMatch(/^\d{4}$/);
+      const pickUp = (pickupCode?: string) =>
+        http()
+          .post(`/api/v1/me/taxi/rides/${ride.id}/pickup`)
+          .set('Authorization', owner.auth)
+          .send(pickupCode ? { pickupCode } : {});
+      expect(reason(await pickUp().expect(409))).toBe('TAXI_PICKUP_CODE_WRONG');
+      const wrong = ride.pickupCode === '0000' ? '1111' : '0000';
+      expect(reason(await pickUp(wrong).expect(409))).toBe('TAXI_PICKUP_CODE_WRONG');
+      await pickUp(ride.pickupCode!).expect(200);
       await step('complete');
       expect(await remaining()).toBe(4);
       const entries = await db

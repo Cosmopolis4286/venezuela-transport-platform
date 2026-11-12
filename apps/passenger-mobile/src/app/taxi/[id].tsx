@@ -101,6 +101,13 @@ export default function TaxiRideScreen() {
           {data.tripPack ? (
             <Banner tone="success">{t.ride.paidWithPack(data.tripPack.code)}</Banner>
           ) : null}
+          {data.pickupCode && data.status === 'accepted' ? (
+            <Card>
+              <Subheading>{t.ride.pickupCode}</Subheading>
+              <Heading>{data.pickupCode.split('').join(' ')}</Heading>
+              <Body muted>{t.ride.pickupCodeHint}</Body>
+            </Card>
+          ) : null}
           {/* A ride booked for later has no countdown worth showing. */}
           {data.status === 'requested' && !data.scheduledFor ? (
             <Body muted>{t.taxi.waitsFor(formatClock(secondsLeft))}</Body>
