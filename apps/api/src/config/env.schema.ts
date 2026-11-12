@@ -131,6 +131,8 @@ export const envSchema = z
       .refine((value) => !value || normalizeWhatsapp(value) !== null, {
         message: 'SUPPORT_WHATSAPP must be an international number with 8 to 15 digits',
       }),
+    /** Optional. Download page of the Android passenger app (APK or Google Play), https only. */
+    ANDROID_APP_URL: z.union([z.url({ protocol: /^https$/ }), z.literal('')]).default(''),
 
     REDIS_URL: z
       .union([z.url({ protocol: /^rediss?$/ }), z.literal('')])

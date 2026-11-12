@@ -6,6 +6,11 @@
 export interface SupportContact {
   /** International number, digits only (e.g. 584121234567). */
   whatsapp: string | null;
+  /**
+   * Where to download the passenger app for Android (`ANDROID_APP_URL`): the APK during the pilot,
+   * Google Play afterwards. The web's `/app` page links to it, so shared links never change.
+   */
+  androidApp: string | null;
 }
 
 /** `+58 412-123.4567` → `584121234567`; null unless it has 8 to 15 digits. */

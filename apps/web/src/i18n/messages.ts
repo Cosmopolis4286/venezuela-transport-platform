@@ -16,6 +16,14 @@ const es = {
     operatorsLink: 'portal de operadores',
   },
   support: {
+    download: 'Descargar la app',
+    appTitle: 'Descarga la app',
+    appIntro:
+      'Con la app reservas tu puesto o tu boleto abierto, pagas con pago móvil o transferencia y llevas tu boleto QR en el teléfono.',
+    appAndroid: 'Descargar para Android',
+    appSoon: 'La app para Android estará disponible muy pronto.',
+    appIphone:
+      'La app para iPhone llegará más adelante; mientras tanto puedes buscar salidas aquí en la web.',
     whatsapp: 'Escríbenos por WhatsApp',
     message: 'Hola, necesito ayuda con VTP.',
   },
@@ -74,6 +82,14 @@ const en: Messages = {
     operatorsLink: 'operator portal',
   },
   support: {
+    download: 'Get the app',
+    appTitle: 'Get the app',
+    appIntro:
+      'With the app you book your seat or open ticket, pay by mobile payment or transfer, and carry your QR ticket on your phone.',
+    appAndroid: 'Download for Android',
+    appSoon: 'The Android app will be available very soon.',
+    appIphone:
+      'The iPhone app will come later; meanwhile you can search departures here on the web.',
     whatsapp: 'Message us on WhatsApp',
     message: 'Hi, I need help with VTP.',
   },
@@ -132,6 +148,14 @@ const ptBR: Messages = {
     operatorsLink: 'portal de operadores',
   },
   support: {
+    download: 'Baixar o app',
+    appTitle: 'Baixe o app',
+    appIntro:
+      'Com o app você reserva seu assento ou bilhete aberto, paga por pagamento móvel ou transferência e leva seu bilhete QR no celular.',
+    appAndroid: 'Baixar para Android',
+    appSoon: 'O app para Android estará disponível em breve.',
+    appIphone:
+      'O app para iPhone virá depois; enquanto isso, você pode buscar partidas aqui na web.',
     whatsapp: 'Fale conosco pelo WhatsApp',
     message: 'Olá, preciso de ajuda com a VTP.',
   },

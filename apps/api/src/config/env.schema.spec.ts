@@ -39,6 +39,13 @@ describe('validateEnv', () => {
     );
     expect(validateEnv(valid).SUPPORT_WHATSAPP).toBe('');
     expect(() => validateEnv({ ...valid, SUPPORT_WHATSAPP: '0412' })).toThrow(/SUPPORT_WHATSAPP/);
+    expect(() => validateEnv({ ...valid, ANDROID_APP_URL: 'http://x.example/app.apk' })).toThrow(
+      /ANDROID_APP_URL/,
+    );
+    expect(
+      validateEnv({ ...valid, ANDROID_APP_URL: 'https://play.google.com/store/apps/details?id=x' })
+        .ANDROID_APP_URL,
+    ).toBe('https://play.google.com/store/apps/details?id=x');
   });
 
   it('parses the CORS allowlist', () => {

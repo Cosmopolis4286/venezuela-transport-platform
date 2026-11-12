@@ -32,13 +32,13 @@ async function cachedSupport(): Promise<SupportContact> {
   return apiRequest<SupportContact>('/support', { auth: false });
 }
 
-/** The support WhatsApp number, or null when it is not configured or the API is unreachable. */
-export async function getSupportWhatsapp(): Promise<string | null> {
+/** Support WhatsApp and app download link; both null when not configured or the API is down. */
+export async function getSupport(): Promise<SupportContact> {
   await connection();
   try {
-    return (await cachedSupport()).whatsapp;
+    return await cachedSupport();
   } catch {
-    return null;
+    return { whatsapp: null, androidApp: null };
   }
 }
 

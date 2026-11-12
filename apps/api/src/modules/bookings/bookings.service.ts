@@ -7,6 +7,7 @@ import {
   TICKET_QR_PREFIX,
   toNetworkIso,
   refundPercentFor,
+  type AdminBookingLookup,
   type Booking,
   type CancelDepartureResult,
   type CancellationQuote,
@@ -256,6 +257,42 @@ export class BookingsService {
 
   async getMine(userId: string, bookingId: string): Promise<Booking> {
     return (await this.toBookings([await this.requireMine(userId, bookingId)]))[0]!;
+  }
+
+  /**
+   * Support (platform staff): a booking by its code (`VTP-7K3QXA`, `7k3qxa` or `vtp7k3qxa`), with the
+   * passenger's contact. Every lookup is audited: it shows personal data.
+   */
+  async findByCode(
+    rawCode: string,
+    actor: Authenticated,
+    meta: RequestMeta,
+  ): Promise<AdminBookingLookup> {
+    const code = normalizeBookingCode(rawCode);
+    const [row] = code
+      ? await this.database.db
+          .select({ booking: bookings, user: users })
+          .from(bookings)
+          .innerJoin(users, eq(users.id, bookings.userId))
+          .where(eq(bookings.code, code))
+      : [];
+    if (!row) throw notFound();
+    await this.audit.record({
+      action: 'booking.looked_up',
+      actorUserId: actor.user.id,
+      targetType: 'booking',
+      targetId: row.booking.id,
+      ip: meta.ip,
+    });
+    const [booking] = await this.toBookings([row.booking]);
+    return {
+      booking: booking!,
+      customer: {
+        name: [row.user.firstName, row.user.lastName].filter(Boolean).join(' ') || null,
+        email: row.user.email,
+        phone: row.user.phone,
+      },
+    };
   }
 
   /** The lowest ticket numbers of the day nobody holds, or 409 when the day is sold out. */
@@ -791,6 +828,15 @@ export class BookingsService {
       };
     });
   }
+}
+
+/** `vtp-7k3qxa`, `VTP7K3QXA` or `7K3QXA` → `VTP-7K3QXA`; null if it cannot be a booking code. */
+export function normalizeBookingCode(input: string): string | null {
+  const bare = input
+    .trim()
+    .toUpperCase()
+    .replace(/^VTP-?/, '');
+  return /^[A-Z0-9]{6}$/.test(bare) ? `VTP-${bare}` : null;
 }
 
 function billingOf(booking: BookingRow): InvoiceBuyer | null {

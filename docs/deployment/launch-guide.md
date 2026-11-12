@@ -108,6 +108,9 @@ En la web los pasajeros **buscan**; para comprar usan la app Android (o la taqui
    para estas compilaciones (con cola).
 4. En la API: `PUSH_DELIVERY=expo` (y `EXPO_ACCESS_TOKEN` si activas la seguridad reforzada).
 5. Sube el `.aab` a la prueba cerrada de Google Play e invita a los probadores del piloto.
+6. Pon en `ANDROID_APP_URL` el enlace de descarga (el de la prueba de Google Play, o el APK de
+   EAS) y comparte siempre `https://TU-DOMINIO/es/app`: cuando pases a producción solo cambia la
+   variable.
 
 - **Comprobar:** la app instalada desde Play inicia sesión contra producción y recibe un push.
 

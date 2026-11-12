@@ -18,6 +18,13 @@ Los roles se otorgan desde el servidor, nunca desde la web:
   registrada), marca cada documento como aceptado o rechazado con el motivo y decide: aprobar,
   pedir cambios o rechazar.
 
+## Buscar reserva (`/admin/bookings`)
+
+Para atender por WhatsApp o correo: con el código que envía el pasajero (`VTP-7K3QXA` o solo
+`7K3QXA`) ves el estado, el pago (con enlace a Pagos o Reembolsos si hace falta), la factura, los
+pasajeros y sus boletos, y cómo contactar al cliente. Cada búsqueda queda en la auditoría. Ver
+[atención por WhatsApp](whatsapp-soporte.md).
+
 ## Terminales y paradas (`/admin/stops`)
 
 Agrega los terminales y paradas que usan las rutas (nombre, ciudad, estado y, si la tienes, la
