@@ -18,24 +18,24 @@ que compran por adelantado. Cada tipo de vehículo tiene precios distintos.
 
 ## Decisiones del dueño del producto (2026-11-08)
 
-| Pregunta                                     | Decisión                                                                                    |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| ¿Quién vende los paquetes?                   | **La plataforma.** Sirven con cualquier empresa adherida que haga ese tramo en ese vehículo |
-| ¿Qué cubre un paquete?                       | **Un tramo fijo** (par de paradas) en un tipo de vehículo                                   |
-| ¿Vencen?                                     | **Sí**, a los días que fije cada paquete; **60 por defecto**                                |
-| Taxis y motos: ¿con horario o bajo demanda?  | **Híbrido:** salidas con horario y también viajes bajo demanda                              |
-| Cancelar una reserva                         | Hasta **30 minutos antes** de la hora de viaje; después, no hay devolución                  |
-| Devoluciones                                 | **Escalonadas** según el tiempo que falta y el momento en que se cancela (ver abajo)        |
-| Motos                                        | **Un tipo de organización nuevo**: línea de mototaxis (`moto_line`)                         |
-| ¿Cómo se sabe si una ruta es suburbana?      | **La empresa lo elige** al crear la ruta (Interurbano o Suburbano)                          |
-| Apagar un servicio                           | Interruptores **por corredor o ciudad**, no solo uno general                                |
-| ¿Y lo ya vendido si se apaga?                | **Se respeta:** solo deja de venderse; boletos y paquetes siguen válidos                    |
-| Pasajeros por moto                           | **Uno**                                                                                     |
-| Sentido de un paquete                        | **Ida y vuelta** (A → B y B → A)                                                            |
-| Límites por paquete                          | **4 reservas futuras** sin usar, **una por salida**                                         |
-| Devolver un paquete                          | **No se devuelve**; los viajes sin usar se pierden al vencer                                |
-| Cuánto gana la empresa por viaje con paquete | **Su tarifa normal del tramo** menos comisión; la plataforma pone o gana la diferencia      |
-| Tramos de reembolso suburbanos               | 100 % desde 24 h, 75 % desde 2 h, 50 % desde 30 min, nada después; interurbano sin cambios  |
+| Pregunta                                     | Decisión                                                                                      |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| ¿Quién vende los paquetes?                   | **La plataforma.** Sirven con cualquier empresa adherida que haga ese tramo en ese vehículo   |
+| ¿Qué cubre un paquete?                       | **Un tramo fijo** (par de paradas) en un tipo de vehículo                                     |
+| ¿Vencen?                                     | **Sí**, a los días que fije cada paquete; **60 por defecto**                                  |
+| Taxis y motos: ¿con horario o bajo demanda?  | **Híbrido:** salidas con horario y también viajes bajo demanda                                |
+| Cancelar una reserva                         | Hasta **30 minutos antes** de la hora de viaje; después, no hay devolución                    |
+| Devoluciones                                 | **Escalonadas** según el tiempo que falta y el momento en que se cancela (ver abajo)          |
+| Motos                                        | **Un tipo de organización nuevo**: línea de mototaxis (`moto_line`)                           |
+| ¿Cómo se sabe si una ruta es suburbana?      | **La empresa lo elige** al crear la ruta (Interurbano o Suburbano)                            |
+| Apagar un servicio                           | Interruptores **por corredor o ciudad**, no solo uno general                                  |
+| ¿Y lo ya vendido si se apaga?                | **Se respeta:** solo deja de venderse; boletos y paquetes siguen válidos                      |
+| Pasajeros por moto                           | **Uno**                                                                                       |
+| Sentido de un paquete                        | **Ida y vuelta** (A → B y B → A)                                                              |
+| Límites por paquete                          | **4 reservas futuras** sin usar, **una por salida**                                           |
+| Devolver un paquete                          | **No se devuelve**; los viajes sin usar se pierden al vencer                                  |
+| Cuánto gana la empresa por viaje con paquete | **Su tarifa normal del tramo** menos comisión (hasta el tope por viaje del paquete, si tiene) |
+| Tramos de reembolso suburbanos               | 100 % desde 24 h, 75 % desde 2 h, 50 % desde 30 min, nada después; interurbano sin cambios    |
 
 Las supuestas en este documento, que conviene confirmar, están marcadas con **(por confirmar)**.
 

@@ -10,6 +10,7 @@ import {
   type TaxiRideKind,
   type AcceptTaxiRideRequest,
   type AssignTaxiRideRequest,
+  type CompleteTaxiRideRequest,
   type Currency,
   type ReplaceTaxiTerminalsRequest,
   type RequestTaxiRequest,
@@ -19,6 +20,7 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsISO8601,
   IsIn,
   IsInt,
@@ -175,4 +177,13 @@ export class StretchOptionsQueryDto {
   @ApiProperty()
   @IsUUID()
   to!: string;
+}
+
+export class CompleteTaxiRideDto implements CompleteTaxiRideRequest {
+  @ApiPropertyOptional({
+    description: 'false: the passenger did not pay the pending cancellation fees (default true)',
+  })
+  @IsOptional()
+  @IsBoolean()
+  feesCollected?: boolean;
 }

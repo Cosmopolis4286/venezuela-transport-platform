@@ -9,7 +9,7 @@ import {
   type TripPackProduct,
   type TripPackProductInput,
 } from '@vtp/shared-types';
-import { and, asc, desc, eq, gt, gte, inArray, lt, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, gte, inArray, lt, sql } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import {
   DatabaseService,
@@ -101,6 +101,7 @@ export class TripPacksService {
       price: input.price ?? current.price,
       currency: input.currency ?? current.currency,
       validityDays: input.validityDays ?? current.validityDays,
+      maxFare: input.maxFare === undefined ? current.maxFare : input.maxFare,
       active: input.active ?? current.active,
     });
     await this.database.db
@@ -121,6 +122,17 @@ export class TripPacksService {
     if (!product) {
       throw ApiException.conflict('This trip pack is not for sale', 'TRIP_PACK_NOT_FOR_SALE');
     }
+    await this.sweep();
+    const [unpaid] = await this.database.db
+      .select({ n: count() })
+      .from(tripPacks)
+      .where(and(eq(tripPacks.userId, auth.user.id), eq(tripPacks.status, 'pending_payment')));
+    if ((unpaid?.n ?? 0) >= TRIP_PACK_LIMITS.maxUnpaid) {
+      throw ApiException.conflict(
+        'You already have trip packs waiting for payment',
+        'TRIP_PACK_UNPAID_LIMIT',
+      );
+    }
     let row: TripPackRow | undefined;
     for (let attempt = 0; !row && attempt < 3; attempt++) {
       [row] = await this.database.db
@@ -139,6 +151,7 @@ export class TripPacksService {
           currency: product.currency,
           unitPrice: product.unitPrice,
           validityDays: product.validityDays,
+          maxFare: product.maxFare,
           paymentDueAt: new Date(Date.now() + TRIP_PACK_LIMITS.paymentHours * HOUR_MS),
         })
         .onConflictDoNothing({ target: tripPacks.code })
@@ -412,6 +425,9 @@ export class TripPacksService {
       );
     }
     if (!(Number(input.price) > 0)) throw invalid('The price must be greater than zero');
+    if (input.maxFare !== undefined && input.maxFare !== null && !(Number(input.maxFare) > 0)) {
+      throw invalid('The cap per trip must be greater than zero');
+    }
     return {
       serviceAreaId: input.serviceAreaId,
       stopAId: a,
@@ -421,6 +437,7 @@ export class TripPacksService {
       price: Number(input.price).toFixed(2),
       currency: input.currency,
       validityDays: input.validityDays ?? DEFAULT_TRIP_PACK_VALIDITY_DAYS,
+      maxFare: input.maxFare ? Number(input.maxFare).toFixed(2) : null,
       active: input.active ?? true,
     };
   }
@@ -458,6 +475,7 @@ function toProduct(
     currency: row.currency,
     unitPrice: unitPriceOf(row.price, row.trips),
     validityDays: row.validityDays,
+    maxFare: row.maxFare,
     active: row.active,
   };
 }

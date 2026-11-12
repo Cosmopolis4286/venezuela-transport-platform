@@ -104,6 +104,9 @@ La empresa ve cada pago en su portal.
   tipo de vehículo, una cantidad de viajes, un precio en US$ o Bs. y una vigencia (60 días por
   defecto). **Dejar de vender** lo saca de la venta; los paquetes ya comprados siguen valiendo.
   Cambiar un producto no cambia los paquetes ya comprados.
+- **Tope por viaje** (opcional): lo máximo que la plataforma le paga a una empresa por cada viaje
+  usado. Sin tope, se paga la tarifa de la empresa aunque la suba después de vendido el paquete;
+  ponlo igual o algo mayor que las tarifas actuales del tramo para no perder dinero.
 - **Tasas de cambio de la plataforma**: convierten el precio de los paquetes al cobrar (las
   empresas tienen las suyas para sus boletos). Sin tasa de bolívares no se ofrece pago móvil ni
   transferencia para paquetes en dólares.

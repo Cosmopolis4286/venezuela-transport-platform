@@ -13,6 +13,12 @@ pull request.
 
 ### Agregado
 
+- **Tope por viaje en los paquetes** (opcional, en el catálogo del admin): lo máximo que la
+  plataforma le paga a una empresa por cada viaje usado, para no perder dinero si sube su tarifa.
+- **Aviso de paquete por vencer**: 3 días antes, si le quedan viajes (push y correo).
+- **«Terminar sin cobrar la tasa»** en la app de conductores: si el pasajero no paga una tasa de
+  cancelación pendiente, sigue debiéndola y a la línea no se le descuenta.
+- Máximo **2 paquetes esperando pago** por usuario.
 - **Blindaje del suburbano para la primera versión**: sin tasa de cancelación si el conductor no
   recoge al pasajero en 20 minutos; los viajes de taxi o moto abandonados se cierran solos (no
   bloquean al pasajero y devuelven los viajes del paquete); los paquetes no se cobran en
@@ -88,6 +94,8 @@ pull request.
 
 ### Corregido
 
+- Los reportes contaban como venta la tasa de cancelación que una línea cobraba para otra, y la
+  sumaban a las tarifas de los viajes usados con paquete.
 - **Los mototaxistas no tenían acceso al tablero de solicitudes** en la app de conductores (solo
   llegaban desde una notificación); y los viajes en moto ya no dicen «Tu taxi» ni «Cancelar el
   taxi».

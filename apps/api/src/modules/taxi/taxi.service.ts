@@ -139,7 +139,12 @@ async function closeAbandonedRides(db: Database, now: Date) {
  * What completing a ride settles: a ride paid with a pack earns the line its fare (ADR-028), and
  * the driver collected the passenger's pending late-cancellation fees in cash (ADR-030).
  */
-async function settleCompletedRide(tx: Transaction, ride: TaxiRideRow, now: Date) {
+async function settleCompletedRide(
+  tx: Transaction,
+  ride: TaxiRideRow,
+  now: Date,
+  feesCollected = true,
+) {
   if (ride.tripPackId) {
     await recordRideEarning(tx, {
       id: ride.id,
@@ -147,8 +152,11 @@ async function settleCompletedRide(tx: Transaction, ride: TaxiRideRow, now: Date
       passengers: ride.passengers,
       fareAmount: ride.fareAmount!,
       fareCurrency: ride.fareCurrency!,
+      tripPackId: ride.tripPackId,
     });
   }
+  // The driver says the passenger did not pay them: they stay owed for the next ride.
+  if (!feesCollected) return;
   const charged = await tx
     .update(rideCancellationFees)
     .set({ chargedRideId: ride.id, chargedAt: now })
@@ -731,6 +739,7 @@ export class TaxiService {
     rideId: string,
     step: 'pickup' | 'complete' | 'release',
     meta: RequestMeta,
+    feesCollected = true,
   ): Promise<OperatorTaxiRide | null> {
     const [ride] = await this.database.db
       .select()
@@ -757,7 +766,9 @@ export class TaxiService {
           ),
         )
         .returning();
-      if (updated && step === 'complete') await settleCompletedRide(tx, updated, now);
+      if (updated && step === 'complete') {
+        await settleCompletedRide(tx, updated, now, feesCollected);
+      }
       return updated;
     });
     if (!row) {

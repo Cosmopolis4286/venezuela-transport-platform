@@ -225,6 +225,20 @@
       "when": 1794441809610,
       "tag": "0031_ride_cancellation_fees",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794511530956,
+      "tag": "0032_trip_pack_expiry_notice",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1794511684677,
+      "tag": "0033_trip_pack_max_fare",
+      "breakpoints": true
     }
   ]
 }

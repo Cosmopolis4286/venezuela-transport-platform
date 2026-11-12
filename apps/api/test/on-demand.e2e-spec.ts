@@ -341,6 +341,8 @@ describe.runIf(expectDatabase)('On-demand stretch rides (e2e)', () => {
             trips: 5,
             price: '8',
             currency: 'USD',
+            // The platform pays at most 1.50 per trip, whatever the line charges.
+            maxFare: '1.50',
           })
           .expect(201)
       ).body as { id: string };
@@ -434,7 +436,8 @@ describe.runIf(expectDatabase)('On-demand stretch rides (e2e)', () => {
       expect(entries).toEqual([
         expect.objectContaining({
           kind: 'booking',
-          gross: '2.00',
+          // The line's fare is 2.00; the pack caps what the platform pays at 1.50.
+          gross: '1.50',
           collectedBy: 'platform',
           organizationId: organization.id,
           bookingId: null,
@@ -657,6 +660,14 @@ describe.runIf(expectDatabase)('On-demand stretch rides (e2e)', () => {
         .from(rideCancellationFees)
         .where(eq(rideCancellationFees.cancelledRideId, late.id));
       expect(charged?.chargedRideId).toBe(next.id);
+      // The second line only passed the money on: it is not a sale in its reports.
+      const sales = (
+        await http()
+          .get(`/api/v1/organizations/${second.id}/reports/sales`)
+          .set('Authorization', second.owner.auth)
+          .expect(200)
+      ).body as { totals: unknown[] };
+      expect(sales.totals).toEqual([]);
       // Already charged: a later ride owes nothing.
       expect((await ask()).feesDue).toEqual([]);
       const last = (
@@ -669,6 +680,19 @@ describe.runIf(expectDatabase)('On-demand stretch rides (e2e)', () => {
       await second.step(again.id, 'accept');
       await takenAgo(again.id, 5);
       await cancel(again.id);
+      // The passenger does not pay it: the driver says so, it stays owed and nothing is recorded.
+      const unpaid = await ask();
+      await second.step(unpaid.id, 'accept');
+      await second.step(unpaid.id, 'pickup');
+      await http()
+        .post(`/api/v1/me/taxi/rides/${unpaid.id}/complete`)
+        .set('Authorization', second.owner.auth)
+        .send({ feesCollected: false })
+        .expect(200);
+      expect(await fees()).toEqual([expect.objectContaining({ amount: '1.50' })]);
+      expect(
+        await db.select().from(settlementEntries).where(eq(settlementEntries.taxiRideId, again.id)),
+      ).toEqual([]);
       const following = await ask();
       expect(following.feesDue).toEqual([{ amount: '1.50', currency: 'USD' }]);
       await second.step(following.id, 'accept');

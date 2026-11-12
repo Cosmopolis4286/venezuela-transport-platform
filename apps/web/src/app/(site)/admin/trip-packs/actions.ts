@@ -10,7 +10,7 @@ import { failure, text } from '@/lib/server/form-actions';
 
 const PRODUCT_RULES = {
   VALIDATION_FAILED:
-    'Revisa el paquete: dos paradas distintas del corredor, de 2 a 100 viajes, un precio mayor que cero y de 1 a 365 días de vigencia.',
+    'Revisa el paquete: dos paradas distintas del corredor, de 2 a 100 viajes, un precio mayor que cero y de 1 a 365 días de vigencia; el tope por viaje, si lo pones, mayor que cero.',
 };
 
 export async function createTripPackProduct(_: FormState, form: FormData): Promise<FormState> {
@@ -25,6 +25,7 @@ export async function createTripPackProduct(_: FormState, form: FormData): Promi
         price: text(form, 'price').replace(',', '.'),
         currency: text(form, 'currency'),
         validityDays: Number(text(form, 'validityDays')) || undefined,
+        maxFare: text(form, 'maxFare').replace(',', '.') || null,
       },
     });
   } catch (error) {

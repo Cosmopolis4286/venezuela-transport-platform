@@ -132,6 +132,9 @@ días adelante):
   hora pedida) se cancela solo, sin tasa y devolviendo los viajes del paquete; uno en curso que
   no se termina en 6 horas se da por terminado (con su ganancia y sus tasas). Así el pasajero no
   queda bloqueado (`RIDE_ABANDONED_HOURS`).
+- Si el pasajero no paga la tasa, el conductor termina con **Terminar sin cobrar la tasa**
+  (`POST …/complete` con `feesCollected: false`): queda pendiente para el siguiente viaje y a su
+  línea no se le descuenta.
 - Si el pasajero no vuelve a pedir un viaje, la tasa queda pendiente (no hay cobro forzoso).
 
 | Método y ruta                                     | Quién                          |

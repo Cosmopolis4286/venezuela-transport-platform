@@ -9,12 +9,17 @@ import type { Payment } from './payments.js';
 
 export const DEFAULT_TRIP_PACK_VALIDITY_DAYS = 60;
 
+/** Packs with trips left are reminded this many days before they expire. */
+export const TRIP_PACK_EXPIRY_NOTICE_DAYS = 3;
+
 export const TRIP_PACK_LIMITS = {
   minTrips: 2,
   maxTrips: 100,
   maxValidityDays: 365,
   /** Unused future bookings one pack can hold at a time (decided by the product owner). */
   maxFutureBookings: 4,
+  /** Packs one user can have waiting for payment at a time (so unpaid ones do not pile up). */
+  maxUnpaid: 2,
   /** A bought pack waits this long for its payment before it is voided. */
   paymentHours: 24,
 } as const;
@@ -46,6 +51,11 @@ export interface TripPackProduct {
   /** `price ÷ trips`, two decimals. */
   unitPrice: string;
   validityDays: number;
+  /**
+   * The most the platform pays an operator per trip used, in the pack's currency; null: the
+   * operator's fare, whatever it is (ADR-028). Protects the platform if fares go up after sale.
+   */
+  maxFare: string | null;
   /** Inactive products are not sold; packs already bought keep working. */
   active: boolean;
 }
@@ -59,6 +69,8 @@ export interface TripPackProductInput {
   price: string;
   currency: Currency;
   validityDays?: number;
+  /** Null or omitted on create: no cap. */
+  maxFare?: string | null;
   active?: boolean;
 }
 

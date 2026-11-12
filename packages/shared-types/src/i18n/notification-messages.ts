@@ -47,6 +47,8 @@ export interface NotificationMessages {
     expires: string,
   ) => NotificationText;
   tripPackPaymentRejected: (code: string, reason: string) => NotificationText;
+  /** A pack with trips left expires soon (`TRIP_PACK_EXPIRY_NOTICE_DAYS`); unused trips are lost. */
+  tripPackExpiring: (code: string, remaining: number, expires: string) => NotificationText;
   /** The operator cancelled the departure; `refund` is the formatted amount, or null if unpaid. */
   departureCancelled: (
     bookingCode: string,
@@ -144,6 +146,10 @@ const es: NotificationMessages = {
   paymentRejected: (code, reason) => ({
     title: 'No encontramos tu pago',
     body: `Reserva ${code}: ${reason} Revisa los datos y vuelve a intentarlo desde la app.`,
+  }),
+  tripPackExpiring: (code, remaining, expires) => ({
+    title: 'Tu paquete está por vencer',
+    body: `A tu paquete ${code} le quedan ${remaining} ${remaining === 1 ? 'viaje' : 'viajes'} y vence el ${expires}. Los viajes sin usar se pierden: resérvalos en la app.`,
   }),
   tripPackActivated: (code, trips, stretch, expires) => ({
     title: 'Paquete activado',
@@ -243,6 +249,10 @@ const en: NotificationMessages = {
     title: 'We could not find your payment',
     body: `Booking ${code}: ${reason} Check the details and try again from the app.`,
   }),
+  tripPackExpiring: (code, remaining, expires) => ({
+    title: 'Your trip pack expires soon',
+    body: `Your trip pack ${code} has ${remaining} ${remaining === 1 ? 'trip' : 'trips'} left and expires on ${expires}. Unused trips are lost: book them in the app.`,
+  }),
   tripPackActivated: (code, trips, stretch, expires) => ({
     title: 'Trip pack activated',
     body: `Your trip pack ${code} (${trips} trips, ${stretch}) is paid and expires on ${expires}. Use it when booking in the app.`,
@@ -340,6 +350,10 @@ const ptBR: NotificationMessages = {
   paymentRejected: (code, reason) => ({
     title: 'Não encontramos seu pagamento',
     body: `Reserva ${code}: ${reason} Confira os dados e tente de novo pelo app.`,
+  }),
+  tripPackExpiring: (code, remaining, expires) => ({
+    title: 'Seu pacote está vencendo',
+    body: `Seu pacote ${code} tem ${remaining} ${remaining === 1 ? 'viagem' : 'viagens'} e vence em ${expires}. Viagens não usadas se perdem: reserve-as no app.`,
   }),
   tripPackActivated: (code, trips, stretch, expires) => ({
     title: 'Pacote ativado',

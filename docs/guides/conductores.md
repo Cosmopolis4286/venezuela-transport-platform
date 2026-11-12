@@ -58,5 +58,7 @@ el código de reserva y el número de puesto. El resultado sale al instante:
 4. El pasajero te paga directamente. Si la solicitud dice **«Cobra además … de una cancelación
    anterior»**, cóbrale también esa tasa en efectivo: es de la línea que salió a buscarlo antes
    (si fue otra, la plataforma se la descuenta a tu línea en la liquidación y se la paga a ella).
+   Si el pasajero no te la paga, termina con **Terminar sin cobrar la tasa**: queda pendiente
+   para su próximo viaje y a tu línea no se le descuenta.
 
 Solo puedes tener un viaje de taxi activo a la vez.

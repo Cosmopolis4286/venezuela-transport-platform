@@ -15,7 +15,21 @@ import {
   type SalesReport,
   type TripPackMetrics,
 } from '@vtp/shared-types';
-import { and, asc, eq, gt, gte, inArray, isNotNull, lt, lte, or, sql, type SQL } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNotNull,
+  lt,
+  lte,
+  ne,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService } from '../../database/database.service.js';
 import { bookingPassengers, bookings, trips } from '../bookings/bookings.schema.js';
@@ -63,6 +77,11 @@ export function reportRange(from?: string, to?: string): ReportRange {
 const money = (value: SQL) => sql<string>`coalesce(${value}, 0)::numeric(14, 2)::text`;
 const isBooking = sql`${settlementEntries.kind} = 'booking'`;
 const isCancellation = sql`${settlementEntries.kind} = 'cancellation'`;
+/**
+ * A late-cancellation fee one line collected in cash for another (ADR-030) is money passing
+ * through, not a sale: the line that went out reports it. Excluded from the sales figures.
+ */
+const notPassThrough = sql`not (${settlementEntries.kind} = 'ride_cancellation_fee' and ${settlementEntries.collectedBy} = 'operator' and ${settlementEntries.earned} = 0 and ${settlementEntries.commission} = 0)`;
 
 /** Aggregates of the settlement ledger, grouped by whatever the caller adds. */
 const salesColumns = {
@@ -90,6 +109,7 @@ export class ReportsService {
   /** Sales of one operator: paid bookings minus cancellations, by currency, route and day. */
   async sales(organizationId: string, range: ReportRange): Promise<SalesReport> {
     const where = and(
+      notPassThrough,
       eq(settlementEntries.organizationId, organizationId),
       gte(settlementEntries.createdAt, range.start),
       lt(settlementEntries.createdAt, range.end),
@@ -218,6 +238,8 @@ export class ReportsService {
       .leftJoin(taxiRides, eq(taxiRides.id, settlementEntries.taxiRideId))
       .where(
         and(
+          // Trips paid with a pack, not the fees of rides cancelled late.
+          ne(settlementEntries.kind, 'ride_cancellation_fee'),
           or(isNotNull(bookings.tripPackId), isNotNull(taxiRides.tripPackId)),
           gte(settlementEntries.createdAt, range.start),
           lt(settlementEntries.createdAt, range.end),
@@ -268,6 +290,7 @@ export class ReportsService {
       .leftJoin(taxiRides, eq(taxiRides.id, settlementEntries.taxiRideId))
       .where(
         and(
+          notPassThrough,
           gte(settlementEntries.createdAt, range.start),
           lt(settlementEntries.createdAt, range.end),
         ),

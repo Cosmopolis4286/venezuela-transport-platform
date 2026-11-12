@@ -234,6 +234,14 @@ export interface StretchOption {
   maxFare: string;
 }
 
+/**
+ * `POST /me/taxi/rides/:id/complete`. `feesCollected: false`: the passenger did not pay the
+ * pending cancellation fees; they stay owed for the next ride and the line is not charged them.
+ */
+export interface CompleteTaxiRideRequest {
+  feesCollected?: boolean;
+}
+
 /** `GET /me/taxi-fees`: late-cancellation fees the passenger still owes (paid on the next ride). */
 export interface PendingRideFee {
   id: string;

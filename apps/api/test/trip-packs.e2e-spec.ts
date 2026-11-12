@@ -28,6 +28,7 @@ import { addDays, todayInVenezuela } from '../src/modules/network/departures.js'
 import { settlementEntries } from '../src/modules/settlements/settlements.schema.js';
 import { platformExchangeRates } from '../src/modules/payments/payments.schema.js';
 import { tripPacks } from '../src/modules/trip-packs/trip-packs.schema.js';
+import { TripRemindersService } from '../src/modules/notifications/trip-reminders.service.js';
 
 const expectDatabase = process.env.E2E_EXPECT_DATABASE === 'true';
 
@@ -232,6 +233,24 @@ describe.runIf(expectDatabase)('Trip packs (e2e)', () => {
     });
     const days = (Date.parse(paid.expiresAt!) - Date.parse(paid.activatedAt!)) / 86_400_000;
     expect(Math.round(days)).toBe(60);
+    // Three days before it expires, with trips left, the passenger is reminded once.
+    const reminders = app.get(TripRemindersService);
+    expect(await reminders.sweepPacks()).toBeGreaterThanOrEqual(0);
+    await db
+      .update(tripPacks)
+      .set({ expiresAt: sql`now() + interval '2 days'` })
+      .where(eq(tripPacks.id, pack.id));
+    await reminders.sweepPacks();
+    const [reminded] = await db.select().from(tripPacks).where(eq(tripPacks.id, pack.id));
+    expect(reminded?.expiryNoticeSentAt).not.toBeNull();
+    const again = reminded!.expiryNoticeSentAt!.getTime();
+    await reminders.sweepPacks();
+    const [still] = await db.select().from(tripPacks).where(eq(tripPacks.id, pack.id));
+    expect(still?.expiryNoticeSentAt?.getTime()).toBe(again);
+    await db
+      .update(tripPacks)
+      .set({ expiresAt: paid.expiresAt ? new Date(paid.expiresAt) : null })
+      .where(eq(tripPacks.id, pack.id));
     // Paying again or asking for options of an active pack is refused.
     expect(
       reason(await http().get(optionsUrl).set('Authorization', passenger.auth).expect(409)),
@@ -239,6 +258,13 @@ describe.runIf(expectDatabase)('Trip packs (e2e)', () => {
 
     // --- An unpaid pack is voided after its payment time; money arriving later is refunded.
     const late = (await buy().expect(201)).body as TripPack;
+    // At most two packs waiting for payment at a time.
+    const second = (await buy().expect(201)).body as TripPack;
+    expect(reason(await buy().expect(409))).toBe('TRIP_PACK_UNPAID_LIMIT');
+    await db
+      .update(tripPacks)
+      .set({ paymentDueAt: sql`now() - interval '1 minute'` })
+      .where(eq(tripPacks.id, second.id));
     const latePayment = (
       await http()
         .post(`/api/v1/me/trip-packs/${late.id}/payments`)

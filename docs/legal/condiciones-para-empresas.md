@@ -89,7 +89,8 @@ Empresa acepta paquetes solo si {{nombre_comercial}} la habilita para ello. Una 
 acepta como pagados los viajes que los pasajeros paguen con un paquete en sus salidas o viajes del
 tramo y tipo de vehículo del paquete, y por cada viaje usado gana **su tarifa vigente de ese
 tramo menos la comisión**, aunque el precio por viaje del paquete sea otro: la diferencia la pone
-o la gana {{nombre_comercial}}. Si un viaje vuelve al paquete por una cancelación a tiempo, se
+o la gana {{nombre_comercial}}. Si el paquete tiene un **tope por viaje**, la Empresa gana su tarifa
+hasta ese tope; {{nombre_comercial}} informa los topes vigentes a las Empresas que aceptan paquetes. Si un viaje vuelve al paquete por una cancelación a tiempo, se
 anula también lo ganado por él.
 
 4.7. **Taxis y mototaxis por tramo.** Las líneas de taxis y de mototaxis publican tarifas fijas

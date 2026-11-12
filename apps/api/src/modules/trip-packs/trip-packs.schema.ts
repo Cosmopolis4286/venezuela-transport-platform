@@ -41,6 +41,8 @@ export const tripPackProducts = pgTable(
     price: numeric({ precision: 12, scale: 2 }).notNull(),
     currency: currency().notNull(),
     validityDays: integer().notNull().default(DEFAULT_TRIP_PACK_VALIDITY_DAYS),
+    /** The most the platform pays an operator per trip used (pack currency); null: no cap. */
+    maxFare: numeric({ precision: 12, scale: 2 }),
     active: boolean().notNull().default(true),
     updatedByUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
     ...timestamps,
@@ -82,10 +84,14 @@ export const tripPacks = pgTable(
     currency: currency().notNull(),
     unitPrice: numeric({ precision: 12, scale: 2 }).notNull(),
     validityDays: integer().notNull(),
+    /** Copied from the product at purchase. */
+    maxFare: numeric({ precision: 12, scale: 2 }),
     status: tripPackStatus().notNull().default('pending_payment'),
     paymentDueAt: timestamp({ withTimezone: true }),
     activatedAt: timestamp({ withTimezone: true }),
     expiresAt: timestamp({ withTimezone: true }),
+    /** When the passenger was reminded that it expires soon (once). */
+    expiryNoticeSentAt: timestamp({ withTimezone: true }),
     ...timestamps,
   },
   (t) => [

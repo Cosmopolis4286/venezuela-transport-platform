@@ -18,6 +18,7 @@ import {
   IsOptional,
   IsUUID,
   Matches,
+  ValidateIf,
   Max,
   Min,
 } from 'class-validator';
@@ -58,6 +59,17 @@ export class TripPackProductDto implements TripPackProductInput {
   @Min(1)
   @Max(TRIP_PACK_LIMITS.maxValidityDays)
   validityDays?: number;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    example: '1.50',
+    description: 'Most the platform pays an operator per trip used; null: no cap',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @Matches(/^\d{1,8}(\.\d{1,2})?$/, { message: 'maxFare must be a decimal with up to 2 places' })
+  maxFare?: string | null;
 
   @ApiPropertyOptional()
   @IsOptional()

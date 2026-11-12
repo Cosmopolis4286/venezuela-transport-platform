@@ -31,6 +31,7 @@ import {
 } from '../organizations/organization-access.js';
 import {
   AcceptTaxiRideDto,
+  CompleteTaxiRideDto,
   AssignTaxiRideDto,
   ReplaceTaxiTerminalsDto,
   RequestTaxiDto,
@@ -140,9 +141,10 @@ export class TaxiDriverController {
   complete(
     @CurrentAuth() auth: Authenticated,
     @Param('rideId', ParseUUIDPipe) rideId: string,
+    @Body() body: CompleteTaxiRideDto,
     @ReqMeta() meta: RequestMeta,
   ): Promise<OperatorTaxiRide | null> {
-    return this.taxi.driverStep(auth, rideId, 'complete', meta);
+    return this.taxi.driverStep(auth, rideId, 'complete', meta, body.feesCollected ?? true);
   }
 
   @Post('rides/:rideId/release')

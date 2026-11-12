@@ -3,6 +3,7 @@ import { and, count, eq } from 'drizzle-orm';
 import type { Database, Transaction } from '../../database/database.service.js';
 import { bookingPassengers, bookings, trips } from '../bookings/bookings.schema.js';
 import { fromScaled, toScaled } from '../payments/money.js';
+import { tripPacks } from '../trip-packs/trip-packs.schema.js';
 import { organizationPolicies, platformSettings, settlementEntries } from './settlements.schema.js';
 
 /** Rounds `numerator / denominator` half up (both non-negative). */
@@ -39,6 +40,27 @@ export function splitRefund(
     fromEarned: fromScaled(fromEarned, 2),
     fromCommission: fromScaled(total - fromEarned, 2),
   };
+}
+
+/**
+ * What a trip paid with a pack earns at most (ADR-028): the operator's fare, but no more than the
+ * pack's cap per trip × `trips` when it has one in the same currency.
+ */
+async function packCapped(
+  tx: Transaction,
+  tripPackId: string | null,
+  gross: string,
+  currency: Currency,
+  trips: number,
+): Promise<string> {
+  if (!tripPackId) return gross;
+  const [pack] = await tx
+    .select({ maxFare: tripPacks.maxFare, currency: tripPacks.currency })
+    .from(tripPacks)
+    .where(eq(tripPacks.id, tripPackId));
+  if (!pack?.maxFare || pack.currency !== currency) return gross;
+  const cap = toScaled(pack.maxFare, 2) * BigInt(trips);
+  return toScaled(gross, 2) > cap ? fromScaled(cap, 2) : gross;
 }
 
 /** `"8.5"` → `"8.50"`. */
@@ -92,6 +114,7 @@ export async function recordEarning(
       organizationId: trips.organizationId,
       gross: bookings.totalAmount,
       currency: bookings.currency,
+      tripPackId: bookings.tripPackId,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -102,6 +125,7 @@ export async function recordEarning(
     .from(bookingPassengers)
     .where(and(eq(bookingPassengers.bookingId, bookingId), eq(bookingPassengers.active, true)));
   const commissionRate = normalizeRate((await policyFor(tx, row.organizationId)).commissionRate);
+  const gross = await packCapped(tx, row.tripPackId, row.gross, row.currency, seats?.n ?? 0);
   await tx
     .insert(settlementEntries)
     .values({
@@ -110,9 +134,9 @@ export async function recordEarning(
       collectedBy,
       seats: seats?.n ?? 0,
       currency: row.currency,
-      gross: row.gross,
+      gross,
       commissionRate,
-      ...splitFare(row.gross, commissionRate),
+      ...splitFare(gross, commissionRate),
     })
     .onConflictDoNothing({ target: [settlementEntries.bookingId, settlementEntries.kind] });
 }
@@ -198,9 +222,17 @@ export async function recordRideEarning(
     passengers: number;
     fareAmount: string;
     fareCurrency: Currency;
+    tripPackId: string | null;
   },
 ): Promise<void> {
   const commissionRate = normalizeRate((await policyFor(tx, ride.organizationId)).commissionRate);
+  const gross = await packCapped(
+    tx,
+    ride.tripPackId,
+    ride.fareAmount,
+    ride.fareCurrency,
+    ride.passengers,
+  );
   await tx
     .insert(settlementEntries)
     .values({
@@ -209,9 +241,9 @@ export async function recordRideEarning(
       collectedBy: 'platform',
       seats: ride.passengers,
       currency: ride.fareCurrency,
-      gross: ride.fareAmount,
+      gross,
       commissionRate,
-      ...splitFare(ride.fareAmount, commissionRate),
+      ...splitFare(gross, commissionRate),
     })
     .onConflictDoNothing({
       target: [

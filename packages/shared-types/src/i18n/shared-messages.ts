@@ -125,6 +125,8 @@ const es: SharedMessages = {
     SERVICE_AREA_STOP_IN_USE: 'Una ruta suburbana usa esa parada; no se puede quitar del corredor.',
     LAST_SERVICE_ON: 'Debe quedar al menos un servicio encendido.',
     TRIP_PACK_NOT_FOR_SALE: 'Ese paquete ya no está a la venta.',
+    TRIP_PACK_UNPAID_LIMIT:
+      'Ya tienes paquetes esperando el pago: págalos o espera a que venzan antes de comprar otro.',
     TRIP_PACK_NOT_AWAITING_PAYMENT: 'Ese paquete ya no espera un pago.',
     TRIP_PACK_NOT_VALID_HERE:
       'Ese paquete no sirve para esta salida: revisa el tramo, el tipo de vehículo y la empresa.',
@@ -281,6 +283,8 @@ const en: SharedMessages = {
     SERVICE_AREA_STOP_IN_USE: 'A suburban route uses that stop; it cannot leave the corridor.',
     LAST_SERVICE_ON: 'At least one service must stay on.',
     TRIP_PACK_NOT_FOR_SALE: 'That trip pack is no longer for sale.',
+    TRIP_PACK_UNPAID_LIMIT:
+      'You already have trip packs waiting for payment: pay them or let them lapse before buying another.',
     TRIP_PACK_NOT_AWAITING_PAYMENT: 'That trip pack is no longer waiting for a payment.',
     TRIP_PACK_NOT_VALID_HERE:
       'That trip pack does not cover this departure: check the stretch, the vehicle and the company.',
@@ -439,6 +443,8 @@ const ptBR: SharedMessages = {
     SERVICE_AREA_STOP_IN_USE: 'Uma rota suburbana usa essa parada; ela não pode sair do corredor.',
     LAST_SERVICE_ON: 'Pelo menos um serviço deve ficar ligado.',
     TRIP_PACK_NOT_FOR_SALE: 'Esse pacote não está mais à venda.',
+    TRIP_PACK_UNPAID_LIMIT:
+      'Você já tem pacotes aguardando pagamento: pague-os ou espere que expirem antes de comprar outro.',
     TRIP_PACK_NOT_AWAITING_PAYMENT: 'Esse pacote não espera mais um pagamento.',
     TRIP_PACK_NOT_VALID_HERE:
       'Esse pacote não serve para esta partida: verifique o trecho, o tipo de veículo e a empresa.',

@@ -66,8 +66,20 @@ export default function TaxiScreen() {
     }
   };
 
-  const step = (ride: OperatorTaxiRide, name: 'pickup' | 'complete' | 'release', text: string) =>
-    run(() => api.request(`/me/taxi/rides/${ride.id}/${name}`, { method: 'POST' }), text);
+  const step = (
+    ride: OperatorTaxiRide,
+    name: 'pickup' | 'complete' | 'release',
+    text: string,
+    body?: { feesCollected: boolean },
+  ) =>
+    run(
+      () =>
+        api.request(`/me/taxi/rides/${ride.id}/${name}`, {
+          method: 'POST',
+          ...(body ? { body } : {}),
+        }),
+      text,
+    );
 
   const data = board.data;
   const current = data?.current;
@@ -124,11 +136,31 @@ export default function TaxiScreen() {
                 />
               </>
             ) : (
-              <Button
-                title="Terminar viaje"
-                loading={busy}
-                onPress={() => void step(current, 'complete', 'Viaje terminado.')}
-              />
+              <>
+                <Button
+                  title={
+                    current.feesDue.length ? 'Terminar viaje (cobré la tasa)' : 'Terminar viaje'
+                  }
+                  loading={busy}
+                  onPress={() => void step(current, 'complete', 'Viaje terminado.')}
+                />
+                {/* The passenger did not pay the earlier fee: it stays owed, the line owes nothing. */}
+                {current.feesDue.length ? (
+                  <Button
+                    variant="secondary"
+                    title="Terminar sin cobrar la tasa"
+                    disabled={busy}
+                    onPress={() =>
+                      void step(
+                        current,
+                        'complete',
+                        'Viaje terminado. La tasa queda pendiente para el próximo viaje del pasajero.',
+                        { feesCollected: false },
+                      )
+                    }
+                  />
+                ) : null}
+              </>
             )}
           </Card>
         </>

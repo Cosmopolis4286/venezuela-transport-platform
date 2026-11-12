@@ -77,6 +77,11 @@ export default async function TripPacksPage() {
                     {formatMoney(p.price, p.currency)} ({formatMoney(p.unitPrice, p.currency)} por
                     viaje) · vence a los {p.validityDays} días · {p.serviceArea.name}
                   </p>
+                  <p className="text-sm text-muted-foreground">
+                    {p.maxFare
+                      ? `La plataforma paga a la empresa hasta ${formatMoney(p.maxFare, p.currency)} por viaje usado.`
+                      : 'Sin tope: la plataforma paga la tarifa de cada empresa, aunque la suba.'}
+                  </p>
                 </div>
                 <ActionForm
                   action={setTripPackProductActive}
@@ -150,6 +155,9 @@ export default async function TripPacksPage() {
                   max={365}
                   defaultValue={DEFAULT_TRIP_PACK_VALIDITY_DAYS}
                 />
+              </Field>
+              <Field label="Tope por viaje (opcional)" htmlFor="maxFare">
+                <Input id="maxFare" name="maxFare" inputMode="decimal" placeholder="Sin tope" />
               </Field>
             </div>
             <div>
