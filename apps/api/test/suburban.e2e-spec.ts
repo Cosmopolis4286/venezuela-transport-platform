@@ -5,9 +5,12 @@ import {
   todayInVenezuela,
   type AuthResponse,
   type Booking,
+  type CashSale,
+  type CashSalesDay,
   type Departure,
   type DriverEarnings,
   type Route,
+  type SalesReport,
   type Stop,
   type TicketValidation,
   type TripAvailability,
@@ -256,6 +259,67 @@ describe.runIf(expectDatabase)('Suburban frequency service and open tickets (e2e
           balance: '1.00',
         }),
       ]);
+
+      // --- Cash: the driver records who paid in cash; the amount is the published fare.
+      const cash = (body: object, auth = driver.auth) =>
+        http().post(`${org}/cash-sales`).set('Authorization', auth).send(body);
+      const segment = { routeId: route.id, fromStopId: centro.id, toStopId: turmero.id };
+      await cash({ ...segment, passengers: 3 }, passenger.auth).expect(404);
+      await cash({ ...segment, passengers: 0 }).expect(400);
+      await cash({ ...segment, fromStopId: turmero.id, toStopId: centro.id, passengers: 1 }).expect(
+        400,
+      );
+      const sale = (await cash({ ...segment, passengers: 3 }).expect(201)).body as CashSale;
+      expect(sale).toMatchObject({
+        passengers: 3,
+        amount: '1.50',
+        currency: 'USD',
+        serviceDate: today,
+        driver: { id: driver.user.id, name: 'Jose Prueba' },
+        voidedAt: null,
+      });
+      const mistake = (await cash({ ...segment, passengers: 2 }).expect(201)).body as CashSale;
+      const myDay = async () =>
+        (await http().get(`${org}/cash-sales/mine`).set('Authorization', driver.auth).expect(200))
+          .body as CashSalesDay;
+      expect((await myDay()).totals).toEqual([{ currency: 'USD', passengers: 5, amount: '2.50' }]);
+      // Only who recorded it can void it, the same day.
+      await http()
+        .post(`${org}/cash-sales/${mistake.id}/void`)
+        .set('Authorization', owner.auth)
+        .send({ reason: 'Registro duplicado' })
+        .expect(404);
+      expect(
+        (
+          await http()
+            .post(`${org}/cash-sales/${mistake.id}/void`)
+            .set('Authorization', driver.auth)
+            .send({ reason: 'Registro duplicado' })
+            .expect(200)
+        ).body,
+      ).toMatchObject({ voidReason: 'Registro duplicado' });
+      const day = await myDay();
+      expect(day.sales).toHaveLength(2);
+      expect(day.totals).toEqual([{ currency: 'USD', passengers: 3, amount: '1.50' }]);
+
+      // The operator's sales report counts cash apart from app sales.
+      const report = (
+        await http()
+          .get(`${org}/reports/sales?from=${today}&to=${today}`)
+          .set('Authorization', owner.auth)
+          .expect(200)
+      ).body as SalesReport;
+      expect(report.cash).toEqual({
+        totals: [{ currency: 'USD', passengers: 3, amount: '1.50' }],
+        byRoute: [
+          {
+            route: { id: route.id, name: route.name },
+            currency: 'USD',
+            passengers: 3,
+            amount: '1.50',
+          },
+        ],
+      });
     },
   );
 });

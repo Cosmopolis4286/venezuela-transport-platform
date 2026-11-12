@@ -1,3 +1,4 @@
+import type { CashTotal } from './cash-sales.js';
 import type { Currency } from './network.js';
 
 /**
@@ -39,6 +40,11 @@ export interface SalesReport {
   byRoute: (SalesFigures & { route: { id: string; name: string } })[];
   /** Only days with movement, oldest first. */
   byDay: (SalesFigures & { date: string })[];
+  /** Passengers who paid the driver in cash (not in the figures above: no fee, not settled). */
+  cash: {
+    totals: CashTotal[];
+    byRoute: (CashTotal & { route: { id: string; name: string } })[];
+  };
 }
 
 export interface DepartureOccupancy {

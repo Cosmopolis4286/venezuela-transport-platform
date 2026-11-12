@@ -20,6 +20,7 @@ import { RetentionModule } from './modules/retention/retention.module.js';
 import { ReportsModule } from './modules/reports/reports.module.js';
 import { SettlementsModule } from './modules/settlements/settlements.module.js';
 import { FiscalModule } from './modules/fiscal/fiscal.module.js';
+import { CashSalesModule } from './modules/cash-sales/cash-sales.module.js';
 import { TaxiModule } from './modules/taxi/taxi.module.js';
 import { MailModule } from './mail/mail.module.js';
 import { StorageModule } from './storage/storage.module.js';
@@ -55,6 +56,7 @@ import { StorageModule } from './storage/storage.module.js';
     PaymentsModule,
     SettlementsModule,
     FiscalModule,
+    CashSalesModule,
     ReportsModule,
     DispatchModule,
     TaxiModule,

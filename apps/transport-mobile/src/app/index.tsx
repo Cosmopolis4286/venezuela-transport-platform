@@ -3,6 +3,7 @@ import {
   ORGANIZATION_ROLE_LABELS,
   ORGANIZATION_STATUS_LABELS,
   ORGANIZATION_TYPE_LABELS,
+  runsRoutes,
   type DriverTrip,
   type OrganizationMembershipSummary,
   type ProviderApplication,
@@ -170,6 +171,23 @@ export default function Home() {
             organization.type === 'taxi_line' &&
             permissions.includes('trips.drive') ? (
               <Button title="Solicitudes de taxi" onPress={() => router.push('/taxi')} />
+            ) : null}
+            {organization.status === 'active' &&
+            runsRoutes(organization.type) &&
+            permissions.includes('trips.drive') ? (
+              <Button
+                title="Ventas en efectivo"
+                variant="secondary"
+                onPress={() =>
+                  router.push({
+                    pathname: '/cash',
+                    params: {
+                      organizationId: organization.id,
+                      name: organization.tradeName ?? organization.legalName,
+                    },
+                  })
+                }
+              />
             ) : null}
             {organization.status === 'active' && permissions.includes('tickets.validate') ? (
               <Button

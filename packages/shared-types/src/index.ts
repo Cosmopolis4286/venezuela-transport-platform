@@ -18,3 +18,4 @@ export * from './api/notifications.js';
 export * from './api/reports.js';
 export * from './api/legal.js';
 export * from './api/fiscal.js';
+export * from './api/cash-sales.js';

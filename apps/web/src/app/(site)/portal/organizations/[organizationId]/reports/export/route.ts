@@ -48,6 +48,18 @@ export async function GET(
           r.cancellations,
           Number(r.refunded),
         ]),
+        // Cash paid to drivers (ADR-033): passengers in "Puestos", no commission.
+        ...report.cash.byRoute.map((r) => [
+          `${r.route.name} (efectivo)`,
+          r.currency,
+          0,
+          r.passengers,
+          Number(r.amount),
+          0,
+          Number(r.amount),
+          0,
+          0,
+        ]),
       ]);
     } else {
       const report = await apiRequest<OccupancyReport>(path);

@@ -28,6 +28,13 @@ En el portal: **Reportes**, en la página de la empresa de autobuses, con el ran
 ruta de la web que convierte el JSON de la API en una hoja de cálculo: UTF-8 con BOM para Excel,
 y las celdas que parecen fórmulas se neutralizan).
 
+### Efectivo (ADR-033)
+
+`SalesReport.cash` suma lo que los conductores anotaron como cobrado en efectivo
+(`POST /organizations/:id/cash-sales`), por moneda y por ruta, según el día en que se anotó y sin
+los registros anulados. Va aparte de las ventas por la app: no lleva comisión ni se liquida. El
+CSV de ventas lo agrega como filas "Ruta (efectivo)".
+
 ## Para la plataforma
 
 `GET /admin/metrics` (solo administradores): ventas y comisión de toda la plataforma por moneda,
