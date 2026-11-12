@@ -3,6 +3,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import {
   todayInVenezuela,
+  type AdminBookingLookup,
   type AuthResponse,
   type Booking,
   type CashSale,
@@ -320,6 +321,20 @@ describe.runIf(expectDatabase)('Suburban frequency service and open tickets (e2e
           },
         ],
       });
+
+      // --- Support finds the booking by the code the passenger sends by WhatsApp.
+      const lookup = (code: string, auth = admin.auth) =>
+        http().get(`/api/v1/admin/bookings/by-code/${code}`).set('Authorization', auth);
+      const found = (await lookup(booking.code.slice(4).toLowerCase()).expect(200))
+        .body as AdminBookingLookup;
+      expect(found.booking).toMatchObject({ id: booking.id, status: 'confirmed' });
+      expect(found.customer).toMatchObject({
+        name: 'pasajera Prueba',
+        email: `suburban-pasajera-${run}@example.test`,
+      });
+      await lookup(booking.code, passenger.auth).expect(403);
+      await lookup('VTP-000000').expect(404);
+      await lookup('nada').expect(404);
     },
   );
 });

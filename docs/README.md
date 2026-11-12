@@ -8,6 +8,7 @@ Por dónde empezar según lo que necesites.
 - [Guía para empresas](guides/empresas.md): portal, rutas, despacho, taxis, liquidaciones.
 - [Guía para conductores e inspectores](guides/conductores.md): app de transportistas.
 - [Guion del piloto suburbano](guides/piloto-suburbano.md): la prueba con gente real antes de abrir.
+- [Atención por WhatsApp](guides/whatsapp-soporte.md): mensajes automáticos, respuestas rápidas y qué hacer en cada caso.
 - [Manual de administración](guides/administracion.md): revisiones, políticas, pagos a empresas,
   reembolsos.
 - [Glosario](glossary.md).

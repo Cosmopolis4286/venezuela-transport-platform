@@ -37,9 +37,9 @@ describe('API (e2e)', () => {
     },
   );
 
-  it('GET /api/v1/support is public and empty until SUPPORT_WHATSAPP is set', async () => {
+  it('GET /api/v1/support is public and empty until SUPPORT_WHATSAPP and ANDROID_APP_URL are set', async () => {
     const res = await request(app.getHttpServer()).get('/api/v1/support').expect(200);
-    expect(res.body).toEqual({ whatsapp: null });
+    expect(res.body).toEqual({ whatsapp: null, androidApp: null });
   });
 
   it('sends security headers and hides the framework', async () => {

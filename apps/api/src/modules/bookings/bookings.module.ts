@@ -4,6 +4,7 @@ import { IdentityModule } from '../identity/identity.module.js';
 import { NetworkModule } from '../network/network.module.js';
 import { OrganizationsModule } from '../organizations/organizations.module.js';
 import {
+  AdminBookingsController,
   BookingsController,
   OrganizationTicketsController,
   OrganizationTripsController,
@@ -15,7 +16,12 @@ import { TripsService } from './trips.service.js';
 /** Trips (one schedule on one date), seat holds, passenger lists and ticket validation. */
 @Module({
   imports: [IdentityModule, AuditModule, OrganizationsModule, NetworkModule],
-  controllers: [BookingsController, OrganizationTripsController, OrganizationTicketsController],
+  controllers: [
+    BookingsController,
+    OrganizationTripsController,
+    OrganizationTicketsController,
+    AdminBookingsController,
+  ],
   providers: [TripsService, BookingsService, TicketsService],
   exports: [TripsService, BookingsService],
 })

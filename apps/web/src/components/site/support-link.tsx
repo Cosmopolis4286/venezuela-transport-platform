@@ -1,10 +1,10 @@
 import { whatsappLink } from '@vtp/shared-types';
 import type { Messages } from '@/i18n/messages';
-import { getSupportWhatsapp } from '@/lib/server/network';
+import { getSupport } from '@/lib/server/network';
 
 /** "Message us on WhatsApp", when the server has a support number (`SUPPORT_WHATSAPP`). */
 export async function SupportLink({ t }: { t: Messages['support'] }) {
-  const number = await getSupportWhatsapp();
+  const number = (await getSupport()).whatsapp;
   if (!number) return null;
   return (
     <a

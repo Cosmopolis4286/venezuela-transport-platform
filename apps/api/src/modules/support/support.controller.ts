@@ -4,7 +4,7 @@ import { normalizeWhatsapp, type SupportContact } from '@vtp/shared-types';
 import { AppConfigService } from '../../config/app-config.service.js';
 import { Public } from '../identity/auth.decorators.js';
 
-/** How to reach support (public): the web and the apps show a WhatsApp button when it is set. */
+/** Support contact and app download link (public); each is hidden while it is not configured. */
 @ApiTags('support')
 @Controller({ path: 'support', version: '1' })
 export class SupportController {
@@ -14,6 +14,9 @@ export class SupportController {
   @Get()
   @Header('Cache-Control', 'public, max-age=300')
   contact(): SupportContact {
-    return { whatsapp: normalizeWhatsapp(this.config.get('SUPPORT_WHATSAPP')) };
+    return {
+      whatsapp: normalizeWhatsapp(this.config.get('SUPPORT_WHATSAPP')),
+      androidApp: this.config.get('ANDROID_APP_URL') || null,
+    };
   }
 }

@@ -140,6 +140,15 @@ export interface BookingInvoice {
 }
 
 /**
+ * `GET /admin/bookings/by-code/:code`: platform staff find a booking by the code a passenger
+ * sends to support (WhatsApp, e-mail), with how to reach the passenger.
+ */
+export interface AdminBookingLookup {
+  booking: Booking;
+  customer: { name: string | null; email: string | null; phone: string | null };
+}
+
+/**
  * `PUT /me/bookings/:id/billing`: invoice the service fee to another name (or back to the first
  * passenger with `null`), while the invoice is not issued yet.
  */

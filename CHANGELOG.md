@@ -26,6 +26,11 @@ pull request.
 
 ### Agregado
 
+- **Atención por WhatsApp**: búsqueda de reservas por código para el personal
+  (`/admin/bookings`, auditada, con el contacto del cliente y enlace para escribirle), página
+  `/es/app` con un enlace fijo de descarga de la app (`ANDROID_APP_URL`) y la
+  [guía de atención](docs/guides/whatsapp-soporte.md) con mensaje de bienvenida, ausencia y
+  respuestas rápidas listas para copiar.
 - **Botón "Escríbenos por WhatsApp"** en la web (pie de página), la app de pasajeros (Mi cuenta y
   cada reserva, con el código ya escrito) y la app de transportistas. El número sale de
   `SUPPORT_WHATSAPP` en la API (`GET /api/v1/support`): se cambia sin publicar las apps y, vacío,

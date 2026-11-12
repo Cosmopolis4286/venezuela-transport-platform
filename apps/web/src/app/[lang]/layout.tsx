@@ -54,9 +54,17 @@ export default async function PublicLayout({ children }: LayoutProps<'/[lang]'>)
           segment={localeSegment(locale)}
           t={t.legal}
           support={
-            <Suspense fallback={null}>
-              <SupportLink t={t.support} />
-            </Suspense>
+            <>
+              <Link
+                href={`/${localeSegment(locale)}/app`}
+                className="font-medium text-foreground hover:underline"
+              >
+                {t.support.download}
+              </Link>
+              <Suspense fallback={null}>
+                <SupportLink t={t.support} />
+              </Suspense>
+            </>
           }
         />
       </body>
