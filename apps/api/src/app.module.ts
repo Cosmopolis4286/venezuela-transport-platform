@@ -10,6 +10,7 @@ import { BookingsModule } from './modules/bookings/bookings.module.js';
 import { DispatchModule } from './modules/dispatch/dispatch.module.js';
 import { FleetModule } from './modules/fleet/fleet.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { SupportModule } from './modules/support/support.module.js';
 import { IdentityModule } from './modules/identity/identity.module.js';
 import { NetworkModule } from './modules/network/network.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
@@ -47,6 +48,7 @@ import { StorageModule } from './storage/storage.module.js';
     NotificationsModule,
     // Feature modules (see docs/architecture/overview.md) are registered below.
     HealthModule,
+    SupportModule,
     IdentityModule,
     OrganizationsModule,
     OnboardingModule,

@@ -26,6 +26,10 @@ pull request.
 
 ### Agregado
 
+- **Botón "Escríbenos por WhatsApp"** en la web (pie de página), la app de pasajeros (Mi cuenta y
+  cada reserva, con el código ya escrito) y la app de transportistas. El número sale de
+  `SUPPORT_WHATSAPP` en la API (`GET /api/v1/support`): se cambia sin publicar las apps y, vacío,
+  oculta el botón. Solo abre un chat; no automatiza nada.
 - **Ventas en efectivo** (ADR-033): el conductor anota en la app de transportistas cuántos
   pasajeros le pagaron en efectivo por ruta y tramo; el monto sale de la tarifa publicada. Puede
   anular un registro equivocado el mismo día. El reporte de ventas del portal (y su CSV) lo muestra

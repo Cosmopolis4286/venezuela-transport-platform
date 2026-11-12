@@ -7,6 +7,7 @@ import {
   withServiceFee,
 } from './network.js';
 import { roleHasPermission } from './organizations.js';
+import { normalizeWhatsapp, whatsappLink } from './support.js';
 
 describe('network helpers', () => {
   it('validates 24-hour times of day', () => {
@@ -46,5 +47,18 @@ describe('frequencyRuns', () => {
     expect(frequencyRuns('05:00', '05:10', 15)).toBe(1);
     expect(frequencyRuns('06:00', null, null)).toBe(1);
     expect(frequencyRuns('20:00', '05:00', 15)).toBe(1);
+  });
+});
+
+describe('support contact', () => {
+  it('keeps only valid international numbers and builds the chat link', () => {
+    expect(normalizeWhatsapp('+58 412-123.4567')).toBe('584121234567');
+    expect(normalizeWhatsapp('(0412) 123')).toBeNull();
+    expect(normalizeWhatsapp('')).toBeNull();
+    expect(normalizeWhatsapp(undefined)).toBeNull();
+    expect(whatsappLink('584121234567')).toBe('https://wa.me/584121234567');
+    expect(whatsappLink('584121234567', 'Hola, reserva VTP-1')).toBe(
+      'https://wa.me/584121234567?text=Hola%2C%20reserva%20VTP-1',
+    );
   });
 });

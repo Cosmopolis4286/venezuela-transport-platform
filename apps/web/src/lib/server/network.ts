@@ -1,5 +1,11 @@
 import 'server-only';
-import { apiErrorText, type Departure, type Locale, type Stop } from '@vtp/shared-types';
+import {
+  apiErrorText,
+  type Departure,
+  type Locale,
+  type Stop,
+  type SupportContact,
+} from '@vtp/shared-types';
 import { cacheLife } from 'next/cache';
 import { connection } from 'next/server';
 import { MESSAGES } from '@/i18n/messages';
@@ -18,6 +24,22 @@ async function cachedStops(): Promise<Stop[]> {
 export async function getStops(): Promise<Stop[]> {
   await connection();
   return cachedStops();
+}
+
+async function cachedSupport(): Promise<SupportContact> {
+  'use cache';
+  cacheLife('minutes');
+  return apiRequest<SupportContact>('/support', { auth: false });
+}
+
+/** The support WhatsApp number, or null when it is not configured or the API is unreachable. */
+export async function getSupportWhatsapp(): Promise<string | null> {
+  await connection();
+  try {
+    return (await cachedSupport()).whatsapp;
+  } catch {
+    return null;
+  }
 }
 
 export type DepartureSearch =

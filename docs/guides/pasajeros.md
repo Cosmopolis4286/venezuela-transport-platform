@@ -85,6 +85,11 @@ autobús ya salió.
 3. Sigue el estado en la app. Puedes cancelar mientras no hayas subido. **Al taxi se le paga
    directamente al conductor.**
 
+## Ayuda
+
+En **Mi cuenta** y en cada reserva está **Escríbenos por WhatsApp**: abre un chat con soporte con
+el código de tu reserva ya escrito. También está al pie de la web.
+
 ## Preguntas frecuentes
 
 | Pregunta                                   | Respuesta                                                                                                                                                                                                                                  |

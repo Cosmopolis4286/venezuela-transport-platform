@@ -15,6 +15,10 @@ const es = {
       '¿Tienes una empresa de transporte o una línea de taxis? Publica tus rutas desde el',
     operatorsLink: 'portal de operadores',
   },
+  support: {
+    whatsapp: 'Escríbenos por WhatsApp',
+    message: 'Hola, necesito ayuda con VTP.',
+  },
   legal: {
     footer: 'Información legal',
     terms: 'Términos y condiciones',
@@ -69,6 +73,10 @@ const en: Messages = {
     operatorsBefore: 'Do you run a transport company or a taxi line? Publish your routes from the',
     operatorsLink: 'operator portal',
   },
+  support: {
+    whatsapp: 'Message us on WhatsApp',
+    message: 'Hi, I need help with VTP.',
+  },
   legal: {
     footer: 'Legal',
     terms: 'Terms and conditions',
@@ -122,6 +130,10 @@ const ptBR: Messages = {
     operatorsBefore:
       'Você tem uma empresa de transporte ou uma cooperativa de táxi? Publique suas rotas no',
     operatorsLink: 'portal de operadores',
+  },
+  support: {
+    whatsapp: 'Fale conosco pelo WhatsApp',
+    message: 'Olá, preciso de ajuda com a VTP.',
   },
   legal: {
     footer: 'Informações legais',

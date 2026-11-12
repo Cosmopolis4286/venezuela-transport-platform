@@ -32,3 +32,4 @@ export {
   usePushNotifications,
 } from './push/push-registration';
 export { DeleteAccount, LegalLinks, TermsPrompt, openLegalPage } from './legal/legal-links';
+export { SupportButton } from './support/support-button';
