@@ -197,6 +197,13 @@
       "when": 1794424656155,
       "tag": "0027_frequency_service",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1794442149519,
+      "tag": "0028_cash_sales",
+      "breakpoints": true
     }
   ]
 }

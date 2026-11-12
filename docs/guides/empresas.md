@@ -92,6 +92,8 @@ En **Reportes** (empresas de autobuses) eliges un rango de días y ves:
 
 - **Ventas** (dueño y administrador): lo vendido, la comisión y lo que gana la empresa, por ruta y
   por día, con las cancelaciones y lo devuelto. Cuadra con las liquidaciones.
+- **Efectivo cobrado por los conductores**: los pasajeros que tus conductores anotaron como pagados
+  en efectivo, por ruta. No lleva comisión ni entra en la liquidación.
 - **Ocupación** (quien puede ver los viajes): por cada salida con reservas, la capacidad, los
   puestos vendidos, cuántos abordaron y el porcentaje de ocupación, y los totales por ruta.
 

@@ -62,7 +62,15 @@ el código de reserva y el número de puesto. El resultado sale al instante:
 
 Solo puedes tener un viaje de taxi activo a la vez.
 
-## 6. Mis cobros
+## 6. Ventas en efectivo (urbano y suburbano)
+
+Si un pasajero te paga en efectivo, anótalo en **Ventas en efectivo**: eliges la ruta, dónde sube
+y dónde baja, y cuántos pasajeros. La app calcula el monto con la tarifa publicada. Abajo ves lo
+que llevas en el día; si te equivocaste, toca **Anular** (solo el mismo día). Ese dinero es tuyo o
+de tu empresa según lo acuerden: no pasa por VTP, no lleva cargo de la plataforma y solo aparece en
+los reportes de la empresa.
+
+## 7. Mis cobros
 
 En las rutas que les pagan a sus conductores (por defecto, las urbanas y suburbanas), lo que pagan
 los pasajeros de tus viajes es tuyo. En **Mis cobros** ves cuánto te deben por cada empresa y

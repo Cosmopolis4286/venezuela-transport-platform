@@ -12,10 +12,12 @@ import {
   type SalesFigures,
   type SalesReport,
 } from '@vtp/shared-types';
-import { and, asc, eq, gte, lt, lte, sql, type SQL } from 'drizzle-orm';
+import { and, asc, eq, gte, isNull, lt, lte, sql, type SQL } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService } from '../../database/database.service.js';
 import { bookingPassengers, bookings, trips } from '../bookings/bookings.schema.js';
+import { cashSales } from '../cash-sales/cash-sales.schema.js';
+import { totals as cashTotals } from '../cash-sales/cash-sales.service.js';
 import { users } from '../identity/identity.schema.js';
 import { addDays } from '../network/departures.js';
 import { routes } from '../network/network.schema.js';
@@ -114,12 +116,33 @@ export class ReportsService {
       .where(where)
       .groupBy(day, settlementEntries.currency)
       .orderBy(asc(day));
+    // Cash paid to drivers (ADR-033), by the day it was recorded; voided records left out.
+    const cashRows = await db
+      .select({
+        route: { id: routes.id, name: routes.name },
+        currency: cashSales.currency,
+        passengers: sql<number>`sum(${cashSales.passengers})::int`,
+        amount: sql<string>`sum(${cashSales.amount})::numeric(14, 2)::text`,
+      })
+      .from(cashSales)
+      .innerJoin(routes, eq(routes.id, cashSales.routeId))
+      .where(
+        and(
+          eq(cashSales.organizationId, organizationId),
+          gte(cashSales.serviceDate, range.from),
+          lte(cashSales.serviceDate, range.to),
+          isNull(cashSales.voidedAt),
+        ),
+      )
+      .groupBy(routes.id, routes.name, cashSales.currency)
+      .orderBy(asc(routes.name));
     return {
       from: range.from,
       to: range.to,
       totals: byCurrency(totals as SalesFigures[]),
       byRoute: byRoute as SalesReport['byRoute'],
       byDay: byDay as SalesReport['byDay'],
+      cash: { totals: cashTotals(cashRows), byRoute: cashRows },
     };
   }
 

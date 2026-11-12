@@ -26,6 +26,10 @@ pull request.
 
 ### Agregado
 
+- **Ventas en efectivo** (ADR-033): el conductor anota en la app de transportistas cuántos
+  pasajeros le pagaron en efectivo por ruta y tramo; el monto sale de la tarifa publicada. Puede
+  anular un registro equivocado el mismo día. El reporte de ventas del portal (y su CSV) lo muestra
+  aparte: no lleva comisión ni se liquida.
 - **Servicio urbano y suburbano por frecuencia** (ADR-032): un horario puede salir cada N
   minutos hasta una última salida. Se vende un **boleto abierto** para el día, sin elegir puesto,
   válido en cualquier unidad de la ruta. Los conductores ahora pueden validar boletos y, si la ruta

@@ -551,3 +551,18 @@ Reutilizar el viaje y los números de puesto evita un segundo modelo de ventas.
 empezado el servicio, el boleto ya no se cancela. No hay recordatorio de salida. Varias unidades
 comparten el viaje, así que la asignación de vehículo y conductor del despacho no describe cada
 unidad; el cobro sigue al conductor que valida.
+
+## ADR-033: Ventas en efectivo registradas por el conductor, solo para reportes
+
+**Decisión** (del dueño del producto). En el urbano y suburbano muchos pasajeros siguen pagando en
+efectivo. El conductor anota en la app de transportistas la ruta, el tramo y cuántos pasajeros le
+pagaron (`cash_sales`). El monto lo calcula la API con la tarifa publicada del tramo, así que no se
+escribe a mano. Esas ventas no llevan cargo de la plataforma, no entran en la liquidación ni en la
+facturación, y solo cuentan en el reporte de ventas de la empresa, separadas de las ventas por la
+app. Un registro equivocado lo anula quien lo hizo, el mismo día; nada se borra.
+
+**Por qué.** Sin ellas los reportes de las rutas suburbanas solo ven una parte de los pasajeros, y
+la empresa no puede planificar frecuencias ni comparar unidades.
+
+**Compromisos.** Es lo que el conductor declara: no se puede verificar contra el dinero. El
+efectivo es un asunto entre la empresa y sus conductores; la plataforma no lo custodia.
