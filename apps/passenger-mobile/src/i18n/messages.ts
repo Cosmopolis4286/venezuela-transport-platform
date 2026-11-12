@@ -236,6 +236,14 @@ const es = {
     timePast: 'Esa hora ya pasó: elige otro día u otra hora.',
     payDriver: 'Le pago al conductor',
     paidWithPack: (code: string) => `Pagado con tu paquete ${code}: no le pagas al conductor.`,
+    feesOwed: (amount: string) =>
+      `Tienes una tasa de cancelación pendiente de ${amount}: se la pagas en efectivo al conductor de tu próximo viaje, además de la tarifa.`,
+    feesDue: (amount: string) =>
+      `Además de la tarifa, págale al conductor ${amount} de una cancelación anterior.`,
+    freeCancelUntil: (time: string, fee: string) =>
+      `Puedes cancelar sin costo hasta las ${time}. Después, cancelar cuesta ${fee}, que pagas en tu próximo viaje.`,
+    lateCancel: (fee: string) =>
+      `Si cancelas ahora, pagarás una tasa de ${fee} en tu próximo viaje de taxi o moto (si usaste un paquete, el viaje vuelve a él).`,
   },
   taxi: {
     heading: 'Taxi desde o hacia el terminal',
@@ -503,6 +511,14 @@ const en: Messages = {
     timePast: 'That time has passed: choose another day or time.',
     payDriver: 'I pay the driver',
     paidWithPack: (code) => `Paid with your trip pack ${code}: you do not pay the driver.`,
+    feesOwed: (amount) =>
+      `You owe a ${amount} cancellation fee: pay it in cash to the driver of your next ride, on top of the fare.`,
+    feesDue: (amount) =>
+      `On top of the fare, pay the driver ${amount} for an earlier cancellation.`,
+    freeCancelUntil: (time, fee) =>
+      `You can cancel for free until ${time}. After that, cancelling costs ${fee}, paid on your next ride.`,
+    lateCancel: (fee) =>
+      `If you cancel now, you will pay a ${fee} fee on your next taxi or motorcycle ride (a trip paid with a pack goes back to it).`,
   },
   taxi: {
     heading: 'Taxi to or from the terminal',
@@ -772,6 +788,14 @@ const ptBR: Messages = {
     timePast: 'Esse horário já passou: escolha outro dia ou hora.',
     payDriver: 'Pago ao motorista',
     paidWithPack: (code) => `Pago com seu pacote ${code}: você não paga ao motorista.`,
+    feesOwed: (amount) =>
+      `Você tem uma taxa de cancelamento pendente de ${amount}: pague em dinheiro ao motorista da sua próxima viagem, além da tarifa.`,
+    feesDue: (amount) =>
+      `Além da tarifa, pague ao motorista ${amount} de um cancelamento anterior.`,
+    freeCancelUntil: (time, fee) =>
+      `Você pode cancelar sem custo até ${time}. Depois, cancelar custa ${fee}, pago na sua próxima viagem.`,
+    lateCancel: (fee) =>
+      `Se cancelar agora, você pagará uma taxa de ${fee} na sua próxima viagem de táxi ou moto (se usou um pacote, a viagem volta para ele).`,
   },
   taxi: {
     heading: 'Táxi para ou do terminal',

@@ -21,6 +21,7 @@ import {
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator } from 'react-native';
+import { PendingFeesBanner } from '@/components/pending-fees';
 import { useT } from '@/i18n/use-t';
 import { upcomingDays } from '@/lib/dates';
 import { useSearch } from '@/lib/search-context';
@@ -208,6 +209,7 @@ export function StretchRideForm() {
         onChangeText={setNotes}
         maxLength={200}
       />
+      <PendingFeesBanner />
       {error ? <Banner tone="error">{error}</Banner> : null}
       <Button
         title={t.ride.request}

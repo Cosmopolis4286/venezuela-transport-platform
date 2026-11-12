@@ -23,6 +23,7 @@ import {
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { RefreshControl } from 'react-native';
+import { useFeeTotal } from '@/components/pending-fees';
 import { useT } from '@/i18n/use-t';
 import { driverLine, isOpenRide, ridePlace } from '@/lib/taxi';
 import { formatClock, useSecondsLeft } from '@/lib/use-countdown';
@@ -50,6 +51,14 @@ export default function TaxiRideScreen() {
   const data = ride.data;
   const open = data ? isOpenRide(data) : false;
   const secondsLeft = useSecondsLeft(data?.status === 'requested' ? data.expiresAt : null);
+  // Cancelling a ride a line took is free until then; afterwards it costs a fee (next ride).
+  const freeSecondsLeft = useSecondsLeft(
+    data?.status === 'accepted' ? data.freeCancellationUntil : null,
+  );
+  const feesDue = useFeeTotal(data?.feesDue ?? []);
+  const lateFee = data?.lateCancellationFee
+    ? formatMoney(data.lateCancellationFee.amount, data.lateCancellationFee.currency, locale)
+    : null;
 
   useEffect(() => {
     if (!open) return;
@@ -139,6 +148,16 @@ export default function TaxiRideScreen() {
             </Body>
           </Card>
 
+          {feesDue ? <Banner tone="warning">{t.ride.feesDue(feesDue)}</Banner> : null}
+          {data.status === 'accepted' && lateFee && data.freeCancellationUntil ? (
+            freeSecondsLeft > 0 ? (
+              <Body muted>
+                {t.ride.freeCancelUntil(networkClock(data.freeCancellationUntil), lateFee)}
+              </Body>
+            ) : (
+              <Banner tone="warning">{t.ride.lateCancel(lateFee)}</Banner>
+            )
+          ) : null}
           {error ? <Banner tone="error">{error}</Banner> : null}
           {data.status === 'requested' || data.status === 'accepted' ? (
             <Button

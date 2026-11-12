@@ -99,16 +99,37 @@ días adelante):
 - Si el corredor se apaga (ADR-029), no se piden viajes nuevos y no se muestran las tarifas.
 - Se paga **al conductor** o **con un paquete de viajes** del tramo y vehículo (`tripPackId`):
   - pedir el viaje gasta un viaje del paquete por pasajero (en la misma transacción);
-  - los viajes vuelven al paquete si nadie toma la solicitud, o si el pasajero cancela antes de
-    que la tomen o con 30 minutos o más antes de la hora pedida; después se pierden;
+  - los viajes vuelven al paquete si nadie toma la solicitud o si el pasajero cancela (siempre;
+    una cancelación tardía cuesta la tasa de abajo, ADR-030);
   - solo las líneas que **aceptan paquetes** (política de la empresa) ven y toman esos viajes, y
     el conductor ve "Pagado con paquete" (no cobra);
   - al terminar el viaje, la línea gana su tarifa del tramo menos su comisión: una entrada del
     libro de liquidaciones con `taxi_ride_id` (código `TAXI-…` en sus movimientos).
 
+### Cancelar un viaje que una línea ya tomó (ADR-030)
+
+- **Gratis** antes de que una línea lo tome, durante los primeros **3 minutos** después de que lo
+  toma y, en un viaje programado, hasta **30 minutos antes** de la hora pedida. Los minutos y el
+  porcentaje los fija un administrador en Liquidaciones → Política general
+  (`platform_settings.ride_free_cancel_minutes`, `ride_cancel_fee_percent`).
+- Después, el pasajero debe una **tasa del 50 % de la tarifa de la línea**
+  (`ride_cancellation_fees`), pague en efectivo o con paquete (el viaje del paquete vuelve igual).
+  La app le muestra hasta qué hora cancela gratis y cuánto costaría después
+  (`freeCancellationUntil`, `lateCancellationFee`).
+- La tasa se paga **en efectivo al conductor de su próximo viaje** de taxi o moto (por tramo o de
+  terminal): la ve antes de pedir (`GET /me/taxi-fees`) y en el viaje (`feesDue`); el conductor y
+  el despachador la ven en la solicitud. Al terminar ese viaje la tasa queda cobrada.
+- La tasa es de **la línea que salió a buscarlo**. En el libro, filas `ride_cancellation_fee` con
+  el `taxi_ride_id` del viaje cancelado: si la cobró la misma línea, una fila cobrada por ella
+  (debe solo la comisión); si la cobró otra, la primera gana la tasa menos su comisión (cobrada
+  por la plataforma) y la segunda tiene una fila cobrada por ella sin ganancia, que le resta la
+  tasa de su saldo.
+- Si el pasajero no vuelve a pedir un viaje, la tasa queda pendiente (no hay cobro forzoso).
+
 | Método y ruta                                     | Quién                          |
 | ------------------------------------------------- | ------------------------------ |
 | `GET /taxi/stretch-options?from=&to=`             | Público — tarifas por vehículo |
+| `GET /me/taxi-fees`                               | El pasajero — tasas pendientes |
 | `GET`/`PUT /organizations/:id/taxi/stretch-fares` | Miembros / `routes.manage`     |
 
 ## Todavía no

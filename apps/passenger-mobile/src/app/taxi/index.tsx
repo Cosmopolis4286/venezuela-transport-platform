@@ -23,6 +23,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, Text } from 'react-native';
 import { StretchRideForm } from '@/components/stretch-ride-form';
+import { PendingFeesBanner } from '@/components/pending-fees';
 import { useT } from '@/i18n/use-t';
 import { useSearch } from '@/lib/search-context';
 import { isOpenRide, ridePlace } from '@/lib/taxi';
@@ -163,6 +164,7 @@ export default function RequestTaxiScreen() {
               value={phone}
               onChangeText={setPhone}
             />
+            <PendingFeesBanner />
             {error ? <Banner tone="error">{error}</Banner> : null}
             <Button
               title={t.taxi.request}

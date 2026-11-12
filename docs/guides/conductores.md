@@ -54,6 +54,8 @@ el código de reserva y el número de puesto. El resultado sale al instante:
    dice.
 3. Al recoger al pasajero, **Pasajero a bordo**; al llegar, **Terminar viaje**. Si no puedes
    hacerlo, **No puedo hacer este viaje** lo devuelve a las solicitudes.
-4. El pasajero te paga directamente.
+4. El pasajero te paga directamente. Si la solicitud dice **«Cobra además … de una cancelación
+   anterior»**, cóbrale también esa tasa en efectivo: es de la línea que salió a buscarlo antes
+   (si fue otra, la plataforma se la descuenta a tu línea en la liquidación y se la paga a ella).
 
 Solo puedes tener un viaje de taxi activo a la vez.

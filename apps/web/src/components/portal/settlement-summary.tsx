@@ -19,7 +19,14 @@ function balanceText(balance: string, currency: Parameters<typeof formatPaymentA
 }
 
 /** Balance per currency: fares, commission, payouts and what is still owed. */
-export function SettlementBalances({ settlement }: { settlement: OrganizationSettlement }) {
+export function SettlementBalances({
+  settlement,
+  onDemand = false,
+}: {
+  settlement: OrganizationSettlement;
+  /** A taxi or motorcycle line: explain the late-cancellation fee. */
+  onDemand?: boolean;
+}) {
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-muted-foreground">
@@ -38,6 +45,15 @@ export function SettlementBalances({ settlement }: { settlement: OrganizationSet
           ? 'Cobros: la empresa recibe los pagos en sus propias cuentas, los verifica, hace sus reembolsos y le paga la comisión a la plataforma.'
           : 'Cobros: la plataforma recibe los pagos de los pasajeros y le paga a la empresa lo que gana.'}
       </p>
+      {onDemand ? (
+        <p className="text-sm text-muted-foreground">
+          Taxis y motos por tramo: si el pasajero cancela más de{' '}
+          {settlement.rideCancellation.freeMinutes} min después de que la línea tomó el viaje, debe
+          una tasa del {settlement.rideCancellation.feePercent} % de la tarifa. La cobra en efectivo
+          el conductor de su próximo viaje; si es de otra línea, se la descontamos a esa y se la
+          pagamos a la que salió a buscarlo, menos la comisión.
+        </p>
+      ) : null}
       {settlement.acceptsTripPacks ? (
         <p className="text-sm text-muted-foreground">
           Acepta paquetes de viajes: por cada viaje usado gana su tarifa normal del tramo, menos la
@@ -127,6 +143,9 @@ export function SettlementEntries({ entries }: { entries: SettlementEntry[] }) {
                 {e.bookingCode}
                 {e.kind === 'cancellation' ? (
                   <span className="text-muted-foreground"> · cancelada</span>
+                ) : null}
+                {e.kind === 'ride_cancellation_fee' ? (
+                  <span className="text-muted-foreground"> · tasa de cancelación</span>
                 ) : null}
                 {e.collectedBy === 'operator' ? (
                   <span className="text-muted-foreground"> · cobró la empresa</span>

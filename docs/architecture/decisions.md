@@ -491,3 +491,22 @@ interfaz queda igual de simple que hoy.
 **Compromisos.** Un interruptor más que mirar en cada consulta de venta. Que la empresa elija el
 servicio depende de que lo marque bien; el personal de la plataforma lo revisa al aprobar sus
 rutas suburbanas (el corredor ya limita las paradas posibles).
+
+## ADR-030: Tasa por cancelar tarde un taxi o una moto que una línea ya tomó
+
+**Decisión.** Decidido por el dueño del producto (2026-11-12), en lugar de "el viaje del paquete
+se pierde": cancelar un viaje por tramo es **gratis** antes de que una línea lo tome, durante los
+primeros **3 minutos** después y, si es programado, hasta 30 minutos antes de la hora. Después, el
+pasajero debe una **tasa del 50 % de la tarifa** de la línea, pague en efectivo o con paquete (el
+viaje del paquete vuelve siempre). Los minutos y el porcentaje los configura un administrador. La
+tasa se paga **en efectivo al conductor del próximo viaje** de taxi o moto y es de **la línea que
+salió**: si el próximo viaje es con otra línea, la plataforma se la descuenta a esa y se la paga a
+la primera en las liquidaciones, menos la comisión. Ver [taxis.md](taxis.md).
+
+**Por qué.** Justo para las partes: la línea que salió cobra algo por el viaje perdido, y el
+pasajero con paquete no pierde todo el viaje por un cambio de planes. Cobrarla en efectivo en el
+siguiente viaje funciona igual con pasajeros que pagan en efectivo, que no tienen saldo con la
+plataforma.
+
+**Compromisos.** Si el pasajero no vuelve a pedir un taxi o una moto, la tasa no se cobra. El
+conductor del siguiente viaje cobra dinero que no es de su línea; las liquidaciones lo compensan.

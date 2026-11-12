@@ -8,6 +8,7 @@ import {
   numeric,
   pgEnum,
   pgTable,
+  smallint,
   text,
   timestamp,
   uniqueIndex,
@@ -17,6 +18,7 @@ import {
   PAYMENT_COLLECTIONS,
   PAYOUT_DIRECTIONS,
   PAYOUT_METHODS,
+  DEFAULT_RIDE_CANCELLATION,
   DEFAULT_SUBURBAN_REFUND_TIERS,
   type RefundTier,
 } from '@vtp/shared-types';
@@ -27,7 +29,11 @@ import { organizations } from '../organizations/organizations.schema.js';
 import { taxiRides } from '../taxi/taxi.schema.js';
 
 export const payoutMethod = pgEnum('payout_method', PAYOUT_METHODS);
-export const settlementEntryKind = pgEnum('settlement_entry_kind', ['booking', 'cancellation']);
+export const settlementEntryKind = pgEnum('settlement_entry_kind', [
+  'booking',
+  'cancellation',
+  'ride_cancellation_fee',
+]);
 export const paymentCollection = pgEnum('payment_collection', PAYMENT_COLLECTIONS);
 export const payoutDirection = pgEnum('payout_direction', PAYOUT_DIRECTIONS);
 
@@ -44,6 +50,10 @@ export const platformSettings = pgTable(
       .$type<RefundTier[]>()
       .notNull()
       .default([...DEFAULT_SUBURBAN_REFUND_TIERS]),
+    /** Cancelling a stretch ride a line took: free for these minutes after it was taken. */
+    rideFreeCancelMinutes: smallint().notNull().default(DEFAULT_RIDE_CANCELLATION.freeMinutes),
+    /** Later, this percentage of the line's fare, paid on the next ride. */
+    rideCancelFeePercent: smallint().notNull().default(DEFAULT_RIDE_CANCELLATION.feePercent),
     updatedByUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
     ...timestamps,
   },
@@ -80,7 +90,11 @@ export const settlementEntries = pgTable(
     /** Exactly one of the two is set. */
     bookingId: uuid().references(() => bookings.id, { onDelete: 'restrict' }),
     taxiRideId: uuid().references(() => taxiRides.id, { onDelete: 'restrict' }),
-    /** `booking` when it was paid; `cancellation` (negative amounts) when the passenger cancelled. */
+    /**
+     * `booking` when it was paid; `cancellation` (negative amounts) when the passenger cancelled;
+     * `ride_cancellation_fee` for a late-cancelled ride (its `taxi_ride_id`): earned by the line
+     * that went out and, when another line collected it in cash, owed by that line.
+     */
     kind: settlementEntryKind().notNull().default('booking'),
     /** Who received the passenger's money: with `operator`, the operator owes the commission. */
     collectedBy: paymentCollection().notNull().default('platform'),
@@ -95,7 +109,12 @@ export const settlementEntries = pgTable(
   (t) => [
     // A booking is earned once, even if a provider reports the money twice, and cancelled once.
     uniqueIndex('settlement_entries_booking_kind_key').on(t.bookingId, t.kind),
-    uniqueIndex('settlement_entries_taxi_ride_kind_key').on(t.taxiRideId, t.kind),
+    // A cancellation fee may have two entries: the line that earns it and the one that collected it.
+    uniqueIndex('settlement_entries_taxi_ride_kind_org_key').on(
+      t.taxiRideId,
+      t.kind,
+      t.organizationId,
+    ),
     check(
       'settlement_entries_subject_check',
       sql`(${t.bookingId} is null) <> (${t.taxiRideId} is null)`,

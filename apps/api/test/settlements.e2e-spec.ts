@@ -224,6 +224,10 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
           { hoursBefore: 48, percent: 100 },
         ],
       }).expect(400);
+      await putPlatform({
+        ...platformPolicy,
+        rideCancellation: { freeMinutes: 3, feePercent: 150 },
+      }).expect(400);
       // Saving the same values back leaves the shared default untouched for other tests.
       expect((await putPlatform(platformPolicy).expect(200)).body).toEqual(platformPolicy);
 
@@ -235,6 +239,7 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
         refundTiers: platformPolicy.refundTiers,
         refundTiersOverride: null,
         suburbanRefundTiers: platformPolicy.suburbanRefundTiers,
+        rideCancellation: platformPolicy.rideCancellation,
         acceptsTripPacks: false,
         paymentCollection: 'platform',
         balances: [],

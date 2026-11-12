@@ -143,5 +143,44 @@ export const taxiRides = pgTable(
   ],
 );
 
+/**
+ * A stretch ride the passenger cancelled late, after a line took it: they owe the line part of
+ * its fare, paid in cash to the driver of their next taxi or motorcycle ride. `charged_ride_id`
+ * is that ride, set when it is completed (the ledger records it then).
+ */
+export const rideCancellationFees = pgTable(
+  'ride_cancellation_fees',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    cancelledRideId: uuid()
+      .notNull()
+      .unique()
+      .references(() => taxiRides.id, { onDelete: 'restrict' }),
+    passengerUserId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    /** The line that went out: the fee is its. */
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'restrict' }),
+    amount: numeric({ precision: 12, scale: 2 }).notNull(),
+    currency: currency().notNull(),
+    chargedRideId: uuid().references(() => taxiRides.id, { onDelete: 'restrict' }),
+    chargedAt: timestamp({ withTimezone: true }),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('ride_cancellation_fees_pending_idx')
+      .on(t.passengerUserId)
+      .where(sql`${t.chargedAt} is null`),
+    check('ride_cancellation_fees_amount_check', sql`${t.amount} > 0`),
+    check(
+      'ride_cancellation_fees_charged_check',
+      sql`(${t.chargedAt} is null) = (${t.chargedRideId} is null)`,
+    ),
+  ],
+);
+
 export type TaxiRideRow = typeof taxiRides.$inferSelect;
 export type OnDemandFareRow = typeof onDemandFares.$inferSelect;
+export type RideCancellationFeeRow = typeof rideCancellationFees.$inferSelect;

@@ -105,6 +105,14 @@ export interface TaxiRide {
   scheduledFor: string | null;
   /** The trip pack that pays it; null: the passenger pays the driver. */
   tripPack: { id: string; code: string } | null;
+  /**
+   * Stretch rides a line took: cancelling is free until this instant; afterwards it costs
+   * `lateCancellationFee`, paid on the next ride. Null when cancelling is free anyway.
+   */
+  freeCancellationUntil: string | null;
+  lateCancellationFee: { amount: string; currency: Currency } | null;
+  /** Fees of earlier late cancellations the passenger pays the driver on this ride, in cash. */
+  feesDue: { amount: string; currency: Currency }[];
   address: string;
   notes: string | null;
   passengers: number;
@@ -133,6 +141,8 @@ export interface TaxiRequest {
   scheduledFor: string | null;
   /** Paid with a trip pack: the driver charges nothing. */
   paidWithPack: boolean;
+  /** Cancellation fees the driver collects in cash on this ride, on top of the fare. */
+  feesDue: { amount: string; currency: Currency }[];
   address: string;
   notes: string | null;
   passengers: number;
@@ -217,6 +227,14 @@ export interface StretchOption {
   currency: Currency;
   minFare: string;
   maxFare: string;
+}
+
+/** `GET /me/taxi-fees`: late-cancellation fees the passenger still owes (paid on the next ride). */
+export interface PendingRideFee {
+  id: string;
+  amount: string;
+  currency: Currency;
+  createdAt: string;
 }
 
 /** `PUT /organizations/:id/taxi/terminals` — where the line picks up and drops off. */

@@ -1,4 +1,5 @@
 import {
+  formatMoney,
   networkClock,
   TAXI_DIRECTION_LABELS,
   TRANSPORT_MODE_LABELS,
@@ -49,4 +50,16 @@ export function parseFare(input: string): string | null {
   const value = input.trim().replace(',', '.');
   if (!/^\d{1,8}(\.\d{1,2})?$/.test(value) || Number(value) <= 0) return null;
   return Number(value).toFixed(2);
+}
+
+/**
+ * Late-cancellation fees the passenger owes from earlier rides: the driver collects them in cash
+ * on top of the fare (null when there are none).
+ */
+export function feesNotice(fees: TaxiRequest['feesDue']): string | null {
+  if (!fees.length) return null;
+  const sums = new Map<TaxiRequest['feesDue'][number]['currency'], number>();
+  for (const f of fees) sums.set(f.currency, (sums.get(f.currency) ?? 0) + Number(f.amount));
+  const total = [...sums].map(([c, n]) => formatMoney(n.toFixed(2), c)).join(' + ');
+  return `Cobra además ${total} de una cancelación anterior del pasajero (en efectivo).`;
 }

@@ -12,8 +12,11 @@ import {
   type ReplaceOnDemandFaresRequest,
   type StretchOption,
   type AcceptTaxiRideRequest,
+  type Currency,
   type DriverTaxiBoard,
   type OperatorTaxiRide,
+  type PendingRideFee,
+  type RideCancellationPolicy,
   type RequestTaxiRequest,
   type StopSummary,
   type TaxiDispatchBoard,
@@ -44,11 +47,18 @@ import {
   organizations,
   type OrganizationRow,
 } from '../organizations/organizations.schema.js';
-import { policyFor, recordRideEarning } from '../settlements/ledger.js';
+import { percentOf, policyFor, recordRideEarning, recordRideFee } from '../settlements/ledger.js';
 import { organizationPolicies } from '../settlements/settlements.schema.js';
 import { tripPacks } from '../trip-packs/trip-packs.schema.js';
 import { TripPacksService } from '../trip-packs/trip-packs.service.js';
-import { onDemandFares, taxiRides, taxiServiceAreas, type TaxiRideRow } from './taxi.schema.js';
+import {
+  onDemandFares,
+  rideCancellationFees,
+  taxiRides,
+  taxiServiceAreas,
+  type RideCancellationFeeRow,
+  type TaxiRideRow,
+} from './taxi.schema.js';
 
 const DRIVING_ROLES = rolesWith('trips.drive');
 const ACTIVE = ['accepted', 'in_progress'] as const;
@@ -546,22 +556,64 @@ export class TaxiService {
   /** Before pickup only; afterwards the ride is between the passenger and the driver. */
   async cancelMine(auth: Authenticated, rideId: string, meta: RequestMeta): Promise<TaxiRide> {
     const ride = await this.requireMine(auth.user.id, rideId);
+    const now = new Date();
+    const policy = ride.organizationId
+      ? (await policyFor(this.database.db, ride.organizationId)).rideCancellation
+      : null;
+    const fee = policy ? lateFeeOf(ride, policy, now.getTime()) : null;
     const row = await this.database.db.transaction(async (tx) => {
       const [cancelled] = await tx
         .update(taxiRides)
-        .set({ status: 'cancelled', cancelledAt: new Date() })
-        .where(and(eq(taxiRides.id, ride.id), inArray(taxiRides.status, ['requested', 'accepted'])))
+        .set({ status: 'cancelled', cancelledAt: now })
+        .where(
+          and(
+            eq(taxiRides.id, ride.id),
+            // The fee was worked out for the ride as read: it must not have moved since.
+            eq(taxiRides.status, ride.status),
+            inArray(taxiRides.status, ['requested', 'accepted']),
+          ),
+        )
         .returning();
-      // Paid with a pack: the trips go back before a line takes it, or up to 30 minutes before
-      // the time asked (ADR-028); later, they are lost.
-      if (cancelled?.tripPackId && tripsGoBack(ride)) {
+      if (!cancelled) return undefined;
+      // Paid with a pack: the trips always go back (the late fee is charged apart, ADR-028).
+      if (cancelled.tripPackId) {
         await giveTripsBack(tx, cancelled.tripPackId, cancelled.passengers);
+      }
+      // Cancelled late after a line took it: the passenger owes it a fee, paid on the next ride.
+      if (fee) {
+        await tx.insert(rideCancellationFees).values({
+          cancelledRideId: cancelled.id,
+          passengerUserId: cancelled.passengerUserId,
+          organizationId: cancelled.organizationId!,
+          amount: fee.amount,
+          currency: fee.currency,
+        });
       }
       return cancelled;
     });
     if (!row) throw conflict('This ride can no longer be cancelled', 'TAXI_RIDE_NOT_CANCELLABLE');
-    await this.record('taxi_ride.cancelled', row, auth, meta);
+    await this.record('taxi_ride.cancelled', row, auth, meta, fee ? { lateFee: fee } : {});
     return (await this.toRides([row]))[0]!;
+  }
+
+  /** Late-cancellation fees the passenger still owes; paid in cash on the next ride. */
+  async pendingFees(userId: string): Promise<PendingRideFee[]> {
+    const rows = await this.database.db
+      .select()
+      .from(rideCancellationFees)
+      .where(
+        and(
+          eq(rideCancellationFees.passengerUserId, userId),
+          isNull(rideCancellationFees.chargedAt),
+        ),
+      )
+      .orderBy(asc(rideCancellationFees.createdAt));
+    return rows.map((f) => ({
+      id: f.id,
+      amount: f.amount,
+      currency: f.currency,
+      createdAt: f.createdAt.toISOString(),
+    }));
   }
 
   // --- Drivers ----------------------------------------------------------------------------
@@ -651,6 +703,15 @@ export class TaxiService {
           fareAmount: updated.fareAmount!,
           fareCurrency: updated.fareCurrency!,
         });
+      }
+      // The driver collected the passenger's pending late-cancellation fees in cash.
+      if (updated && step === 'complete') {
+        const charged = await tx
+          .update(rideCancellationFees)
+          .set({ chargedRideId: updated.id, chargedAt: now })
+          .where(dueOn(updated))
+          .returning();
+        for (const fee of charged) await recordRideFee(tx, fee, updated.organizationId!);
       }
       return updated;
     });
@@ -976,9 +1037,10 @@ export class TaxiService {
     // Rides for now first by age; rides booked for later by their time.
     const when = (r: TaxiRideRow) => (r.scheduledFor ?? r.createdAt).getTime();
     const rows = [...atTerminals, ...onStretches].sort((x, y) => when(x.ride) - when(y.ride));
-    const { stop } = await this.related(rows.map((r) => r.ride));
+    const { stop, feesDue } = await this.related(rows.map((r) => r.ride));
     return rows.map(({ ride, firstName }) => ({
       ...requestFields(ride, stop),
+      feesDue: feesDue(ride),
       passengerFirstName: firstName,
     }));
   }
@@ -1059,7 +1121,27 @@ export class TaxiService {
         : [],
       this.stops.summaries([...ids('terminalStopId'), ...ids('fromStopId'), ...ids('toStopId')]),
     ]);
+    // Fees due on these rides: charged on them, or pending from before they were asked.
+    const passengerIds = ids('passengerUserId');
+    const fees = rows.length
+      ? await this.database.db
+          .select()
+          .from(rideCancellationFees)
+          .where(
+            or(
+              inArray(
+                rideCancellationFees.chargedRideId,
+                rows.map((r) => r.id),
+              ),
+              and(
+                inArray(rideCancellationFees.passengerUserId, passengerIds),
+                isNull(rideCancellationFees.chargedAt),
+              ),
+            ),
+          )
+      : [];
     return {
+      feesDue: (ride: TaxiRideRow) => feesDueOn(ride, fees),
       user: new Map(people.map((u) => [u.id, u])),
       line: new Map(lines.map((o) => [o.id, o])),
       vehicle: new Map(fleet.map((v) => [v.id, v])),
@@ -1069,7 +1151,11 @@ export class TaxiService {
 
   /** The passenger's view: the driver's name, verified phone and vehicle once taken. */
   private async toRides(rows: TaxiRideRow[]): Promise<TaxiRide[]> {
-    const { user, line, vehicle, stop } = await this.related(rows);
+    const { user, line, vehicle, stop, feesDue } = await this.related(rows);
+    const policies = new Map<string, RideCancellationPolicy>();
+    for (const id of new Set(rows.flatMap((r) => (r.organizationId ? [r.organizationId] : [])))) {
+      policies.set(id, (await policyFor(this.database.db, id)).rideCancellation);
+    }
     const packIds = rows.flatMap((r) => (r.tripPackId ? [r.tripPackId] : []));
     const packCodes = new Map(
       packIds.length
@@ -1083,6 +1169,8 @@ export class TaxiService {
     );
     return rows.map((ride) => {
       const driver = ride.driverUserId ? user.get(ride.driverUserId) : undefined;
+      const policy = ride.organizationId ? policies.get(ride.organizationId) : undefined;
+      const late = policy ? lateWindowOf(ride, policy) : null;
       return {
         id: ride.id,
         kind: ride.kind,
@@ -1103,6 +1191,9 @@ export class TaxiService {
           ride.fareAmount && ride.fareCurrency
             ? { amount: ride.fareAmount, currency: ride.fareCurrency }
             : null,
+        freeCancellationUntil: late ? new Date(late.from).toISOString() : null,
+        lateCancellationFee: late?.fee ?? null,
+        feesDue: feesDue(ride),
         organization: (ride.organizationId && line.get(ride.organizationId)) || null,
         driver: driver
           ? {
@@ -1124,7 +1215,7 @@ export class TaxiService {
 
   /** The line's view of rides it took: the passenger's name and contact phone. */
   private async toOperatorRides(rows: TaxiRideRow[]): Promise<OperatorTaxiRide[]> {
-    const { user, vehicle, stop } = await this.related(rows);
+    const { user, vehicle, stop, feesDue } = await this.related(rows);
     return rows.flatMap((ride) => {
       if (!ride.organizationId || !ride.driverUserId || !ride.vehicleId || !ride.acceptedAt) {
         return [];
@@ -1134,6 +1225,7 @@ export class TaxiService {
       return [
         {
           ...requestFields(ride, stop),
+          feesDue: feesDue(ride),
           passengerFirstName: passenger.firstName,
           status: ride.status,
           organizationId: ride.organizationId,
@@ -1210,14 +1302,51 @@ function requestFields(ride: TaxiRideRow, stop: Map<string, StopSummary>) {
 
 const byName = (a: StopSummary, b: StopSummary) => a.name.localeCompare(b.name, 'es');
 
-/** Before a line takes it, or 30 minutes or more before the time asked. */
-function tripsGoBack(
-  ride: Pick<TaxiRideRow, 'status' | 'scheduledFor'>,
-  now = Date.now(),
-): boolean {
-  if (ride.status === 'requested') return true;
-  return (
-    ride.scheduledFor !== null &&
-    ride.scheduledFor.getTime() - now >= TRIP_PACK_RETURN_MINUTES * MINUTE_MS
+/**
+ * When cancelling a stretch ride a line took starts to cost a fee, and how much (null: it never
+ * does). Free for `freeMinutes` after it was taken, and up to 30 minutes before a ride booked for
+ * later (the same window as trip packs, ADR-028).
+ */
+function lateWindowOf(
+  ride: TaxiRideRow,
+  policy: RideCancellationPolicy,
+): { from: number; fee: { amount: string; currency: Currency } } | null {
+  if (ride.kind !== 'stretch' || ride.status !== 'accepted' || !ride.acceptedAt) return null;
+  const amount = percentOf(ride.fareAmount!, policy.feePercent);
+  if (toCents(amount) === 0) return null;
+  const from = Math.max(
+    ride.acceptedAt.getTime() + policy.freeMinutes * MINUTE_MS,
+    (ride.scheduledFor?.getTime() ?? 0) - TRIP_PACK_RETURN_MINUTES * MINUTE_MS,
   );
+  return { from, fee: { amount, currency: ride.fareCurrency! } };
+}
+
+/** The fee owed for cancelling `ride` at `now`, or null when it is free. */
+function lateFeeOf(ride: TaxiRideRow, policy: RideCancellationPolicy, now: number) {
+  const late = lateWindowOf(ride, policy);
+  return late && now >= late.from ? late.fee : null;
+}
+
+const toCents = (amount: string) => Math.round(Number(amount) * 100);
+
+/** Pending fees the passenger had when they asked for `ride`: its driver collects them. */
+const dueOn = (ride: TaxiRideRow) =>
+  and(
+    eq(rideCancellationFees.passengerUserId, ride.passengerUserId),
+    isNull(rideCancellationFees.chargedAt),
+    lte(rideCancellationFees.createdAt, ride.createdAt),
+  );
+
+/** The same as `dueOn` in memory, plus the fees already charged on the ride. */
+function feesDueOn(ride: TaxiRideRow, fees: RideCancellationFeeRow[]) {
+  const open = ['requested', 'accepted', 'in_progress'].includes(ride.status);
+  return fees
+    .filter((f) =>
+      f.chargedRideId
+        ? f.chargedRideId === ride.id
+        : open &&
+          f.passengerUserId === ride.passengerUserId &&
+          f.createdAt.getTime() <= ride.createdAt.getTime(),
+    )
+    .map((f) => ({ amount: f.amount, currency: f.currency }));
 }

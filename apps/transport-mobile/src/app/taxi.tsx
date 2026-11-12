@@ -24,7 +24,7 @@ import {
 } from '@vtp/shared-types';
 import { useEffect, useState } from 'react';
 import { RefreshControl } from 'react-native';
-import { parseFare, requestSummary, rideRoute } from '@/lib/taxi-board';
+import { parseFare, requestSummary, rideRoute, feesNotice } from '@/lib/taxi-board';
 import { useRefreshOnFocus } from '@/lib/use-refresh-on-focus';
 
 /** New requests and the current ride's status are reloaded this often. */
@@ -98,6 +98,9 @@ export default function TaxiScreen() {
               {vehicleName(current.vehicle)} · Tarifa{' '}
               {formatMoney(current.fare.amount, current.fare.currency)}
             </Body>
+            {feesNotice(current.feesDue) ? (
+              <Banner tone="warning">{feesNotice(current.feesDue)}</Banner>
+            ) : null}
             {current.paidWithPack ? (
               <Banner tone="info">
                 Pagado con paquete de viajes: no le cobres al pasajero. La plataforma le paga la
@@ -221,6 +224,7 @@ function RequestCard({
       <Body>{rideRoute(request)}</Body>
       <Body muted>{requestSummary(request)}</Body>
       {request.paidWithPack ? <Badge label="Pagado con paquete" tone="success" /> : null}
+      {feesNotice(request.feesDue) ? <Body muted>{feesNotice(request.feesDue)}</Body> : null}
       {request.passengerFirstName || request.notes ? (
         <Body muted>{[request.passengerFirstName, request.notes].filter(Boolean).join(' · ')}</Body>
       ) : null}

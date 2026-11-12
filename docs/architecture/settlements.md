@@ -25,6 +25,10 @@ una fila en `settlement_entries` (`recordEarning`, en `ledger.ts`):
 - **Una fila por reserva y tipo** (`kind`: `booking` al pagarse, `cancellation` al cancelarse;
   índice único sobre `booking_id, kind`): una notificación repetida del proveedor no gana dos
   veces y una reserva se cancela una sola vez.
+- **Tasas de cancelación de taxis y motos** (`kind = 'ride_cancellation_fee'`, ADR-030): con el
+  `taxi_ride_id` del viaje cancelado, una fila por línea (índice único sobre
+  `taxi_ride_id, kind, organization_id`): la que la gana y, si otra la cobró en efectivo, la que
+  la debe (cobrada por ella, `earned = 0`).
 - **Las filas no cambian.** Cambiar la comisión solo afecta a las reservas que se paguen después;
   una cancelación agrega su propia fila, con montos negativos.
 - Las reservas confirmadas antes de este módulo no tienen fila (no hay datos de producción).
@@ -38,7 +42,9 @@ plataforma en **Liquidaciones**. Empieza con:
 - **tramos de reembolso**: 100 % si el pasajero cancela con al menos 48 h de anticipación, 50 %
   con al menos 2 h, nada después;
 - **tramos de reembolso suburbanos** (rutas suburbanas de todas las empresas, ADR-028): 100 % con
-  24 h o más, 75 % con 2 h o más, 50 % con 30 minutos o más, nada en los últimos 30 minutos.
+  24 h o más, 75 % con 2 h o más, 50 % con 30 minutos o más, nada en los últimos 30 minutos;
+- **cancelación de taxis y motos por tramo** (ADR-030): gratis 3 minutos después de que una línea
+  toma el viaje; después, una tasa del 50 % de su tarifa.
 
 Cada empresa puede tener **su propia comisión, sus propios tramos (de sus rutas entre ciudades) o
 ambos**

@@ -218,6 +218,13 @@
       "when": 1794424075827,
       "tag": "0030_trip_pack_rides",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794441809610,
+      "tag": "0031_ride_cancellation_fees",
+      "breakpoints": true
     }
   ]
 }

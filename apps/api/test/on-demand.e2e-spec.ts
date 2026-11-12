@@ -8,6 +8,7 @@ import type {
   OnDemandFare,
   OperatorTaxiRide,
   OtpChallengeResponse,
+  PendingRideFee,
   ServiceArea,
   Stop,
   StretchOption,
@@ -18,7 +19,7 @@ import request from 'supertest';
 import { DatabaseService } from '../src/database/database.service.js';
 import { users } from '../src/modules/identity/identity.schema.js';
 import { settlementEntries } from '../src/modules/settlements/settlements.schema.js';
-import { taxiRides } from '../src/modules/taxi/taxi.schema.js';
+import { rideCancellationFees, taxiRides } from '../src/modules/taxi/taxi.schema.js';
 import type { OtpMessage, OtpSender } from '../src/modules/identity/otp/otp-sender.js';
 
 const expectDatabase = process.env.E2E_EXPECT_DATABASE === 'true';
@@ -446,6 +447,221 @@ describe.runIf(expectDatabase)('On-demand stretch rides (e2e)', () => {
         bookingCode: expect.stringMatching(/^TAXI-/),
         route: { name: expect.stringContaining('Moto') },
       });
+    },
+  );
+
+  it(
+    'charges a late cancellation on the next ride, for the line that went out',
+    { timeout: 30_000 },
+    async () => {
+      const admin = await signIn('admin');
+      const db = app.get(DatabaseService).db;
+      const stop = async (name: string) =>
+        (
+          await http()
+            .post('/api/v1/admin/stops')
+            .set('Authorization', admin.auth)
+            .send({
+              kind: 'stop',
+              name: `${name} ${run}`,
+              city: `${name} ${run}`,
+              state: 'Bolívar',
+            })
+            .expect(201)
+        ).body as Stop;
+      const a = await stop('Tasa A');
+      const b = await stop('Tasa B');
+      await http()
+        .post('/api/v1/admin/service-areas')
+        .set('Authorization', admin.auth)
+        .send({ name: `Tasa ${run}`, stopIds: [a.id, b.id], active: true })
+        .expect(201);
+      const line = async (amount: string) => {
+        const owner = await signIn();
+        const { organization } = (
+          await http()
+            .post('/api/v1/organizations')
+            .set('Authorization', owner.auth)
+            .send({
+              type: 'moto_line',
+              legalName: `Motos tasa ${run} ${amount}`,
+              rif: `J-${randomInt(10_000_000, 99_999_999)}-${randomInt(0, 9)}`,
+            })
+            .expect(201)
+        ).body as { organization: { id: string } };
+        await http()
+          .post(`/api/v1/admin/organizations/${organization.id}/review`)
+          .set('Authorization', admin.auth)
+          .send({ decision: 'approve' })
+          .expect(200);
+        // A known commission, whatever the platform default is.
+        await http()
+          .put(`/api/v1/admin/organizations/${organization.id}/policy`)
+          .set('Authorization', admin.auth)
+          .send({ commissionRate: '10.00', refundTiers: null })
+          .expect(200);
+        const url = `/api/v1/organizations/${organization.id}`;
+        const vehicle = (
+          await http()
+            .post(`${url}/vehicles`)
+            .set('Authorization', owner.auth)
+            .send({ plate: `MF${randomInt(100, 999)}AB` })
+            .expect(201)
+        ).body as FleetVehicle;
+        await http()
+          .put(`${url}/taxi/stretch-fares`)
+          .set('Authorization', owner.auth)
+          .send({ fares: [{ stopIds: [a.id, b.id], mode: 'motorcycle', amount, currency: 'USD' }] })
+          .expect(200);
+        const step = (rideId: string, path: string) =>
+          http()
+            .post(`/api/v1/me/taxi/rides/${rideId}/${path}`)
+            .set('Authorization', owner.auth)
+            .send(
+              path === 'accept' ? { organizationId: organization.id, vehicleId: vehicle.id } : {},
+            )
+            .expect(200);
+        return { id: organization.id, owner, step };
+      };
+      const first = await line('2.00');
+      const second = await line('3.00');
+      const rider = await signIn();
+      const ask = async (body: object = {}) =>
+        (
+          await http()
+            .post('/api/v1/me/taxi-rides')
+            .set('Authorization', rider.auth)
+            .send({
+              kind: 'stretch',
+              fromStopId: a.id,
+              toStopId: b.id,
+              mode: 'motorcycle',
+              passengers: 1,
+              address: 'Frente a la bodega, casa blanca',
+              ...body,
+            })
+            .expect(201)
+        ).body as TaxiRide;
+      const cancel = async (rideId: string) =>
+        (
+          await http()
+            .post(`/api/v1/me/taxi-rides/${rideId}/cancel`)
+            .set('Authorization', rider.auth)
+            .expect(200)
+        ).body as TaxiRide;
+      const fees = async () =>
+        (await http().get('/api/v1/me/taxi-fees').set('Authorization', rider.auth).expect(200))
+          .body as PendingRideFee[];
+      const takenAgo = (rideId: string, minutes: number) =>
+        db
+          .update(taxiRides)
+          .set({ acceptedAt: new Date(Date.now() - minutes * 60_000) })
+          .where(eq(taxiRides.id, rideId));
+
+      // --- Within 3 minutes of being taken: free. The passenger sees until when, and the fee.
+      const quick = await ask();
+      await first.step(quick.id, 'accept');
+      const shown = (
+        await http()
+          .get(`/api/v1/me/taxi-rides/${quick.id}`)
+          .set('Authorization', rider.auth)
+          .expect(200)
+      ).body as TaxiRide;
+      expect(shown.lateCancellationFee).toEqual({ amount: '1.00', currency: 'USD' });
+      expect(Date.parse(shown.freeCancellationUntil!) - Date.parse(shown.acceptedAt!)).toBe(
+        3 * 60_000,
+      );
+      await cancel(quick.id);
+      expect(await fees()).toEqual([]);
+
+      // --- Booked for tomorrow: free until 30 minutes before, however long ago it was taken.
+      const booked = await ask({
+        scheduledFor: new Date(Date.now() + 24 * 3600_000).toISOString(),
+      });
+      await first.step(booked.id, 'accept');
+      await takenAgo(booked.id, 10);
+      await cancel(booked.id);
+      expect(await fees()).toEqual([]);
+
+      // --- Later: 50 % of the line's fare, owed until the next ride.
+      const late = await ask();
+      await first.step(late.id, 'accept');
+      await takenAgo(late.id, 4);
+      await cancel(late.id);
+      expect(await fees()).toEqual([expect.objectContaining({ amount: '1.00', currency: 'USD' })]);
+
+      // The next ride, with another line: its driver sees the fee and collects it in cash.
+      const next = await ask();
+      expect(next.feesDue).toEqual([{ amount: '1.00', currency: 'USD' }]);
+      const board = (
+        await http().get('/api/v1/me/taxi').set('Authorization', second.owner.auth).expect(200)
+      ).body as DriverTaxiBoard;
+      expect(board.requests.find((r) => r.id === next.id)?.feesDue).toEqual([
+        { amount: '1.00', currency: 'USD' },
+      ]);
+      await second.step(next.id, 'accept');
+      await second.step(next.id, 'pickup');
+      await second.step(next.id, 'complete');
+      expect(await fees()).toEqual([]);
+      // The first line earns it (minus commission); the second owes what it collected.
+      const entries = await db
+        .select()
+        .from(settlementEntries)
+        .where(eq(settlementEntries.taxiRideId, late.id));
+      expect(entries).toHaveLength(2);
+      expect(entries).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            organizationId: first.id,
+            kind: 'ride_cancellation_fee',
+            collectedBy: 'platform',
+            gross: '1.00',
+            commission: '0.10',
+            earned: '0.90',
+          }),
+          expect.objectContaining({
+            organizationId: second.id,
+            kind: 'ride_cancellation_fee',
+            collectedBy: 'operator',
+            gross: '1.00',
+            commission: '0.00',
+            earned: '0.00',
+          }),
+        ]),
+      );
+      const [charged] = await db
+        .select()
+        .from(rideCancellationFees)
+        .where(eq(rideCancellationFees.cancelledRideId, late.id));
+      expect(charged?.chargedRideId).toBe(next.id);
+      // Already charged: a later ride owes nothing.
+      expect((await ask()).feesDue).toEqual([]);
+      const last = (
+        await http().get('/api/v1/me/taxi-rides').set('Authorization', rider.auth).expect(200)
+      ).body as TaxiRide[];
+      await cancel(last[0]!.id);
+
+      // --- The same line collects its own fee: it owes only the commission.
+      const again = await ask();
+      await second.step(again.id, 'accept');
+      await takenAgo(again.id, 5);
+      await cancel(again.id);
+      const following = await ask();
+      expect(following.feesDue).toEqual([{ amount: '1.50', currency: 'USD' }]);
+      await second.step(following.id, 'accept');
+      await second.step(following.id, 'pickup');
+      await second.step(following.id, 'complete');
+      expect(
+        await db.select().from(settlementEntries).where(eq(settlementEntries.taxiRideId, again.id)),
+      ).toEqual([
+        expect.objectContaining({
+          organizationId: second.id,
+          collectedBy: 'operator',
+          gross: '1.50',
+          commission: '0.15',
+          earned: '1.35',
+        }),
+      ]);
     },
   );
 });

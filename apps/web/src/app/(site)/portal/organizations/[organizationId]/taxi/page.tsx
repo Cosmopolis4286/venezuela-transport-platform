@@ -232,6 +232,15 @@ async function Taxi({ params }: { params: Promise<{ organizationId: string }> })
                         {networkClock(request.expiresAt)}
                         {request.notes ? ` · ${request.notes}` : ''}
                       </p>
+                      {request.feesDue.length ? (
+                        <p className="text-sm text-amber-700 dark:text-amber-400">
+                          El conductor cobra además{' '}
+                          {request.feesDue
+                            .map((f) => formatMoney(f.amount, f.currency))
+                            .join(' + ')}{' '}
+                          de una cancelación anterior del pasajero (en efectivo).
+                        </p>
+                      ) : null}
                     </div>
                     <ActionForm action={assignTaxiRide} hidden={{ ...hidden, rideId: request.id }}>
                       <div className="grid items-end gap-3 sm:grid-cols-[1fr_1fr_8rem_6rem_auto]">
@@ -333,8 +342,13 @@ async function Taxi({ params }: { params: Promise<{ organizationId: string }> })
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {person(ride.driver)} · {vehicleName(ride.vehicle)} ·{' '}
-                        {formatMoney(ride.fare.amount, ride.fare.currency)} · pasajero{' '}
-                        {person(ride.passenger)}
+                        {formatMoney(ride.fare.amount, ride.fare.currency)}
+                        {ride.feesDue.length
+                          ? ` + tasa de cancelación ${ride.feesDue
+                              .map((f) => formatMoney(f.amount, f.currency))
+                              .join(' + ')}`
+                          : ''}{' '}
+                        · pasajero {person(ride.passenger)}
                         {ride.passenger.phone ? ` (${localPhone(ride.passenger.phone)})` : ''} ·
                         tomado a las {networkClock(ride.acceptedAt)}
                       </p>

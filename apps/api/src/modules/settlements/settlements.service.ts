@@ -216,6 +216,10 @@ export class SettlementsService {
       commissionRate: row.commissionRate,
       refundTiers: row.refundTiers,
       suburbanRefundTiers: row.suburbanRefundTiers,
+      rideCancellation: {
+        freeMinutes: row.rideFreeCancelMinutes,
+        feePercent: row.rideCancelFeePercent,
+      },
     };
   }
 
@@ -236,6 +240,12 @@ export class SettlementsService {
         commissionRate,
         refundTiers,
         ...(suburbanRefundTiers ? { suburbanRefundTiers } : {}),
+        ...(input.rideCancellation
+          ? {
+              rideFreeCancelMinutes: input.rideCancellation.freeMinutes,
+              rideCancelFeePercent: input.rideCancellation.feePercent,
+            }
+          : {}),
         updatedByUserId: auth.user.id,
         updatedAt: new Date(),
       })
@@ -244,7 +254,12 @@ export class SettlementsService {
       action: 'settlement.platform_policy_set',
       actorUserId: auth.user.id,
       ip: meta.ip,
-      metadata: { commissionRate, refundTiers, suburbanRefundTiers },
+      metadata: {
+        commissionRate,
+        refundTiers,
+        suburbanRefundTiers,
+        rideCancellation: input.rideCancellation,
+      },
     });
     return this.platformPolicy();
   }
@@ -622,6 +637,7 @@ export class SettlementsService {
         refundTiers: own?.refundTiers ?? platform.refundTiers,
         refundTiersOverride: own?.refundTiers ?? null,
         suburbanRefundTiers: platform.suburbanRefundTiers,
+        rideCancellation: platform.rideCancellation,
         acceptsTripPacks: own?.acceptsTripPacks ?? false,
         paymentCollection: own?.paymentCollection ?? 'platform',
         balances: CURRENCIES.flatMap((currency) => {

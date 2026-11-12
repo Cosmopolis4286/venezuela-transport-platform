@@ -66,6 +66,10 @@ export async function policyFor(
     commissionRate: own?.commissionRate ?? platform.commissionRate,
     refundTiers: own?.refundTiers ?? platform.refundTiers,
     suburbanRefundTiers: platform.suburbanRefundTiers,
+    rideCancellation: {
+      freeMinutes: platform.rideFreeCancelMinutes,
+      feePercent: platform.rideCancelFeePercent,
+    },
     commissionOverride: own?.commissionRate ?? null,
     refundTiersOverride: own?.refundTiers ?? null,
     paymentCollection: own?.paymentCollection ?? 'platform',
@@ -209,5 +213,69 @@ export async function recordRideEarning(
       commissionRate,
       ...splitFare(ride.fareAmount, commissionRate),
     })
-    .onConflictDoNothing({ target: [settlementEntries.taxiRideId, settlementEntries.kind] });
+    .onConflictDoNothing({
+      target: [
+        settlementEntries.taxiRideId,
+        settlementEntries.kind,
+        settlementEntries.organizationId,
+      ],
+    });
+}
+
+/**
+ * A late-cancellation fee the driver of the passenger's next ride collected in cash: the line
+ * that went out earns it, minus its commission. When another line collected it, that line owes it
+ * to the platform (collected by the operator, nothing earned) and the platform pays the first.
+ * Once per fee (its cancelled ride).
+ */
+export async function recordRideFee(
+  tx: Transaction,
+  fee: {
+    cancelledRideId: string;
+    organizationId: string;
+    amount: string;
+    currency: Currency;
+  },
+  collectingOrganizationId: string,
+): Promise<void> {
+  const commissionRate = normalizeRate((await policyFor(tx, fee.organizationId)).commissionRate);
+  const sameLine = collectingOrganizationId === fee.organizationId;
+  const common = {
+    taxiRideId: fee.cancelledRideId,
+    kind: 'ride_cancellation_fee' as const,
+    seats: 0,
+    currency: fee.currency,
+    gross: fee.amount,
+  };
+  const values = [
+    {
+      ...common,
+      organizationId: fee.organizationId,
+      collectedBy: sameLine ? ('operator' as const) : ('platform' as const),
+      commissionRate,
+      ...splitFare(fee.amount, commissionRate),
+    },
+    ...(sameLine
+      ? []
+      : [
+          {
+            ...common,
+            organizationId: collectingOrganizationId,
+            collectedBy: 'operator' as const,
+            commissionRate: '0.00',
+            commission: '0.00',
+            earned: '0.00',
+          },
+        ]),
+  ];
+  await tx
+    .insert(settlementEntries)
+    .values(values)
+    .onConflictDoNothing({
+      target: [
+        settlementEntries.taxiRideId,
+        settlementEntries.kind,
+        settlementEntries.organizationId,
+      ],
+    });
 }

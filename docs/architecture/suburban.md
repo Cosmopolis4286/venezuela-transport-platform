@@ -280,6 +280,11 @@ Antes de esos 30 minutos la devolución es **escalonada** y depende de cómo se 
    se pueden usar hasta que vence; los que quedan sin usar se pierden. Solo se devuelve el dinero
    de un pago que llegó cuando el paquete ya no podía activarse (como con las reservas).
 
+4. **Taxi o moto por tramo** (ADR-030): el viaje del paquete vuelve siempre que el pasajero
+   cancela. Si una línea ya lo había tomado hace más de 3 minutos (o faltan menos de 30 para uno
+   programado), el pasajero debe una tasa del 50 % de la tarifa de la línea, que paga en efectivo
+   en su próximo viaje. Ver [taxis.md](taxis.md#cancelar-un-viaje-que-una-línea-ya-tomó-adr-030).
+
 Al cancelar se muestra antes cuánto se devuelve, como hoy (`GET /me/bookings/:id/cancellation`,
 y uno nuevo para paquetes).
 

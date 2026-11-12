@@ -1,11 +1,12 @@
 import type { TaxiRequest } from '@vtp/shared-types';
-import { parseFare, requestSummary, rideRoute } from './taxi-board';
+import { feesNotice, parseFare, requestSummary, rideRoute } from './taxi-board';
 
 const request = {
   kind: 'terminal',
   mode: 'car',
   scheduledFor: null,
   paidWithPack: false,
+  feesDue: [] as TaxiRequest['feesDue'],
   direction: 'from_terminal',
   terminal: { name: 'Terminal La Bandera' },
   address: 'Av. Bolívar, Los Teques',
@@ -56,5 +57,15 @@ describe('taxi board labels', () => {
     expect(parseFare('0')).toBeNull();
     expect(parseFare('8.555')).toBeNull();
     expect(parseFare('ocho')).toBeNull();
+  });
+
+  it('tells the driver to collect pending cancellation fees', () => {
+    expect(feesNotice([])).toBeNull();
+    expect(
+      feesNotice([
+        { amount: '1.00', currency: 'USD' },
+        { amount: '0.50', currency: 'USD' },
+      ]),
+    ).toMatch(/^Cobra además .*1,50.* de una cancelación anterior/);
   });
 });

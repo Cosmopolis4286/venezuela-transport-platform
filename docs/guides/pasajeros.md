@@ -90,8 +90,13 @@ la parada de origen. La primera línea que lo toma cobra su tarifa del tramo; le
 conductor. Una moto lleva un solo pasajero.
 
 Si tienes un **paquete de viajes** de ese tramo y vehículo, en **¿Cómo pagas?** puedes usarlo: no
-le pagas al conductor. El viaje vuelve a tu paquete si nadie lo toma o si cancelas antes de que lo
-tomen (o, si lo pediste para más tarde, hasta 30 minutos antes).
+le pagas al conductor. Si nadie lo toma o lo cancelas, el viaje vuelve a tu paquete.
+
+**Cancelar**: es gratis antes de que una línea tome el viaje, durante los 3 minutos siguientes y,
+si lo pediste para más tarde, hasta 30 minutos antes de la hora. La app te muestra hasta qué hora.
+Después, cancelar cuesta una **tasa** (hoy el 50 % de la tarifa de la línea), que le pagas en
+efectivo al conductor de tu **próximo** viaje de taxi o moto, además de su tarifa; la app te la
+recuerda antes de pedir.
 
 ## 6. Pedir un taxi en el terminal
 

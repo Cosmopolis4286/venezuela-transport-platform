@@ -16,6 +16,7 @@ import type {
   StretchOption,
   DriverTaxiBoard,
   OperatorTaxiRide,
+  PendingRideFee,
   StopSummary,
   TaxiDispatchBoard,
   TaxiRide,
@@ -71,6 +72,13 @@ export class TaxiController {
   @Get('me/taxi-rides')
   mine(@CurrentAuth() auth: Authenticated): Promise<TaxiRide[]> {
     return this.taxi.listMine(auth.user.id);
+  }
+
+  /** Late-cancellation fees still owed: the next driver collects them with the fare. */
+  @ApiBearerAuth()
+  @Get('me/taxi-fees')
+  fees(@CurrentAuth() auth: Authenticated): Promise<PendingRideFee[]> {
+    return this.taxi.pendingFees(auth.user.id);
   }
 
   @ApiBearerAuth()

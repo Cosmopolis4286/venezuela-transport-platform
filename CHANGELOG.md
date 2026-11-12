@@ -13,6 +13,11 @@ pull request.
 
 ### Agregado
 
+- **Tasa por cancelar tarde un taxi o una moto por tramo** (ADR-030): gratis 3 minutos después de
+  que una línea toma el viaje (y hasta 30 minutos antes de uno programado); después, el 50 % de la
+  tarifa, que el pasajero paga en efectivo en su próximo viaje para la línea que salió (las
+  liquidaciones lo compensan si la cobra otra línea). Minutos y porcentaje configurables en
+  Liquidaciones → Política general. Los viajes pagados con paquete vuelven siempre al paquete.
 - **Pagar el taxi o la moto por tramo con un paquete de viajes**: un viaje por pasajero, gastado al
   pedir y devuelto si nadie lo toma o se cancela a tiempo. Solo lo ven y toman las líneas que
   aceptan paquetes; al terminar, la línea gana su tarifa del tramo (el libro de liquidaciones

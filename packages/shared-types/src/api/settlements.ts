@@ -88,7 +88,22 @@ export interface SettlementPolicy {
   refundTiers: RefundTier[];
   /** Suburban routes, for every operator (ADR-028). */
   suburbanRefundTiers: RefundTier[];
+  /** Cancelling a taxi or motorcycle ride a line already took (stretch rides). */
+  rideCancellation: RideCancellationPolicy;
 }
+
+/**
+ * Cancelling a stretch ride after a line took it (decided by the product owner): free for
+ * `freeMinutes` after it was taken (and up to 30 minutes before a ride booked for later); later,
+ * the passenger owes `feePercent` of the line's fare, paid in cash on the next taxi or motorcycle
+ * ride, for the line that went out. Trips paid with a pack go back to it either way.
+ */
+export interface RideCancellationPolicy {
+  freeMinutes: number;
+  feePercent: number;
+}
+
+export const DEFAULT_RIDE_CANCELLATION: RideCancellationPolicy = { freeMinutes: 3, feePercent: 50 };
 
 export const PAYOUT_METHODS = ['bank_transfer', 'pago_movil', 'usdt'] as const;
 export type PayoutMethod = (typeof PAYOUT_METHODS)[number];
@@ -131,6 +146,7 @@ export interface OrganizationSettlement {
   refundTiersOverride: RefundTier[] | null;
   /** The platform's tiers for suburban routes (operators have no override). */
   suburbanRefundTiers: RefundTier[];
+  rideCancellation: RideCancellationPolicy;
   /** Its departures accept trip packs; the platform pays it its fare for each trip used. */
   acceptsTripPacks: boolean;
   /** Who receives this operator's passengers' payments. */
@@ -149,8 +165,12 @@ export interface SettlementEntry {
   /** Exactly one of the two is set. */
   bookingId: string | null;
   taxiRideId: string | null;
-  /** `cancellation` entries are negative: the refund taken back when a passenger cancelled. */
-  kind: 'booking' | 'cancellation';
+  /**
+   * `cancellation` entries are negative: the refund taken back when a passenger cancelled.
+   * `ride_cancellation_fee`: a late-cancelled ride's fee, earned by the line that went out, or
+   * collected in cash by the line of the passenger's next ride (it owes it to the platform).
+   */
+  kind: 'booking' | 'cancellation' | 'ride_cancellation_fee';
   /** Who received the passenger's money. */
   collectedBy: PaymentCollection;
   bookingCode: string;
@@ -198,8 +218,12 @@ export interface AdminSettlementSummary extends OrganizationSettlement {
 }
 
 /** `PUT /admin/settlement-policy` — the platform defaults. Omitting the suburban tiers keeps them. */
-export type UpdateSettlementPolicyRequest = Omit<SettlementPolicy, 'suburbanRefundTiers'> & {
+export type UpdateSettlementPolicyRequest = Omit<
+  SettlementPolicy,
+  'suburbanRefundTiers' | 'rideCancellation'
+> & {
   suburbanRefundTiers?: RefundTier[];
+  rideCancellation?: RideCancellationPolicy;
 };
 
 /** The tiers that apply to a booking of a route of `service`. */
