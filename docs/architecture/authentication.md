@@ -17,6 +17,21 @@ organizaciones** ([organizations.md](organizations.md)), que se obtienen por inv
 de una solicitud aprobada (KYC, [onboarding.md](onboarding.md)). Iniciar sesión nunca da acceso a
 una organización por sí solo.
 
+### Invitados (ADR-034)
+
+La app de pasajeros puede comprar sin cuenta: `POST /api/v1/auth/guest` (`client: passenger`,
+`acceptTerms: true`, con el mismo límite por IP que el resto del acceso) crea un usuario con
+`guest = true`, sin correo, teléfono ni contraseña, y devuelve sus tokens, que la app guarda en
+`secureTokenStore`. `UserProfile.guest` lo indica.
+
+- `POST /me/account` (correo, contraseña, nombre): el invitado pasa a cuenta normal, con sus
+  viajes. `EMAIL_TAKEN` si el correo ya existe, `NOT_A_GUEST` si ya era cuenta.
+- `POST /me/claim-guest` (`guestAccessToken`): con la sesión de una cuenta existente, mueve las
+  reservas, pagos, taxis y avisos del invitado (cuyo token prueba que el teléfono los compró) y
+  cierra al invitado. `mobile-core` lo llama solo al iniciar sesión desde un teléfono invitado.
+- Crear empresas o solicitudes KYC responde `409 ACCOUNT_REQUIRED` a un invitado.
+- La tarea de conservación borra los invitados sin compras ni taxis después de 30 días.
+
 ## Tokens y sesiones
 
 - Cada inicio de sesión crea una **sesión** para un cliente (`web`, `passenger`, `transport`) y

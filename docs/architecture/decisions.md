@@ -566,3 +566,27 @@ la empresa no puede planificar frecuencias ni comparar unidades.
 
 **Compromisos.** Es lo que el conductor declara: no se puede verificar contra el dinero. El
 efectivo es un asunto entre la empresa y sus conductores; la plataforma no lo custodia.
+
+## ADR-034: Comprar sin registrarse (cuenta de invitado en el teléfono)
+
+**Decisión** (del dueño del producto). En la app de pasajeros se puede reservar y pagar sin crear
+una cuenta. Al tocar "Continuar sin crear cuenta" la app pide `POST /auth/guest` y guarda la
+sesión de un usuario **invitado** (`users.guest`, sin correo, teléfono ni contraseña) en el
+almacenamiento seguro del teléfono; desde ahí todo funciona igual (reservas, pagos, boletos,
+avisos push, taxis). Al reservar se puede dejar un teléfono o WhatsApp de contacto
+(`bookings.contact_phone`), que el soporte ve. El invitado se vuelve cuenta normal con
+`POST /me/account` (correo, contraseña y nombre) sin perder nada; si inicia sesión en una cuenta
+que ya existía, la app llama `POST /me/claim-guest` con el token del invitado y sus reservas,
+pagos, taxis y avisos pasan a esa cuenta (el invitado se cierra). Los invitados no crean empresas
+ni solicitudes KYC (`ACCOUNT_REQUIRED`). Los invitados sin compras se borran al mes.
+
+**Por qué.** Buena parte de los pasajeros del urbano y suburbano tiene poca experiencia digital:
+pedir correo y contraseña antes de comprar los hace desistir. El historial no se ata a un número de
+teléfono porque no hay verificación por SMS: unir viajes solo con el número permitiría quedarse
+con los de otra persona; el token del teléfono prueba que ese teléfono los compró.
+
+**Compromisos.** Si se borra la app o se pierde el teléfono sin haber creado la cuenta, los
+boletos no se recuperan desde la app; el soporte los encuentra por código de reserva y
+documento. Un invitado puede crear varias cuentas para apartar más puestos: lo frenan el límite
+por IP de los endpoints de acceso y la caducidad de los apartados. Términos (2.1.1) y Privacidad
+actualizados (versión 2026-11-12).

@@ -57,6 +57,16 @@ export class ApiClient {
     return this.tokens !== null;
   }
 
+  /** The current access token (refreshed if about to expire), or null without a session. */
+  async accessToken(): Promise<string | null> {
+    if (!this.tokens) return null;
+    try {
+      return await this.validAccessToken();
+    } catch {
+      return null;
+    }
+  }
+
   /** Loads a saved session. Returns false when there is none or it can no longer be refreshed. */
   async restore(): Promise<boolean> {
     this.tokens = await this.options.store.load();

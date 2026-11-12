@@ -3,7 +3,9 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { AuthResponse, OtpChallengeResponse } from '@vtp/shared-types';
 import { AuthThrottle, CurrentAuth, Public, ReqMeta } from './auth.decorators.js';
 import { AuthService } from './auth.service.js';
+import { GuestService } from './guest.service.js';
 import {
+  GuestDto,
   OtpRequestDto,
   OtpVerifyDto,
   PasswordForgotDto,
@@ -17,7 +19,10 @@ import type { Authenticated, RequestMeta } from './sessions.service.js';
 @ApiTags('auth')
 @Controller({ path: 'auth', version: '1' })
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    private readonly guests: GuestService,
+  ) {}
 
   /** E-mail + password sign-up (passengers). */
   @Public()
@@ -25,6 +30,14 @@ export class AuthController {
   @Post('register')
   register(@Body() body: RegisterDto, @ReqMeta() meta: RequestMeta): Promise<AuthResponse> {
     return this.auth.register(body, meta);
+  }
+
+  /** Buy without registering (passenger app, ADR-034): a guest account kept on the phone. */
+  @Public()
+  @AuthThrottle()
+  @Post('guest')
+  guest(@Body() body: GuestDto, @ReqMeta() meta: RequestMeta): Promise<AuthResponse> {
+    return this.guests.create(body.client, meta);
   }
 
   @Public()

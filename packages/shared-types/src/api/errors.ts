@@ -102,6 +102,9 @@ export const API_ERROR_REASONS = [
   'INVOICE_NUMBER_TAKEN',
   'PURCHASE_TAKEN',
   'INVOICE_ALREADY_ISSUED',
+  // Guests (ADR-034)
+  'ACCOUNT_REQUIRED',
+  'NOT_A_GUEST',
 ] as const;
 
 export type ApiErrorReason = (typeof API_ERROR_REASONS)[number];

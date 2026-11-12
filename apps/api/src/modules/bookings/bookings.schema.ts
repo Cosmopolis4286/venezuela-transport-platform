@@ -110,6 +110,8 @@ export const bookings = pgTable(
      * driver, since the day's trip has many units (ADR-032).
      */
     boardingDriverUserId: uuid().references(() => users.id, { onDelete: 'restrict' }),
+    /** Phone or WhatsApp the buyer left to be reached (guests have no e-mail). */
+    contactPhone: text(),
     /**
      * Who the service-fee invoice is for when the passenger asked for another name (ADR-031);
      * null: the first passenger. `billingIdType` is V, E, J, G or P.

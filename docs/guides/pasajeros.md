@@ -28,6 +28,17 @@ boleto abierto". No eliges puesto: indicas cuántos pasajeros, sus datos y pagas
 para **cualquier unidad de esa ruta ese día**, dentro del horario; muéstraselo al conductor al
 subir.
 
+### Comprar sin crear cuenta
+
+No hace falta registrarse: al elegir el viaje toca **Continuar sin crear cuenta**. Pones los datos
+de los pasajeros (nombre y cédula) y, si quieres, un **teléfono o WhatsApp** para que te avisemos
+si hay algún problema. Tus viajes y boletos quedan guardados **en ese teléfono**, en **Mis
+viajes**.
+
+Para no perderlos si cambias de teléfono, en **Mi cuenta** toca **Crear mi cuenta** (nombre,
+correo y contraseña): tus viajes se quedan. Si ya tenías cuenta, toca **Ya tengo cuenta: iniciar
+sesión** y los viajes de este teléfono pasan a tu cuenta.
+
 ## 3. Pagar
 
 Elige cómo pagar: **pago móvil**, **transferencia** (en bolívares), **PIX** (en reales) o

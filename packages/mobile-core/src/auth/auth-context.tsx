@@ -5,6 +5,7 @@ import {
   type OtpChallengeResponse,
   type OtpChannel,
   type RegisterRequest,
+  type UpgradeGuestRequest,
   type UserProfile,
 } from '@vtp/shared-types';
 import {
@@ -41,6 +42,13 @@ export interface AuthContextValue {
   resetPassword(challengeId: string, code: string, password: string): Promise<void>;
   /** Signs up; the screen made the person accept the Terms and Privacy Policy. */
   register(input: Omit<RegisterRequest, 'client' | 'acceptTerms'>): Promise<void>;
+  /**
+   * Buys without registering (passenger app, ADR-034): a guest account kept on this phone. The
+   * screen showed that continuing accepts the Terms and Privacy Policy.
+   */
+  continueAsGuest(): Promise<void>;
+  /** A guest registers with e-mail and password, keeping its trips. */
+  upgradeGuest(input: UpgradeGuestRequest): Promise<void>;
   signOut(): Promise<void>;
   /** Accepts the current Terms and Privacy Policy. */
   acceptTerms(): Promise<void>;
@@ -86,11 +94,25 @@ export function AuthProvider({ api, children }: { api: ApiClient; children: Reac
     };
   }, [api]);
 
+  /**
+   * Signs in with `response`. When this phone was a guest, its trips move to the account it signed
+   * in to (the guest's token proves the phone bought them); a failure there never blocks sign-in.
+   */
   const signedIn = useCallback(
     async (response: AuthResponse) => {
-      setState({ status: 'signedIn', user: await api.startSession(response) });
+      const guestToken =
+        state.status === 'signedIn' && state.user.guest && !response.user.guest
+          ? await api.accessToken()
+          : null;
+      const user = await api.startSession(response);
+      if (guestToken && user.id !== (state.status === 'signedIn' ? state.user.id : null)) {
+        await api
+          .request('/me/claim-guest', { body: { guestAccessToken: guestToken } })
+          .catch(() => undefined);
+      }
+      setState({ status: 'signedIn', user });
     },
-    [api],
+    [api, state],
   );
 
   const value = useMemo<AuthContextValue>(
@@ -135,6 +157,17 @@ export function AuthProvider({ api, children }: { api: ApiClient; children: Reac
             body: { ...input, client: api.client, acceptTerms: true },
           }),
         ),
+      continueAsGuest: async () =>
+        signedIn(
+          await api.request<AuthResponse>('/auth/guest', {
+            auth: false,
+            body: { client: api.client, acceptTerms: true },
+          }),
+        ),
+      upgradeGuest: async (input) => {
+        const user = await api.request<UserProfile>('/me/account', { body: input });
+        setState({ status: 'signedIn', user });
+      },
       signOut: async () => {
         await unregisterFromPush(api);
         await api.endSession();
