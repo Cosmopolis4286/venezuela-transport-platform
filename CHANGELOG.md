@@ -11,16 +11,6 @@ pull request.
 
 ## Sin publicar
 
-### Agregado
-
-- **Tipo de vehículo** (bus, carro o moto) en cada ruta y cada vehículo: cada tipo tiene sus
-  propias tarifas; la búsqueda se filtra por tipo en la web y la app de pasajeros, con pestañas
-  solo para los tipos presentes; el despacho solo asigna vehículos del tipo de la ruta
-  (`VEHICLE_MODE_MISMATCH`).
-- **Líneas de mototaxis** (`moto_line`): organización con los roles de una línea de taxis que solo
-  publica rutas urbanas o suburbanas de moto (`SERVICE_NOT_ALLOWED`); cada salida lleva un
-  pasajero y no usa mapa de puestos (`MOTORCYCLE_ONE_PASSENGER`).
-
 ### Cambiado
 
 - **Pago a la línea o al conductor** (ADR-030): cada ruta es interurbana o urbana/suburbana y
@@ -35,6 +25,14 @@ pull request.
   actualizados (versión 2026-11-08: los usuarios aceptan de nuevo).
 
 ### Agregado
+
+- **Tipo de vehículo** (bus, carro o moto) en cada ruta y cada vehículo: cada tipo tiene sus
+  propias tarifas; la búsqueda se filtra por tipo en la web y la app de pasajeros, con pestañas
+  solo para los tipos presentes; el despacho solo asigna vehículos del tipo de la ruta
+  (`VEHICLE_MODE_MISMATCH`).
+- **Líneas de mototaxis** (`moto_line`): organización con los roles de una línea de taxis que solo
+  publica rutas urbanas o suburbanas de moto (`SERVICE_NOT_ALLOWED`); cada salida lleva un
+  pasajero y no usa mapa de puestos (`MOTORCYCLE_ONE_PASSENGER`).
 
 - **Comprar sin registrarse** (ADR-034): en la app de pasajeros, "Continuar sin crear cuenta"
   guarda una cuenta de invitado en el teléfono con sus viajes y boletos. "Crear mi cuenta" la
