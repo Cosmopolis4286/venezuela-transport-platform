@@ -208,17 +208,19 @@ async function serve(label, script, ports) {
     const child = spawn('pnpm', [script], { cwd: ROOT, stdio: 'inherit', shell: WINDOWS });
     const stop = () => child.kill('SIGINT');
     process.once('SIGINT', stop);
+    let spawnError;
     child.once('error', (error) => {
-      process.removeListener('SIGINT', stop);
-      fail(`No se pudo iniciar ${script}: ${error.message}`);
-      resolve();
+      spawnError = error;
     });
     child.once('close', (code, signal) => {
       process.removeListener('SIGINT', stop);
-      if (signal && signal !== 'SIGINT') {
-        warn(`${script} terminó por la señal ${signal}.`);
+      if (spawnError) {
+        throw new StepError(`No se pudo iniciar ${script}: ${spawnError.message}`);
       }
-      if (code !== 0 && !signal) {
+      if (signal && signal !== 'SIGINT') {
+        throw new StepError(`${script} terminó por la señal ${signal}.`);
+      }
+      if (code !== 0) {
         throw new StepError(`${script} terminó con código ${code ?? 'desconocido'}.`);
       }
       resolve();
