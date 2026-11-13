@@ -5,7 +5,7 @@ de macOS y Windows siguen los instaladores oficiales; no se corren en la CI.
 
 ## El camino corto: el menú
 
-Con Node 24 y Docker instalados (paso 1), desde la raíz del repositorio:
+Desde la raíz del repositorio, puedes iniciar el menú con cualquier versión de Node compatible con la sintaxis del script. Si detecta una versión fuera del rango del proyecto, intenta instalar Node 24 y relanzarse automáticamente usando `fnm` (recomendado) o `nvm-windows` (Windows). Si no encuentra ninguno, indica cómo resolverlo. Docker debe estar instalado y en ejecución para preparar la base de datos:
 
 ```bash
 node infrastructure/scripts/menu.mjs
@@ -13,7 +13,7 @@ node infrastructure/scripts/menu.mjs
 
 | Opción                                | Qué hace                                                                                                                                                                                                                                                                                                                                                  |
 | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Preparar todo                         | Revisa Node, pnpm (lo activa con corepack) y Docker (espera a que arranque); instala dependencias, crea los `.env`, arranca PostgreSQL y aplica las migraciones, con reintentos                                                                                                                                                                           |
+| Preparar todo                         | Asegura Node 24 con `fnm`/`nvm-windows` si hace falta, revisa pnpm (lo activa con corepack) y Docker (espera a que arranque); instala dependencias, crea los `.env`, arranca PostgreSQL y aplica las migraciones, con reintentos                                                                                                                                                                           |
 | Arrancar API y web, apps, todo        | Asegura la base de datos, avisa si un puerto está ocupado y arranca los servidores; **Ctrl+C** vuelve al menú                                                                                                                                                                                                                                             |
 | Cargar datos de ejemplo del suburbano | Zona activa Casacoima – San Félix – Puerto Ordaz, paradas, rutas de bus cada 15 min, líneas de mototaxis y taxis con tarifas por tramo y dos paquetes de viajes, más cuentas de prueba (contraseña `vtp-demo-2026`). Si la API está apagada la arranca solo para esto. Se puede repetir sin duplicar nada. **Datos inventados: solo para tu computadora** |
 | Hacer administradora una cuenta       | `pnpm platform:grant --email … --role admin`                                                                                                                                                                                                                                                                                                              |
