@@ -3,7 +3,7 @@
 Versión {{version}} · Vigente desde {{fecha_vigencia}}
 
 Estas Condiciones regulan la relación entre {{razon_social}}, RIF {{rif}} («{{nombre_comercial}}»)
-y cada empresa de transporte de pasajeros, línea de taxis o terminal que se registra en la
+y cada empresa de transporte de pasajeros, línea de taxis, línea de mototaxis o terminal que se registra en la
 Plataforma (la «Empresa»). Completan los [Términos y Condiciones de Uso](terminos) y la [Política
 de Privacidad](privacidad). La persona que registra la Empresa declara que tiene facultades
 suficientes para obligarla.
@@ -89,11 +89,34 @@ tiene por aceptado, salvo error material.
 4.4. **Tasas de cambio.** La Empresa fija las tasas con las que se convierten sus tarifas a otras
 monedas y responde por ellas.
 
+4.5. **Zonas y rutas suburbanas.** La Empresa indica si cada ruta es interurbana o urbana o
+suburbana, y su tipo de vehículo. {{nombre_comercial}} puede abrir, anunciar o pausar la venta en
+cada ciudad o zona; lo ya vendido se respeta y la Empresa debe prestar esos viajes.
+
+4.6. **Paquetes de viajes.** Los paquetes los vende y cobra {{nombre_comercial}} por su cuenta. La
+Empresa acepta paquetes solo si {{nombre_comercial}} la habilita para ello. Una Empresa habilitada
+acepta como pagados los viajes que los pasajeros paguen con un paquete en sus salidas o viajes del
+tramo y tipo de vehículo del paquete, y por cada viaje usado gana **su tarifa vigente de ese
+tramo**, sin cargo por servicio ni comisión, aunque el precio por viaje del paquete sea otro: la diferencia la pone
+o la gana {{nombre_comercial}}. Si el paquete tiene un **tope por viaje**, la Empresa gana su tarifa
+hasta ese tope; {{nombre_comercial}} informa los topes vigentes a las Empresas que aceptan paquetes. Si un viaje vuelve al paquete por una cancelación a tiempo, se
+anula también lo ganado por él.
+
+4.7. **Taxis y mototaxis por tramo.** Las líneas de taxis y de mototaxis publican tarifas fijas
+por tramo, en su tipo de vehículo, y las respetan: el pasajero las ve antes de pedir. Una moto
+lleva a un solo pasajero, con casco. Cuando un pasajero cancela tarde un viaje que la línea ya
+había aceptado, la línea tiene derecho a la **tasa de cancelación** que fija la Política de
+Cancelación y Reembolsos, completa. El conductor del siguiente viaje del pasajero cobra
+la tasa en efectivo junto con su tarifa; si ese conductor es de otra línea, {{nombre_comercial}}
+le descuenta la tasa a esa línea en su estado de cuenta y se la acredita a la línea que salió.
+Las líneas se obligan a cobrar las tasas que la Plataforma les indique.
+
 ## 5. Cancelaciones y reembolsos
 
-5.1. La Empresa fija su política de reembolso por cancelación del pasajero dentro de los límites
-que acepta la Plataforma; mientras no fije una propia, aplica la general. La política se muestra
-al pasajero antes de pagar.
+5.1. En sus rutas interurbanas, la Empresa fija su política de reembolso por cancelación del
+pasajero dentro de los límites que acepta la Plataforma; mientras no fije una propia, aplica la
+general. En las rutas suburbanas aplica la escala general de {{nombre_comercial}} para todas las
+Empresas. La política se muestra al pasajero antes de pagar.
 
 5.2. Cuando un pasajero cancela, el reembolso (sobre la tarifa) se descuenta de lo ganado por la
 Empresa; el cargo por servicio no se reembolsa y lo conserva {{nombre_comercial}}.

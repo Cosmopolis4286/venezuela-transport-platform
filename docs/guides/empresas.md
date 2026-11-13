@@ -27,6 +27,7 @@ En la página de la organización:
 1. **Mapas de puestos**: crea el de cada tipo de bus (hay plantillas).
 2. **Rutas → Nueva ruta**: nombre y paradas en orden, con los minutos desde el origen. Las paradas
    salen del catálogo de VTP; si falta un terminal, pídeselo a la administración.
+   Si la ruta es de motos o de carros, elige el **tipo de vehículo** al crearla.
 3. **Tarifas** por tramo (US$ o Bs.).
 4. **Horarios**: hora de salida, días de la semana, vigencia, clase de servicio y mapa de puestos.
    En rutas **urbanas o suburbanas** puedes poner una **frecuencia** (por ejemplo, cada 15
@@ -58,7 +59,7 @@ En la página de la organización:
 
 ## Líneas de mototaxis
 
-Publican **rutas suburbanas** dentro de un corredor de VTP, igual que en el paso 3, con dos
+Publican **rutas urbanas o suburbanas** de moto, igual que en el paso 3, con dos
 diferencias: cada salida es **una moto con un pasajero** (no hay mapas de puestos ni cantidad de
 puestos que elegir) y no hay taxis de terminal. En **Vehículos** registras las placas de las motos
 y sus documentos; en el despacho asignas moto y conductor a cada salida.
@@ -69,6 +70,12 @@ y sus documentos; en el despacho asignas moto y conductor a cada salida.
 2. El tablero muestra las solicitudes de esos terminales. Un despachador puede asignar una a un
    conductor y vehículo con su tarifa, o tus conductores la toman desde su app.
 3. Por ahora el pasajero le paga al conductor; la plataforma no cobra los taxis.
+4. **Viajes por tramo (suburbano)**: en **Taxis** (o **Mototaxis**), carga tus **tarifas por
+   tramo**: dos paradas de una zona y el monto, en los dos sentidos. Tus conductores ven las
+   solicitudes de esos tramos (ahora o programadas) y al tomarlas se cobra tu tarifa, sin
+   escribirla. Un viaje programado que tomas no te impide tomar otros hasta la hora de recoger.
+   Si tu línea **acepta paquetes de viajes** (lo activa VTP), también ves los viajes pagados con
+   paquete ("Pagado con paquete": no cobres); VTP te paga tu tarifa del tramo al terminarlos.
 
 ## 6. Cobros y liquidaciones
 

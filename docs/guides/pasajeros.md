@@ -90,6 +90,42 @@ El reembolso se hace por el mismo medio con el que pagaste. Te avisamos cuando s
 cancelación y cuando se envía el dinero. No se puede cancelar después de abordar ni cuando el
 autobús ya salió.
 
+## Viajes suburbanos y paquetes de viajes
+
+Si VTP opera viajes suburbanos (por ejemplo, Casacoima – San Félix – Puerto Ordaz), arriba de la
+pantalla de inicio puedes elegir **Entre ciudades** o **Suburbano**. La app recuerda tu elección.
+
+En **Suburbano** también puedes comprar **paquetes de viajes** (**Ver paquetes**, o **Mis viajes →
+Tus paquetes**): varios viajes de un tramo, en bus, taxi o moto, por un precio fijo.
+
+- Sirven en los **dos sentidos** del tramo (ida y vuelta).
+- Se pagan como una reserva (pago móvil, transferencia, PIX o USDT) y se activan cuando llega el
+  pago. Si no lo pagas en 24 horas, se anula.
+- **Vencen** (por defecto, 60 días después de pagarlos) y **no se devuelven**: los viajes que no
+  uses se pierden.
+- Para usarlo, reserva como siempre: al llegar a los pasajeros, en **¿Cómo pagas?** aparece tu
+  paquete (si sirve para esa salida). La reserva queda pagada al instante. Puedes tener hasta 4
+  reservas futuras con un paquete, y una por salida.
+- Si cancelas hasta 30 minutos antes de abordar, el viaje vuelve a tu paquete; después, se pierde.
+
+### Taxi o moto por tramo
+
+En **Suburbano**, **Pedir taxi o moto**: elige desde qué parada y hasta cuál, el vehículo (ves
+el precio antes de pedir), **ahora** o **para más tarde** (día y hora), y dónde te buscan cerca de
+la parada de origen. La primera línea que lo toma cobra su tarifa del tramo; le pagas al
+conductor. Una moto lleva un solo pasajero.
+
+Si tienes un **paquete de viajes** de ese tramo y vehículo, en **¿Cómo pagas?** puedes usarlo: no
+le pagas al conductor. Cuando una línea lo toma, la app te muestra un **código de recogida** de 4
+dígitos: díselo al conductor al subir. Si nadie lo toma o lo cancelas, el viaje vuelve a tu paquete.
+
+**Cancelar**: es gratis antes de que una línea tome el viaje, durante los 3 minutos siguientes y,
+si lo pediste para más tarde, hasta 30 minutos antes de la hora. La app te muestra hasta qué hora.
+Después, cancelar cuesta una **tasa** (hoy el 50 % de la tarifa de la línea), que le pagas en
+efectivo al conductor de tu **próximo** viaje de taxi o moto, además de su tarifa; la app te la
+recuerda antes de pedir. Si el conductor no llega 20 minutos después de tomar el viaje (o de la
+hora que pediste), puedes cancelar sin costo.
+
 ## 6. Pedir un taxi en el terminal
 
 1. **Pedir un taxi**: elige el terminal, si vas **desde** o **hacia** él, la dirección, cuántos

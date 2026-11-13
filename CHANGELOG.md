@@ -37,7 +37,23 @@ pull request.
 - **Líneas de mototaxis** (`moto_line`): organización con los roles de una línea de taxis que solo
   publica rutas urbanas o suburbanas de moto (`SERVICE_NOT_ALLOWED`); cada salida lleva un
   pasajero y no usa mapa de puestos (`MOTORCYCLE_ONE_PASSENGER`).
-
+- **Paquetes de viajes** (ADR-035): la plataforma vende viajes de un tramo de una zona, en un tipo
+  de vehículo, que vencen (60 días por defecto) y no se devuelven. Pagan reservas de rutas
+  suburbanas (también boletos abiertos) de empresas habilitadas, sin cargo por servicio: hasta 4
+  reservas futuras por paquete y una por salida; la empresa (o el conductor) gana su tarifa, hasta
+  un tope por viaje opcional. Se cobran con tasas de la plataforma de menos de 24 h; máximo 2
+  paquetes esperando pago; aviso 3 días antes de vencer. Catálogo en `/admin/trip-packs`, compra
+  en la app, reportes y métricas.
+- **Taxi o moto por tramo** (ADR-035): entre dos paradas de una zona activa, ahora o para una
+  hora, a la tarifa fija que publica cada línea; se paga al conductor o con un paquete (con
+  código de recogida). Las líneas de mototaxis tienen su tablero en el portal y en la app de
+  conductores.
+- **Tasa por cancelar tarde** un taxi o una moto ya tomados (ADR-036): gratis 3 minutos, hasta 30
+  minutos antes de uno programado o si el conductor no llega en 20 minutos; si no, el 50 % de la
+  tarifa, pagado en efectivo en el siguiente viaje, completo para la línea que salió. El
+  conductor puede terminar «sin cobrar la tasa». Los viajes abandonados se cierran solos.
+- Textos legales del suburbano (versión 2026-11-13: los usuarios aceptan de nuevo). Siguen siendo
+  borradores para revisión de un abogado.
 - **Comprar sin registrarse** (ADR-034): en la app de pasajeros, "Continuar sin crear cuenta"
   guarda una cuenta de invitado en el teléfono con sus viajes y boletos. "Crear mi cuenta" la
   convierte en cuenta normal sin perder nada, e iniciar sesión en una cuenta existente le pasa los

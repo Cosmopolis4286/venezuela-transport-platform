@@ -35,6 +35,7 @@ Por dónde empezar según lo que necesites.
 - [Reservas](architecture/bookings.md) · [Pagos y boletos](architecture/payments.md) ·
   [Liquidaciones y reembolsos](architecture/settlements.md) ·
   [Facturación y libros fiscales](architecture/fiscal.md)
+- [Transporte suburbano: tipos de vehículo, mototaxis, paquetes de viajes y taxi o moto por tramo](architecture/suburban.md)
 - [Despacho](architecture/dispatch.md) · [Taxis](architecture/taxis.md) ·
   [Notificaciones](architecture/notifications.md) · [Reportes](architecture/reports.md)
 - [Portal web](architecture/web-portal.md) · [Apps móviles](architecture/mobile-apps.md) ·

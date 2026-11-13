@@ -49,6 +49,21 @@ Estados de una reserva: `held` (puestos apartados hasta `expiresAt`, esperando e
 - Al validarlo, el primer conductor (o inspector) queda en `bookings.boarding_driver_user_id`; en
   una ruta que le paga al conductor, ese es quien cobra (ADR-030).
 
+## Reservas pagadas con un paquete de viajes (ADR-035)
+
+`POST /bookings` con `tripPackId` paga con un paquete del pasajero: se gasta un viaje por puesto en
+la misma transacción que toma los puestos (o numera los boletos abiertos), y la reserva queda
+**confirmada** al instante, sin apartado, sin pago y **sin cargo por servicio**. Debe coincidir con
+el paquete: tipo de vehículo, una ruta **urbana o suburbana**, el tramo en cualquier sentido, una
+empresa que **acepta paquetes** (`organization_policies.accepts_trip_packs`, la activa un
+administrador) y una salida antes de que venza el paquete. Límites: 4 reservas futuras por paquete
+y una por salida. La empresa (o el conductor, si la ruta le paga a él, ADR-030) gana su tarifa,
+hasta el tope por viaje del paquete.
+
+Cancelar hasta 30 minutos antes de abordar devuelve los viajes al paquete (si no venció) y deshace
+la ganancia; después, los viajes se pierden y se conserva lo ganado. Si la empresa cancela la
+salida, los viajes vuelven al paquete y se deshace la ganancia.
+
 ## Endpoints (`/api/v1`)
 
 | Método y ruta                                                              | Quién                                                                                  |

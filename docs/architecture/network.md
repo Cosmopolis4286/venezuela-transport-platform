@@ -43,7 +43,17 @@ reservas, los puestos y el despacho se construyen sobre ella.
   borran; solo se pueden borrar los borradores.
 - Las tarifas son decimales positivos con hasta dos decimales. La lista se reemplaza completa.
 - Horarios: `HH:MM`, al menos un día, de 1 a 100 puestos, `validUntil` igual o posterior a
-  `validFrom`; hasta 100 por ruta. Pausar un horario (`active: false`) lo oculta de la búsqueda.
+  `validFrom`; hasta 300 por ruta. Las **salidas frecuentes** (de 05:00 a 20:00 cada 15 minutos)
+  se guardan como un horario por salida con el mismo `seriesId`, y se pausan o eliminan juntas
+  ([suburban.md](suburban.md#3-horarios-por-frecuencia)). Pausar un horario (`active: false`) lo oculta de la búsqueda.
+
+## Tipo de vehículo y líneas de mototaxis (ADR-035)
+
+Cada ruta y cada vehículo tienen un **tipo** (`mode`: `bus`, `car` o `motorcycle`), con sus propias
+tarifas; la búsqueda devuelve `mode` y las apps filtran por tipo. Las **líneas de mototaxis**
+(`moto_line`) solo publican rutas urbanas o suburbanas (`SERVICE_NOT_ALLOWED`) y cada salida lleva
+un pasajero, sin mapa de puestos (`MOTORCYCLE_ONE_PASSENGER`). `GET /stops?zoneId=` lista las
+paradas de una zona (la usa la app para elegir un tramo).
 
 ## Zonas operativas
 
@@ -98,7 +108,7 @@ primera reserva, a partir del mismo cálculo ([bookings.md](bookings.md)).
 
 | Método y ruta                                                        | Quién                                    |
 | -------------------------------------------------------------------- | ---------------------------------------- |
-| `GET /stops?q=&kind=`                                                | Público — paradas activas                |
+| `GET /stops?q=&kind=&zoneId=`                                        | Público — paradas activas                |
 | `GET /stops/nearby?latitude=&longitude=&radiusKm=&kind=`             | Público — paradas cercanas               |
 | `GET /zones`                                                         | Público — zonas activas y próximas       |
 | `GET /admin/zones`                                                   | Revisor o administrador de la plataforma |

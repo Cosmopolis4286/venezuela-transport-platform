@@ -16,7 +16,7 @@ los permisos.**
 | `driver`       | Conductor            |          ✅          |        ✅        |         ✅         |     —      |
 | `inspector`    | Inspector de boletos |          ✅          |        —         |         —          |     ✅     |
 
-Las **líneas de mototaxis** (`moto_line`, ADR-028) solo publican rutas **suburbanas** de moto:
+Las **líneas de mototaxis** (`moto_line`, ADR-035) solo publican rutas **suburbanas** de moto:
 cada salida es una moto con **un pasajero**, sin mapa de puestos (`MOTORCYCLE_ONE_PASSENGER`), y
 no tienen tablero de taxis de terminal. Qué servicios y tipos de vehículo usa cada tipo de
 organización está en `SERVICES_BY_ORGANIZATION_TYPE` y `TRANSPORT_MODES_BY_ORGANIZATION_TYPE`.

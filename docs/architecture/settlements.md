@@ -31,6 +31,10 @@ cambio no tienen esas columnas y conservan el modelo anterior (la comisión sal�
 - **Una fila por reserva y tipo** (`kind`: `booking` al pagarse, `cancellation` al cancelarse;
   índice único sobre `booking_id, kind`): una notificación repetida del proveedor no gana dos
   veces y una reserva se cancela una sola vez.
+- **Tasas de cancelación de taxis y motos** (`kind = 'ride_cancellation_fee'`, ADR-036): con el
+  `taxi_ride_id` del viaje cancelado, una fila por línea (índice único sobre
+  `taxi_ride_id, kind, organization_id`): la que la gana y, si otra la cobró en efectivo, la que
+  la debe (cobrada por ella, `earned = 0`).
 - **Las filas no cambian.** Cambiar la comisión solo afecta a las reservas que se paguen después;
   una cancelación agrega su propia fila, con montos negativos.
 - Las reservas confirmadas antes de este módulo no tienen fila (no hay datos de producción).
@@ -45,8 +49,10 @@ plataforma en **Liquidaciones**. Empieza con:
   de la tarifa);
 - **tramos de reembolso**: 100 % si el pasajero cancela con al menos 48 h de anticipación, 50 %
   con al menos 2 h, nada después;
-- **tramos de reembolso suburbanos** (rutas suburbanas de todas las empresas, ADR-028): 100 % con
-  24 h o más, 75 % con 2 h o más, 50 % con 30 minutos o más, nada en los últimos 30 minutos.
+- **tramos de reembolso suburbanos** (rutas suburbanas de todas las empresas, ADR-035): 100 % con
+  24 h o más, 75 % con 2 h o más, 50 % con 30 minutos o más, nada en los últimos 30 minutos;
+- **cancelación de taxis y motos por tramo** (ADR-036): gratis 3 minutos después de que una línea
+  toma el viaje (y si el conductor no recoge en 20 minutos); si no, una tasa del 50 % de su tarifa.
 
 Cada empresa puede tener **su propio cargo, sus propios tramos (de sus rutas interurbanas) o ambos**
 (`organization_policies`); lo que deja vacío usa el de la **zona donde sube el pasajero**
@@ -56,6 +62,10 @@ al cancelar.
 
 Los tramos (1 a 4) van del que pide más horas al que pide menos, con horas de 0 a 720 en cuartos
 de hora (0,5 = 30 minutos) y porcentajes enteros. Las horas se cuentan hasta la hora en que el pasajero aborda en su parada.
+
+Las entradas del libro son de una reserva o de un **viaje de taxi o moto pagado con un paquete**
+(`settlement_entries.taxi_ride_id`, ADR-035): la línea gana su tarifa del tramo, sin cargo ni
+comisión (hasta el tope por viaje del paquete), cuando termina el viaje.
 
 ## Saldo y pagos a las empresas
 
