@@ -89,7 +89,9 @@ function ensureNodeRuntime() {
   const [major, minor] = process.versions.node.split('.').map(Number);
   if (major === 24 && minor >= 15) return true;
   if (process.env.VTP_NODE_BOOTSTRAPPED === '1') {
-    fail(`Node ${process.versions.node} sigue fuera del rango requerido después del cambio automático.`);
+    fail(
+      `Node ${process.versions.node} sigue fuera del rango requerido después del cambio automático.`,
+    );
     return false;
   }
 
@@ -110,7 +112,9 @@ function ensureNodeRuntime() {
     const relaunched = runManager('fnm', [
       'exec', '--using', '24', 'node', script, ...forwardedArgs,
     ]);
-    if (relaunched.error) fail(`No se pudo reiniciar el menú con Node 24: ${relaunched.error.message}`);
+    if (relaunched.error) {
+      fail(`No se pudo reiniciar el menú con Node 24: ${relaunched.error.message}`);
+    }
     process.exit(relaunched.status ?? 1);
   }
 
@@ -124,7 +128,9 @@ function ensureNodeRuntime() {
     }
     const selected = runManager('nvm', ['use', '24.15.0']);
     if (selected.error || selected.status !== 0) {
-      fail('No se pudo activar Node 24.15.0 con nvm-windows. Comprueba los permisos de NVM_SYMLINK.');
+      fail(
+        'No se pudo activar Node 24.15.0 con nvm-windows. Comprueba los permisos de NVM_SYMLINK.',
+      );
       return false;
     }
     const relaunched = runManager('node', [script, ...forwardedArgs]);
@@ -132,8 +138,12 @@ function ensureNodeRuntime() {
     process.exit(relaunched.status ?? 1);
   }
 
-  fail(`Node ${process.versions.node}: el proyecto requiere Node 24.15 o más nuevo (y menor que 25).`);
-  console.log(dim('  Para automatizar el cambio, instala fnm (recomendado) o nvm-windows y vuelve a ejecutar el menú.'));
+  fail(
+    `Node ${process.versions.node}: el proyecto requiere Node 24.15 o más nuevo (y menor que 25).`,
+  );
+  console.log(
+    dim('  Para automatizar el cambio, instala fnm (recomendado) o nvm-windows y vuelve a ejecutar el menú.'),
+  );
   return false;
 }
 
