@@ -67,9 +67,7 @@ pnpm dev                        # web (:3000) + API (:4000)
 curl http://localhost:4000/api/v1/health
 ```
 
-**Con menú** (lo más fácil): `node infrastructure/scripts/menu.mjs` (o `pnpm menu`) revisa lo
-necesario (Node 24, pnpm, Docker), prepara todo, arranca la API, la web y las apps, carga datos de
-ejemplo del suburbano y repara lo más común. Cada opción también corre sola, por ejemplo
+**Con menú** (lo más fácil): `node infrastructure/scripts/menu.mjs` (o `pnpm menu`) comprueba Node, pnpm y Docker. Si Node no cumple el rango del proyecto y tienes `fnm` o `nvm-windows`, instala/activa Node 24 y reinicia el menú automáticamente con esa versión. Después puede preparar todo, arrancar la API, la web y las apps, cargar datos de ejemplo y reparar lo más común. Cada opción también corre sola, por ejemplo
 `pnpm menu setup` o `pnpm menu seed`.
 
 Instrucciones completas por sistema operativo:
