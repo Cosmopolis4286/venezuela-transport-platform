@@ -211,6 +211,27 @@
       "when": 1794511925787,
       "tag": "0029_guest_checkout",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1794530447668,
+      "tag": "0030_transport_modes_and_moto_lines",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794530685551,
+      "tag": "0031_suburban_refund_tiers",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794531033121,
+      "tag": "0032_trip_packs_and_stretch_rides",
+      "breakpoints": true
     }
   ]
 }

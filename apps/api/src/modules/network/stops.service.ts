@@ -80,12 +80,14 @@ export class StopsService {
   async search(filter: {
     q?: string;
     kind?: StopKind;
+    zoneId?: string;
     includeInactive?: boolean;
   }): Promise<Stop[]> {
     const conditions: SQL[] = [];
     // Passengers only see stops that sell; staff see them all.
     if (!filter.includeInactive) conditions.push(eq(stops.active, true), this.served);
     if (filter.kind) conditions.push(eq(stops.kind, filter.kind));
+    if (filter.zoneId) conditions.push(eq(stops.zoneId, filter.zoneId));
     const q = filter.q?.trim();
     if (q) {
       const pattern = `%${escapeLike(q)}%`;

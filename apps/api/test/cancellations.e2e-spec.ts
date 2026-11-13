@@ -508,6 +508,27 @@ describe.runIf(expectDatabase)('Cancelling paid bookings (e2e)', () => {
       expect(board.departures.find((d) => d.scheduleId === scheduleId)?.cancellation).toMatchObject(
         { reason: 'La unidad tuvo una falla mecánica.' },
       );
+
+      // --- Suburban routes use the platform's suburban tiers, whatever the operator's own.
+      await http()
+        .patch(routeUrl)
+        .set('Authorization', owner.auth)
+        .send({ scope: 'suburban' })
+        .expect(200);
+      const platformPolicy = (
+        await http()
+          .get('/api/v1/admin/settlement-policy')
+          .set('Authorization', admin.auth)
+          .expect(200)
+      ).body as { suburbanRefundTiers: unknown };
+      const suburban = await book(['20']);
+      const shown = (
+        await http()
+          .get(`/api/v1/me/bookings/${suburban.id}`)
+          .set('Authorization', passenger.auth)
+          .expect(200)
+      ).body as Booking;
+      expect(shown.refundPolicy).toEqual(platformPolicy.suburbanRefundTiers);
     },
   );
 });

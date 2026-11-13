@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  check,
   index,
   boolean,
   jsonb,
@@ -22,6 +23,7 @@ import {
 import { bookings } from '../bookings/bookings.schema.js';
 import { timestamps, users } from '../identity/identity.schema.js';
 import { organizations } from '../organizations/organizations.schema.js';
+import { tripPacks } from '../trip-packs/trip-packs.schema.js';
 
 export const paymentMethod = pgEnum('payment_method', PAYMENT_METHODS);
 export const paymentStatus = pgEnum('payment_status', PAYMENT_STATUSES);
@@ -43,14 +45,24 @@ export const exchangeRates = pgTable(
   (t) => [primaryKey({ columns: [t.organizationId, t.currency] })],
 );
 
-/** One attempt to pay a booking with one method. The amount and rate are frozen at creation. */
+/** Units of a currency per US dollar, set by platform admins for what the platform sells (packs). */
+export const platformExchangeRates = pgTable('platform_exchange_rates', {
+  currency: rateCurrency().primaryKey(),
+  unitsPerUsd: numeric({ precision: 18, scale: 4 }).notNull(),
+  updatedByUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
+  ...timestamps,
+});
+
+/**
+ * One attempt to pay a booking or a trip pack (exactly one) with one method. The amount and rate
+ * are frozen at creation.
+ */
 export const payments = pgTable(
   'payments',
   {
     id: uuid().primaryKey().defaultRandom(),
-    bookingId: uuid()
-      .notNull()
-      .references(() => bookings.id, { onDelete: 'restrict' }),
+    bookingId: uuid().references(() => bookings.id, { onDelete: 'restrict' }),
+    tripPackId: uuid().references(() => tripPacks.id, { onDelete: 'restrict' }),
     userId: uuid()
       .notNull()
       .references(() => users.id, { onDelete: 'restrict' }),
@@ -93,7 +105,12 @@ export const payments = pgTable(
     uniqueIndex('payments_booking_pending_key')
       .on(t.bookingId)
       .where(sql`${t.status} = 'pending'`),
+    uniqueIndex('payments_trip_pack_pending_key')
+      .on(t.tripPackId)
+      .where(sql`${t.status} = 'pending'`),
     index('payments_booking_idx').on(t.bookingId),
+    index('payments_trip_pack_idx').on(t.tripPackId),
+    check('payments_subject_check', sql`(${t.bookingId} is null) <> (${t.tripPackId} is null)`),
     index('payments_status_idx').on(t.status),
   ],
 );

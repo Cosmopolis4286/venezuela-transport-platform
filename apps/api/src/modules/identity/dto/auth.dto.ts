@@ -169,7 +169,7 @@ export class PasswordResetDto implements PasswordResetRequest {
 }
 
 export class AcceptTermsDto implements AcceptTermsRequest {
-  @ApiProperty({ example: '2026-11-07', description: 'Must be the current LEGAL_VERSION' })
+  @ApiProperty({ example: '2026-11-13', description: 'Must be the current LEGAL_VERSION' })
   @IsString()
   @MaxLength(20)
   version!: string;

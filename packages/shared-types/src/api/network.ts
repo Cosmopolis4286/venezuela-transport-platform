@@ -14,11 +14,45 @@ export const NETWORK_UTC_OFFSET = '-04:00';
 export const ROUTE_OPERATOR_TYPES = [
   'bus_company',
   'taxi_line',
+  'moto_line',
 ] as const satisfies readonly OrganizationType[];
 
 export function runsRoutes(type: OrganizationType): boolean {
   return (ROUTE_OPERATOR_TYPES as readonly OrganizationType[]).includes(type);
 }
+
+// --- Transport modes -------------------------------------------------------------------------
+
+/**
+ * The kind of vehicle a route runs and a vehicle is (ADR-028). Each route has one mode, so each
+ * mode has its own fares for the same pair of stops.
+ */
+export const TRANSPORT_MODES = ['bus', 'car', 'motorcycle'] as const;
+export type TransportMode = (typeof TRANSPORT_MODES)[number];
+
+export const TRANSPORT_MODE_LABELS: Record<TransportMode, string> =
+  SHARED_MESSAGES.es.transportMode;
+
+/** Modes each organization type runs; the first is the default for new routes and vehicles. */
+export const TRANSPORT_MODES_BY_ORGANIZATION_TYPE: Record<
+  OrganizationType,
+  readonly TransportMode[]
+> = {
+  bus_company: ['bus'],
+  taxi_line: ['car'],
+  moto_line: ['motorcycle'],
+  terminal: [],
+};
+
+export function modesFor(type: OrganizationType): readonly TransportMode[] {
+  return TRANSPORT_MODES_BY_ORGANIZATION_TYPE[type];
+}
+
+/**
+ * A motorcycle carries one passenger (decided by the product owner): its departures have one
+ * seat and no seat map, and its vehicles have no seat map either.
+ */
+export const MOTORCYCLE_SEATS = 1;
 
 // --- Stops -------------------------------------------------------------------------------------
 
@@ -206,6 +240,8 @@ export interface Route {
   id: string;
   organizationId: string;
   name: string;
+  /** Set when the route is created; never changes. */
+  mode: TransportMode;
   status: RouteStatus;
   scope: RouteScope;
   /** The route's own choice; null uses `defaultPayee(scope)`. */
@@ -222,6 +258,7 @@ export interface Route {
 export interface RouteSummary {
   id: string;
   name: string;
+  mode: TransportMode;
   status: RouteStatus;
   origin: StopSummary;
   destination: StopSummary;
@@ -241,6 +278,8 @@ export interface RouteInput {
   scope?: RouteScope;
   /** Null (or omitted) uses the default for the scope. */
   payeeOverride?: Payee | null;
+  /** Only on creation; defaults to the organization's first mode (`modesFor`). */
+  mode?: TransportMode;
 }
 
 /** `PUT …/routes/:routeId/fares` replaces every fare of the route. */
@@ -255,9 +294,13 @@ export interface ChangeRouteStatusRequest {
 
 // --- Search ------------------------------------------------------------------------------------
 
-/** `GET /api/v1/search/departures?from=<stopId>&to=<stopId>&date=YYYY-MM-DD` (public). */
+/**
+ * `GET /api/v1/search/departures?from=<stopId>&to=<stopId>&date=YYYY-MM-DD[&mode=bus]` (public).
+ * Without `mode`, every mode.
+ */
 export interface Departure {
   scheduleId: string;
+  mode: TransportMode;
   /** Date the bus leaves the route's origin (may be the day before `departsAt` at an intermediate stop). */
   serviceDate: string;
   operator: Pick<Organization, 'id' | 'type' | 'legalName' | 'tradeName'>;

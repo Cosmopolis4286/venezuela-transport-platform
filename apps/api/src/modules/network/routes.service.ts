@@ -3,6 +3,8 @@ import {
   isTimeOfDay,
   MAX_HEADWAY_MINUTES,
   MIN_HEADWAY_MINUTES,
+  modesFor,
+  MOTORCYCLE_SEATS,
   runsRoutes,
   type Fare,
   type Route,
@@ -80,6 +82,7 @@ export class RoutesService {
       return {
         id: route.id,
         name: route.name,
+        mode: route.mode,
         status: route.status,
         origin: toSummary(own[0]!.stop),
         destination: toSummary(own.at(-1)!.stop),
@@ -101,9 +104,23 @@ export class RoutesService {
   ): Promise<Route> {
     if (!runsRoutes(access.organization.type)) {
       throw conflict(
-        'Only bus companies and taxi lines publish routes',
+        'Only bus companies, taxi lines and motorcycle taxi lines publish routes',
         'ORGANIZATION_TYPE_NOT_ALLOWED',
       );
+    }
+    const allowed = modesFor(access.organization.type);
+    const mode = input.mode ?? allowed[0]!;
+    if (!allowed.includes(mode)) {
+      throw conflict(
+        'This organization does not run that kind of vehicle',
+        'TRANSPORT_MODE_NOT_ALLOWED',
+      );
+    }
+    // Motorcycle taxi lines only run urban and suburban routes (ADR-028).
+    const scope =
+      input.scope ?? (access.organization.type === 'moto_line' ? 'suburban' : 'interurban');
+    if (access.organization.type === 'moto_line' && scope !== 'suburban') {
+      throw conflict('Motorcycle taxi lines only publish suburban routes', 'SERVICE_NOT_ALLOWED');
     }
     await this.assertStops(input.stops);
     const route = await this.database.db.transaction(async (tx) => {
@@ -112,8 +129,9 @@ export class RoutesService {
         .values({
           organizationId: access.organization.id,
           name: input.name.trim(),
-          scope: input.scope ?? 'interurban',
+          scope,
           payeeOverride: input.payeeOverride ?? null,
+          mode,
           createdBy: actor.user.id,
         })
         .returning();
@@ -128,12 +146,15 @@ export class RoutesService {
   async update(
     access: OrganizationAccess,
     routeId: string,
-    input: Partial<RouteInput>,
+    input: Partial<Omit<RouteInput, 'mode'>>,
     actor: Authenticated,
     meta: RequestMeta,
   ): Promise<Route> {
     const route = await this.requireRoute(access, routeId);
     if (input.stops) await this.assertStops(input.stops);
+    if (access.organization.type === 'moto_line' && input.scope && input.scope !== 'suburban') {
+      throw conflict('Motorcycle taxi lines only publish suburban routes', 'SERVICE_NOT_ALLOWED');
+    }
     let droppedFares = 0;
     await this.database.db.transaction(async (tx) => {
       if (input.name || input.scope || input.payeeOverride !== undefined) {
@@ -293,7 +314,7 @@ export class RoutesService {
       .where(eq(routeSchedules.routeId, route.id))) as [{ total: number }];
     if (total >= MAX_SCHEDULES_PER_ROUTE)
       throw conflict('This route has too many schedules', 'TOO_MANY_SCHEDULES');
-    const seating = await this.seating(access, input.seatLayoutId ?? null, input.seats);
+    const seating = await this.seating(access, route, input.seatLayoutId ?? null, input.seats);
     const frequency = frequencyOf(
       input.departureTime,
       input.headwayMinutes ?? null,
@@ -333,6 +354,7 @@ export class RoutesService {
     assertWindow(validFrom, validUntil);
     const seating = await this.seating(
       access,
+      route,
       input.seatLayoutId === undefined ? current.seatLayoutId : input.seatLayoutId,
       input.seats ?? current.seats,
     );
@@ -385,12 +407,25 @@ export class RoutesService {
     return this.load(route);
   }
 
-  /** With a seat layout the schedule takes its capacity; without one, `seats` is required. */
+  /**
+   * With a seat layout the schedule takes its capacity; without one, `seats` is required. A
+   * motorcycle departure carries one passenger, without a seat map.
+   */
   private async seating(
     access: OrganizationAccess,
+    route: RouteRow,
     seatLayoutId: string | null,
     seats: number | undefined,
   ): Promise<{ seatLayoutId: string | null; seats: number }> {
+    if (route.mode === 'motorcycle') {
+      if (seatLayoutId || (seats !== undefined && seats !== MOTORCYCLE_SEATS)) {
+        throw conflict(
+          'A motorcycle carries one passenger and has no seat map',
+          'MOTORCYCLE_ONE_PASSENGER',
+        );
+      }
+      return { seatLayoutId: null, seats: MOTORCYCLE_SEATS };
+    }
     if (seatLayoutId) {
       const layout = await this.fleet.require(access.organization.id, seatLayoutId);
       return { seatLayoutId: layout.id, seats: layout.capacity };
@@ -469,6 +504,7 @@ export class RoutesService {
       id: row.id,
       organizationId: row.organizationId,
       name: row.name,
+      mode: row.mode,
       status: row.status,
       scope: row.scope,
       payeeOverride: row.payeeOverride,

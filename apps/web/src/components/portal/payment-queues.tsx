@@ -44,7 +44,7 @@ export function PaymentReviewList({
   }
   return (
     <ul className="flex flex-col divide-y">
-      {queue.map(({ payment, booking, operator, payer }) => (
+      {queue.map(({ payment, booking, tripPack, operator, payer }) => (
         <li key={payment.id} className="flex flex-col gap-3 py-3">
           <div className="flex flex-col gap-1">
             <p className="font-medium">
@@ -52,9 +52,11 @@ export function PaymentReviewList({
               {PAYMENT_METHOD_LABELS[payment.method]} · operación {payment.payerReference}
             </p>
             <p className="text-sm">
-              Concepto {payment.reference} · reserva {booking.code} · {booking.route},{' '}
-              {dateTime(booking.departsAt)}
-              {showOperator ? ` · ${operator.name}` : ''}
+              Concepto {payment.reference} ·{' '}
+              {booking
+                ? `reserva ${booking.code} · ${booking.route}, ${dateTime(booking.departsAt)}`
+                : `paquete ${tripPack?.code ?? ''} · ${tripPack?.description ?? ''}`}
+              {showOperator && operator ? ` · ${operator.name}` : ''}
             </p>
             <p className="text-sm text-muted-foreground">
               {payer.name}
@@ -63,9 +65,13 @@ export function PaymentReviewList({
               {payment.reportedAt ? dateTime(payment.reportedAt) : ''}
             </p>
             <p className="text-sm text-muted-foreground">
-              {booking.status === 'held' && booking.expiresAt
-                ? `Puestos apartados hasta: ${dateTime(booking.expiresAt)}`
-                : 'El apartado ya terminó: si el dinero llegó, se marcará para reembolso.'}
+              {tripPack
+                ? tripPack.status === 'pending_payment'
+                  ? 'Paquete de la plataforma: se activa al confirmar el pago.'
+                  : 'El paquete ya no espera el pago: si el dinero llegó, se marcará para reembolso.'
+                : booking?.status === 'held' && booking.expiresAt
+                  ? `Puestos apartados hasta: ${dateTime(booking.expiresAt)}`
+                  : 'El apartado ya terminó: si el dinero llegó, se marcará para reembolso.'}
             </p>
           </div>
           <div className="flex flex-col gap-2 md:flex-row md:items-end md:gap-6">
@@ -203,7 +209,8 @@ export function RefundDueList({
           <div className="flex flex-col gap-1">
             <p className="font-medium">
               Devolver {formatPaymentAmount(r.refundAmount, r.currency)} por{' '}
-              {PAYMENT_METHOD_LABELS[r.method]} · reserva {r.bookingCode}
+              {PAYMENT_METHOD_LABELS[r.method]} · {r.tripPackId ? 'paquete' : 'reserva'}{' '}
+              {r.bookingCode}
             </p>
             <p className="text-sm">
               {r.cancellation
@@ -214,7 +221,9 @@ export function RefundDueList({
               {r.payer.name ?? 'Sin nombre'}
               {r.payer.phone ? ` · ${r.payer.phone}` : ''}
               {r.payer.email ? ` · ${r.payer.email}` : ''}
-              {showOperator ? ` · ${r.organization.name}` : ''} · {formatDate(r.createdAt)}
+              {showOperator
+                ? ` · ${r.organization?.name ?? 'Paquete de la plataforma'}`
+                : ''} · {formatDate(r.createdAt)}
             </p>
             <p className="text-sm text-muted-foreground">
               Pagado {formatPaymentAmount(r.amount, r.currency)}

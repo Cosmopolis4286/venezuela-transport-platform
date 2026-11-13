@@ -16,7 +16,8 @@ Los roles se otorgan desde el servidor, nunca desde la web:
   **Rechazar** o **Suspender** exige una nota que el dueño verá.
 - **Solicitudes KYC**: abre cada solicitud, descarga y revisa los documentos (cada descarga queda
   registrada), marca cada documento como aceptado o rechazado con el motivo y decide: aprobar,
-  pedir cambios o rechazar.
+  pedir cambios o rechazar. Para conductores de una **línea de mototaxis**, verifica que la
+  licencia sea del grado que permite conducir motos.
 
 ## Buscar reserva (`/admin/bookings`)
 
@@ -72,9 +73,17 @@ regístralo en **Registrar un pago** con el tipo «Pago de la empresa a la plata
 ### Política general
 
 Comisión de la plataforma (hoy **8 %**) y **tramos de reembolso** (hoy 100 % con 48 h o más de
-anticipación, 50 % con 2 h o más, nada después) para las empresas sin política propia. Un cambio
+anticipación, 50 % con 2 h o más, nada después) para las empresas sin política propia, y los
+**tramos suburbanos** (hoy 100 % con 24 h, 75 % con 2 h, 50 % con 30 min, nada después), que valen
+para las rutas suburbanas de todas las empresas. También la **cancelación de taxis y motos por
+tramo**: minutos sin costo después de que una línea toma el viaje (hoy 3) y la tasa después (hoy
+el 50 % de la tarifa), que el pasajero paga en su próximo viaje para la línea que salió a buscarlo.
+Las horas aceptan cuartos: 0,5 son 30 minutos. Un cambio
 se aplica desde ese momento: las reservas ya pagadas conservan su comisión, y los tramos se leen
 al cancelar.
+
+**Tasas de cambio de los paquetes** (Paquetes de viajes): una tasa con más de 24 horas no se usa
+y el pago en bolívares deja de ofrecerse. Guárdalas al menos una vez al día, aunque no cambien.
 
 ### Una empresa
 
@@ -95,6 +104,25 @@ Abre la empresa en la lista para:
 
 La empresa ve cada pago en su portal.
 
+## Paquetes de viajes (`/admin/trip-packs`, solo administradores)
+
+- **Catálogo**: cada paquete es un tramo de una zona activa (dos paradas; sirve en los dos sentidos), un
+  tipo de vehículo, una cantidad de viajes, un precio en US$ o Bs. y una vigencia (60 días por
+  defecto). **Dejar de vender** lo saca de la venta; los paquetes ya comprados siguen valiendo.
+  Cambiar un producto no cambia los paquetes ya comprados.
+- **Tope por viaje** (opcional): lo máximo que la plataforma le paga a una empresa por cada viaje
+  usado. Sin tope, se paga la tarifa de la empresa aunque la suba después de vendido el paquete;
+  ponlo igual o algo mayor que las tarifas actuales del tramo para no perder dinero.
+- **Tasas de cambio de la plataforma**: convierten el precio de los paquetes al cobrar (las
+  empresas tienen las suyas para sus boletos). Sin tasa de bolívares no se ofrece pago móvil ni
+  transferencia para paquetes en dólares.
+- **Empresas adheridas**: en **Liquidaciones → la empresa**, marca **Acepta paquetes de viajes**
+  después de acordarlo con ella. Solo sus rutas suburbanas aceptan paquetes; por cada viaje usado
+  gana su tarifa normal del tramo (sin cargo ni comisión), hasta el tope por viaje.
+- Los pagos de paquetes llegan a las cuentas de la plataforma y aparecen en **Pagos** como "paquete
+  …"; se confirman o rechazan como los de las reservas. El dinero que llega para un paquete ya
+  anulado aparece en **Reembolsos**.
+
 ## Reembolsos (`/admin/refunds`, solo administradores)
 
 La cola muestra, de lo más antiguo a lo más nuevo, el dinero que debe volver a los pasajeros:
@@ -112,7 +140,9 @@ devolución. El pasajero recibe un aviso por push y correo.
 
 Para un rango de días: ventas y comisión de la plataforma por moneda, reembolsos enviados y los
 que esperan en la cola, usuarios nuevos, organizaciones activas por tipo y taxis pedidos,
-terminados y cancelados o vencidos.
+terminados y cancelados o vencidos. Si se venden paquetes de viajes, también: paquetes vendidos,
+viajes usados (y las tarifas que se les deben a las empresas por ellos), viajes vendidos que
+todavía no se usan (servicio que la plataforma debe) y viajes que vencieron sin usarse.
 
 ## Facturación (`/admin/fiscal`, solo administradores)
 

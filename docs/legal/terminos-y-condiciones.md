@@ -10,15 +10,18 @@ servicios, en conjunto la «Plataforma»), operada por {{razon_social}}, RIF {{r
 Al crear una cuenta, entrar con un código o usar la Plataforma, usted («el Usuario») declara que
 leyó, entendió y acepta estos Términos, la [Política de Privacidad](privacidad) y la [Política de
 Cancelación y Reembolsos](cancelacion-y-reembolsos). Si no está de acuerdo, no use la Plataforma.
-Las empresas de transporte, líneas de taxis y terminales además aceptan las [Condiciones para
-Empresas](condiciones-para-empresas).
+Las empresas de transporte, líneas de taxis y de mototaxis y terminales además aceptan las
+[Condiciones para Empresas](condiciones-para-empresas).
 
 ## 1. Qué es la Plataforma
 
 1.1. {{nombre_comercial}} es una plataforma tecnológica de **intermediación** que permite a los
-pasajeros buscar salidas de transporte terrestre de pasajeros, apartar puestos, pagarlos, recibir
-boletos electrónicos y pedir taxis desde y hacia los terminales; y a las empresas de transporte,
-líneas de taxis y terminales («Empresas») publicar su oferta y gestionar sus viajes.
+pasajeros buscar salidas de transporte terrestre de pasajeros entre ciudades («interurbano») y
+dentro de una ciudad o entre ciudades cercanas («urbano o suburbano»), en autobús, taxi o moto; apartar
+puestos, pagarlos y recibir boletos electrónicos; comprar **paquetes de viajes**; y pedir taxis
+desde y hacia los terminales, o taxis y mototaxis entre dos paradas de una misma zona. A las empresas
+de transporte, líneas de taxis y de mototaxis y terminales («Empresas») les permite publicar su
+oferta y gestionar sus viajes.
 
 1.2. **{{nombre_comercial}} no presta el servicio de transporte.** El transporte lo presta la
 Empresa que aparece en cada salida o viaje, bajo su propia responsabilidad, con sus vehículos,
@@ -31,6 +34,11 @@ indica al pagar, como receptor del pago por cuenta de la Empresa.
 publica la Empresa. {{nombre_comercial}} no garantiza que la Empresa cumpla el horario, pero sí
 pone a disposición del pasajero los mecanismos de cancelación, reembolso y reclamo descritos en
 estos Términos.
+
+1.4. {{nombre_comercial}} puede abrir, anunciar como próxima o pausar la venta en cada ciudad o
+zona.
+Cerrar la venta no afecta lo ya vendido: los boletos pagados y los paquetes comprados se
+respetan.
 
 ## 2. Cuentas
 
@@ -132,8 +140,9 @@ Empresa puede negar el abordaje si no se cumplen esos requisitos.
 ## 5. Cancelaciones y reembolsos
 
 5.1. El pasajero puede cancelar una reserva apartada sin costo, y una reserva pagada hasta que el
-autobús salga o algún pasajero de la reserva aborde, con el reembolso que fija la política de la
-Empresa y que la Plataforma muestra **antes de pagar y antes de confirmar la cancelación**.
+autobús salga o algún pasajero de la reserva aborde, con el reembolso que fija la política
+aplicable (la de la Empresa en las rutas interurbanas, la general de {{nombre_comercial}} en las
+suburbanas) y que la Plataforma muestra **antes de pagar y antes de confirmar la cancelación**.
 
 5.1.1. El reembolso por cancelación del pasajero se calcula sobre el precio de los pasajes; el
 **cargo por servicio no se reembolsa**, porque el servicio de intermediación ya se prestó.
@@ -144,19 +153,68 @@ pagó, incluido el cargo por servicio.
 5.3. Los detalles, plazos y medios están en la [Política de Cancelación y
 Reembolsos](cancelacion-y-reembolsos), que forma parte de estos Términos.
 
-## 6. Taxis desde y hacia los terminales
+## 6. Taxis, mototaxis y paquetes de viajes
 
-6.1. La Plataforma permite pedir un taxi desde o hacia un terminal. La solicitud la ven las
-líneas de taxis afiliadas que operan en ese terminal; la primera que la acepta presta el servicio
-y fija la tarifa, que el pasajero ve antes de que salga el taxi.
+6.1. **Taxis de terminal.** La Plataforma permite pedir un taxi desde o hacia un terminal. La
+solicitud la ven las líneas de taxis afiliadas que operan en ese terminal; la primera que la
+acepta presta el servicio y fija la tarifa, que el pasajero ve antes de que salga el taxi.
 
-6.2. Hoy **el taxi se paga directamente al conductor**. El servicio de taxi lo presta la línea de
-taxis, bajo su responsabilidad. El pasajero puede cancelar la solicitud mientras no haya subido
-al vehículo.
+6.2. **Taxis y mototaxis por tramo.** En el servicio suburbano, el pasajero puede pedir un taxi o
+una moto entre dos paradas de una zona, para ese momento o para una hora determinada. Antes de
+pedir ve las tarifas fijas que publican las líneas para ese tramo; la primera línea que acepta
+presta el servicio con su tarifa. El pasajero indica dónde recogerlo cerca de la parada de origen;
+la Plataforma no usa la ubicación GPS. Una moto lleva a un solo pasajero, que debe usar casco y
+seguir las normas de tránsito.
+
+6.3. **Pago.** El taxi o la moto se paga **directamente al conductor**, salvo que el viaje se
+pague con un paquete de viajes (sección 6.6). El servicio lo presta la línea, bajo su
+responsabilidad.
+
+6.4. **Cancelar.** El pasajero puede cancelar sin costo mientras ninguna línea haya aceptado la
+solicitud, y después mientras no haya subido al vehículo, con estas condiciones en los viajes por
+tramo:
+
+- es **gratis** durante los primeros minutos después de que una línea lo acepta (hoy, 3 minutos)
+  y, en un viaje para una hora determinada, hasta 30 minutos antes de esa hora;
+- si el conductor no recoge al pasajero dentro de los 20 minutos siguientes a aceptar el viaje (o
+  a la hora pedida), cancelar vuelve a ser gratis;
+- fuera de esos casos, el pasajero debe una **tasa de cancelación** (hoy, el 50 % de la tarifa de la línea),
+  para compensar a la línea que salió a buscarlo. La Plataforma muestra hasta qué hora se cancela
+  gratis y el monto de la tasa antes de cancelar;
+- la tasa se paga **en efectivo al conductor del siguiente viaje** de taxi o moto que el
+  pasajero pida por la Plataforma, además de su tarifa, y la Plataforma la muestra antes de
+  pedirlo. Si el viaje cancelado se pagó con un paquete, el viaje vuelve al paquete.
+
+La duración del período gratuito y el porcentaje de la tasa pueden cambiar; los vigentes se
+muestran en la Plataforma y se aplican a los viajes aceptados después del cambio.
+
+6.5. **Paquetes de viajes.** {{nombre_comercial}} vende paquetes con un número de viajes entre dos
+paradas de una zona (en los dos sentidos) y en un tipo de vehículo, por un precio fijo. El
+paquete:
+
+- lo vende y lo cobra **{{nombre_comercial}}** y se activa cuando se confirma su pago;
+- **vence** a los días que se indican al comprarlo (contados desde la activación); los viajes sin
+  usar al vencer se pierden;
+- es **personal**: lo usa el titular de la cuenta para sí o para los pasajeros de sus reservas,
+  pero no se transfiere ni se revende;
+- **no se reembolsa** una vez activado, salvo lo que disponga la ley. Si el pago llega cuando el
+  paquete ya no puede activarse, se devuelve el dinero recibido.
+
+6.6. **Usar un paquete.** El paquete paga un viaje por pasajero con las Empresas adheridas que
+aceptan paquetes, en el tramo y tipo de vehículo del paquete:
+
+- en autobús, al reservar (rutas urbanas o suburbanas): la reserva queda pagada, sin costo adicional
+  ni cargo por servicio. Cada paquete puede tener
+  a la vez hasta 4 reservas futuras sin usar, y una sola por salida;
+- en taxi o moto por tramo, al pedir el viaje: el conductor no cobra la tarifa, y el pasajero le
+  dice al subir el código de recogida que le muestra la Plataforma;
+- si una reserva hecha con paquete se cancela con 30 minutos o más antes de la hora de viaje, el
+  viaje vuelve al paquete (si no venció); con menos, se pierde. Un viaje de taxi o moto vuelve al
+  paquete si nadie lo acepta o si el pasajero lo cancela (sección 6.4).
 
 ## 7. Avisos
 
-El Usuario acepta recibir avisos sobre sus reservas, pagos, reembolsos, viajes y su cuenta por
+El Usuario acepta recibir avisos sobre sus reservas, paquetes, pagos, reembolsos, viajes y su cuenta por
 notificaciones en la aplicación y por correo electrónico. Puede desactivar las notificaciones del
 teléfono en su configuración; los correos sobre pagos, reembolsos, seguridad de la cuenta y
 cambios en estos Términos son parte del servicio y no se pueden desactivar mientras la cuenta

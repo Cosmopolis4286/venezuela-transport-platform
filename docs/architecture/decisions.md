@@ -590,3 +590,59 @@ boletos no se recuperan desde la app; el soporte los encuentra por código de re
 documento. Un invitado puede crear varias cuentas para apartar más puestos: lo frenan el límite
 por IP de los endpoints de acceso y la caducidad de los apartados. Términos (2.1.1) y Privacidad
 actualizados (versión 2026-11-12).
+
+## ADR-035: Mototaxis, paquetes de viajes y taxis y motos por tramo en las zonas
+
+**Decisión** (del dueño del producto, 2026-11-08 a 2026-11-12). Sobre las zonas operativas
+(ADR-028), las rutas urbanas o suburbanas y el servicio por frecuencia (ADR-032):
+
+- Cada ruta y cada vehículo tienen un **tipo** (`bus`, `car`, `motorcycle`): cada tipo tiene sus
+  propias tarifas y la búsqueda se filtra por tipo. Las motos las operan **líneas de mototaxis**
+  (`moto_line`), que solo publican rutas suburbanas, con un pasajero por moto.
+- Las rutas **suburbanas** de todas las empresas usan una escala de reembolso propia: 100 % desde
+  24 h, 75 % desde 2 h, 50 % desde 30 min y nada en los últimos 30 minutos.
+- La **plataforma vende paquetes de viajes**: un tramo fijo de una zona (los dos sentidos), un tipo
+  de vehículo, **vencen** (60 días por defecto) y **no se devuelven**. Pagan reservas de rutas
+  suburbanas de empresas que un administrador **habilita para aceptar paquetes**: hasta 4 reservas
+  futuras por paquete y una por salida, sin cargo por servicio. La empresa (o el conductor, según
+  la ruta, ADR-030) gana su tarifa, hasta un **tope por viaje** opcional del paquete.
+- Taxis y motos son **híbridos**: además de los taxis de terminal, un pasajero pide un taxi o una
+  moto **entre dos paradas de una zona**, ahora o para una hora, a la **tarifa fija por tramo**
+  que publica cada línea. Se paga al conductor o con un paquete; con paquete, el conductor
+  escribe el **código de recogida** que ve el pasajero.
+- Las tasas de cambio de la plataforma (para cobrar paquetes) no se usan si tienen más de 24 h.
+
+Diseño completo en [suburban.md](suburban.md).
+
+**Por qué.** En el suburbano la gente viaja todos los días el mismo tramo: el paquete le asegura
+el precio y a la plataforma le da ingresos por adelantado; venderlo desde la plataforma permite
+usarlo con cualquier empresa adherida del tramo. Las zonas ya deciden dónde se vende, así que los
+paquetes y los viajes por tramo cuelgan de ellas en vez de tener un concepto propio.
+
+**Compromisos.** La plataforma recibe dinero por viajes que prestan otros (más peso para la
+revisión legal del ADR-018) y responde por la diferencia entre el precio por viaje del paquete y
+la tarifa que paga, por eso el tope. Un viaje no se devuelve a medias: con paquete, la cancelación
+tiene dos tramos (con 30 minutos o más el viaje vuelve; con menos, se pierde). Los pagos ya no
+pertenecen siempre a una reserva (`payments.trip_pack_id`).
+
+## ADR-036: Tasa por cancelar tarde un taxi o una moto que una línea ya tomó
+
+**Decisión** (del dueño del producto, 2026-11-12). Cancelar un viaje por tramo es **gratis** antes
+de que una línea lo tome, durante los primeros **3 minutos** después, hasta 30 minutos antes de un
+viaje programado, y si el conductor no recoge al pasajero **20 minutos** después de tomarlo (o de
+la hora pedida). Fuera de eso, el pasajero debe una **tasa del 50 % de la tarifa** de la línea,
+pague en efectivo o con paquete (el viaje del paquete vuelve siempre). Los minutos y el porcentaje
+los configura un administrador. La tasa se paga **en efectivo al conductor del siguiente viaje**
+de taxi o moto y es de **la línea que salió**: si el siguiente viaje es con otra línea, la
+liquidación se la descuenta a esa y se la acredita a la primera. Como desde el ADR-029 las
+empresas no pagan comisión, la tasa va completa a la línea. Si el pasajero no la paga, el
+conductor termina el viaje «sin cobrar la tasa»: sigue pendiente y a su línea no se le descuenta.
+Los viajes tomados que nadie recoge en 2 horas se cancelan solos, sin tasa. Ver [taxis.md](taxis.md).
+
+**Por qué.** Justo para las partes: la línea que salió cobra algo por el viaje perdido, el
+pasajero con paquete no pierde el viaje por un cambio de planes y no paga si el conductor no llega.
+Cobrarla en el siguiente viaje funciona igual con pasajeros que pagan en efectivo.
+
+**Compromisos.** Si el pasajero no vuelve a pedir un taxi o una moto, o borra su cuenta, la tasa
+no se cobra. El conductor del siguiente viaje cobra dinero que no es de su línea; las
+liquidaciones lo compensan.

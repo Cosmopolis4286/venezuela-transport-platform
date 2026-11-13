@@ -48,6 +48,20 @@ describe('validateEnv', () => {
     ).toBe('https://play.google.com/store/apps/details?id=x');
   });
 
+  it('treats empty choices from .env.example as not set', () => {
+    const empty = validateEnv({
+      ...valid,
+      MAIL_DELIVERY: '',
+      PUSH_DELIVERY: '',
+      PAYMENT_PROVIDER: '',
+    });
+    const unset = validateEnv(valid);
+    expect(empty.MAIL_DELIVERY).toBe(unset.MAIL_DELIVERY);
+    expect(empty.PUSH_DELIVERY).toBe(unset.PUSH_DELIVERY);
+    expect(empty.PAYMENT_PROVIDER).toBe(unset.PAYMENT_PROVIDER);
+    expect(() => validateEnv({ ...valid, MAIL_DELIVERY: 'pigeon' })).toThrow(/MAIL_DELIVERY/);
+  });
+
   it('parses the CORS allowlist', () => {
     const env = validateEnv({
       ...valid,

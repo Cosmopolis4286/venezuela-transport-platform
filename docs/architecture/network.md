@@ -21,6 +21,10 @@ reservas, los puestos y el despacho se construyen sobre ella.
   nombres son únicos por ciudad (sin distinguir mayúsculas).
 - **Las líneas de taxis también publican rutas** (servicios por puesto entre ciudades); los
   terminales no.
+- **Cada ruta tiene un tipo de vehículo** (`mode`: `bus`, `car` o `motorcycle`, ADR-028), fijado
+  al crearla: las empresas de autobuses publican rutas de bus y las líneas de taxis, de carro
+  (`TRANSPORT_MODES_BY_ORGANIZATION_TYPE`). Así el mismo tramo puede tener una tarifa en bus y
+  otra en taxi. Pedir otro tipo da `409 TRANSPORT_MODE_NOT_ALLOWED`.
 - **Las horas son hora de Venezuela** (America/Caracas, UTC−4, sin horario de verano). Las
   respuestas llevan el desfase `-04:00`.
 - **Tiempos de viaje, no itinerarios por parada.** Cada parada guarda los minutos desde el origen,
@@ -39,7 +43,17 @@ reservas, los puestos y el despacho se construyen sobre ella.
   borran; solo se pueden borrar los borradores.
 - Las tarifas son decimales positivos con hasta dos decimales. La lista se reemplaza completa.
 - Horarios: `HH:MM`, al menos un día, de 1 a 100 puestos, `validUntil` igual o posterior a
-  `validFrom`; hasta 100 por ruta. Pausar un horario (`active: false`) lo oculta de la búsqueda.
+  `validFrom`; hasta 300 por ruta. Las **salidas frecuentes** (de 05:00 a 20:00 cada 15 minutos)
+  se guardan como un horario por salida con el mismo `seriesId`, y se pausan o eliminan juntas
+  ([suburban.md](suburban.md#3-horarios-por-frecuencia)). Pausar un horario (`active: false`) lo oculta de la búsqueda.
+
+## Tipo de vehículo y líneas de mototaxis (ADR-035)
+
+Cada ruta y cada vehículo tienen un **tipo** (`mode`: `bus`, `car` o `motorcycle`), con sus propias
+tarifas; la búsqueda devuelve `mode` y las apps filtran por tipo. Las **líneas de mototaxis**
+(`moto_line`) solo publican rutas urbanas o suburbanas (`SERVICE_NOT_ALLOWED`) y cada salida lleva
+un pasajero, sin mapa de puestos (`MOTORCYCLE_ONE_PASSENGER`). `GET /stops?zoneId=` lista las
+paradas de una zona (la usa la app para elegir un tramo).
 
 ## Zonas operativas
 
@@ -62,7 +76,10 @@ dentro del radio (25 km por defecto, máximo 200), de la más cercana a la más 
 
 ## Búsqueda de salidas
 
-`GET /api/v1/search/departures?from=<stopId>&to=<stopId>&date=YYYY-MM-DD` es **pública**.
+`GET /api/v1/search/departures?from=<stopId>&to=<stopId>&date=YYYY-MM-DD[&mode=bus]` es
+**pública**; `mode` limita a un tipo de vehículo y cada salida trae su `mode`. La web y la app
+piden todas y filtran con pestañas **Todos · Bus · Taxi · Moto**, con cuántas salidas tiene cada
+una.
 Devuelve las salidas de horarios activos, en rutas activas de organizaciones activas, en las que
 `from` va antes que `to`, ordenadas por hora, con la tarifa de ese par (o `null`) y los puestos
 libres (`seatsAvailable`).
@@ -91,7 +108,7 @@ primera reserva, a partir del mismo cálculo ([bookings.md](bookings.md)).
 
 | Método y ruta                                                        | Quién                                    |
 | -------------------------------------------------------------------- | ---------------------------------------- |
-| `GET /stops?q=&kind=`                                                | Público — paradas activas                |
+| `GET /stops?q=&kind=&zoneId=`                                        | Público — paradas activas                |
 | `GET /stops/nearby?latitude=&longitude=&radiusKm=&kind=`             | Público — paradas cercanas               |
 | `GET /zones`                                                         | Público — zonas activas y próximas       |
 | `GET /admin/zones`                                                   | Revisor o administrador de la plataforma |

@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import type { StopSummary, TripAvailability } from '@vtp/shared-types';
+import type { RouteScope, StopSummary, TransportMode, TripAvailability } from '@vtp/shared-types';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService, type Transaction } from '../../database/database.service.js';
@@ -25,13 +25,13 @@ import {
   type TripLayout,
   type TripRow,
 } from './bookings.schema.js';
-import { commissionFor } from '../settlements/ledger.js';
+import { commissionFor, policyFor } from '../settlements/ledger.js';
 import { occupiesSeat } from './occupancy.js';
 
 /** Everything needed to show or book one departure between two stops. */
 export interface DepartureContext {
   schedule: RouteScheduleRow;
-  route: { id: string; name: string };
+  route: { id: string; name: string; mode: TransportMode; scope: RouteScope };
   operator: TripAvailability['operator'];
   from: StopSummary;
   to: StopSummary;
@@ -64,7 +64,13 @@ export class TripsService {
     const [row] = await this.database.db
       .select({
         schedule: routeSchedules,
-        route: { id: routes.id, name: routes.name, status: routes.status },
+        route: {
+          id: routes.id,
+          name: routes.name,
+          status: routes.status,
+          mode: routes.mode,
+          scope: routes.scope,
+        },
         operator: {
           id: organizations.id,
           type: organizations.type,
@@ -168,7 +174,7 @@ export class TripsService {
       scheduleId,
       serviceDate,
       operator: context.operator,
-      route: context.route,
+      route: { id: context.route.id, name: context.route.name },
       from: context.from,
       to: context.to,
       departsAt: context.occurrence.departsAt,
@@ -182,6 +188,9 @@ export class TripsService {
       bookable: isBookable(context) && trip?.status !== 'cancelled',
       headwayMinutes: context.schedule.headwayMinutes,
       lastDepartsAt: context.occurrence.lastDepartsAt,
+      mode: context.route.mode,
+      scope: context.route.scope,
+      acceptsTripPacks: (await policyFor(this.database.db, context.operator.id)).acceptsTripPacks,
     };
   }
 

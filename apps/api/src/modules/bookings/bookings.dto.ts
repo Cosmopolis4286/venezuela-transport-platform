@@ -104,6 +104,10 @@ export class CreateBookingDto implements CreateBookingRequest {
   @IsOptional()
   @Matches(/^[+\d\s().-]{7,20}$/, { message: 'contactPhone is not a valid phone number' })
   contactPhone?: string;
+  @ApiPropertyOptional({ description: 'Pay with this trip pack of yours (ADR-028)' })
+  @IsOptional()
+  @IsUUID()
+  tripPackId?: string;
 }
 
 export class TripsDateQueryDto {

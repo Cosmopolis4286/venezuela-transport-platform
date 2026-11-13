@@ -19,6 +19,7 @@ import { currency, routes, routeSchedules, stops } from '../network/network.sche
 import { vehicles } from '../fleet/fleet.schema.js';
 import { identityDocumentType } from '../onboarding/onboarding.schema.js';
 import { organizations } from '../organizations/organizations.schema.js';
+import { tripPacks } from '../trip-packs/trip-packs.schema.js';
 
 export const bookingStatus = pgEnum('booking_status', BOOKING_STATUSES);
 export const tripStatus = pgEnum('trip_status', ['scheduled', 'cancelled']);
@@ -122,10 +123,13 @@ export const bookings = pgTable(
     billingAddress: text(),
     /** Set when the passenger got the trip reminder (notifications), so it is sent once. */
     reminderSentAt: timestamp({ withTimezone: true }),
+    /** Paid with this trip pack (one trip per seat) instead of money (ADR-028). */
+    tripPackId: uuid().references(() => tripPacks.id, { onDelete: 'restrict' }),
     ...timestamps,
   },
   (t) => [
     uniqueIndex('bookings_code_key').on(t.code),
+    index('bookings_trip_pack_idx').on(t.tripPackId, t.status),
     index('bookings_user_idx').on(t.userId, t.createdAt),
     index('bookings_trip_status_idx').on(t.tripId, t.status),
   ],

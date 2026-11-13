@@ -70,7 +70,10 @@ async function OrganizationSettlementView({
 
       <Card>
         <CardTitle>Saldo</CardTitle>
-        <SettlementBalances settlement={settlement} />
+        <SettlementBalances
+          settlement={settlement}
+          onDemand={['taxi_line', 'moto_line'].includes(settlement.organization.type)}
+        />
       </Card>
 
       <Card>
@@ -164,6 +167,19 @@ async function OrganizationSettlementView({
               <option value="operator">La empresa, en sus propias cuentas</option>
             </Select>
           </Field>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="acceptsTripPacks"
+              className="mt-1"
+              defaultChecked={settlement.acceptsTripPacks}
+            />
+            <span>
+              Acepta paquetes de viajes en sus rutas suburbanas. La plataforma le paga su tarifa
+              normal del tramo, menos la comisión, por cada viaje usado. Actívalo después de
+              acordarlo con la empresa.
+            </span>
+          </label>
           <div>
             <SubmitButton variant="outline">Guardar política</SubmitButton>
           </div>

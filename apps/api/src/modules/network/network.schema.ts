@@ -26,7 +26,7 @@ import {
   ZONE_STATUSES,
 } from '@vtp/shared-types';
 import { timestamps, users } from '../identity/identity.schema.js';
-import { seatLayouts } from '../fleet/fleet.schema.js';
+import { seatLayouts, transportMode } from '../fleet/fleet.schema.js';
 import { organizations } from '../organizations/organizations.schema.js';
 
 export const stopKind = pgEnum('stop_kind', STOP_KINDS);
@@ -104,6 +104,8 @@ export const routes = pgTable(
       .notNull()
       .references(() => organizations.id, { onDelete: 'cascade' }),
     name: text().notNull(),
+    /** Bus, car or motorcycle (ADR-028); fixed when the route is created. */
+    mode: transportMode().notNull(),
     status: routeStatus().notNull().default('draft'),
     /** Interurban routes pay the line, suburban ones the driver, unless `payee_override` (ADR-030). */
     scope: routeScope().notNull().default('interurban'),

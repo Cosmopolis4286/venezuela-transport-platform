@@ -1,5 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
+  TRANSPORT_MODE_LABELS,
+  toNetworkIso,
   CURRENCIES,
   formatPaymentAmount,
   NETWORK_UTC_OFFSET,
@@ -14,6 +16,8 @@ import {
   type RefundTier,
   type SetOrganizationPolicyRequest,
   type SettlementPolicy,
+  type UpdateSettlementPolicyRequest,
+  ROUTE_OPERATOR_TYPES,
   type RefundDuePayment,
   type SettlementBalance,
   type SettlementEntry,
@@ -26,9 +30,11 @@ import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService } from '../../database/database.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { bookings, trips } from '../bookings/bookings.schema.js';
+import { taxiRides } from '../taxi/taxi.schema.js';
+import { tripPacks } from '../trip-packs/trip-packs.schema.js';
 import { users } from '../identity/identity.schema.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
-import { routes } from '../network/network.schema.js';
+import { routes, stops } from '../network/network.schema.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { organizations } from '../organizations/organizations.schema.js';
 import { fromScaled, toScaled } from '../payments/money.js';
@@ -104,9 +110,9 @@ export class SettlementsService {
         serviceDate: trips.serviceDate,
       })
       .from(settlementEntries)
-      .innerJoin(bookings, eq(bookings.id, settlementEntries.bookingId))
-      .innerJoin(trips, eq(trips.id, bookings.tripId))
-      .innerJoin(routes, eq(routes.id, trips.routeId))
+      .leftJoin(bookings, eq(bookings.id, settlementEntries.bookingId))
+      .leftJoin(trips, eq(trips.id, bookings.tripId))
+      .leftJoin(routes, eq(routes.id, trips.routeId))
       .where(
         and(
           eq(settlementEntries.organizationId, organizationId),
@@ -115,22 +121,54 @@ export class SettlementsService {
         ),
       )
       .orderBy(desc(settlementEntries.createdAt));
-    return rows.map(({ entry, ...rest }) => ({
-      id: entry.id,
-      bookingId: entry.bookingId,
-      kind: entry.kind,
-      collectedBy: entry.collectedBy,
-      bookingCode: rest.bookingCode,
-      route: rest.route,
-      serviceDate: rest.serviceDate,
-      seats: entry.seats,
-      currency: entry.currency,
-      gross: entry.gross,
-      commissionRate: entry.commissionRate,
-      commission: entry.commission,
-      earned: entry.earned,
-      createdAt: entry.createdAt.toISOString(),
-    }));
+    // Taxi and motorcycle rides paid with a pack (ADR-028): described by their stretch.
+    const rideIds = rows.flatMap((r) => (r.entry.taxiRideId ? [r.entry.taxiRideId] : []));
+    const rides = rideIds.length
+      ? await this.database.db
+          .select({
+            id: taxiRides.id,
+            mode: taxiRides.mode,
+            from: taxiRides.fromStopId,
+            to: taxiRides.toStopId,
+            at: taxiRides.completedAt,
+          })
+          .from(taxiRides)
+          .where(inArray(taxiRides.id, rideIds))
+      : [];
+    const stopIds = rides.flatMap((r) => [r.from!, r.to!]);
+    const stopNames = stopIds.length
+      ? await this.database.db
+          .select({ id: stops.id, city: stops.city })
+          .from(stops)
+          .where(inArray(stops.id, stopIds))
+      : [];
+    const city = (id: string | null) => stopNames.find((s) => s.id === id)?.city ?? '?';
+    return rows.map(({ entry, ...rest }) => {
+      const ride = rides.find((r) => r.id === entry.taxiRideId);
+      return {
+        id: entry.id,
+        bookingId: entry.bookingId,
+        taxiRideId: entry.taxiRideId,
+        kind: entry.kind,
+        collectedBy: entry.collectedBy,
+        bookingCode:
+          rest.bookingCode ?? `TAXI-${(entry.taxiRideId ?? '').slice(0, 6).toUpperCase()}`,
+        route: rest.route ?? {
+          id: '',
+          name: ride
+            ? `${TRANSPORT_MODE_LABELS[ride.mode]} · ${city(ride.from)} → ${city(ride.to)}`
+            : '',
+        },
+        serviceDate: rest.serviceDate ?? toNetworkIso(ride?.at ?? entry.createdAt).slice(0, 10),
+        seats: entry.seats,
+        currency: entry.currency,
+        gross: entry.gross,
+        commissionRate: entry.commissionRate,
+        commission: entry.commission,
+        earned: entry.earned,
+        createdAt: entry.createdAt.toISOString(),
+      };
+    });
   }
 
   async payouts(organizationId: string): Promise<Payout[]> {
@@ -315,7 +353,10 @@ export class SettlementsService {
       .from(organizations)
       .where(
         or(
-          and(eq(organizations.status, 'active'), eq(organizations.type, 'bus_company')),
+          and(
+            eq(organizations.status, 'active'),
+            inArray(organizations.type, [...ROUTE_OPERATOR_TYPES]),
+          ),
           inArray(organizations.id, withMoney),
         ),
       );
@@ -340,26 +381,54 @@ export class SettlementsService {
       .from(platformSettings)
       .where(eq(platformSettings.id, 1));
     if (!row) throw new Error('platform_settings has no row: run the migrations');
-    return { commissionRate: row.commissionRate, refundTiers: row.refundTiers };
+    return {
+      commissionRate: row.commissionRate,
+      refundTiers: row.refundTiers,
+      suburbanRefundTiers: row.suburbanRefundTiers,
+      rideCancellation: {
+        freeMinutes: row.rideFreeCancelMinutes,
+        feePercent: row.rideCancelFeePercent,
+      },
+    };
   }
 
   /** The defaults for every operator without its own values. Applies from now on. */
   async setPlatformPolicy(
-    input: SettlementPolicy,
+    input: UpdateSettlementPolicyRequest,
     auth: Authenticated,
     meta: RequestMeta,
   ): Promise<SettlementPolicy> {
     const refundTiers = checkTiers(input.refundTiers);
+    const suburbanRefundTiers = input.suburbanRefundTiers
+      ? checkTiers(input.suburbanRefundTiers)
+      : undefined;
     const commissionRate = normalizeRate(input.commissionRate);
     await this.database.db
       .update(platformSettings)
-      .set({ commissionRate, refundTiers, updatedByUserId: auth.user.id, updatedAt: new Date() })
+      .set({
+        commissionRate,
+        refundTiers,
+        ...(suburbanRefundTiers ? { suburbanRefundTiers } : {}),
+        ...(input.rideCancellation
+          ? {
+              rideFreeCancelMinutes: input.rideCancellation.freeMinutes,
+              rideCancelFeePercent: input.rideCancellation.feePercent,
+            }
+          : {}),
+        updatedByUserId: auth.user.id,
+        updatedAt: new Date(),
+      })
       .where(eq(platformSettings.id, 1));
     await this.audit.record({
       action: 'settlement.platform_policy_set',
       actorUserId: auth.user.id,
       ip: meta.ip,
-      metadata: { commissionRate, refundTiers },
+      metadata: {
+        commissionRate,
+        refundTiers,
+        suburbanRefundTiers,
+        rideCancellation: input.rideCancellation,
+      },
     });
     return this.platformPolicy();
   }
@@ -376,7 +445,10 @@ export class SettlementsService {
       input.commissionRate === null ? null : normalizeRate(input.commissionRate);
     const refundTiers = input.refundTiers === null ? null : checkTiers(input.refundTiers);
     const [current] = await this.database.db
-      .select({ paymentCollection: organizationPolicies.paymentCollection })
+      .select({
+        paymentCollection: organizationPolicies.paymentCollection,
+        acceptsTripPacks: organizationPolicies.acceptsTripPacks,
+      })
       .from(organizationPolicies)
       .where(eq(organizationPolicies.organizationId, organizationId));
     // Stored only when the operator collects; null means the platform does.
@@ -386,7 +458,13 @@ export class SettlementsService {
         : input.paymentCollection === 'operator'
           ? 'operator'
           : null;
-    if (commissionRate === null && refundTiers === null && collection === null) {
+    const acceptsTripPacks = input.acceptsTripPacks ?? current?.acceptsTripPacks ?? false;
+    if (
+      commissionRate === null &&
+      refundTiers === null &&
+      collection === null &&
+      !acceptsTripPacks
+    ) {
       await this.database.db
         .delete(organizationPolicies)
         .where(eq(organizationPolicies.organizationId, organizationId));
@@ -395,6 +473,7 @@ export class SettlementsService {
         commissionRate,
         refundTiers,
         paymentCollection: collection,
+        acceptsTripPacks,
         updatedByUserId: auth.user.id,
       };
       await this.database.db
@@ -411,7 +490,12 @@ export class SettlementsService {
       targetType: 'organization',
       targetId: organizationId,
       ip: meta.ip,
-      metadata: { commissionRate, refundTiers, paymentCollection: collection ?? 'platform' },
+      metadata: {
+        commissionRate,
+        refundTiers,
+        paymentCollection: collection ?? 'platform',
+        acceptsTripPacks,
+      },
     });
     return this.settlement(organizationId);
   }
@@ -575,6 +659,7 @@ export class SettlementsService {
       .select({
         payment: payments,
         bookingCode: bookings.code,
+        packCode: tripPacks.code,
         organization: { id: organizations.id, name: organizationColumns.name },
         payer: {
           firstName: users.firstName,
@@ -584,17 +669,20 @@ export class SettlementsService {
         },
       })
       .from(payments)
-      .innerJoin(bookings, eq(bookings.id, payments.bookingId))
-      .innerJoin(trips, eq(trips.id, bookings.tripId))
-      .innerJoin(organizations, eq(organizations.id, trips.organizationId))
+      .leftJoin(bookings, eq(bookings.id, payments.bookingId))
+      .leftJoin(trips, eq(trips.id, bookings.tripId))
+      .leftJoin(organizations, eq(organizations.id, trips.organizationId))
+      .leftJoin(tripPacks, eq(tripPacks.id, payments.tripPackId))
       .innerJoin(users, eq(users.id, payments.userId))
       .where(and(eq(payments.status, 'refund_due'), collectedBy(collector)))
       .orderBy(payments.updatedAt);
     return rows.map(({ payment, payer, ...rest }) => ({
       paymentId: payment.id,
       bookingId: payment.bookingId,
-      bookingCode: rest.bookingCode,
-      organization: rest.organization,
+      tripPackId: payment.tripPackId,
+      bookingCode: rest.bookingCode ?? rest.packCode ?? '',
+      // Trip packs are the platform's own sales.
+      organization: rest.organization?.id ? rest.organization : null,
       payer: {
         name: [payer.firstName, payer.lastName].filter(Boolean).join(' ') || null,
         email: payer.email,
@@ -630,7 +718,11 @@ export class SettlementsService {
       .where(
         and(eq(payments.id, paymentId), eq(payments.status, 'refund_due'), collectedBy(collector)),
       )
-      .returning({ id: payments.id, bookingId: payments.bookingId });
+      .returning({
+        id: payments.id,
+        bookingId: payments.bookingId,
+        tripPackId: payments.tripPackId,
+      });
     if (!row) {
       const [existing] = await this.database.db
         .select({ id: payments.id })
@@ -648,23 +740,36 @@ export class SettlementsService {
       targetType: 'payment',
       targetId: row.id,
       ip: meta.ip,
-      metadata: { bookingId: row.bookingId, reference: reference.trim() },
+      metadata: {
+        bookingId: row.bookingId,
+        tripPackId: row.tripPackId,
+        reference: reference.trim(),
+      },
     });
     this.notifications.later(async () => {
       const [payment] = await this.database.db
         .select()
         .from(payments)
         .where(eq(payments.id, row.id));
-      const booking = await this.notifications.booking(row.bookingId);
+      const code = row.bookingId
+        ? (await this.notifications.booking(row.bookingId)).code
+        : ((
+            await this.database.db
+              .select({ code: tripPacks.code })
+              .from(tripPacks)
+              .where(eq(tripPacks.id, row.tripPackId!))
+          )[0]?.code ?? '');
       return {
         kind: 'refund_sent',
         userIds: [payment!.userId],
         app: 'passenger',
         email: true,
-        reference: { key: 'bookingId', id: row.bookingId },
+        reference: row.bookingId
+          ? { key: 'bookingId', id: row.bookingId }
+          : { key: 'tripPackId', id: row.tripPackId! },
         text: (m, locale) =>
           m.refundSent(
-            booking.code,
+            code,
             formatPaymentAmount(
               payment!.refundAmount ?? payment!.receivedAmount ?? payment!.amount,
               payment!.currency,
@@ -732,6 +837,9 @@ export class SettlementsService {
         commissionOverride: own?.commissionRate ?? null,
         refundTiers: own?.refundTiers ?? platform.refundTiers,
         refundTiersOverride: own?.refundTiers ?? null,
+        suburbanRefundTiers: platform.suburbanRefundTiers,
+        rideCancellation: platform.rideCancellation,
+        acceptsTripPacks: own?.acceptsTripPacks ?? false,
         paymentCollection: own?.paymentCollection ?? 'platform',
         balances: CURRENCIES.flatMap((currency) => {
           const t = totals.get(`${organizationId}:${currency}`);

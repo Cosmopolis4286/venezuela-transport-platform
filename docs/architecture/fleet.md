@@ -30,7 +30,8 @@ editar un mapa nunca mueve un puesto ya vendido.
 
 ## Vehículos
 
-Un **vehículo** es una unidad de la empresa: su **placa** (de 5 a 8 letras o cifras, guardada sin
+Un **vehículo** es una unidad de la empresa: su **tipo** (`mode`: bus, carro o moto, fijado al
+registrarlo; solo corre rutas de su mismo tipo), su **placa** (de 5 a 8 letras o cifras, guardada sin
 espacios ni guiones y en mayúsculas, única dentro de la organización), un nombre interno opcional
 ("Unidad 12") y, si se quiere, el **mapa de puestos** que tiene. Un vehículo con mapa solo se
 asigna a salidas vendidas con ese mapa; uno sin mapa, a cualquiera.

@@ -1,7 +1,7 @@
 import { SHARED_MESSAGES } from '../i18n/shared-messages.js';
 
 /** Kinds of organization on the platform. Each one only allows the roles in ROLES_BY_ORGANIZATION_TYPE. */
-export const ORGANIZATION_TYPES = ['bus_company', 'taxi_line', 'terminal'] as const;
+export const ORGANIZATION_TYPES = ['bus_company', 'taxi_line', 'moto_line', 'terminal'] as const;
 export type OrganizationType = (typeof ORGANIZATION_TYPES)[number];
 
 /**
@@ -44,6 +44,7 @@ export const ORGANIZATION_STATUS_LABELS: Record<OrganizationStatus, string> = {
 export const ROLES_BY_ORGANIZATION_TYPE: Record<OrganizationType, readonly OrganizationRole[]> = {
   bus_company: ['owner', 'admin', 'dispatcher', 'ticket_agent', 'driver', 'inspector'],
   taxi_line: ['owner', 'admin', 'dispatcher', 'driver'],
+  moto_line: ['owner', 'admin', 'dispatcher', 'driver'],
   terminal: ['owner', 'admin', 'dispatcher', 'inspector'],
 };
 

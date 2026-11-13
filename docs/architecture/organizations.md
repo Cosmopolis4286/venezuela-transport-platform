@@ -7,14 +7,19 @@ los permisos.**
 
 ## Tipos de organización y roles
 
-| Rol            | Etiqueta             | Empresa de autobuses |  Línea de taxis  |  Terminal  |
-| -------------- | -------------------- | :------------------: | :--------------: | :--------: |
-| `owner`        | Dueño                |          ✅          |        ✅        |     ✅     |
-| `admin`        | Administrador        |          ✅          |        ✅        |     ✅     |
-| `dispatcher`   | Despachador          |      ✅ salidas      | ✅ asigna viajes | ✅ andenes |
-| `ticket_agent` | Taquillero           |          ✅          |        —         |     —      |
-| `driver`       | Conductor            |          ✅          |        ✅        |     —      |
-| `inspector`    | Inspector de boletos |          ✅          |        —         |     ✅     |
+| Rol            | Etiqueta             | Empresa de autobuses |  Línea de taxis  | Línea de mototaxis |  Terminal  |
+| -------------- | -------------------- | :------------------: | :--------------: | :----------------: | :--------: |
+| `owner`        | Dueño                |          ✅          |        ✅        |         ✅         |     ✅     |
+| `admin`        | Administrador        |          ✅          |        ✅        |         ✅         |     ✅     |
+| `dispatcher`   | Despachador          |      ✅ salidas      | ✅ asigna viajes |     ✅ salidas     | ✅ andenes |
+| `ticket_agent` | Taquillero           |          ✅          |        —         |         —          |     —      |
+| `driver`       | Conductor            |          ✅          |        ✅        |         ✅         |     —      |
+| `inspector`    | Inspector de boletos |          ✅          |        —         |         —          |     ✅     |
+
+Las **líneas de mototaxis** (`moto_line`, ADR-035) solo publican rutas **suburbanas** de moto:
+cada salida es una moto con **un pasajero**, sin mapa de puestos (`MOTORCYCLE_ONE_PASSENGER`), y
+no tienen tablero de taxis de terminal. Qué servicios y tipos de vehículo usa cada tipo de
+organización está en `SERVICES_BY_ORGANIZATION_TYPE` y `TRANSPORT_MODES_BY_ORGANIZATION_TYPE`.
 
 Un rol por persona en cada organización. Una persona puede pertenecer a varias organizaciones.
 

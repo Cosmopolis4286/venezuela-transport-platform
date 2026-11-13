@@ -77,7 +77,7 @@ export class DispatchService {
       this.database.db
         .select({
           schedule: routeSchedules,
-          route: { id: routes.id, name: routes.name, status: routes.status },
+          route: { id: routes.id, name: routes.name, status: routes.status, mode: routes.mode },
         })
         .from(routeSchedules)
         .innerJoin(routes, eq(routes.id, routeSchedules.routeId))
@@ -96,6 +96,7 @@ export class DispatchService {
         serviceDate: trip.serviceDate,
         tripId: trip.id,
         route: trip.route,
+        mode: byId.get(trip.scheduleId)?.route.mode ?? 'bus',
         departsAt,
         arrivesAt: later(departsAt, ends.get(trip.route.id)?.duration ?? 0),
         serviceClass: trip.serviceClass,
@@ -123,6 +124,7 @@ export class DispatchService {
         serviceDate: date,
         tripId: null,
         route: { id: route.id, name: route.name },
+        mode: route.mode,
         departsAt: occurrence.departsAt,
         arrivesAt: occurrence.arrivesAt,
         serviceClass: schedule.serviceClass,
@@ -149,6 +151,7 @@ export class DispatchService {
           id: v.id,
           plate: v.plate,
           label: v.label,
+          mode: v.mode,
           seatLayoutId: v.seatLayout?.id ?? null,
           documentAlert: v.documentAlert,
         })),
@@ -197,9 +200,13 @@ export class DispatchService {
     const trip = await this.trips.ensure(organizationId, input.scheduleId, input.serviceDate);
     if (trip.status !== 'scheduled') throw conflict('This trip is cancelled', 'TRIP_CANCELLED');
     const [schedule] = await this.database.db
-      .select({ seatLayoutId: routeSchedules.seatLayoutId })
+      .select({ seatLayoutId: routeSchedules.seatLayoutId, mode: routes.mode })
       .from(routeSchedules)
+      .innerJoin(routes, eq(routes.id, routeSchedules.routeId))
       .where(eq(routeSchedules.id, trip.scheduleId));
+    if (vehicle && schedule && vehicle.mode !== schedule.mode) {
+      throw conflict('This vehicle is of a different kind than the route', 'VEHICLE_MODE_MISMATCH');
+    }
     if (
       vehicle?.seatLayoutId &&
       schedule?.seatLayoutId &&
@@ -363,7 +370,10 @@ export class DispatchService {
       .orderBy(asc(users.firstName), asc(users.lastName));
   }
 
-  /** Whether `column` = `id` on another scheduled trip overlapping `window`. */
+  /**
+   * Whether `column` = `id` on another scheduled trip overlapping `window`. A trip the driver
+   * marked as arrived frees the vehicle and the driver from its real arrival, not the planned one.
+   */
   private async busy(
     tx: Transaction,
     column: typeof trips.vehicleId | typeof trips.driverUserId,
@@ -372,7 +382,7 @@ export class DispatchService {
     window: { start: Date; end: Date },
   ): Promise<boolean> {
     const others = await tx
-      .select({ departsAt: trips.departsAt, routeId: trips.routeId })
+      .select({ departsAt: trips.departsAt, routeId: trips.routeId, arrivedAt: trips.arrivedAt })
       .from(trips)
       .where(
         and(
@@ -386,7 +396,9 @@ export class DispatchService {
     if (!others.length) return false;
     const ends = await this.routeEnds(others.map((o) => o.routeId));
     return others.some(
-      (o) => +o.departsAt + (ends.get(o.routeId)?.duration ?? 0) * MINUTE_MS > +window.start,
+      (o) =>
+        +(o.arrivedAt ?? +o.departsAt + (ends.get(o.routeId)?.duration ?? 0) * MINUTE_MS) >
+        +window.start,
     );
   }
 

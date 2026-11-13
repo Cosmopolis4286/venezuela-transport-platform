@@ -16,6 +16,7 @@ import type { StopSummary } from '@vtp/shared-types';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useT } from '@/i18n/use-t';
+import { useSellingZones } from '@/lib/zones';
 import { upcomingDays } from '@/lib/dates';
 import { useSearch } from '@/lib/search-context';
 
@@ -48,6 +49,7 @@ function StopButton({
 
 export default function SearchScreen() {
   const { state } = useAuth();
+  const zones = useSellingZones();
   const { from, to, date, setDate, swap } = useSearch();
   const { t, locale } = useT();
   const days = upcomingDays(7, undefined, locale, t.home);
@@ -84,6 +86,36 @@ export default function SearchScreen() {
         {from && to && from.id === to.id ? <Body muted>{t.home.sameStop}</Body> : null}
         <Button title={t.home.search} disabled={!ready} onPress={() => router.push('/results')} />
       </Card>
+
+      {/* Where a zone sells (ADR-028): trip packs and taxis or motorcycles by stretch (ADR-035). */}
+      {zones.length ? (
+        <Card>
+          <Subheading>{t.packs.homeTitle}</Subheading>
+          <Body muted>{t.packs.homeIntro}</Body>
+          <Button
+            variant="secondary"
+            title={t.packs.homeButton}
+            onPress={() => router.push(state.status === 'signedIn' ? '/trip-packs' : '/sign-in')}
+          />
+        </Card>
+      ) : null}
+      {zones.length ? (
+        <Card>
+          <Subheading>{t.ride.homeTitle}</Subheading>
+          <Body muted>{t.ride.homeIntro}</Body>
+          <Button
+            variant="secondary"
+            title={t.ride.homeButton}
+            onPress={() =>
+              router.push(
+                state.status === 'signedIn'
+                  ? { pathname: '/taxi', params: { kind: 'stretch' } }
+                  : '/sign-in',
+              )
+            }
+          />
+        </Card>
+      ) : null}
 
       <Card>
         <Subheading>{t.home.taxiTitle}</Subheading>

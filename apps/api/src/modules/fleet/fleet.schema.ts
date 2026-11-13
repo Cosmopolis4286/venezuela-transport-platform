@@ -12,9 +12,12 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { VEHICLE_DOCUMENT_KINDS, type LayoutSeat } from '@vtp/shared-types';
+import { TRANSPORT_MODES, VEHICLE_DOCUMENT_KINDS, type LayoutSeat } from '@vtp/shared-types';
 import { timestamps, users } from '../identity/identity.schema.js';
 import { organizations } from '../organizations/organizations.schema.js';
+
+/** Bus, car or motorcycle (ADR-028). Also used by `routes.mode`. */
+export const transportMode = pgEnum('transport_mode', TRANSPORT_MODES);
 
 /** Seat map of a type of vehicle an operator runs. Validated with `layoutProblem()`. */
 export const seatLayouts = pgTable(
@@ -49,6 +52,8 @@ export const vehicles = pgTable(
     /** `normalizePlate()`: upper case letters and digits. */
     plate: text().notNull(),
     label: text(),
+    /** Fixed when the vehicle is registered; it only runs routes of the same mode. */
+    mode: transportMode().notNull(),
     /** Set null if the layout is deleted (only possible while no schedule uses it). */
     seatLayoutId: uuid().references(() => seatLayouts.id, { onDelete: 'set null' }),
     active: boolean().notNull().default(true),

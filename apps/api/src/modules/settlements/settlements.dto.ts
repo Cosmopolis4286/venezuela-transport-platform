@@ -14,8 +14,9 @@ import {
   type PayoutDirection,
   type PayoutMethod,
   type RefundTier,
+  type RideCancellationPolicy,
   type SetOrganizationPolicyRequest,
-  type SettlementPolicy,
+  type UpdateSettlementPolicyRequest,
   type SettlementEntriesQuery,
   type VoidPayoutRequest,
 } from '@vtp/shared-types';
@@ -24,8 +25,10 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
@@ -48,8 +51,8 @@ export class SettlementEntriesQueryDto implements SettlementEntriesQuery {
 }
 
 export class RefundTierDto implements RefundTier {
-  @ApiProperty({ example: 48, description: 'Hours before boarding' })
-  @IsInt()
+  @ApiProperty({ example: 48, description: 'Hours before boarding, in quarters (0.5 = 30 min)' })
+  @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   @Max(720)
   hoursBefore!: number;
@@ -65,7 +68,24 @@ const commissionMessage = {
   message: 'commissionRate must be a percentage between 0 and 100 with up to 2 decimals',
 };
 
-export class SettlementPolicyDto implements SettlementPolicy {
+export class RideCancellationPolicyDto implements RideCancellationPolicy {
+  @ApiProperty({
+    example: 3,
+    description: 'Free cancelling for these minutes after a line took it',
+  })
+  @IsInt()
+  @Min(0)
+  @Max(60)
+  freeMinutes!: number;
+
+  @ApiProperty({ example: 50, description: "Late cancelling: this % of the line's fare" })
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  feePercent!: number;
+}
+
+export class SettlementPolicyDto implements UpdateSettlementPolicyRequest {
   @ApiProperty({ example: '8.00' })
   @IsString()
   @Matches(COMMISSION_PATTERN, commissionMessage)
@@ -78,6 +98,25 @@ export class SettlementPolicyDto implements SettlementPolicy {
   @ValidateNested({ each: true })
   @Type(() => RefundTierDto)
   refundTiers!: RefundTierDto[];
+
+  @ApiProperty({
+    type: [RefundTierDto],
+    required: false,
+    description: 'Suburban routes; omitted: unchanged',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_REFUND_TIERS)
+  @ValidateNested({ each: true })
+  @Type(() => RefundTierDto)
+  suburbanRefundTiers?: RefundTierDto[];
+
+  @ApiPropertyOptional({ type: RideCancellationPolicyDto, description: 'Omitted: unchanged' })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => RideCancellationPolicyDto)
+  rideCancellation?: RideCancellationPolicyDto;
 }
 
 export class SetOrganizationPolicyDto implements SetOrganizationPolicyRequest {
@@ -105,6 +144,14 @@ export class SetOrganizationPolicyDto implements SetOrganizationPolicyRequest {
   @IsOptional()
   @IsIn(PAYMENT_COLLECTIONS)
   paymentCollection?: PaymentCollection;
+
+  @ApiProperty({
+    required: false,
+    description: 'Its departures accept trip packs; omitted: unchanged',
+  })
+  @IsOptional()
+  @IsBoolean()
+  acceptsTripPacks?: boolean;
 }
 
 export class CreatePayoutDto implements CreatePayoutRequest {
