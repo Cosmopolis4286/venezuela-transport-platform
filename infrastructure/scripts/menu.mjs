@@ -106,7 +106,9 @@ function ensureNodeRuntime() {
     step('Node incompatible: preparando automáticamente Node 24 con fnm');
     const installed = runManager('fnm', ['install', '24']);
     if (installed.error || installed.status !== 0) {
-      fail('No se pudo instalar Node 24 con fnm. Comprueba tu conexión y vuelve a intentarlo.');
+      fail(
+        'No se pudo instalar Node 24 con fnm. Comprueba tu conexión y vuelve a intentarlo.',
+      );
       return false;
     }
     const relaunched = runManager('fnm', [
