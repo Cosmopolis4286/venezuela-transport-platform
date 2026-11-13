@@ -76,7 +76,20 @@ function nodeOk() {
   const [major, minor] = process.versions.node.split('.').map(Number);
   if (major === 24 && minor >= 15) return (ok(`Node ${process.versions.node}`), true);
   fail(`Node ${process.versions.node}: hace falta Node 24.15 o más nuevo (y menor que 25).`);
-  console.log(dim('  Instálalo con fnm o nvm: fnm install 24 && fnm use 24'));
+  if (WINDOWS) {
+    console.log(dim('  En Windows (PowerShell), con fnm:'));
+    console.log(dim('    winget install Schniz.fnm'));
+    console.log(dim('    fnm env --use-on-cd --shell powershell | Out-String | Invoke-Expression'));
+    console.log(dim('    fnm install 24; fnm use 24'));
+    console.log(dim('  O con nvm-windows: nvm install 24 y luego nvm use 24.'));
+    console.log(
+      dim('  Cierra y abre la terminal, comprueba con "node -v" (v24.x) y vuelve a abrir el menú.'),
+    );
+  } else {
+    console.log(
+      dim('  Instálalo con fnm o nvm: fnm install 24 && fnm use 24 (el repo trae .nvmrc).'),
+    );
+  }
   return false;
 }
 
