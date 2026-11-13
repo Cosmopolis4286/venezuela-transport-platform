@@ -165,7 +165,9 @@ function envFiles() {
 async function database() {
   step('Base de datos (PostgreSQL + PostGIS en Docker)');
   if (!(await dockerOk())) throw new StepError('Docker no está disponible.');
-  if (!existsSync(join(ROOT, '.env'))) envFiles();
+  // The root .env is not a reliable proxy for the app-specific files: users may have
+  // created only some of them. init-env is safe to run repeatedly and never overwrites.
+  envFiles();
   await retry('Arrancar la base de datos', () => run('pnpm', ['infra:up']), {
     hint: 'Si el puerto 5432 está ocupado por otro PostgreSQL, deténlo o cambia POSTGRES_PORT en .env.',
   });
@@ -179,7 +181,6 @@ async function database() {
 async function setup() {
   await preflight();
   await install();
-  envFiles();
   await database();
   step('Listo');
   console.log(
@@ -207,8 +208,19 @@ async function serve(label, script, ports) {
     const child = spawn('pnpm', [script], { cwd: ROOT, stdio: 'inherit', shell: WINDOWS });
     const stop = () => child.kill('SIGINT');
     process.once('SIGINT', stop);
-    child.on('exit', () => {
+    child.once('error', (error) => {
       process.removeListener('SIGINT', stop);
+      fail(`No se pudo iniciar ${script}: ${error.message}`);
+      resolve();
+    });
+    child.once('close', (code, signal) => {
+      process.removeListener('SIGINT', stop);
+      if (signal && signal !== 'SIGINT') {
+        warn(`${script} terminó por la señal ${signal}.`);
+      }
+      if (code !== 0 && !signal) {
+        throw new StepError(`${script} terminó con código ${code ?? 'desconocido'}.`);
+      }
       resolve();
     });
   });
@@ -227,18 +239,26 @@ async function withApi(work) {
     shell: false,
   });
   let errors = '';
+  let startupError;
   api.stderr.on('data', (chunk) => (errors += chunk));
+  api.once('error', (error) => {
+    startupError = error;
+  });
   try {
     for (let i = 0; i < 60 && !(await apiUp()); i++) {
+      if (startupError) {
+        throw new StepError(`No se pudo iniciar la API: ${startupError.message}`);
+      }
       if (api.exitCode !== null) {
         throw new StepError(`La API se detuvo al arrancar:\n${errors.slice(-800)}`);
       }
       await sleep(1000);
     }
+    if (startupError) throw new StepError(`No se pudo iniciar la API: ${startupError.message}`);
     if (!(await apiUp())) throw new StepError('La API no respondió en 60 s.');
     await work();
   } finally {
-    api.kill();
+    if (api.exitCode === null) api.kill();
   }
 }
 
@@ -258,9 +278,14 @@ async function admin(email) {
   await database();
   const address =
     email ?? (await ask('Correo de la cuenta (ya registrada) que será administradora: '));
-  if (!address.includes('@')) throw new StepError('Ese no parece un correo.');
-  step(`Dando el rol de administrador a ${address}`);
-  if (!run('pnpm', ['platform:grant', '--email', address.trim(), '--role', 'admin'])) {
+  const normalizedEmail = address.trim();
+  // `run()` uses the Windows shell for pnpm.cmd; accept a conservative email shape so
+  // shell metacharacters cannot become additional commands.
+  if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(normalizedEmail)) {
+    throw new StepError('Ese no parece un correo válido.');
+  }
+  step(`Dando el rol de administrador a ${normalizedEmail}`);
+  if (!run('pnpm', ['platform:grant', '--email', normalizedEmail, '--role', 'admin'])) {
     throw new StepError(
       'No se pudo dar el rol.',
       'La cuenta debe existir: regístrate primero en la web o la app.',
@@ -348,9 +373,10 @@ const waiting = [];
 let inputClosed = false;
 let releasing = false;
 function releaseInput() {
+  if (!rl) return;
+  // Keep the flag set until the close event fires; readline may emit it asynchronously.
   releasing = true;
-  rl?.close();
-  releasing = false;
+  rl.close();
 }
 function ask(question) {
   if (!rl) {
@@ -358,7 +384,10 @@ function ask(question) {
     rl.on('line', (line) => (waiting.length ? waiting.shift()(line) : lines.push(line)));
     rl.on('close', () => {
       rl = undefined;
-      if (releasing) return;
+      if (releasing) {
+        releasing = false;
+        return;
+      }
       inputClosed = true;
       while (waiting.length) waiting.shift()('0');
     });
