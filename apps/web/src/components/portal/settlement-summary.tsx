@@ -31,9 +31,10 @@ export function SettlementBalances({ settlement }: { settlement: OrganizationSet
       </p>
       <p className="text-sm text-muted-foreground">
         Reembolso si el pasajero cancela: {describeRefundTiers(settlement.refundTiers)}
-        {settlement.refundTiersOverride ? ' (acordado con la empresa)' : ' (por defecto)'}, sobre la
-        tarifa; el cargo por servicio no se reembolsa. Si la empresa cancela la salida, el pasajero
-        recibe todo y la empresa asume el cargo por servicio.
+        {settlement.refundTiersOverride ? ' (acordado con la empresa)' : ' (por defecto)'}; en rutas
+        suburbanas, {describeRefundTiers(settlement.suburbanRefundTiers)}. Se aplican a la tarifa;
+        el cargo por servicio no se reembolsa. Si la empresa cancela la salida, el pasajero recibe
+        todo y la empresa asume el cargo por servicio.
       </p>
       <p className="text-sm text-muted-foreground">
         {settlement.paymentCollection === 'operator'

@@ -73,7 +73,9 @@ regístralo en **Registrar un pago** con el tipo «Pago de la empresa a la plata
 ### Política general
 
 Comisión de la plataforma (hoy **8 %**) y **tramos de reembolso** (hoy 100 % con 48 h o más de
-anticipación, 50 % con 2 h o más, nada después) para las empresas sin política propia. Un cambio
+anticipación, 50 % con 2 h o más, nada después) para las empresas sin política propia, y los
+**tramos suburbanos** (hoy 100 % con 24 h, 75 % con 2 h, 50 % con 30 min, nada después), que valen
+para las rutas suburbanas de todas las empresas. Las horas aceptan cuartos: 0,5 son 30 minutos. Un cambio
 se aplica desde ese momento: las reservas ya pagadas conservan su comisión, y los tramos se leen
 al cancelar.
 

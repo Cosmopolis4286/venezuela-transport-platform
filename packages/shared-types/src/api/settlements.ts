@@ -17,6 +17,7 @@ export const COMMISSION_PATTERN = /^(100(\.0{1,2})?|\d{1,2}(\.\d{1,2})?)$/;
  * last one nothing is refunded. The platform keeps its commission (ADR-025).
  */
 export interface RefundTier {
+  /** Whole hours or quarters of an hour (0.5 = 30 minutes). */
   hoursBefore: number;
   percent: number;
 }
@@ -29,12 +30,34 @@ export const DEFAULT_REFUND_TIERS: readonly RefundTier[] = [
   { hoursBefore: 2, percent: 50 },
 ];
 
-/** Why a list of tiers is invalid, or null: 1–4 tiers, whole hours (0–720) strictly decreasing. */
+/**
+ * Suburban routes (decided by the product owner): 100 % up to 24 h before, 75 % up to 2 h, 50 % up
+ * to 30 minutes, and nothing in the last 30 minutes.
+ */
+export const DEFAULT_SUBURBAN_REFUND_TIERS: readonly RefundTier[] = [
+  { hoursBefore: 24, percent: 100 },
+  { hoursBefore: 2, percent: 75 },
+  { hoursBefore: 0.5, percent: 50 },
+];
+
+/** "48 h", "2 h", "30 min", "1 h 30 min" */
+export function formatHoursBefore(hours: number): string {
+  const total = Math.round(hours * 60);
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (!h) return `${m} min`;
+  return m ? `${h} h ${m} min` : `${h} h`;
+}
+
+/**
+ * Why a list of tiers is invalid, or null: 1–4 tiers, hours in quarters of an hour (0–720)
+ * strictly decreasing.
+ */
 export function refundTiersProblem(tiers: readonly RefundTier[]): string | null {
   if (tiers.length < 1 || tiers.length > MAX_REFUND_TIERS) return 'Use between 1 and 4 tiers';
   for (const [i, tier] of tiers.entries()) {
-    if (!Number.isInteger(tier.hoursBefore) || tier.hoursBefore < 0 || tier.hoursBefore > 720)
-      return 'hoursBefore must be a whole number of hours between 0 and 720';
+    if (!Number.isInteger(tier.hoursBefore * 4) || tier.hoursBefore < 0 || tier.hoursBefore > 720)
+      return 'hoursBefore must be between 0 and 720 hours, in quarters of an hour (0.5 = 30 min)';
     if (!Number.isInteger(tier.percent) || tier.percent < 0 || tier.percent > 100)
       return 'percent must be a whole number between 0 and 100';
     if (i > 0 && tier.hoursBefore >= tiers[i - 1]!.hoursBefore)
@@ -61,7 +84,10 @@ export type PaymentCollection = (typeof PAYMENT_COLLECTIONS)[number];
 export interface SettlementPolicy {
   /** Percentage, e.g. `"8.00"`. */
   commissionRate: string;
+  /** Intercity routes; an operator can have its own (`SetOrganizationPolicyRequest`). */
   refundTiers: RefundTier[];
+  /** Suburban routes, for every operator (ADR-028). */
+  suburbanRefundTiers: RefundTier[];
 }
 
 export const PAYOUT_METHODS = ['bank_transfer', 'pago_movil', 'usdt'] as const;
@@ -108,6 +134,8 @@ export interface OrganizationSettlement {
   /** Refund tiers applied to this operator's cancellations, and its own ones if any. */
   refundTiers: RefundTier[];
   refundTiersOverride: RefundTier[] | null;
+  /** The platform's tiers for suburban routes (operators have no override). */
+  suburbanRefundTiers: RefundTier[];
   /** Who receives this operator's passengers' payments. */
   paymentCollection: PaymentCollection;
   /** One per currency with activity, USD first. */
@@ -204,8 +232,18 @@ export interface AdminSettlementSummary extends OrganizationSettlement {
   organization: { id: string; name: string; type: OrganizationType };
 }
 
-/** `PUT /admin/settlement-policy` — the platform defaults. */
-export type UpdateSettlementPolicyRequest = SettlementPolicy;
+/** `PUT /admin/settlement-policy` — the platform defaults. Omitting the suburban tiers keeps them. */
+export type UpdateSettlementPolicyRequest = Omit<SettlementPolicy, 'suburbanRefundTiers'> & {
+  suburbanRefundTiers?: RefundTier[];
+};
+
+/** The tiers that apply to a booking of a route of `scope` (suburban: the same for everyone). */
+export function refundTiersForScope(
+  policy: Pick<SettlementPolicy, 'refundTiers' | 'suburbanRefundTiers'>,
+  scope: 'interurban' | 'suburban',
+): RefundTier[] {
+  return scope === 'suburban' ? policy.suburbanRefundTiers : policy.refundTiers;
+}
 
 /** `PUT /admin/organizations/:id/policy` — null fields go back to the platform default. */
 export interface SetOrganizationPolicyRequest {

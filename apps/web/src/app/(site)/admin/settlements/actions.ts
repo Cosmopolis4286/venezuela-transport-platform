@@ -10,12 +10,12 @@ import { failure, text } from '@/lib/server/form-actions';
 
 const decimal = (form: FormData, name: string) => text(form, name).replace(',', '.');
 
-/** Tiers typed in rows `tierHours:N` / `tierPercent:N`; empty rows are skipped. */
-function tiersFrom(form: FormData): RefundTier[] {
+/** Tiers typed in rows `<prefix>Hours:N` / `<prefix>Percent:N`; empty rows are skipped. */
+function tiersFrom(form: FormData, prefix = 'tier'): RefundTier[] {
   const tiers: RefundTier[] = [];
   for (let i = 0; i < MAX_REFUND_TIERS; i++) {
-    const hours = text(form, `tierHours:${i}`);
-    const percent = text(form, `tierPercent:${i}`);
+    const hours = text(form, `${prefix}Hours:${i}`).replace(',', '.');
+    const percent = text(form, `${prefix}Percent:${i}`);
     if (!hours && !percent) continue;
     tiers.push({ hoursBefore: Number(hours), percent: Number(percent) });
   }
@@ -24,14 +24,18 @@ function tiersFrom(form: FormData): RefundTier[] {
 
 const POLICY_RULES = {
   VALIDATION_FAILED:
-    'Revisa la política: comisión entre 0 y 100 con hasta dos decimales; de 1 a 4 tramos con horas enteras distintas (0 a 720) y porcentajes enteros de 0 a 100.',
+    'Revisa la política: comisión entre 0 y 100 con hasta dos decimales; de 1 a 4 tramos con horas distintas (0 a 720, en cuartos de hora: 0,5 son 30 minutos) y porcentajes enteros de 0 a 100.',
 };
 
 export async function setPlatformPolicy(_: FormState, form: FormData): Promise<FormState> {
   try {
     await apiRequest('/admin/settlement-policy', {
       method: 'PUT',
-      body: { commissionRate: decimal(form, 'commissionRate'), refundTiers: tiersFrom(form) },
+      body: {
+        commissionRate: decimal(form, 'commissionRate'),
+        refundTiers: tiersFrom(form),
+        suburbanRefundTiers: tiersFrom(form, 'suburban'),
+      },
     });
   } catch (error) {
     return failure(error, POLICY_RULES);

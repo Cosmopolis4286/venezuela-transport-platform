@@ -83,6 +83,9 @@ la política de la empresa, por ejemplo:
 - 50 % si cancelas con al menos 2 horas;
 - después, sin reembolso (pero tu puesto queda libre para otro pasajero).
 
+En los viajes **suburbanos** (por ejemplo, Casacoima – San Félix – Puerto Ordaz): 100 % con 24
+horas o más, 75 % con 2 horas o más, 50 % con 30 minutos o más, y nada en los últimos 30 minutos.
+
 El reembolso se hace por el mismo medio con el que pagaste. Te avisamos cuando se registra la
 cancelación y cuando se envía el dinero. No se puede cancelar después de abordar ni cuando el
 autobús ya salió.

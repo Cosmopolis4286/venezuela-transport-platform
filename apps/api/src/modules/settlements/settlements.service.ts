@@ -14,6 +14,7 @@ import {
   type RefundTier,
   type SetOrganizationPolicyRequest,
   type SettlementPolicy,
+  type UpdateSettlementPolicyRequest,
   ROUTE_OPERATOR_TYPES,
   type RefundDuePayment,
   type SettlementBalance,
@@ -344,26 +345,39 @@ export class SettlementsService {
       .from(platformSettings)
       .where(eq(platformSettings.id, 1));
     if (!row) throw new Error('platform_settings has no row: run the migrations');
-    return { commissionRate: row.commissionRate, refundTiers: row.refundTiers };
+    return {
+      commissionRate: row.commissionRate,
+      refundTiers: row.refundTiers,
+      suburbanRefundTiers: row.suburbanRefundTiers,
+    };
   }
 
   /** The defaults for every operator without its own values. Applies from now on. */
   async setPlatformPolicy(
-    input: SettlementPolicy,
+    input: UpdateSettlementPolicyRequest,
     auth: Authenticated,
     meta: RequestMeta,
   ): Promise<SettlementPolicy> {
     const refundTiers = checkTiers(input.refundTiers);
+    const suburbanRefundTiers = input.suburbanRefundTiers
+      ? checkTiers(input.suburbanRefundTiers)
+      : undefined;
     const commissionRate = normalizeRate(input.commissionRate);
     await this.database.db
       .update(platformSettings)
-      .set({ commissionRate, refundTiers, updatedByUserId: auth.user.id, updatedAt: new Date() })
+      .set({
+        commissionRate,
+        refundTiers,
+        ...(suburbanRefundTiers ? { suburbanRefundTiers } : {}),
+        updatedByUserId: auth.user.id,
+        updatedAt: new Date(),
+      })
       .where(eq(platformSettings.id, 1));
     await this.audit.record({
       action: 'settlement.platform_policy_set',
       actorUserId: auth.user.id,
       ip: meta.ip,
-      metadata: { commissionRate, refundTiers },
+      metadata: { commissionRate, refundTiers, suburbanRefundTiers },
     });
     return this.platformPolicy();
   }
@@ -736,6 +750,7 @@ export class SettlementsService {
         commissionOverride: own?.commissionRate ?? null,
         refundTiers: own?.refundTiers ?? platform.refundTiers,
         refundTiersOverride: own?.refundTiers ?? null,
+        suburbanRefundTiers: platform.suburbanRefundTiers,
         paymentCollection: own?.paymentCollection ?? 'platform',
         balances: CURRENCIES.flatMap((currency) => {
           const t = totals.get(`${organizationId}:${currency}`);

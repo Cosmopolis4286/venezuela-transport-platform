@@ -26,6 +26,10 @@ pull request.
 
 ### Agregado
 
+- **Reembolsos suburbanos**: las rutas urbanas o suburbanas de todas las empresas devuelven 100 %
+  con 24 h o más, 75 % con 2 h, 50 % con 30 min y nada en los últimos 30 minutos (sobre la tarifa;
+  el cargo por servicio no se devuelve). El administrador los edita en Liquidaciones; las rutas
+  interurbanas no cambian.
 - **Tipo de vehículo** (bus, carro o moto) en cada ruta y cada vehículo: cada tipo tiene sus
   propias tarifas; la búsqueda se filtra por tipo en la web y la app de pasajeros, con pestañas
   solo para los tipos presentes; el despacho solo asigna vehículos del tipo de la ruta

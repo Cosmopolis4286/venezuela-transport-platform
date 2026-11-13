@@ -1,4 +1,4 @@
-import type { Locale } from '@vtp/shared-types';
+import { formatHoursBefore, type Locale } from '@vtp/shared-types';
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
@@ -121,7 +121,9 @@ const es = {
     notCancellable: 'Este viaje ya no se puede cancelar: el autobús salió o ya abordaste.',
     policy: 'Política de cancelación',
     tier: (percent: number, hours: number) =>
-      hours === 0 ? `${percent} % hasta la salida` : `${percent} % hasta ${hours} h antes`,
+      hours === 0
+        ? `${percent} % hasta la salida`
+        : `${percent} % hasta ${formatHoursBefore(hours)} antes`,
     tierAfter: 'después, sin reembolso',
     cancelledRefund: (amount: string) => `Cancelaste esta reserva. Te devolveremos ${amount}.`,
     cancelledRefunded: (amount: string) => `Cancelaste esta reserva y te devolvimos ${amount}.`,
@@ -362,7 +364,9 @@ const en: Messages = {
     notCancellable: 'This trip can no longer be cancelled: the bus left or you boarded.',
     policy: 'Cancellation policy',
     tier: (percent, hours) =>
-      hours === 0 ? `${percent} % until departure` : `${percent} % up to ${hours} h before`,
+      hours === 0
+        ? `${percent} % until departure`
+        : `${percent} % up to ${formatHoursBefore(hours)} before`,
     tierAfter: 'after that, no refund',
     cancelledRefund: (amount) => `You cancelled this booking. We will refund ${amount}.`,
     cancelledRefunded: (amount) => `You cancelled this booking and we refunded ${amount}.`,
@@ -599,7 +603,9 @@ const ptBR: Messages = {
     notCancellable: 'Esta viagem não pode mais ser cancelada: o ônibus partiu ou você embarcou.',
     policy: 'Política de cancelamento',
     tier: (percent, hours) =>
-      hours === 0 ? `${percent} % até a partida` : `${percent} % até ${hours} h antes`,
+      hours === 0
+        ? `${percent} % até a partida`
+        : `${percent} % até ${formatHoursBefore(hours)} antes`,
     tierAfter: 'depois, sem reembolso',
     cancelledRefund: (amount) => `Você cancelou esta reserva. Vamos devolver ${amount}.`,
     cancelledRefunded: (amount) => `Você cancelou esta reserva e devolvemos ${amount}.`,

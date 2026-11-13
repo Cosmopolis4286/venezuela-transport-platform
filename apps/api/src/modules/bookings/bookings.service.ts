@@ -13,7 +13,7 @@ import {
   type CancellationQuote,
   type CreateBookingRequest,
   type InvoiceBuyer,
-  type RefundTier,
+  refundTiersForScope,
   type TripManifest,
   type TripSummary,
 } from '@vtp/shared-types';
@@ -552,10 +552,19 @@ export class BookingsService {
     booking: BookingRow,
   ): Promise<{ quote: CancellationQuote; payment: PaymentRow | undefined; fareRefund: string }> {
     const [trip] = await db
-      .select({ organizationId: trips.organizationId, departedAt: trips.departedAt })
+      .select({
+        organizationId: trips.organizationId,
+        departedAt: trips.departedAt,
+        scope: routes.scope,
+      })
       .from(trips)
+      .innerJoin(routes, eq(routes.id, trips.routeId))
       .where(eq(trips.id, booking.tripId));
-    const { refundTiers } = await policyFor(db, trip!.organizationId);
+    // Suburban routes use the suburban tiers: nothing back in the last 30 minutes.
+    const refundTiers = refundTiersForScope(
+      await policyFor(db, trip!.organizationId),
+      trip!.scope,
+    );
     const [boarded] = await db
       .select({ n: count() })
       .from(bookingPassengers)
@@ -703,6 +712,7 @@ export class BookingsService {
       .select({
         trip: trips,
         route: { id: routes.id, name: routes.name },
+        scope: routes.scope,
         serviceClass: routeSchedules.serviceClass,
         headwayMinutes: routeSchedules.headwayMinutes,
         operator: {
@@ -756,9 +766,9 @@ export class BookingsService {
           eq(invoices.reason, 'service_fee'),
         ),
       );
-    const refundPolicies = new Map<string, RefundTier[]>();
+    const policies = new Map<string, Awaited<ReturnType<typeof policyFor>>>();
     for (const operatorId of new Set(tripRows.map((t) => t.operator.id))) {
-      refundPolicies.set(operatorId, (await policyFor(this.database.db, operatorId)).refundTiers);
+      policies.set(operatorId, await policyFor(this.database.db, operatorId));
     }
     return rows.map((booking) => {
       const payment = currentPayment(
@@ -815,7 +825,9 @@ export class BookingsService {
         expiresAt:
           booking.status === 'held' && booking.expiresAt ? booking.expiresAt.toISOString() : null,
         payment: payment ? toPayment(payment) : null,
-        refundPolicy: refundPolicies.get(trip.operator.id) ?? [],
+        refundPolicy: policies.has(trip.operator.id)
+          ? refundTiersForScope(policies.get(trip.operator.id)!, trip.scope)
+          : [],
         billing: billingOf(booking),
         contactPhone: booking.contactPhone,
         invoice: invoice
