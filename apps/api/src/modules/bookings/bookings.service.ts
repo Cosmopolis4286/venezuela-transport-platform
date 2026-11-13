@@ -14,6 +14,9 @@ import {
   type CreateBookingRequest,
   type InvoiceBuyer,
   refundTiersForScope,
+  packCovers,
+  TRIP_PACK_LIMITS,
+  TRIP_PACK_RETURN_MINUTES,
   type TripManifest,
   type TripSummary,
 } from '@vtp/shared-types';
@@ -44,9 +47,13 @@ import {
   percentOf,
   policyFor,
   recordCancellation,
+  recordEarning,
+  reverseEarning,
   shareOf,
   withServiceFee,
 } from '../settlements/ledger.js';
+import { tripPacks } from '../trip-packs/trip-packs.schema.js';
+import { TripPacksService } from '../trip-packs/trip-packs.service.js';
 import {
   bookingPassengers,
   bookings,
@@ -106,6 +113,7 @@ export class BookingsService {
     private readonly audit: AuditService,
     private readonly config: AppConfigService,
     private readonly notifications: NotificationsService,
+    private readonly packs: TripPacksService,
   ) {}
 
   /** Holds the seats for `BOOKING_HOLD_MINUTES`; payment confirms the booking. */
@@ -143,6 +151,8 @@ export class BookingsService {
     if (!isBookable(context))
       throw conflict('This departure has already left', 'DEPARTURE_NOT_BOOKABLE');
     const fare = context.fare;
+    const packId = input.tripPackId ?? null;
+    if (packId) await this.assertPackFits(auth.user.id, packId, context);
 
     const [{ active }] = (await this.database.db
       .select({ active: count() })
@@ -154,7 +164,8 @@ export class BookingsService {
           gt(bookings.expiresAt, sql`now()`),
         ),
       )) as [{ active: number }];
-    if (active >= MAX_ACTIVE_HOLDS_PER_USER) {
+    // Paying with a pack confirms at once: no hold is left waiting.
+    if (!packId && active >= MAX_ACTIVE_HOLDS_PER_USER) {
       throw conflict(
         'Pay or cancel your pending bookings before holding more seats',
         'TOO_MANY_HOLDS',
@@ -163,12 +174,11 @@ export class BookingsService {
 
     const holdMinutes = this.config.get('BOOKING_HOLD_MINUTES');
     const fares = fromCents(cents(fare.amount) * passengerCount);
-    // The platform's service fee goes on top of the fares (ADR-029), frozen with the hold.
-    const serviceFeeRate = await commissionFor(
-      this.database.db,
-      context.operator.id,
-      input.fromStopId,
-    );
+    // The platform's service fee goes on top of the fares (ADR-029), frozen with the hold. A trip
+    // pack already paid the platform: no fee on top (ADR-035).
+    const serviceFeeRate = packId
+      ? '0.00'
+      : await commissionFor(this.database.db, context.operator.id, input.fromStopId);
     const { fee: serviceFee, total } = withServiceFee(fares, serviceFeeRate);
     let booking: BookingRow | undefined;
     for (let attempt = 0; !booking && attempt < 5; attempt++) {
@@ -184,6 +194,37 @@ export class BookingsService {
             : chosen;
           const unknown = seats.find((seat) => !valid.has(seat));
           if (unknown) throw invalid(`Seat ${unknown} does not exist on this vehicle`);
+          if (packId) {
+            const [same] = await tx
+              .select({ id: bookings.id })
+              .from(bookings)
+              .where(
+                and(
+                  eq(bookings.tripId, trip.id),
+                  eq(bookings.tripPackId, packId),
+                  eq(bookings.status, 'confirmed'),
+                ),
+              );
+            if (same) {
+              throw conflict(
+                'You already have a booking with this trip pack on this departure',
+                'TRIP_PACK_ONE_PER_DEPARTURE',
+              );
+            }
+            const spent = await this.packs.spend(
+              tx,
+              auth.user.id,
+              packId,
+              seats.length,
+              new Date(context.occurrence.departsAt),
+            );
+            if (!spent) {
+              throw conflict(
+                'The trip pack has not enough trips left or expires before this departure',
+                'TRIP_PACK_EXHAUSTED',
+              );
+            }
+          }
 
           const [row] = await tx
             .insert(bookings)
@@ -202,7 +243,9 @@ export class BookingsService {
               serviceFee,
               serviceFeeRate,
               currency: fare.currency,
-              expiresAt: sql`now() + make_interval(mins => ${holdMinutes})`,
+              ...(packId
+                ? { status: 'confirmed' as const, confirmedAt: new Date(), tripPackId: packId }
+                : { expiresAt: sql`now() + make_interval(mins => ${holdMinutes})` }),
             })
             .returning();
           // The partial unique index on (trip, seat) rejects seats another booking holds.
@@ -217,6 +260,8 @@ export class BookingsService {
               documentNumber: passenger.documentNumber.replace(/[\s.-]/g, '').toUpperCase(),
             })),
           );
+          // The operator earns its normal fare for each trip used; the platform collected (ADR-028).
+          if (packId) await recordEarning(tx, row!.id, 'platform');
           return row!;
         });
       } catch (error) {
@@ -235,13 +280,33 @@ export class BookingsService {
     }
     if (!booking) throw new Error('Could not generate a unique booking code');
     await this.audit.record({
-      action: 'booking.held',
+      action: packId ? 'booking.paid_with_trip_pack' : 'booking.held',
       actorUserId: auth.user.id,
       targetType: 'booking',
       targetId: booking.id,
       ip: meta.ip,
-      metadata: { tripId: booking.tripId, seats: passengerCount, open },
+      metadata: {
+        tripId: booking.tripId,
+        seats: passengerCount,
+        open,
+        tripPackId: packId ?? undefined,
+      },
     });
+    if (packId) {
+      const bookingId = booking.id;
+      this.notifications.later(async () => {
+        const notice = await this.notifications.booking(bookingId);
+        return {
+          kind: 'payment_confirmed',
+          userIds: [notice.userId],
+          app: 'passenger',
+          email: true,
+          reference: { key: 'bookingId', id: bookingId },
+          text: (m, locale) =>
+            m.paymentConfirmed(notice.code, notice.route, departureText(notice.departsAt, locale)),
+        };
+      });
+    }
     return (await this.toBookings([booking]))[0]!;
   }
 
@@ -377,13 +442,23 @@ export class BookingsService {
           throw conflict('The bus left or a passenger boarded', 'BOOKING_NOT_CANCELLABLE');
         }
         refundPercent = quote.refundPercent;
+        if (locked.tripPackId) {
+          // Paid with a pack: the trips go back up to 30 minutes before boarding (ADR-028), and
+          // the operator's earning is undone; later, they are lost and the operator keeps it.
+          if (quote.tripPack?.tripsBack) {
+            await this.packs.giveBack(tx, locked.tripPackId, quote.tripPack.tripsBack);
+            await reverseEarning(tx, locked.id);
+          }
+        }
         if (payment && quote.refund) {
           await tx
             .update(payments)
             .set({ status: 'refund_due', refundAmount: quote.refund.amount })
             .where(eq(payments.id, payment.id));
         }
-        if (quote.refundPercent > 0) await recordCancellation(tx, locked.id, fareRefund);
+        if (!locked.tripPackId && quote.refundPercent > 0) {
+          await recordCancellation(tx, locked.id, fareRefund);
+        }
       }
       const [row] = await tx
         .update(bookings)
@@ -480,6 +555,19 @@ export class BookingsService {
               })
               .where(eq(payments.id, payment.id));
           }
+          if (booking.tripPackId) {
+            // The trips go back to the pack (unless it already expired).
+            const [seats] = await tx
+              .select({ n: count() })
+              .from(bookingPassengers)
+              .where(
+                and(
+                  eq(bookingPassengers.bookingId, booking.id),
+                  eq(bookingPassengers.active, true),
+                ),
+              );
+            await this.packs.giveBack(tx, booking.tripPackId, seats?.n ?? 0);
+          }
           await recordCancellation(tx, booking.id, booking.totalAmount, true);
           await correctFeeInvoice(tx, booking.id);
         } else {
@@ -546,6 +634,49 @@ export class BookingsService {
     };
   }
 
+  /**
+   * The pack can pay for this departure (ADR-028): the user's, active, same kind of vehicle and
+   * corridor, the stretch in either direction, an operator that accepts packs, and fewer than
+   * `TRIP_PACK_LIMITS.maxFutureBookings` upcoming bookings with it. Trips left and expiry are
+   * checked when spending them.
+   */
+  private async assertPackFits(
+    userId: string,
+    packId: string,
+    context: Awaited<ReturnType<TripsService['resolve']>>,
+  ): Promise<void> {
+    const pack = await this.packs.row(this.database.db, packId);
+    if (!pack || pack.userId !== userId) throw notFound('Trip pack not found');
+    if (pack.status !== 'active') {
+      throw conflict('This trip pack has no trips to use', 'TRIP_PACK_EXHAUSTED');
+    }
+    const { acceptsTripPacks } = await policyFor(this.database.db, context.operator.id);
+    const fits =
+      acceptsTripPacks &&
+      pack.mode === context.route.mode &&
+      context.route.scope === 'suburban' &&
+      packCovers([pack.stopAId, pack.stopBId], context.from.id, context.to.id);
+    if (!fits) {
+      throw conflict('This trip pack does not cover this departure', 'TRIP_PACK_NOT_VALID_HERE');
+    }
+    const [{ upcoming }] = (await this.database.db
+      .select({ upcoming: count() })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.tripPackId, packId),
+          eq(bookings.status, 'confirmed'),
+          gt(bookings.departsAt, sql`now()`),
+        ),
+      )) as [{ upcoming: number }];
+    if (upcoming >= TRIP_PACK_LIMITS.maxFutureBookings) {
+      throw conflict(
+        'This trip pack already has the most upcoming bookings it can hold',
+        'TRIP_PACK_TOO_MANY_BOOKINGS',
+      );
+    }
+  }
+
   /** Refund for a confirmed booking now: in the payment's currency, and in the fare's. */
   private async quote(
     db: Database | Transaction,
@@ -561,10 +692,7 @@ export class BookingsService {
       .innerJoin(routes, eq(routes.id, trips.routeId))
       .where(eq(trips.id, booking.tripId));
     // Suburban routes use the suburban tiers: nothing back in the last 30 minutes.
-    const refundTiers = refundTiersForScope(
-      await policyFor(db, trip!.organizationId),
-      trip!.scope,
-    );
+    const refundTiers = refundTiersForScope(await policyFor(db, trip!.organizationId), trip!.scope);
     const [boarded] = await db
       .select({ n: count() })
       .from(bookingPassengers)
@@ -580,6 +708,33 @@ export class BookingsService {
       .where(and(eq(payments.bookingId, booking.id), eq(payments.status, 'confirmed')));
     const hoursLeft = (booking.departsAt.getTime() - Date.now()) / 3_600_000;
     const cancellable = hoursLeft > 0 && (boarded?.n ?? 0) === 0 && !trip!.departedAt;
+    if (booking.tripPackId) {
+      const pack = await this.packs.row(db, booking.tripPackId);
+      const [seats] = await db
+        .select({ n: count() })
+        .from(bookingPassengers)
+        .where(
+          and(eq(bookingPassengers.bookingId, booking.id), eq(bookingPassengers.active, true)),
+        );
+      const inTime = cancellable && hoursLeft * 60 >= TRIP_PACK_RETURN_MINUTES;
+      const packUsable =
+        pack !== undefined &&
+        (pack.status === 'active' || pack.status === 'exhausted') &&
+        (pack.expiresAt?.getTime() ?? 0) > Date.now();
+      const tripsBack = inTime && packUsable ? (seats?.n ?? 0) : 0;
+      return {
+        quote: {
+          cancellable,
+          hoursBeforeDeparture: Math.round(hoursLeft * 10) / 10,
+          refundPercent: tripsBack ? 100 : 0,
+          refund: null,
+          policy: [{ hoursBefore: TRIP_PACK_RETURN_MINUTES / 60, percent: 100 }],
+          tripPack: { code: pack?.code ?? '', tripsBack },
+        },
+        payment: undefined,
+        fareRefund: '0.00',
+      };
+    }
     const refundPercent = cancellable ? refundPercentFor(refundTiers, hoursLeft) : 0;
     // The refund tiers apply to the fares; the service fee is not refunded when the passenger
     // cancels (ADR-029). `faresOf` is the whole total for bookings made before the fee existed.
@@ -597,6 +752,7 @@ export class BookingsService {
             ? { amount: refundAmount, currency: payment.currency }
             : null,
         policy: refundTiers,
+        tripPack: null,
       },
       payment,
       fareRefund: percentOf(fares, refundPercent),
@@ -766,6 +922,17 @@ export class BookingsService {
           eq(invoices.reason, 'service_fee'),
         ),
       );
+    const packIds = [...new Set(rows.flatMap((b) => (b.tripPackId ? [b.tripPackId] : [])))];
+    const packCodes = new Map(
+      packIds.length
+        ? (
+            await this.database.db
+              .select({ id: tripPacks.id, code: tripPacks.code })
+              .from(tripPacks)
+              .where(inArray(tripPacks.id, packIds))
+          ).map((p) => [p.id, p.code])
+        : [],
+    );
     const policies = new Map<string, Awaited<ReturnType<typeof policyFor>>>();
     for (const operatorId of new Set(tripRows.map((t) => t.operator.id))) {
       policies.set(operatorId, await policyFor(this.database.db, operatorId));
@@ -825,6 +992,9 @@ export class BookingsService {
         expiresAt:
           booking.status === 'held' && booking.expiresAt ? booking.expiresAt.toISOString() : null,
         payment: payment ? toPayment(payment) : null,
+        tripPack: booking.tripPackId
+          ? { id: booking.tripPackId, code: packCodes.get(booking.tripPackId) ?? '' }
+          : null,
         refundPolicy: policies.has(trip.operator.id)
           ? refundTiersForScope(policies.get(trip.operator.id)!, trip.scope)
           : [],

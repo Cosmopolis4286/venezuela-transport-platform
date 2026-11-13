@@ -4,6 +4,7 @@ import { AuditModule } from '../audit/audit.module.js';
 import { BookingsModule } from '../bookings/bookings.module.js';
 import { IdentityModule } from '../identity/identity.module.js';
 import { OrganizationsModule } from '../organizations/organizations.module.js';
+import { TripPacksModule } from '../trip-packs/trip-packs.module.js';
 import { DatabaseService } from '../../database/database.service.js';
 import {
   ManualPaymentProvider,
@@ -20,10 +21,10 @@ import { PaymentsService } from './payments.service.js';
 
 /**
  * Exchange rates, payments through provider adapters (ADR-018) or verified by staff (ADR-027), and
- * booking confirmation.
+ * booking confirmation and trip pack activation.
  */
 @Module({
-  imports: [IdentityModule, AuditModule, OrganizationsModule, BookingsModule],
+  imports: [IdentityModule, AuditModule, OrganizationsModule, BookingsModule, TripPacksModule],
   controllers: [
     MyPaymentsController,
     ExchangeRatesController,

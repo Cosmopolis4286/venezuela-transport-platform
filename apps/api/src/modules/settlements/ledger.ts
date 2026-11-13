@@ -1,5 +1,6 @@
 import {
   defaultPayee,
+  type Currency,
   type PaymentCollection,
   type RefundTier,
   type SettlementPolicy,
@@ -9,6 +10,7 @@ import type { Database, Transaction } from '../../database/database.service.js';
 import { bookingPassengers, bookings, trips } from '../bookings/bookings.schema.js';
 import { operatingZones, routes, stops } from '../network/network.schema.js';
 import { fromScaled, toScaled } from '../payments/money.js';
+import { tripPacks } from '../trip-packs/trip-packs.schema.js';
 import { organizationPolicies, platformSettings, settlementEntries } from './settlements.schema.js';
 
 /** Rounds `numerator / denominator` half up (both non-negative). */
@@ -63,6 +65,27 @@ export function splitRefund(
   };
 }
 
+/**
+ * What a trip paid with a pack earns at most (ADR-028): the operator's fare, but no more than the
+ * pack's cap per trip × `trips` when it has one in the same currency.
+ */
+async function packCapped(
+  tx: Transaction,
+  tripPackId: string | null,
+  gross: string,
+  currency: Currency,
+  trips: number,
+): Promise<string> {
+  if (!tripPackId) return gross;
+  const [pack] = await tx
+    .select({ maxFare: tripPacks.maxFare, currency: tripPacks.currency })
+    .from(tripPacks)
+    .where(eq(tripPacks.id, tripPackId));
+  if (!pack?.maxFare || pack.currency !== currency) return gross;
+  const cap = toScaled(pack.maxFare, 2) * BigInt(trips);
+  return toScaled(gross, 2) > cap ? fromScaled(cap, 2) : gross;
+}
+
 /** `"8.5"` → `"8.50"`. */
 export const normalizeRate = (rate: string) => fromScaled(toScaled(rate, 2), 2);
 
@@ -75,6 +98,7 @@ export async function policyFor(
     commissionOverride: string | null;
     refundTiersOverride: RefundTier[] | null;
     paymentCollection: PaymentCollection;
+    acceptsTripPacks: boolean;
   }
 > {
   const [platform] = await db.select().from(platformSettings).where(eq(platformSettings.id, 1));
@@ -87,9 +111,14 @@ export async function policyFor(
     commissionRate: own?.commissionRate ?? platform.commissionRate,
     refundTiers: own?.refundTiers ?? platform.refundTiers,
     suburbanRefundTiers: platform.suburbanRefundTiers,
+    rideCancellation: {
+      freeMinutes: platform.rideFreeCancelMinutes,
+      feePercent: platform.rideCancelFeePercent,
+    },
     commissionOverride: own?.commissionRate ?? null,
     refundTiersOverride: own?.refundTiers ?? null,
     paymentCollection: own?.paymentCollection ?? 'platform',
+    acceptsTripPacks: own?.acceptsTripPacks ?? false,
   };
 }
 
@@ -132,6 +161,7 @@ export async function recordEarning(
       serviceFeeRate: bookings.serviceFeeRate,
       scope: routes.scope,
       payeeOverride: routes.payeeOverride,
+      tripPackId: bookings.tripPackId,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -142,6 +172,8 @@ export async function recordEarning(
     .select({ n: count() })
     .from(bookingPassengers)
     .where(and(eq(bookingPassengers.bookingId, bookingId), eq(bookingPassengers.active, true)));
+  // A trip paid with a pack earns at most the pack's cap per trip (ADR-035).
+  const gross = await packCapped(tx, row.tripPackId, row.gross, row.currency, seats?.n ?? 0);
   // Since ADR-029 the commission is the service fee the passenger paid on top of the fares:
   // the operator earns its fares in full. Older bookings had it taken out of the fare.
   const surcharge =
@@ -149,7 +181,7 @@ export async function recordEarning(
       ? {
           commissionRate: row.serviceFeeRate,
           commission: row.serviceFee,
-          earned: fromScaled(toScaled(row.gross, 2) - toScaled(row.serviceFee, 2), 2),
+          earned: fromScaled(toScaled(gross, 2) - toScaled(row.serviceFee, 2), 2),
         }
       : null;
   const commissionRate =
@@ -169,11 +201,11 @@ export async function recordEarning(
           : 'organization',
       seats: seats?.n ?? 0,
       currency: row.currency,
-      gross: row.gross,
+      gross,
       commissionRate,
       ...(surcharge
         ? { commission: surcharge.commission, earned: surcharge.earned }
-        : splitFare(row.gross, commissionRate)),
+        : splitFare(gross, commissionRate)),
     })
     .onConflictDoNothing({ target: [settlementEntries.bookingId, settlementEntries.kind] });
 }
@@ -217,4 +249,137 @@ export async function recordCancellation(
       earned: negative(fromEarned),
     })
     .onConflictDoNothing({ target: [settlementEntries.bookingId, settlementEntries.kind] });
+}
+
+/**
+ * Undoes all of a booking's earning: a trip paid with a pack that went back to the pack (ADR-028).
+ * Nothing was refunded in money, so the platform's commission goes back too.
+ */
+export async function reverseEarning(tx: Transaction, bookingId: string): Promise<void> {
+  const [earning] = await tx
+    .select()
+    .from(settlementEntries)
+    .where(and(eq(settlementEntries.bookingId, bookingId), eq(settlementEntries.kind, 'booking')));
+  if (!earning) return;
+  const negative = (amount: string) => (toScaled(amount, 2) === 0n ? '0.00' : `-${amount}`);
+  await tx
+    .insert(settlementEntries)
+    .values({
+      organizationId: earning.organizationId,
+      bookingId,
+      kind: 'cancellation',
+      collectedBy: earning.collectedBy,
+      seats: -earning.seats,
+      currency: earning.currency,
+      gross: negative(earning.gross),
+      commissionRate: earning.commissionRate,
+      commission: negative(earning.commission),
+      earned: negative(earning.earned),
+    })
+    .onConflictDoNothing({ target: [settlementEntries.bookingId, settlementEntries.kind] });
+}
+
+/**
+ * What a taxi or motorcycle ride paid with a trip pack earns its line, when the ride is completed
+ * (ADR-028): the line's fixed fare for the stretch (no commission, ADR-029). The platform collected
+ * the pack. Once per ride.
+ */
+export async function recordRideEarning(
+  tx: Transaction,
+  ride: {
+    id: string;
+    organizationId: string;
+    passengers: number;
+    fareAmount: string;
+    fareCurrency: Currency;
+    tripPackId: string | null;
+  },
+): Promise<void> {
+  // The platform earns from the pack's price, not from the line (ADR-029): the line gets its fare.
+  const gross = await packCapped(
+    tx,
+    ride.tripPackId,
+    ride.fareAmount,
+    ride.fareCurrency,
+    ride.passengers,
+  );
+  await tx
+    .insert(settlementEntries)
+    .values({
+      organizationId: ride.organizationId,
+      taxiRideId: ride.id,
+      collectedBy: 'platform',
+      seats: ride.passengers,
+      currency: ride.fareCurrency,
+      gross,
+      commissionRate: '0.00',
+      commission: '0.00',
+      earned: gross,
+    })
+    .onConflictDoNothing({
+      target: [
+        settlementEntries.taxiRideId,
+        settlementEntries.kind,
+        settlementEntries.organizationId,
+      ],
+    });
+}
+
+/**
+ * A late-cancellation fee the driver of the passenger's next ride collected in cash: the line
+ * that went out earns all of it. When another line collected it, that line owes it
+ * to the platform (collected by the operator, nothing earned) and the platform pays the first.
+ * Once per fee (its cancelled ride).
+ */
+export async function recordRideFee(
+  tx: Transaction,
+  fee: {
+    cancelledRideId: string;
+    organizationId: string;
+    amount: string;
+    currency: Currency;
+  },
+  collectingOrganizationId: string,
+): Promise<void> {
+  // Since ADR-029 operators pay no commission: the line that went out gets the whole fee.
+  const sameLine = collectingOrganizationId === fee.organizationId;
+  const common = {
+    taxiRideId: fee.cancelledRideId,
+    kind: 'ride_cancellation_fee' as const,
+    seats: 0,
+    currency: fee.currency,
+    gross: fee.amount,
+  };
+  const values = [
+    {
+      ...common,
+      organizationId: fee.organizationId,
+      collectedBy: sameLine ? ('operator' as const) : ('platform' as const),
+      commissionRate: '0.00',
+      commission: '0.00',
+      earned: fee.amount,
+    },
+    ...(sameLine
+      ? []
+      : [
+          {
+            ...common,
+            organizationId: collectingOrganizationId,
+            collectedBy: 'operator' as const,
+            commissionRate: '0.00',
+            commission: '0.00',
+            earned: '0.00',
+          },
+        ]),
+  ];
+  await tx
+    .insert(settlementEntries)
+    .values(values)
+    .onConflictDoNothing({
+      target: [
+        settlementEntries.taxiRideId,
+        settlementEntries.kind,
+        settlementEntries.organizationId,
+      ],
+    });
 }

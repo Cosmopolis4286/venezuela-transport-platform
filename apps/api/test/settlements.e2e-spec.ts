@@ -235,6 +235,8 @@ describe.runIf(expectDatabase)('Settlements and refunds (e2e)', () => {
         refundTiers: platformPolicy.refundTiers,
         refundTiersOverride: null,
         suburbanRefundTiers: platformPolicy.suburbanRefundTiers,
+        rideCancellation: platformPolicy.rideCancellation,
+        acceptsTripPacks: false,
         paymentCollection: 'platform',
         balances: [],
         drivers: [],

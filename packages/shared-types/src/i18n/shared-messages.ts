@@ -25,6 +25,8 @@ export interface SharedMessages {
   taxiRideHint: Record<Exclude<TaxiRideStatus, 'accepted'>, string> & {
     acceptedFromTerminal: string;
     acceptedToTerminal: string;
+    acceptedStretch: string;
+    requestedStretch: string;
   };
   /** Messages for error codes whose meaning does not depend on the request. */
   errors: Partial<Record<ApiErrorCode, string>> & { INTERNAL_ERROR: string; network: string };
@@ -65,7 +67,7 @@ const es: SharedMessages = {
   taxiDirection: { from_terminal: 'Desde el terminal', to_terminal: 'Hacia el terminal' },
   taxiRideStatus: {
     requested: 'Buscando taxi',
-    accepted: 'Taxi asignado',
+    accepted: 'Conductor asignado',
     in_progress: 'En camino',
     completed: 'Terminado',
     cancelled: 'Cancelado',
@@ -77,6 +79,10 @@ const es: SharedMessages = {
       'Tu taxi va a la parada de taxis del terminal. Verifica la placa antes de subir.',
     acceptedToTerminal:
       'Tu taxi va a buscarte a la dirección que indicaste. Verifica la placa antes de subir.',
+    acceptedStretch:
+      'Tu conductor va a buscarte a la dirección que indicaste. Verifica la placa antes de subir.',
+    requestedStretch:
+      'Las líneas que hacen este tramo ya ven tu solicitud y pueden tomarla desde ahora.',
     in_progress: 'Buen viaje. Paga la tarifa acordada al conductor.',
     completed: 'Viaje terminado.',
     cancelled: 'El viaje se canceló.',
@@ -110,6 +116,19 @@ const es: SharedMessages = {
     TRANSPORT_MODE_NOT_ALLOWED: 'Tu organización no opera ese tipo de vehículo.',
     SERVICE_NOT_ALLOWED: 'Las líneas de mototaxis solo publican rutas urbanas o suburbanas.',
     MOTORCYCLE_ONE_PASSENGER: 'Una moto lleva un solo pasajero y no usa mapa de puestos.',
+    TRIP_PACK_NOT_FOR_SALE: 'Ese paquete ya no está a la venta.',
+    TRIP_PACK_UNPAID_LIMIT:
+      'Ya tienes paquetes esperando el pago: págalos o espera a que venzan antes de comprar otro.',
+    TRIP_PACK_NOT_AWAITING_PAYMENT: 'Ese paquete ya no espera un pago.',
+    TRIP_PACK_NOT_VALID_HERE:
+      'Ese paquete no sirve para esta salida: revisa el tramo, el tipo de vehículo y la empresa.',
+    TRIP_PACK_EXHAUSTED: 'Al paquete no le quedan viajes suficientes o vence antes de esta salida.',
+    TRIP_PACK_TOO_MANY_BOOKINGS:
+      'Ya tienes 4 reservas futuras con ese paquete. Usa o cancela alguna antes de reservar otra.',
+    TRIP_PACK_ONE_PER_DEPARTURE: 'Ya tienes una reserva con ese paquete en esta salida.',
+    TAXI_STRETCH_NOT_SERVED: 'Ninguna línea hace ese tramo bajo demanda en ese vehículo.',
+    TAXI_NO_FARE: 'Tu línea no tiene tarifa para ese tramo en ese vehículo.',
+    STOPS_OUTSIDE_ZONE: 'Las dos paradas deben ser de la misma zona.',
     APPLICATION_OPEN: 'Ya tienes una solicitud abierta.',
     APPLICATION_UNDER_REVIEW: 'Tu solicitud está en revisión y no se puede cambiar ahora.',
     APPLICATION_WRONG_STATUS: 'La solicitud no está esperando revisión.',
@@ -153,6 +172,9 @@ const es: SharedMessages = {
     TAXI_RIDE_NOT_CANCELLABLE: 'Este taxi ya no se puede cancelar.',
     TAXI_RIDE_NOT_RELEASABLE: 'Solo se puede liberar un viaje que aún no ha empezado.',
     TAXI_RIDE_WRONG_STEP: 'El viaje cambió de estado. Actualiza la pantalla.',
+    TAXI_PICKUP_CODE_WRONG: 'Ese no es el código del pasajero. Pídele que te lo muestre en su app.',
+    TAXI_PICKUP_CODE_LOCKED:
+      'Demasiados intentos con el código. Libera el viaje o pide ayuda a soporte.',
     TAXI_LINE_INACTIVE: 'La línea de taxi no está activa.',
     NOT_A_TAXI_LINE: 'Solo las líneas de taxi atienden solicitudes de taxi.',
     COLLECTION_EXCEEDS_DEBT:
@@ -214,7 +236,7 @@ const en: SharedMessages = {
   taxiDirection: { from_terminal: 'From the terminal', to_terminal: 'To the terminal' },
   taxiRideStatus: {
     requested: 'Looking for a taxi',
-    accepted: 'Taxi assigned',
+    accepted: 'Driver assigned',
     in_progress: 'On the way',
     completed: 'Completed',
     cancelled: 'Cancelled',
@@ -226,6 +248,10 @@ const en: SharedMessages = {
       'Your taxi is heading to the terminal taxi stand. Check the plate before you get in.',
     acceptedToTerminal:
       'Your taxi is on its way to the address you gave. Check the plate before you get in.',
+    acceptedStretch:
+      'Your driver is on the way to the address you gave. Check the plate before you get in.',
+    requestedStretch:
+      'The lines that ride this stretch already see your request and can take it now.',
     in_progress: 'Have a good trip. Pay the agreed fare to the driver.',
     completed: 'Ride completed.',
     cancelled: 'The ride was cancelled.',
@@ -259,6 +285,21 @@ const en: SharedMessages = {
     TRANSPORT_MODE_NOT_ALLOWED: 'Your organization does not run that kind of vehicle.',
     SERVICE_NOT_ALLOWED: 'Motorcycle taxi lines only publish urban or suburban routes.',
     MOTORCYCLE_ONE_PASSENGER: 'A motorcycle carries a single passenger and has no seat map.',
+    TRIP_PACK_NOT_FOR_SALE: 'That trip pack is no longer for sale.',
+    TRIP_PACK_UNPAID_LIMIT:
+      'You already have trip packs waiting for payment: pay them or let them lapse before buying another.',
+    TRIP_PACK_NOT_AWAITING_PAYMENT: 'That trip pack is no longer waiting for a payment.',
+    TRIP_PACK_NOT_VALID_HERE:
+      'That trip pack does not cover this departure: check the stretch, the vehicle and the company.',
+    TRIP_PACK_EXHAUSTED:
+      'The trip pack does not have enough trips left or expires before this departure.',
+    TRIP_PACK_TOO_MANY_BOOKINGS:
+      'You already have 4 upcoming bookings with that trip pack. Use or cancel one first.',
+    TRIP_PACK_ONE_PER_DEPARTURE:
+      'You already have a booking with that trip pack on this departure.',
+    TAXI_STRETCH_NOT_SERVED: 'No line rides that stretch on demand with that vehicle.',
+    TAXI_NO_FARE: 'Your line has no fare for that stretch and vehicle.',
+    STOPS_OUTSIDE_ZONE: 'Both stops must belong to the same zone.',
     APPLICATION_OPEN: 'You already have an open application.',
     APPLICATION_UNDER_REVIEW: 'Your application is under review and cannot be changed now.',
     APPLICATION_WRONG_STATUS: 'The application is not waiting for review.',
@@ -302,6 +343,8 @@ const en: SharedMessages = {
     TAXI_RIDE_NOT_CANCELLABLE: 'This taxi can no longer be cancelled.',
     TAXI_RIDE_NOT_RELEASABLE: 'Only a ride that has not started can be released.',
     TAXI_RIDE_WRONG_STEP: 'The ride changed. Refresh the screen.',
+    TAXI_PICKUP_CODE_WRONG: "That is not the passenger's code. Ask them to show it in their app.",
+    TAXI_PICKUP_CODE_LOCKED: 'Too many tries with the code. Release the ride or contact support.',
     TAXI_LINE_INACTIVE: 'The taxi company is not active.',
     NOT_A_TAXI_LINE: 'Only taxi companies take taxi requests.',
     COLLECTION_EXCEEDS_DEBT:
@@ -364,7 +407,7 @@ const ptBR: SharedMessages = {
   taxiDirection: { from_terminal: 'Saindo do terminal', to_terminal: 'Indo para o terminal' },
   taxiRideStatus: {
     requested: 'Procurando táxi',
-    accepted: 'Táxi a caminho',
+    accepted: 'Motorista a caminho',
     in_progress: 'Em viagem',
     completed: 'Concluída',
     cancelled: 'Cancelada',
@@ -376,6 +419,9 @@ const ptBR: SharedMessages = {
       'Seu táxi está indo para o ponto de táxi do terminal. Confira a placa antes de entrar.',
     acceptedToTerminal:
       'Seu táxi está indo buscar você no endereço informado. Confira a placa antes de entrar.',
+    acceptedStretch:
+      'Seu motorista está indo buscar você no endereço informado. Confira a placa antes de entrar.',
+    requestedStretch: 'As linhas que fazem este trecho já veem seu pedido e podem aceitá-lo agora.',
     in_progress: 'Boa viagem. Pague a tarifa combinada ao motorista.',
     completed: 'Viagem concluída.',
     cancelled: 'A viagem foi cancelada.',
@@ -409,6 +455,19 @@ const ptBR: SharedMessages = {
     TRANSPORT_MODE_NOT_ALLOWED: 'Sua organização não opera esse tipo de veículo.',
     SERVICE_NOT_ALLOWED: 'Linhas de mototáxi só publicam rotas urbanas ou suburbanas.',
     MOTORCYCLE_ONE_PASSENGER: 'Uma moto leva um único passageiro e não usa mapa de assentos.',
+    TRIP_PACK_NOT_FOR_SALE: 'Esse pacote não está mais à venda.',
+    TRIP_PACK_UNPAID_LIMIT:
+      'Você já tem pacotes aguardando pagamento: pague-os ou espere que expirem antes de comprar outro.',
+    TRIP_PACK_NOT_AWAITING_PAYMENT: 'Esse pacote não espera mais um pagamento.',
+    TRIP_PACK_NOT_VALID_HERE:
+      'Esse pacote não serve para esta partida: verifique o trecho, o tipo de veículo e a empresa.',
+    TRIP_PACK_EXHAUSTED: 'O pacote não tem viagens suficientes ou vence antes desta partida.',
+    TRIP_PACK_TOO_MANY_BOOKINGS:
+      'Você já tem 4 reservas futuras com esse pacote. Use ou cancele alguma antes.',
+    TRIP_PACK_ONE_PER_DEPARTURE: 'Você já tem uma reserva com esse pacote nesta partida.',
+    TAXI_STRETCH_NOT_SERVED: 'Nenhuma linha faz esse trecho sob demanda nesse veículo.',
+    TAXI_NO_FARE: 'Sua linha não tem tarifa para esse trecho nesse veículo.',
+    STOPS_OUTSIDE_ZONE: 'As duas paradas devem ser da mesma zona.',
     APPLICATION_OPEN: 'Você já tem uma solicitação aberta.',
     APPLICATION_UNDER_REVIEW: 'Sua solicitação está em análise e não pode ser alterada agora.',
     APPLICATION_WRONG_STATUS: 'A solicitação não está aguardando análise.',
@@ -452,6 +511,9 @@ const ptBR: SharedMessages = {
     TAXI_RIDE_NOT_CANCELLABLE: 'Este táxi não pode mais ser cancelado.',
     TAXI_RIDE_NOT_RELEASABLE: 'Só é possível liberar uma viagem que ainda não começou.',
     TAXI_RIDE_WRONG_STEP: 'A viagem mudou de status. Atualize a tela.',
+    TAXI_PICKUP_CODE_WRONG: 'Esse não é o código do passageiro. Peça que ele o mostre no app.',
+    TAXI_PICKUP_CODE_LOCKED:
+      'Muitas tentativas com o código. Libere a viagem ou fale com o suporte.',
     TAXI_LINE_INACTIVE: 'A cooperativa de táxi não está ativa.',
     NOT_A_TAXI_LINE: 'Só cooperativas de táxi atendem pedidos de táxi.',
     COLLECTION_EXCEEDS_DEBT: 'O valor é maior do que a empresa deve à plataforma nessa moeda.',

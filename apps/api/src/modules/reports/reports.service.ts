@@ -13,8 +13,24 @@ import {
   type PlatformMetrics,
   type SalesFigures,
   type SalesReport,
+  type TripPackMetrics,
 } from '@vtp/shared-types';
-import { and, asc, eq, gte, isNull, lt, lte, sql, type SQL } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  lte,
+  ne,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService } from '../../database/database.service.js';
 import { bookingPassengers, bookings, trips } from '../bookings/bookings.schema.js';
@@ -27,6 +43,7 @@ import { organizations } from '../organizations/organizations.schema.js';
 import { payments } from '../payments/payments.schema.js';
 import { settlementEntries } from '../settlements/settlements.schema.js';
 import { taxiRides } from '../taxi/taxi.schema.js';
+import { tripPacks } from '../trip-packs/trip-packs.schema.js';
 
 const invalid = (message: string) =>
   new ApiException('VALIDATION_FAILED', message, HttpStatus.BAD_REQUEST);
@@ -63,6 +80,11 @@ export function reportRange(from?: string, to?: string): ReportRange {
 const money = (value: SQL) => sql<string>`coalesce(${value}, 0)::numeric(14, 2)::text`;
 const isBooking = sql`${settlementEntries.kind} = 'booking'`;
 const isCancellation = sql`${settlementEntries.kind} = 'cancellation'`;
+/**
+ * A late-cancellation fee one line collected in cash for another (ADR-030) is money passing
+ * through, not a sale: the line that went out reports it. Excluded from the sales figures.
+ */
+const notPassThrough = sql`not (${settlementEntries.kind} = 'ride_cancellation_fee' and ${settlementEntries.collectedBy} = 'operator' and ${settlementEntries.earned} = 0 and ${settlementEntries.commission} = 0)`;
 
 /** Aggregates of the settlement ledger, grouped by whatever the caller adds. */
 const salesColumns = {
@@ -74,6 +96,7 @@ const salesColumns = {
   earned: money(sql`sum(${settlementEntries.earned})`),
   cancellations: sql<number>`(count(*) filter (where ${isCancellation}))::int`,
   refunded: money(sql`-sum(${settlementEntries.gross}) filter (where ${isCancellation})`),
+  packSeats: sql<number>`coalesce(sum(${settlementEntries.seats}) filter (where ${bookings.tripPackId} is not null or ${taxiRides.tripPackId} is not null), 0)::int`,
 };
 
 const byCurrency = <T extends { currency: Currency }>(rows: T[]): T[] =>
@@ -89,6 +112,7 @@ export class ReportsService {
   /** Sales of one operator: paid bookings minus cancellations, by currency, route and day. */
   async sales(organizationId: string, range: ReportRange): Promise<SalesReport> {
     const where = and(
+      notPassThrough,
       eq(settlementEntries.organizationId, organizationId),
       gte(settlementEntries.createdAt, range.start),
       lt(settlementEntries.createdAt, range.end),
@@ -97,12 +121,15 @@ export class ReportsService {
     const totals = await db
       .select(salesColumns)
       .from(settlementEntries)
+      .leftJoin(bookings, eq(bookings.id, settlementEntries.bookingId))
+      .leftJoin(taxiRides, eq(taxiRides.id, settlementEntries.taxiRideId))
       .where(where)
       .groupBy(settlementEntries.currency);
     const byRoute = await db
       .select({ ...salesColumns, route: { id: routes.id, name: routes.name } })
       .from(settlementEntries)
-      .innerJoin(bookings, eq(bookings.id, settlementEntries.bookingId))
+      .leftJoin(bookings, eq(bookings.id, settlementEntries.bookingId))
+      .leftJoin(taxiRides, eq(taxiRides.id, settlementEntries.taxiRideId))
       .innerJoin(trips, eq(trips.id, bookings.tripId))
       .innerJoin(routes, eq(routes.id, trips.routeId))
       .where(where)
@@ -115,6 +142,8 @@ export class ReportsService {
     const byDay = await db
       .select({ ...salesColumns, date: day })
       .from(settlementEntries)
+      .leftJoin(bookings, eq(bookings.id, settlementEntries.bookingId))
+      .leftJoin(taxiRides, eq(taxiRides.id, settlementEntries.taxiRideId))
       .where(where)
       .groupBy(day, settlementEntries.currency)
       .orderBy(asc(day));
@@ -209,14 +238,83 @@ export class ReportsService {
     };
   }
 
+  /** Trip packs: sold and used in the range, owed and lost (ADR-028). */
+  private async tripPacks(range: ReportRange): Promise<TripPackMetrics> {
+    const db = this.database.db;
+    const sold = await db
+      .select({
+        currency: tripPacks.currency,
+        packs: sql<number>`count(*)::int`,
+        trips: sql<number>`coalesce(sum(${tripPacks.trips}), 0)::int`,
+        amount: money(sql`sum(${tripPacks.price})`),
+      })
+      .from(tripPacks)
+      .where(and(gte(tripPacks.activatedAt, range.start), lt(tripPacks.activatedAt, range.end)))
+      .groupBy(tripPacks.currency);
+    const used = await db
+      .select({
+        currency: settlementEntries.currency,
+        trips: sql<number>`coalesce(sum(${settlementEntries.seats}), 0)::int`,
+        fares: money(sql`sum(${settlementEntries.gross})`),
+      })
+      .from(settlementEntries)
+      .leftJoin(bookings, eq(bookings.id, settlementEntries.bookingId))
+      .leftJoin(taxiRides, eq(taxiRides.id, settlementEntries.taxiRideId))
+      .where(
+        and(
+          // Trips paid with a pack, not the fees of rides cancelled late.
+          ne(settlementEntries.kind, 'ride_cancellation_fee'),
+          or(isNotNull(bookings.tripPackId), isNotNull(taxiRides.tripPackId)),
+          gte(settlementEntries.createdAt, range.start),
+          lt(settlementEntries.createdAt, range.end),
+        ),
+      )
+      .groupBy(settlementEntries.currency);
+    const outstanding = await db
+      .select({
+        currency: tripPacks.currency,
+        trips: sql<number>`coalesce(sum(${tripPacks.remaining}), 0)::int`,
+        value: money(sql`sum(${tripPacks.remaining} * ${tripPacks.unitPrice})`),
+      })
+      .from(tripPacks)
+      .where(and(eq(tripPacks.status, 'active'), gt(tripPacks.expiresAt, sql`now()`)))
+      .groupBy(tripPacks.currency);
+    // Packs past their expiry count as expired even before the lazy sweep marks them.
+    const expired = await db
+      .select({
+        currency: tripPacks.currency,
+        trips: sql<number>`coalesce(sum(${tripPacks.remaining}), 0)::int`,
+        value: money(sql`sum(${tripPacks.remaining} * ${tripPacks.unitPrice})`),
+      })
+      .from(tripPacks)
+      .where(
+        and(
+          inArray(tripPacks.status, ['active', 'expired']),
+          gte(tripPacks.expiresAt, range.start),
+          lt(tripPacks.expiresAt, range.end),
+          lte(tripPacks.expiresAt, sql`now()`),
+        ),
+      )
+      .groupBy(tripPacks.currency);
+    return {
+      sold: byCurrency(sold),
+      used: byCurrency(used),
+      outstanding: byCurrency(outstanding),
+      expired: byCurrency(expired),
+    };
+  }
+
   /** The whole platform in a range, for platform admins. */
   async platform(range: ReportRange): Promise<PlatformMetrics> {
     const db = this.database.db;
     const sales = await db
       .select(salesColumns)
       .from(settlementEntries)
+      .leftJoin(bookings, eq(bookings.id, settlementEntries.bookingId))
+      .leftJoin(taxiRides, eq(taxiRides.id, settlementEntries.taxiRideId))
       .where(
         and(
+          notPassThrough,
           gte(settlementEntries.createdAt, range.start),
           lt(settlementEntries.createdAt, range.end),
         ),
@@ -273,6 +371,7 @@ export class ReportsService {
         ORGANIZATION_TYPES.map((type) => [type, activeOf(type)]),
       ) as Record<OrganizationType, number>,
       taxiRides: taxi ?? { requested: 0, completed: 0, cancelledOrExpired: 0 },
+      tripPacks: await this.tripPacks(range),
     };
   }
 }

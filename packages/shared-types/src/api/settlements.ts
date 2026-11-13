@@ -88,7 +88,22 @@ export interface SettlementPolicy {
   refundTiers: RefundTier[];
   /** Suburban routes, for every operator (ADR-028). */
   suburbanRefundTiers: RefundTier[];
+  /** Cancelling a taxi or motorcycle ride a line already took (stretch rides). */
+  rideCancellation: RideCancellationPolicy;
 }
+
+/**
+ * Cancelling a stretch ride after a line took it (decided by the product owner): free for
+ * `freeMinutes` after it was taken (and up to 30 minutes before a ride booked for later); later,
+ * the passenger owes `feePercent` of the line's fare, paid in cash on the next taxi or motorcycle
+ * ride, for the line that went out. Trips paid with a pack go back to it either way.
+ */
+export interface RideCancellationPolicy {
+  freeMinutes: number;
+  feePercent: number;
+}
+
+export const DEFAULT_RIDE_CANCELLATION: RideCancellationPolicy = { freeMinutes: 3, feePercent: 50 };
 
 export const PAYOUT_METHODS = ['bank_transfer', 'pago_movil', 'usdt'] as const;
 export type PayoutMethod = (typeof PAYOUT_METHODS)[number];
@@ -136,6 +151,9 @@ export interface OrganizationSettlement {
   refundTiersOverride: RefundTier[] | null;
   /** The platform's tiers for suburban routes (operators have no override). */
   suburbanRefundTiers: RefundTier[];
+  rideCancellation: RideCancellationPolicy;
+  /** Its departures accept trip packs; the platform pays it its fare for each trip used. */
+  acceptsTripPacks: boolean;
   /** Who receives this operator's passengers' payments. */
   paymentCollection: PaymentCollection;
   /** One per currency with activity, USD first. */
@@ -178,12 +196,22 @@ export interface DriverEarnings {
   payoutAccount: DriverPayoutAccount | null;
 }
 
-/** One paid booking in an operator's ledger; its amounts are frozen at confirmation. */
+/**
+ * One paid booking in an operator's ledger; its amounts are frozen at confirmation. A taxi or
+ * motorcycle ride paid with a trip pack is an entry too (`taxiRideId`; `bookingCode` is then
+ * `TAXI-…` and `route.name` describes the stretch).
+ */
 export interface SettlementEntry {
   id: string;
-  bookingId: string;
-  /** `cancellation` entries are negative: the refund taken back when a passenger cancelled. */
-  kind: 'booking' | 'cancellation';
+  /** Exactly one of the two is set. */
+  bookingId: string | null;
+  taxiRideId: string | null;
+  /**
+   * `cancellation` entries are negative: the refund taken back when a passenger cancelled.
+   * `ride_cancellation_fee`: a late-cancelled ride's fee, earned by the line that went out, or
+   * collected in cash by the line of the passenger's next ride (it owes it to the platform).
+   */
+  kind: 'booking' | 'cancellation' | 'ride_cancellation_fee';
   /** Who received the passenger's money. */
   collectedBy: PaymentCollection;
   bookingCode: string;
@@ -233,8 +261,12 @@ export interface AdminSettlementSummary extends OrganizationSettlement {
 }
 
 /** `PUT /admin/settlement-policy` — the platform defaults. Omitting the suburban tiers keeps them. */
-export type UpdateSettlementPolicyRequest = Omit<SettlementPolicy, 'suburbanRefundTiers'> & {
+export type UpdateSettlementPolicyRequest = Omit<
+  SettlementPolicy,
+  'suburbanRefundTiers' | 'rideCancellation'
+> & {
   suburbanRefundTiers?: RefundTier[];
+  rideCancellation?: RideCancellationPolicy;
 };
 
 /** The tiers that apply to a booking of a route of `scope` (suburban: the same for everyone). */
@@ -251,6 +283,8 @@ export interface SetOrganizationPolicyRequest {
   refundTiers: RefundTier[] | null;
   /** Omitted: unchanged. */
   paymentCollection?: PaymentCollection;
+  /** Its departures accept trip packs (ADR-028). Omitted: unchanged. */
+  acceptsTripPacks?: boolean;
 }
 
 /**
@@ -276,9 +310,13 @@ export interface VoidPayoutRequest {
 /** A payment whose money must go back to the payer (`GET /admin/refunds`). */
 export interface RefundDuePayment {
   paymentId: string;
-  bookingId: string;
+  /** Exactly one of the two is set. */
+  bookingId: string | null;
+  tripPackId: string | null;
+  /** The booking's or the trip pack's code. */
   bookingCode: string;
-  organization: { id: string; name: string };
+  /** Null for trip packs: the platform sold them. */
+  organization: { id: string; name: string } | null;
   payer: { name: string | null; email: string | null; phone: string | null };
   method: PaymentMethod;
   currency: PaymentCurrency;
@@ -308,6 +346,12 @@ export interface CancellationQuote {
   /** In the currency the passenger paid with; null when nothing is refunded. */
   refund: { amount: string; currency: PaymentCurrency } | null;
   policy: RefundTier[];
+  /**
+   * Bookings paid with a trip pack: how many trips go back to the pack if cancelled now (all of
+   * them up to 30 minutes before boarding while the pack has not expired, ADR-028); no money is
+   * refunded.
+   */
+  tripPack: { code: string; tripsBack: number } | null;
 }
 
 /** `POST /admin/refunds/:paymentId` — the reference of the transfer that sent the money back. */

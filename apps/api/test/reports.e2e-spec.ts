@@ -264,6 +264,7 @@ describe.runIf(expectDatabase)('Reports (e2e)', () => {
           currency: 'USD',
           bookings: 2,
           seats: 2,
+          packSeats: 0,
           gross,
           commission: (3 * feePerSeat).toFixed(2),
           earned: '50.00',

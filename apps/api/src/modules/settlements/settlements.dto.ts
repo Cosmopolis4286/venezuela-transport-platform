@@ -14,6 +14,7 @@ import {
   type PayoutDirection,
   type PayoutMethod,
   type RefundTier,
+  type RideCancellationPolicy,
   type SetOrganizationPolicyRequest,
   type UpdateSettlementPolicyRequest,
   type SettlementEntriesQuery,
@@ -24,6 +25,7 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsNumber,
@@ -66,6 +68,23 @@ const commissionMessage = {
   message: 'commissionRate must be a percentage between 0 and 100 with up to 2 decimals',
 };
 
+export class RideCancellationPolicyDto implements RideCancellationPolicy {
+  @ApiProperty({
+    example: 3,
+    description: 'Free cancelling for these minutes after a line took it',
+  })
+  @IsInt()
+  @Min(0)
+  @Max(60)
+  freeMinutes!: number;
+
+  @ApiProperty({ example: 50, description: "Late cancelling: this % of the line's fare" })
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  feePercent!: number;
+}
+
 export class SettlementPolicyDto implements UpdateSettlementPolicyRequest {
   @ApiProperty({ example: '8.00' })
   @IsString()
@@ -92,6 +111,12 @@ export class SettlementPolicyDto implements UpdateSettlementPolicyRequest {
   @ValidateNested({ each: true })
   @Type(() => RefundTierDto)
   suburbanRefundTiers?: RefundTierDto[];
+
+  @ApiPropertyOptional({ type: RideCancellationPolicyDto, description: 'Omitted: unchanged' })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => RideCancellationPolicyDto)
+  rideCancellation?: RideCancellationPolicyDto;
 }
 
 export class SetOrganizationPolicyDto implements SetOrganizationPolicyRequest {
@@ -119,6 +144,14 @@ export class SetOrganizationPolicyDto implements SetOrganizationPolicyRequest {
   @IsOptional()
   @IsIn(PAYMENT_COLLECTIONS)
   paymentCollection?: PaymentCollection;
+
+  @ApiProperty({
+    required: false,
+    description: 'Its departures accept trip packs; omitted: unchanged',
+  })
+  @IsOptional()
+  @IsBoolean()
+  acceptsTripPacks?: boolean;
 }
 
 export class CreatePayoutDto implements CreatePayoutRequest {
