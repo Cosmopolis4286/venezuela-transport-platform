@@ -81,6 +81,48 @@ async function Metrics({
         )}
       </Card>
 
+      {Object.values(m.tripPacks).some((list) => list.length) ? (
+        <Card>
+          <div className="flex flex-col gap-1">
+            <CardTitle>Paquetes de viajes</CardTitle>
+            <CardDescription>
+              Los vende la plataforma; por cada viaje usado le paga a la empresa su tarifa del
+              tramo. Los viajes vendidos sin usar son servicio que la plataforma todavía debe.
+            </CardDescription>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {m.tripPacks.sold.map((s) =>
+              tile(
+                `Paquetes vendidos (${s.currency})`,
+                formatPaymentAmount(s.amount, s.currency),
+                `${s.packs} paquetes · ${s.trips} viajes`,
+              ),
+            )}
+            {m.tripPacks.used.map((u) =>
+              tile(
+                `Viajes usados (tarifas en ${u.currency})`,
+                u.trips,
+                `Tarifas de las empresas: ${formatPaymentAmount(u.fares, u.currency)}`,
+              ),
+            )}
+            {m.tripPacks.outstanding.map((o) =>
+              tile(
+                `Viajes por usar hoy (${o.currency})`,
+                o.trips,
+                `Valen ${formatPaymentAmount(o.value, o.currency)} al precio de cada paquete`,
+              ),
+            )}
+            {m.tripPacks.expired.map((e) =>
+              tile(
+                `Viajes vencidos sin usar (${e.currency})`,
+                e.trips,
+                `${formatPaymentAmount(e.value, e.currency)} que quedan para la plataforma`,
+              ),
+            )}
+          </div>
+        </Card>
+      ) : null}
+
       <Card>
         <CardTitle>Actividad</CardTitle>
         <div className="grid gap-3 sm:grid-cols-3">

@@ -19,12 +19,15 @@ import {
   type TaxiRide,
   type TaxiTerminal,
 } from '@vtp/shared-types';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, Text } from 'react-native';
+import { StretchRideForm } from '@/components/stretch-ride-form';
+import { PendingFeesBanner } from '@/components/pending-fees';
 import { useT } from '@/i18n/use-t';
-import { isOpenRide } from '@/lib/taxi';
+import { isOpenRide, ridePlace } from '@/lib/taxi';
 import { useRefreshOnFocus } from '@/lib/use-refresh-on-focus';
+import { useSellingZones } from '@/lib/zones';
 
 const PASSENGERS = (['1', '2', '3', '4'] as const).map((value) => ({ value, label: value }));
 
@@ -33,6 +36,13 @@ export default function RequestTaxiScreen() {
   const { api } = useAuth();
   const colors = useColors();
   const { t, shared } = useT();
+  // To or from a terminal, or (where a zone sells) on demand between two stops of a zone.
+  const zones = useSellingZones();
+  const params = useLocalSearchParams<{ kind?: string }>();
+  const [kind, setKind] = useState<'terminal' | 'stretch'>(
+    params.kind === 'stretch' ? 'stretch' : 'terminal',
+  );
+  const stretch = kind === 'stretch' && zones.length > 0;
   const directions = TAXI_DIRECTIONS.map((value) => ({
     value,
     label: shared.taxiDirection[value],
@@ -77,8 +87,19 @@ export default function RequestTaxiScreen() {
 
   return (
     <Screen>
-      <Heading>{t.taxi.heading}</Heading>
-      <Body muted>{t.taxi.intro}</Body>
+      <Heading>{stretch ? t.ride.heading : t.taxi.heading}</Heading>
+      <Body muted>{stretch ? t.ride.intro : t.taxi.intro}</Body>
+      {zones.length ? (
+        <Segmented
+          label={t.ride.kind}
+          options={[
+            { value: 'terminal', label: t.ride.kindTerminal },
+            { value: 'stretch', label: t.ride.kindStretch },
+          ]}
+          value={stretch ? 'stretch' : 'terminal'}
+          onChange={setKind}
+        />
+      ) : null}
 
       {open ? (
         <Card>
@@ -88,6 +109,8 @@ export default function RequestTaxiScreen() {
             onPress={() => router.push({ pathname: '/taxi/[id]', params: { id: open.id } })}
           />
         </Card>
+      ) : stretch ? (
+        <StretchRideForm />
       ) : (
         <>
           <Subheading>{t.taxi.terminal}</Subheading>
@@ -156,6 +179,7 @@ export default function RequestTaxiScreen() {
               value={phone}
               onChangeText={setPhone}
             />
+            <PendingFeesBanner />
             {error ? <Banner tone="error">{error}</Banner> : null}
             <Button
               title={t.taxi.request}
@@ -180,9 +204,7 @@ export default function RequestTaxiScreen() {
                 onPress={() => router.push({ pathname: '/taxi/[id]', params: { id: ride.id } })}
               >
                 <Card>
-                  <Body>
-                    {shared.taxiDirection[ride.direction]} · {ride.terminal.name}
-                  </Body>
+                  <Body>{ridePlace(ride, t, shared)}</Body>
                   <Body muted>
                     {ride.address} · {shared.taxiRideStatus[ride.status]}
                   </Body>

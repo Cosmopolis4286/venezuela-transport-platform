@@ -65,7 +65,10 @@ async function Settlement({
 
       <Card>
         <CardTitle>Saldo</CardTitle>
-        <SettlementBalances settlement={settlement} />
+        <SettlementBalances
+          settlement={settlement}
+          onDemand={['taxi_line', 'moto_line'].includes(organization.type)}
+        />
       </Card>
 
       <Card>

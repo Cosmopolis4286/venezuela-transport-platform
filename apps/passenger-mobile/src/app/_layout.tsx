@@ -25,6 +25,7 @@ function RootNavigator() {
     (data: Record<string, unknown>) => {
       if (typeof data.bookingId === 'string') router.push(`/booking/${data.bookingId}`);
       else if (typeof data.rideId === 'string') router.push(`/taxi/${data.rideId}`);
+      else if (typeof data.tripPackId === 'string') router.push(`/trip-packs/${data.tripPackId}`);
     },
     [router],
   );
@@ -47,6 +48,8 @@ function RootNavigator() {
         <Stack.Screen name="bookings" options={{ title: t.nav.bookings }} />
         <Stack.Screen name="taxi/index" options={{ title: t.nav.taxiRequest }} />
         <Stack.Screen name="taxi/[id]" options={{ title: t.nav.taxiRide }} />
+        <Stack.Screen name="trip-packs/index" options={{ title: t.nav.tripPacks }} />
+        <Stack.Screen name="trip-packs/[id]" options={{ title: t.nav.tripPack }} />
       </Stack.Protected>
       <Stack.Protected guard={!registered}>
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />

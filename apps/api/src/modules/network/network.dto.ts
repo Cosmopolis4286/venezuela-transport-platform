@@ -123,6 +123,12 @@ export class StopSearchQueryDto {
   @IsOptional()
   @IsIn(STOP_KINDS)
   kind?: StopKind;
+
+  /** Only the stops of this zone (stretch rides and trip packs pick both stops in one zone). */
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  zoneId?: string;
 }
 
 export class RouteStopDto {

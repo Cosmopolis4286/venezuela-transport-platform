@@ -15,6 +15,8 @@ const es = {
     bookings: 'Mis viajes',
     taxiRequest: 'Pedir un taxi',
     taxiRide: 'Tu taxi',
+    tripPacks: 'Paquetes de viajes',
+    tripPack: 'Tu paquete',
   },
   signIn: {
     title: 'VTP Pasajeros',
@@ -33,6 +35,12 @@ const es = {
     tomorrow: 'Mañana',
     sameStop: 'Elige un destino distinto del origen.',
     search: 'Buscar salidas',
+    services: 'Tipo de viaje',
+    suburbanHeading: 'Tus viajes diarios',
+    suburbanIntro: (areas: string) =>
+      `Reserva con anticipación tu puesto en bus, taxi o moto en ${areas}.`,
+    suburbanIntroGeneric:
+      'Reserva con anticipación tu puesto en bus, taxi o moto para tus viajes cortos.',
     taxiTitle: 'Taxi en el terminal',
     taxiIntro: 'Pide un taxi para salir del terminal o para llegar a tiempo a tu autobús.',
     taxiButton: 'Pedir un taxi',
@@ -95,6 +103,10 @@ const es = {
     documentNumberFor: (seat: string) => `Número de documento del puesto ${seat}`,
     total: 'Total',
     hold: 'Apartar puestos',
+    payHow: '¿Cómo pagas?',
+    payMoney: (total: string) => `Pagar ${total}`,
+    payPack: (code: string, left: number) => `Con mi paquete ${code} (quedan ${left})`,
+    bookWithPack: 'Reservar con mi paquete',
     notBookable: 'Esta salida ya no se puede reservar.',
     checkNames: 'Revisa los nombres y números de documento.',
     contactPhone: 'Teléfono o WhatsApp (opcional)',
@@ -108,6 +120,7 @@ const es = {
     held: (clock: string) =>
       `Tus puestos están apartados por ${clock} minutos. Paga antes de que termine el tiempo.`,
     confirmed: 'Pago confirmado. Muestra el código QR de cada pasajero al abordar.',
+    showQr: 'Muestra el código QR de cada pasajero al abordar.',
     expired: 'El tiempo para pagar terminó y los puestos se liberaron.',
     refundDue: 'Tu pago llegó cuando la reserva ya no estaba activa. Te lo devolveremos.',
     refunded: 'Te devolvimos el pago de esta reserva.',
@@ -119,6 +132,16 @@ const es = {
     cancelConfirm: 'Sí, cancelar',
     cancelKeep: 'No, mantener mi viaje',
     notCancellable: 'Este viaje ya no se puede cancelar: el autobús salió o ya abordaste.',
+    paidWithPack: (code: string) => `Pagada con tu paquete ${code}.`,
+    packPolicy:
+      'Si cancelas hasta 30 minutos antes de abordar, el viaje vuelve a tu paquete; después, se pierde.',
+    cancelPackBack: (trips: number, code: string) =>
+      trips === 1
+        ? `Si cancelas ahora, el viaje vuelve a tu paquete ${code}.`
+        : `Si cancelas ahora, los ${trips} viajes vuelven a tu paquete ${code}.`,
+    cancelPackLost:
+      'Si cancelas ahora, el viaje no vuelve a tu paquete (faltan menos de 30 minutos o el paquete venció), pero tu puesto queda libre.',
+    cancelledPack: (code: string) => `Cancelaste esta reserva, pagada con tu paquete ${code}.`,
     policy: 'Política de cancelación',
     tier: (percent: number, hours: number) =>
       hours === 0
@@ -188,6 +211,32 @@ const es = {
     serviceFee: (rate: string) => `Cargo por servicio (${rate} %)`,
     notRefunded: 'El cargo por servicio no se reembolsa si cancelas.',
   },
+  packs: {
+    title: 'Paquetes de viajes',
+    intro:
+      'Compra viajes por adelantado para tu tramo de todos los días. Sirven en los dos sentidos y vencen; no se devuelven.',
+    homeTitle: 'Paquetes de viajes',
+    homeIntro: 'Viaja todos los días pagando menos: compra varios viajes de una vez.',
+    homeButton: 'Ver paquetes',
+    forSale: 'A la venta',
+    none: 'No hay paquetes a la venta en este momento.',
+    mine: 'Tus paquetes',
+    product: (trips: number, a: string, b: string) => `${trips} viajes · ${a} ↔ ${b}`,
+    perTrip: (price: string) => `${price} por viaje`,
+    validity: (days: number) => `Vence ${days} días después de pagarlo`,
+    buy: 'Comprar',
+    remaining: (left: number, total: number) => `Quedan ${left} de ${total} viajes`,
+    expires: (date: string) => `Vence el ${date}`,
+    payBy: (date: string) => `Págalo antes del ${date}`,
+    status: {
+      pending_payment: 'Esperando el pago',
+      active: 'Activo',
+      exhausted: 'Usado',
+      expired: 'Vencido',
+      cancelled: 'Anulado',
+    },
+    a11y: (code: string) => `Paquete ${code}`,
+  },
   bookings: {
     none: 'Aún no tienes reservas.',
     a11y: (code: string) => `Reserva ${code}`,
@@ -209,6 +258,48 @@ const es = {
     password: 'Contraseña (mínimo 10 caracteres)',
     haveAccount: 'Ya tengo cuenta: iniciar sesión',
     created: 'Listo: tu cuenta quedó creada y tus viajes siguen aquí.',
+  },
+  ride: {
+    heading: 'Taxi o moto por tramo',
+    intro:
+      'Te buscan cerca de la parada de origen y te llevan a tu destino. La primera línea que tome el viaje cobra su tarifa del tramo; le pagas al conductor o usas tu paquete de viajes.',
+    corridor: 'Zona',
+    kind: '¿Qué necesitas?',
+    kindTerminal: 'Taxi en el terminal',
+    kindStretch: 'Taxi o moto por tramo',
+    from: 'Desde',
+    to: 'Hasta',
+    vehicle: 'Vehículo',
+    price: (min: string, max: string) => (min === max ? min : `${min} – ${max}`),
+    noVehicle: 'Ninguna línea hace este tramo bajo demanda todavía.',
+    when: '¿Cuándo?',
+    now: 'Ahora',
+    later: 'Para más tarde',
+    day: 'Día',
+    time: 'Hora (HH:MM)',
+    pickupLabel: '¿Dónde te buscamos? (cerca de la parada de origen)',
+    request: 'Pedir el viaje',
+    scheduled: (when: string) => `Para el ${when}`,
+    stretch: (from: string, to: string) => `${from} → ${to}`,
+    homeTitle: 'Taxi o moto bajo demanda',
+    homeIntro: 'Pide un taxi o una moto entre las paradas de tu corredor, ahora o para más tarde.',
+    homeButton: 'Pedir taxi o moto',
+    timeInvalid: 'Escribe la hora como 06:30.',
+    timePast: 'Esa hora ya pasó: elige otro día u otra hora.',
+    payDriver: 'Le pago al conductor',
+    paidWithPack: (code: string) => `Pagado con tu paquete ${code}: no le pagas al conductor.`,
+    feesOwed: (amount: string) =>
+      `Tienes una tasa de cancelación pendiente de ${amount}: se la pagas en efectivo al conductor de tu próximo viaje, además de la tarifa.`,
+    feesDue: (amount: string) =>
+      `Además de la tarifa, págale al conductor ${amount} de una cancelación anterior.`,
+    freeCancelUntil: (time: string, fee: string) =>
+      `Puedes cancelar sin costo hasta las ${time}. Después, cancelar cuesta ${fee}, que pagas en tu próximo viaje.`,
+    pickupCode: 'Tu código de recogida',
+    pickupCodeHint:
+      'Díselo al conductor al subir: sin él no puede iniciar el viaje pagado con tu paquete.',
+    driverLate: 'El conductor todavía no llega: si lo necesitas, puedes cancelar sin costo.',
+    lateCancel: (fee: string) =>
+      `Si cancelas ahora, pagarás una tasa de ${fee} en tu próximo viaje de taxi o moto (si usaste un paquete, el viaje vuelve a él).`,
   },
   taxi: {
     heading: 'Taxi desde o hacia el terminal',
@@ -233,6 +324,7 @@ const es = {
     previous: 'Taxis anteriores',
     waitsFor: (clock: string) => `La solicitud espera ${clock} más.`,
     yourTaxi: 'Tu taxi',
+    yourMoto: 'Tu moto',
     plate: (vehicle: string) => `Placa ${vehicle}`,
     fare: (amount: string) => `Tarifa: ${amount}`,
     from: (terminal: string, city: string) => `Desde ${terminal} (${city})`,
@@ -240,7 +332,7 @@ const es = {
     destination: (address: string) => `Destino: ${address}`,
     pickup: (address: string) => `Te buscan en: ${address}`,
     people: (n: number) => plural(n, 'pasajero', 'pasajeros'),
-    cancel: 'Cancelar el taxi',
+    cancel: 'Cancelar el viaje',
     another: 'Pedir otro taxi',
     driver: 'Conductor',
   },
@@ -260,6 +352,8 @@ const en: Messages = {
     bookings: 'My trips',
     taxiRequest: 'Request a taxi',
     taxiRide: 'Your taxi',
+    tripPacks: 'Trip packs',
+    tripPack: 'Your trip pack',
   },
   signIn: {
     title: 'VTP Passengers',
@@ -278,6 +372,11 @@ const en: Messages = {
     tomorrow: 'Tomorrow',
     sameStop: 'Choose a destination different from the origin.',
     search: 'Search departures',
+    services: 'Kind of trip',
+    suburbanHeading: 'Your daily trips',
+    suburbanIntro: (areas) => `Book your seat by bus, taxi or motorcycle in advance in ${areas}.`,
+    suburbanIntroGeneric:
+      'Book your seat by bus, taxi or motorcycle in advance for your short trips.',
     taxiTitle: 'Taxi at the terminal',
     taxiIntro: 'Get a taxi out of the terminal, or to catch your bus on time.',
     taxiButton: 'Request a taxi',
@@ -339,6 +438,10 @@ const en: Messages = {
     documentNumberFor: (seat) => `ID number for seat ${seat}`,
     total: 'Total',
     hold: 'Hold seats',
+    payHow: 'How do you pay?',
+    payMoney: (total) => `Pay ${total}`,
+    payPack: (code, left) => `With my trip pack ${code} (${left} left)`,
+    bookWithPack: 'Book with my trip pack',
     notBookable: 'This departure can no longer be booked.',
     checkNames: 'Check the names and ID numbers.',
     contactPhone: 'Phone or WhatsApp (optional)',
@@ -351,6 +454,7 @@ const en: Messages = {
       `Open ticket for ${date}: board any unit of the route between ${first} and ${last}.`,
     held: (clock) => `Your seats are held for ${clock} minutes. Pay before the time runs out.`,
     confirmed: 'Payment confirmed. Show each passenger’s QR code when boarding.',
+    showQr: 'Show each passenger’s QR code when boarding.',
     expired: 'The time to pay ran out and the seats were released.',
     refundDue: 'Your payment arrived after the booking was no longer active. We will refund it.',
     refunded: 'We refunded the payment for this booking.',
@@ -362,6 +466,16 @@ const en: Messages = {
     cancelConfirm: 'Yes, cancel',
     cancelKeep: 'No, keep my trip',
     notCancellable: 'This trip can no longer be cancelled: the bus left or you boarded.',
+    paidWithPack: (code) => `Paid with your trip pack ${code}.`,
+    packPolicy:
+      'If you cancel up to 30 minutes before boarding, the trip goes back to your pack; after that, it is lost.',
+    cancelPackBack: (trips, code) =>
+      trips === 1
+        ? `If you cancel now, the trip goes back to your trip pack ${code}.`
+        : `If you cancel now, the ${trips} trips go back to your trip pack ${code}.`,
+    cancelPackLost:
+      'If you cancel now, the trip does not go back to your pack (less than 30 minutes left or the pack expired), but your seat is freed.',
+    cancelledPack: (code) => `You cancelled this booking, paid with your trip pack ${code}.`,
     policy: 'Cancellation policy',
     tier: (percent, hours) =>
       hours === 0
@@ -427,6 +541,32 @@ const en: Messages = {
     serviceFee: (rate) => `Service fee (${rate}%)`,
     notRefunded: 'The service fee is not refunded if you cancel.',
   },
+  packs: {
+    title: 'Trip packs',
+    intro:
+      'Buy trips in advance for your daily stretch. They work both ways and expire; they are not refunded.',
+    homeTitle: 'Trip packs',
+    homeIntro: 'Travel every day for less: buy several trips at once.',
+    homeButton: 'See trip packs',
+    forSale: 'For sale',
+    none: 'No trip packs are for sale right now.',
+    mine: 'Your trip packs',
+    product: (trips, a, b) => `${trips} trips · ${a} ↔ ${b}`,
+    perTrip: (price) => `${price} per trip`,
+    validity: (days) => `Expires ${days} days after you pay`,
+    buy: 'Buy',
+    remaining: (left, total) => `${left} of ${total} trips left`,
+    expires: (date) => `Expires on ${date}`,
+    payBy: (date) => `Pay before ${date}`,
+    status: {
+      pending_payment: 'Waiting for payment',
+      active: 'Active',
+      exhausted: 'Used up',
+      expired: 'Expired',
+      cancelled: 'Voided',
+    },
+    a11y: (code) => `Trip pack ${code}`,
+  },
   bookings: {
     none: 'You have no bookings yet.',
     a11y: (code) => `Booking ${code}`,
@@ -448,6 +588,48 @@ const en: Messages = {
     password: 'Password (at least 10 characters)',
     haveAccount: 'I already have an account: sign in',
     created: 'Done: your account is ready and your trips are still here.',
+  },
+  ride: {
+    heading: 'Taxi or motorcycle by stretch',
+    intro:
+      'You are picked up near the origin stop and taken to your destination. The first line to take the ride charges its fare for the stretch; you pay the driver or use your trip pack.',
+    corridor: 'Zone',
+    kind: 'What do you need?',
+    kindTerminal: 'Taxi at the terminal',
+    kindStretch: 'Taxi or motorcycle by stretch',
+    from: 'From',
+    to: 'To',
+    vehicle: 'Vehicle',
+    price: (min, max) => (min === max ? min : `${min} – ${max}`),
+    noVehicle: 'No line rides this stretch on demand yet.',
+    when: 'When?',
+    now: 'Now',
+    later: 'Later',
+    day: 'Day',
+    time: 'Time (HH:MM)',
+    pickupLabel: 'Where do we pick you up? (near the origin stop)',
+    request: 'Request the ride',
+    scheduled: (when) => `For ${when}`,
+    stretch: (from, to) => `${from} → ${to}`,
+    homeTitle: 'Taxi or motorcycle on demand',
+    homeIntro: 'Ask for a taxi or a motorcycle between the stops of your corridor, now or later.',
+    homeButton: 'Get a taxi or motorcycle',
+    timeInvalid: 'Write the time like 06:30.',
+    timePast: 'That time has passed: choose another day or time.',
+    payDriver: 'I pay the driver',
+    paidWithPack: (code) => `Paid with your trip pack ${code}: you do not pay the driver.`,
+    feesOwed: (amount) =>
+      `You owe a ${amount} cancellation fee: pay it in cash to the driver of your next ride, on top of the fare.`,
+    feesDue: (amount) =>
+      `On top of the fare, pay the driver ${amount} for an earlier cancellation.`,
+    freeCancelUntil: (time, fee) =>
+      `You can cancel for free until ${time}. After that, cancelling costs ${fee}, paid on your next ride.`,
+    pickupCode: 'Your pickup code',
+    pickupCodeHint:
+      'Tell it to the driver when you get on: without it they cannot start a ride paid with your pack.',
+    driverLate: 'The driver has not arrived yet: you can cancel for free if you need to.',
+    lateCancel: (fee) =>
+      `If you cancel now, you will pay a ${fee} fee on your next taxi or motorcycle ride (a trip paid with a pack goes back to it).`,
   },
   taxi: {
     heading: 'Taxi to or from the terminal',
@@ -472,6 +654,7 @@ const en: Messages = {
     previous: 'Previous taxis',
     waitsFor: (clock) => `The request waits ${clock} more.`,
     yourTaxi: 'Your taxi',
+    yourMoto: 'Your motorcycle',
     plate: (vehicle) => `Plate ${vehicle}`,
     fare: (amount) => `Fare: ${amount}`,
     from: (terminal, city) => `From ${terminal} (${city})`,
@@ -479,7 +662,7 @@ const en: Messages = {
     destination: (address) => `Destination: ${address}`,
     pickup: (address) => `Pickup at: ${address}`,
     people: (n) => plural(n, 'passenger', 'passengers'),
-    cancel: 'Cancel taxi',
+    cancel: 'Cancel ride',
     another: 'Request another taxi',
     driver: 'Driver',
   },
@@ -497,6 +680,8 @@ const ptBR: Messages = {
     bookings: 'Minhas viagens',
     taxiRequest: 'Pedir um táxi',
     taxiRide: 'Seu táxi',
+    tripPacks: 'Pacotes de viagens',
+    tripPack: 'Seu pacote',
   },
   signIn: {
     title: 'VTP Passageiros',
@@ -515,6 +700,12 @@ const ptBR: Messages = {
     tomorrow: 'Amanhã',
     sameStop: 'Escolha um destino diferente da origem.',
     search: 'Buscar partidas',
+    services: 'Tipo de viagem',
+    suburbanHeading: 'Suas viagens diárias',
+    suburbanIntro: (areas) =>
+      `Reserve com antecedência seu lugar de ônibus, táxi ou moto em ${areas}.`,
+    suburbanIntroGeneric:
+      'Reserve com antecedência seu lugar de ônibus, táxi ou moto para suas viagens curtas.',
     taxiTitle: 'Táxi no terminal',
     taxiIntro: 'Peça um táxi para sair do terminal ou para chegar a tempo ao seu ônibus.',
     taxiButton: 'Pedir um táxi',
@@ -577,6 +768,10 @@ const ptBR: Messages = {
     documentNumberFor: (seat) => `Número do documento do assento ${seat}`,
     total: 'Total',
     hold: 'Reservar assentos',
+    payHow: 'Como você paga?',
+    payMoney: (total) => `Pagar ${total}`,
+    payPack: (code, left) => `Com meu pacote ${code} (restam ${left})`,
+    bookWithPack: 'Reservar com meu pacote',
     notBookable: 'Esta partida não pode mais ser reservada.',
     checkNames: 'Confira os nomes e os números dos documentos.',
     contactPhone: 'Telefone ou WhatsApp (opcional)',
@@ -590,6 +785,7 @@ const ptBR: Messages = {
     held: (clock) =>
       `Seus assentos estão reservados por ${clock} minutos. Pague antes que o tempo acabe.`,
     confirmed: 'Pagamento confirmado. Mostre o QR code de cada passageiro no embarque.',
+    showQr: 'Mostre o QR code de cada passageiro ao embarcar.',
     expired: 'O tempo para pagar acabou e os assentos foram liberados.',
     refundDue: 'Seu pagamento chegou quando a reserva já não estava ativa. Vamos devolvê-lo.',
     refunded: 'Devolvemos o pagamento desta reserva.',
@@ -601,6 +797,16 @@ const ptBR: Messages = {
     cancelConfirm: 'Sim, cancelar',
     cancelKeep: 'Não, manter minha viagem',
     notCancellable: 'Esta viagem não pode mais ser cancelada: o ônibus partiu ou você embarcou.',
+    paidWithPack: (code) => `Paga com seu pacote ${code}.`,
+    packPolicy:
+      'Se você cancelar até 30 minutos antes do embarque, a viagem volta ao seu pacote; depois, ela é perdida.',
+    cancelPackBack: (trips, code) =>
+      trips === 1
+        ? `Se você cancelar agora, a viagem volta ao seu pacote ${code}.`
+        : `Se você cancelar agora, as ${trips} viagens voltam ao seu pacote ${code}.`,
+    cancelPackLost:
+      'Se você cancelar agora, a viagem não volta ao seu pacote (faltam menos de 30 minutos ou o pacote venceu), mas seu assento fica livre.',
+    cancelledPack: (code) => `Você cancelou esta reserva, paga com seu pacote ${code}.`,
     policy: 'Política de cancelamento',
     tier: (percent, hours) =>
       hours === 0
@@ -667,6 +873,32 @@ const ptBR: Messages = {
     serviceFee: (rate) => `Taxa de serviço (${rate}%)`,
     notRefunded: 'A taxa de serviço não é reembolsada se você cancelar.',
   },
+  packs: {
+    title: 'Pacotes de viagens',
+    intro:
+      'Compre viagens antecipadas para o seu trecho diário. Valem nos dois sentidos e vencem; não são reembolsadas.',
+    homeTitle: 'Pacotes de viagens',
+    homeIntro: 'Viaje todos os dias pagando menos: compre várias viagens de uma vez.',
+    homeButton: 'Ver pacotes',
+    forSale: 'À venda',
+    none: 'Não há pacotes à venda no momento.',
+    mine: 'Seus pacotes',
+    product: (trips, a, b) => `${trips} viagens · ${a} ↔ ${b}`,
+    perTrip: (price) => `${price} por viagem`,
+    validity: (days) => `Vence ${days} dias depois do pagamento`,
+    buy: 'Comprar',
+    remaining: (left, total) => `Restam ${left} de ${total} viagens`,
+    expires: (date) => `Vence em ${date}`,
+    payBy: (date) => `Pague antes de ${date}`,
+    status: {
+      pending_payment: 'Aguardando pagamento',
+      active: 'Ativo',
+      exhausted: 'Usado',
+      expired: 'Vencido',
+      cancelled: 'Anulado',
+    },
+    a11y: (code) => `Pacote ${code}`,
+  },
   bookings: {
     none: 'Você ainda não tem reservas.',
     a11y: (code) => `Reserva ${code}`,
@@ -688,6 +920,49 @@ const ptBR: Messages = {
     password: 'Senha (mínimo 10 caracteres)',
     haveAccount: 'Já tenho conta: entrar',
     created: 'Pronto: sua conta foi criada e suas viagens continuam aqui.',
+  },
+  ride: {
+    heading: 'Táxi ou moto por trecho',
+    intro:
+      'Buscam você perto da parada de origem e levam ao seu destino. A primeira linha que aceitar cobra sua tarifa do trecho; você paga ao motorista ou usa seu pacote.',
+    corridor: 'Zona',
+    kind: 'Do que você precisa?',
+    kindTerminal: 'Táxi no terminal',
+    kindStretch: 'Táxi ou moto por trecho',
+    from: 'De',
+    to: 'Até',
+    vehicle: 'Veículo',
+    price: (min, max) => (min === max ? min : `${min} – ${max}`),
+    noVehicle: 'Nenhuma linha faz este trecho sob demanda ainda.',
+    when: 'Quando?',
+    now: 'Agora',
+    later: 'Mais tarde',
+    day: 'Dia',
+    time: 'Hora (HH:MM)',
+    pickupLabel: 'Onde buscamos você? (perto da parada de origem)',
+    request: 'Pedir a viagem',
+    scheduled: (when) => `Para ${when}`,
+    stretch: (from, to) => `${from} → ${to}`,
+    homeTitle: 'Táxi ou moto sob demanda',
+    homeIntro:
+      'Peça um táxi ou uma moto entre as paradas do seu corredor, agora ou para mais tarde.',
+    homeButton: 'Pedir táxi ou moto',
+    timeInvalid: 'Escreva a hora como 06:30.',
+    timePast: 'Esse horário já passou: escolha outro dia ou hora.',
+    payDriver: 'Pago ao motorista',
+    paidWithPack: (code) => `Pago com seu pacote ${code}: você não paga ao motorista.`,
+    feesOwed: (amount) =>
+      `Você tem uma taxa de cancelamento pendente de ${amount}: pague em dinheiro ao motorista da sua próxima viagem, além da tarifa.`,
+    feesDue: (amount) =>
+      `Além da tarifa, pague ao motorista ${amount} de um cancelamento anterior.`,
+    freeCancelUntil: (time, fee) =>
+      `Você pode cancelar sem custo até ${time}. Depois, cancelar custa ${fee}, pago na sua próxima viagem.`,
+    pickupCode: 'Seu código de embarque',
+    pickupCodeHint:
+      'Diga-o ao motorista ao embarcar: sem ele, ele não pode iniciar a viagem paga com seu pacote.',
+    driverLate: 'O motorista ainda não chegou: se precisar, você pode cancelar sem custo.',
+    lateCancel: (fee) =>
+      `Se cancelar agora, você pagará uma taxa de ${fee} na sua próxima viagem de táxi ou moto (se usou um pacote, a viagem volta para ele).`,
   },
   taxi: {
     heading: 'Táxi para ou do terminal',
@@ -712,6 +987,7 @@ const ptBR: Messages = {
     previous: 'Táxis anteriores',
     waitsFor: (clock) => `O pedido espera mais ${clock}.`,
     yourTaxi: 'Seu táxi',
+    yourMoto: 'Sua moto',
     plate: (vehicle) => `Placa ${vehicle}`,
     fare: (amount) => `Tarifa: ${amount}`,
     from: (terminal, city) => `Saindo de ${terminal} (${city})`,
@@ -719,7 +995,7 @@ const ptBR: Messages = {
     destination: (address) => `Destino: ${address}`,
     pickup: (address) => `Buscar em: ${address}`,
     people: (n) => plural(n, 'passageiro', 'passageiros'),
-    cancel: 'Cancelar o táxi',
+    cancel: 'Cancelar a viagem',
     another: 'Pedir outro táxi',
     driver: 'Motorista',
   },

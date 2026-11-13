@@ -97,13 +97,17 @@ async function Organization({ params }: { params: Promise<{ organizationId: stri
           </div>
         </Card>
       ) : null}
-      {organization.type === 'taxi_line' ? (
+      {organization.type === 'taxi_line' || organization.type === 'moto_line' ? (
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-col gap-1">
-              <CardTitle>Taxis</CardTitle>
+              <CardTitle>
+                {organization.type === 'taxi_line' ? 'Taxis' : 'Mototaxis bajo demanda'}
+              </CardTitle>
               <CardDescription>
-                Terminales donde opera la línea y solicitudes de los pasajeros.
+                {organization.type === 'taxi_line'
+                  ? 'Terminales donde opera la línea, tarifas por tramo y solicitudes de los pasajeros.'
+                  : 'Tarifas por tramo y solicitudes de los pasajeros.'}
               </CardDescription>
             </div>
             <Button asChild size="sm" variant="outline">

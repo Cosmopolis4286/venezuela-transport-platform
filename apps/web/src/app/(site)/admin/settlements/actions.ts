@@ -24,7 +24,7 @@ function tiersFrom(form: FormData, prefix = 'tier'): RefundTier[] {
 
 const POLICY_RULES = {
   VALIDATION_FAILED:
-    'Revisa la política: comisión entre 0 y 100 con hasta dos decimales; de 1 a 4 tramos con horas distintas (0 a 720, en cuartos de hora: 0,5 son 30 minutos) y porcentajes enteros de 0 a 100.',
+    'Revisa la política: comisión entre 0 y 100 con hasta dos decimales; de 1 a 4 tramos con horas distintas (0 a 720, en cuartos de hora: 0,5 son 30 minutos) y porcentajes enteros de 0 a 100; cancelación de taxis y motos: de 0 a 60 minutos gratis y una tasa entera de 0 a 100 %.',
 };
 
 export async function setPlatformPolicy(_: FormState, form: FormData): Promise<FormState> {
@@ -35,6 +35,10 @@ export async function setPlatformPolicy(_: FormState, form: FormData): Promise<F
         commissionRate: decimal(form, 'commissionRate'),
         refundTiers: tiersFrom(form),
         suburbanRefundTiers: tiersFrom(form, 'suburban'),
+        rideCancellation: {
+          freeMinutes: Number(form.get('freeMinutes')),
+          feePercent: Number(form.get('feePercent')),
+        },
       },
     });
   } catch (error) {
@@ -57,6 +61,7 @@ export async function setOrganizationPolicy(_: FormState, form: FormData): Promi
           refundTiers: ownTiers ? tiersFrom(form) : null,
           paymentCollection:
             text(form, 'paymentCollection') === 'operator' ? 'operator' : 'platform',
+          acceptsTripPacks: form.get('acceptsTripPacks') === 'on',
         },
       },
     );

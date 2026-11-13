@@ -135,6 +135,12 @@ describe.runIf(expectDatabase)('On-demand stretch rides (e2e)', () => {
       const b = await stop('Demanda Puerto Ordaz');
       const outside = await stop('Demanda Caracas');
       const area = await zoneWith(admin.auth, 'Demanda', [a.id, b.id]);
+      // The app lists a zone's stops to choose the stretch from.
+      expect(
+        ((await http().get('/api/v1/stops').query({ zoneId: area.id }).expect(200)).body as Stop[])
+          .map((s) => s.id)
+          .sort(),
+      ).toEqual([a.id, b.id].sort());
 
       // Three approved lines; their owners drive (owners have every permission).
       const line = async (type: 'taxi_line' | 'moto_line', plate: string) => {
