@@ -6,6 +6,7 @@ import {
   CURRENCIES,
   DAY_OF_WEEK_LABELS,
   ROUTE_STATUS_LABELS,
+  TRANSPORT_MODE_LABELS,
   SERVICE_CLASS_LABELS,
   MAX_HEADWAY_MINUTES,
   MIN_HEADWAY_MINUTES,
@@ -91,6 +92,7 @@ async function RouteDetail({
           <Badge variant={statusVariant(route.status === 'draft' ? 'pending' : route.status)}>
             {ROUTE_STATUS_LABELS[route.status]}
           </Badge>
+          <Badge variant="outline">{TRANSPORT_MODE_LABELS[route.mode]}</Badge>
         </div>
         <p className="text-sm text-muted-foreground">
           {origin.stop.city} → {destination.stop.city} · {route.stops.length} paradas ·{' '}
@@ -423,7 +425,9 @@ function Schedules({
           ))}
         </ul>
       )}
-      {canManage ? <AddSchedule hidden={hidden} layouts={layouts} /> : null}
+      {canManage ? (
+        <AddSchedule hidden={hidden} layouts={layouts} motorcycle={route.mode === 'motorcycle'} />
+      ) : null}
     </Card>
   );
 }
@@ -444,9 +448,12 @@ function LayoutOptions({ layouts }: { layouts: SeatLayout[] }) {
 function AddSchedule({
   hidden,
   layouts,
+  motorcycle,
 }: {
   hidden: Record<string, string>;
   layouts: SeatLayout[];
+  /** One passenger per motorcycle: no class, seat map or seat count to choose. */
+  motorcycle: boolean;
 }) {
   return (
     <details className="rounded-md border p-3">
@@ -456,39 +463,50 @@ function AddSchedule({
           <Field label="Hora de salida" htmlFor="departureTime">
             <Input id="departureTime" name="departureTime" type="time" required />
           </Field>
-          <Field label="Servicio" htmlFor="serviceClass">
-            <Select id="serviceClass" name="serviceClass" defaultValue="standard">
-              {SERVICE_CLASSES.map((c) => (
-                <option key={c} value={c}>
-                  {SERVICE_CLASS_LABELS[c]}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Mapa de puestos" htmlFor="seatLayoutId">
-            <Select id="seatLayoutId" name="seatLayoutId" defaultValue={layouts[0]?.id ?? ''}>
-              <LayoutOptions layouts={layouts} />
-            </Select>
-          </Field>
-          <Field label="Puestos" htmlFor="seats" hint="Solo si no eliges un mapa.">
-            <Input id="seats" name="seats" type="number" min={1} max={100} />
-          </Field>
-          <Field
-            label="Frecuencia en minutos (opcional)"
-            htmlFor="headwayMinutes"
-            hint="Urbano o suburbano: sale una unidad cada N minutos y se vende boleto abierto, sin puesto ni mapa."
-          >
-            <Input
-              id="headwayMinutes"
-              name="headwayMinutes"
-              type="number"
-              min={MIN_HEADWAY_MINUTES}
-              max={MAX_HEADWAY_MINUTES}
-            />
-          </Field>
-          <Field label="Última salida" htmlFor="lastDepartureTime" hint="Solo con frecuencia.">
-            <Input id="lastDepartureTime" name="lastDepartureTime" type="time" />
-          </Field>
+          {motorcycle ? (
+            <>
+              <input type="hidden" name="serviceClass" value="standard" />
+              <p className="self-end text-sm text-muted-foreground">
+                Cada salida es una moto con un pasajero.
+              </p>
+            </>
+          ) : (
+            <>
+              <Field label="Servicio" htmlFor="serviceClass">
+                <Select id="serviceClass" name="serviceClass" defaultValue="standard">
+                  {SERVICE_CLASSES.map((c) => (
+                    <option key={c} value={c}>
+                      {SERVICE_CLASS_LABELS[c]}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Mapa de puestos" htmlFor="seatLayoutId">
+                <Select id="seatLayoutId" name="seatLayoutId" defaultValue={layouts[0]?.id ?? ''}>
+                  <LayoutOptions layouts={layouts} />
+                </Select>
+              </Field>
+              <Field label="Puestos" htmlFor="seats" hint="Solo si no eliges un mapa.">
+                <Input id="seats" name="seats" type="number" min={1} max={100} />
+              </Field>
+              <Field
+                label="Frecuencia en minutos (opcional)"
+                htmlFor="headwayMinutes"
+                hint="Urbano o suburbano: sale una unidad cada N minutos y se vende boleto abierto, sin puesto ni mapa."
+              >
+                <Input
+                  id="headwayMinutes"
+                  name="headwayMinutes"
+                  type="number"
+                  min={MIN_HEADWAY_MINUTES}
+                  max={MAX_HEADWAY_MINUTES}
+                />
+              </Field>
+              <Field label="Última salida" htmlFor="lastDepartureTime" hint="Solo con frecuencia.">
+                <Input id="lastDepartureTime" name="lastDepartureTime" type="time" />
+              </Field>
+            </>
+          )}
           <Field label="Desde" htmlFor="validFrom">
             <Input id="validFrom" name="validFrom" type="date" required />
           </Field>

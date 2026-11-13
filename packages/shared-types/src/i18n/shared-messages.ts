@@ -1,7 +1,7 @@
 // Only type imports from ../api: those modules derive their Spanish constants from this file.
 import type { BookingStatus } from '../api/bookings.js';
 import type { ApiErrorCode, ApiErrorReason } from '../api/errors.js';
-import type { ServiceClass, StopKind } from '../api/network.js';
+import type { ServiceClass, StopKind, TransportMode } from '../api/network.js';
 import type { OrganizationType } from '../api/organizations.js';
 import type { PaymentMethod, PaymentStatus } from '../api/payments.js';
 import type { TaxiDirection, TaxiRideStatus } from '../api/taxi.js';
@@ -14,6 +14,7 @@ import type { Locale } from './locales.js';
 export interface SharedMessages {
   stopKind: Record<StopKind, string>;
   serviceClass: Record<ServiceClass, string>;
+  transportMode: Record<TransportMode, string>;
   organizationType: Record<OrganizationType, string>;
   bookingStatus: Record<BookingStatus, string>;
   paymentMethod: Record<PaymentMethod, string>;
@@ -33,9 +34,11 @@ export interface SharedMessages {
 const es: SharedMessages = {
   stopKind: { terminal: 'Terminal', stop: 'Parada' },
   serviceClass: { standard: 'Convencional', executive: 'Ejecutivo', sleeper: 'Buscama' },
+  transportMode: { bus: 'Bus', car: 'Taxi', motorcycle: 'Moto' },
   organizationType: {
     bus_company: 'Empresa de autobuses',
     taxi_line: 'Línea de taxis',
+    moto_line: 'Línea de mototaxis',
     terminal: 'Terminal',
   },
   bookingStatus: {
@@ -104,6 +107,9 @@ const es: SharedMessages = {
     ORGANIZATION_WRONG_STATUS: 'La organización no está en un estado que permita esa acción.',
     ORGANIZATION_NOT_APPROVED: 'La organización debe estar aprobada para publicar rutas.',
     ORGANIZATION_TYPE_NOT_ALLOWED: 'Este tipo de organización no puede hacer eso.',
+    TRANSPORT_MODE_NOT_ALLOWED: 'Tu organización no opera ese tipo de vehículo.',
+    SERVICE_NOT_ALLOWED: 'Las líneas de mototaxis solo publican rutas urbanas o suburbanas.',
+    MOTORCYCLE_ONE_PASSENGER: 'Una moto lleva un solo pasajero y no usa mapa de puestos.',
     APPLICATION_OPEN: 'Ya tienes una solicitud abierta.',
     APPLICATION_UNDER_REVIEW: 'Tu solicitud está en revisión y no se puede cambiar ahora.',
     APPLICATION_WRONG_STATUS: 'La solicitud no está esperando revisión.',
@@ -137,6 +143,7 @@ const es: SharedMessages = {
     VEHICLE_PLATE_TAKEN: 'Ya tienes un vehículo con esa placa.',
     VEHICLE_INACTIVE: 'Ese vehículo está inactivo.',
     VEHICLE_LAYOUT_MISMATCH: 'Ese vehículo tiene otro mapa de puestos que esta salida.',
+    VEHICLE_MODE_MISMATCH: 'Ese vehículo es de otro tipo (bus, taxi o moto) que esta ruta.',
     VEHICLE_BUSY: 'Ese vehículo ya está en otro viaje a esa hora.',
     DRIVER_BUSY: 'Ese conductor ya está en otro viaje a esa hora.',
     TRIP_CANCELLED: 'Esta salida está cancelada.',
@@ -176,9 +183,11 @@ const es: SharedMessages = {
 const en: SharedMessages = {
   stopKind: { terminal: 'Terminal', stop: 'Stop' },
   serviceClass: { standard: 'Standard', executive: 'Executive', sleeper: 'Sleeper' },
+  transportMode: { bus: 'Bus', car: 'Taxi', motorcycle: 'Motorcycle' },
   organizationType: {
     bus_company: 'Bus company',
     taxi_line: 'Taxi company',
+    moto_line: 'Motorcycle taxi company',
     terminal: 'Terminal',
   },
   bookingStatus: {
@@ -247,6 +256,9 @@ const en: SharedMessages = {
     ORGANIZATION_WRONG_STATUS: 'The organization is not in a state that allows that.',
     ORGANIZATION_NOT_APPROVED: 'The organization must be approved to publish routes.',
     ORGANIZATION_TYPE_NOT_ALLOWED: 'This kind of organization cannot do that.',
+    TRANSPORT_MODE_NOT_ALLOWED: 'Your organization does not run that kind of vehicle.',
+    SERVICE_NOT_ALLOWED: 'Motorcycle taxi lines only publish urban or suburban routes.',
+    MOTORCYCLE_ONE_PASSENGER: 'A motorcycle carries a single passenger and has no seat map.',
     APPLICATION_OPEN: 'You already have an open application.',
     APPLICATION_UNDER_REVIEW: 'Your application is under review and cannot be changed now.',
     APPLICATION_WRONG_STATUS: 'The application is not waiting for review.',
@@ -279,6 +291,8 @@ const en: SharedMessages = {
     VEHICLE_PLATE_TAKEN: 'You already have a vehicle with that plate.',
     VEHICLE_INACTIVE: 'That vehicle is inactive.',
     VEHICLE_LAYOUT_MISMATCH: 'That vehicle has a different seat map than this departure.',
+    VEHICLE_MODE_MISMATCH:
+      'That vehicle is of a different kind (bus, taxi or motorcycle) than this route.',
     VEHICLE_BUSY: 'That vehicle is already on another trip at that time.',
     DRIVER_BUSY: 'That driver is already on another trip at that time.',
     TRIP_CANCELLED: 'This departure is cancelled.',
@@ -319,9 +333,11 @@ const en: SharedMessages = {
 const ptBR: SharedMessages = {
   stopKind: { terminal: 'Terminal', stop: 'Parada' },
   serviceClass: { standard: 'Convencional', executive: 'Executivo', sleeper: 'Leito' },
+  transportMode: { bus: 'Ônibus', car: 'Táxi', motorcycle: 'Moto' },
   organizationType: {
     bus_company: 'Empresa de ônibus',
     taxi_line: 'Cooperativa de táxi',
+    moto_line: 'Cooperativa de mototáxi',
     terminal: 'Terminal',
   },
   bookingStatus: {
@@ -390,6 +406,9 @@ const ptBR: SharedMessages = {
     ORGANIZATION_WRONG_STATUS: 'A organização não está em um estado que permita isso.',
     ORGANIZATION_NOT_APPROVED: 'A organização deve estar aprovada para publicar rotas.',
     ORGANIZATION_TYPE_NOT_ALLOWED: 'Este tipo de organização não pode fazer isso.',
+    TRANSPORT_MODE_NOT_ALLOWED: 'Sua organização não opera esse tipo de veículo.',
+    SERVICE_NOT_ALLOWED: 'Linhas de mototáxi só publicam rotas urbanas ou suburbanas.',
+    MOTORCYCLE_ONE_PASSENGER: 'Uma moto leva um único passageiro e não usa mapa de assentos.',
     APPLICATION_OPEN: 'Você já tem uma solicitação aberta.',
     APPLICATION_UNDER_REVIEW: 'Sua solicitação está em análise e não pode ser alterada agora.',
     APPLICATION_WRONG_STATUS: 'A solicitação não está aguardando análise.',
@@ -423,6 +442,7 @@ const ptBR: SharedMessages = {
     VEHICLE_PLATE_TAKEN: 'Você já tem um veículo com essa placa.',
     VEHICLE_INACTIVE: 'Esse veículo está inativo.',
     VEHICLE_LAYOUT_MISMATCH: 'Esse veículo tem outro mapa de assentos que esta partida.',
+    VEHICLE_MODE_MISMATCH: 'Esse veículo é de outro tipo (ônibus, táxi ou moto) que esta rota.',
     VEHICLE_BUSY: 'Esse veículo já está em outra viagem nesse horário.',
     DRIVER_BUSY: 'Esse motorista já está em outra viagem nesse horário.',
     TRIP_CANCELLED: 'Esta partida foi cancelada.',

@@ -55,6 +55,8 @@ const es = {
     frequency: (minutes: number, first: string, last: string) =>
       `Cada ${minutes} min, de ${first} a ${last} · boleto abierto`,
     buyTickets: 'Comprar boletos',
+    modes: 'Tipo de vehículo',
+    allModes: 'Todos',
   },
   trip: {
     departed: 'Esta salida ya partió.',
@@ -295,6 +297,8 @@ const en: Messages = {
     chooseSeats: 'Choose seats',
     frequency: (minutes, first, last) => `Every ${minutes} min, ${first} to ${last} · open ticket`,
     buyTickets: 'Buy tickets',
+    modes: 'Kind of vehicle',
+    allModes: 'All',
   },
   trip: {
     departed: 'This departure has already left.',
@@ -529,6 +533,8 @@ const ptBR: Messages = {
     frequency: (minutes, first, last) =>
       `A cada ${minutes} min, das ${first} às ${last} · bilhete aberto`,
     buyTickets: 'Comprar bilhetes',
+    modes: 'Tipo de veículo',
+    allModes: 'Todos',
   },
   trip: {
     departed: 'Esta partida já saiu.',

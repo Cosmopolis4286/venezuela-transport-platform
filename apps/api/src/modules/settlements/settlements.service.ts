@@ -14,6 +14,7 @@ import {
   type RefundTier,
   type SetOrganizationPolicyRequest,
   type SettlementPolicy,
+  ROUTE_OPERATOR_TYPES,
   type RefundDuePayment,
   type SettlementBalance,
   type SettlementEntry,
@@ -315,7 +316,10 @@ export class SettlementsService {
       .from(organizations)
       .where(
         or(
-          and(eq(organizations.status, 'active'), eq(organizations.type, 'bus_company')),
+          and(
+            eq(organizations.status, 'active'),
+            inArray(organizations.type, [...ROUTE_OPERATOR_TYPES]),
+          ),
           inArray(organizations.id, withMoney),
         ),
       );

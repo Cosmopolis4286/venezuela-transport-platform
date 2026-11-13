@@ -138,14 +138,18 @@ describe.runIf(expectDatabase)('Taxi dispatch (e2e)', () => {
             .expect(204);
           return member;
         };
-        const vehicle = async (plate: string) =>
-          (
+        const vehicle = async (plate: string) => {
+          const created = (
             await http()
               .post(`${url}/vehicles`)
               .set('Authorization', owner.auth)
               .send({ plate })
               .expect(201)
           ).body as FleetVehicle;
+          // Taxi lines register cars (ADR-028).
+          expect(created.mode).toBe(type === 'taxi_line' ? 'car' : 'bus');
+          return created;
+        };
         return { id: organization.id, url, owner, addMember, vehicle };
       };
 

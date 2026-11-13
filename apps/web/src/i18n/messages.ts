@@ -63,6 +63,8 @@ const es = {
     dayOffset: (days: number) => ` (+${days} d)`,
     sameStop: 'Elige un destino distinto del origen.',
     dateRange: 'Elige una fecha entre hoy y los próximos 180 días.',
+    modes: 'Tipo de vehículo',
+    allModes: 'Todos',
   },
 };
 
@@ -130,6 +132,8 @@ const en: Messages = {
     dayOffset: (days) => ` (+${days} d)`,
     sameStop: 'Choose a destination different from the origin.',
     dateRange: 'Choose a date between today and the next 180 days.',
+    modes: 'Kind of vehicle',
+    allModes: 'All',
   },
 };
 
@@ -196,6 +200,8 @@ const ptBR: Messages = {
     dayOffset: (days) => ` (+${days} d)`,
     sameStop: 'Escolha um destino diferente da origem.',
     dateRange: 'Escolha uma data entre hoje e os próximos 180 dias.',
+    modes: 'Tipo de veículo',
+    allModes: 'Todos',
   },
 };
 

@@ -16,7 +16,8 @@ Los roles se otorgan desde el servidor, nunca desde la web:
   **Rechazar** o **Suspender** exige una nota que el dueño verá.
 - **Solicitudes KYC**: abre cada solicitud, descarga y revisa los documentos (cada descarga queda
   registrada), marca cada documento como aceptado o rechazado con el motivo y decide: aprobar,
-  pedir cambios o rechazar.
+  pedir cambios o rechazar. Para conductores de una **línea de mototaxis**, verifica que la
+  licencia sea del grado que permite conducir motos.
 
 ## Buscar reserva (`/admin/bookings`)
 

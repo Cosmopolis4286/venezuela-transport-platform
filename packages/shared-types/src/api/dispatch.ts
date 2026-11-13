@@ -1,6 +1,6 @@
 import type { BookingStatus, TripSummary } from './bookings.js';
 import type { FleetVehicle, VehicleDocumentStatus } from './fleet.js';
-import type { ServiceClass, StopSummary } from './network.js';
+import type { ServiceClass, StopSummary, TransportMode } from './network.js';
 import type { Organization } from './organizations.js';
 
 /** The vehicle and driver of a trip, as shown on trip lists. */
@@ -21,6 +21,7 @@ export interface DispatchBoard {
   departures: DispatchDeparture[];
   /** Active vehicles that can be assigned, with a warning when their documents need attention. */
   vehicles: (TripVehicle & {
+    mode: TransportMode;
     seatLayoutId: string | null;
     documentAlert: VehicleDocumentStatus | null;
   })[];
@@ -34,6 +35,8 @@ export interface DispatchDeparture {
   /** Null until the first booking or assignment creates the trip. */
   tripId: string | null;
   route: { id: string; name: string };
+  /** Only vehicles of the route's mode fit. */
+  mode: TransportMode;
   /** Leaves the route's origin / reaches its last stop (local ISO timestamps). */
   departsAt: string;
   arrivesAt: string;

@@ -3,6 +3,7 @@ import {
   formatDuration,
   frequencyRuns,
   isTimeOfDay,
+  modesFor,
   runsRoutes,
   withServiceFee,
 } from './network.js';
@@ -60,5 +61,13 @@ describe('support contact', () => {
     expect(whatsappLink('584121234567', 'Hola, reserva VTP-1')).toBe(
       'https://wa.me/584121234567?text=Hola%2C%20reserva%20VTP-1',
     );
+  });
+});
+
+describe('modesFor', () => {
+  it('gives each route operator at least one mode and terminals none', () => {
+    expect(modesFor('bus_company')).toEqual(['bus']);
+    expect(modesFor('taxi_line')).toEqual(['car']);
+    expect(modesFor('terminal')).toEqual([]);
   });
 });

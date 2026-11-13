@@ -8,6 +8,8 @@ import {
   todayInVenezuela,
   type Currency,
   type OccupancyReport,
+  ORGANIZATION_TYPES,
+  type OrganizationType,
   type PlatformMetrics,
   type SalesFigures,
   type SalesReport,
@@ -267,11 +269,9 @@ export class ReportsService {
       refundsSent,
       refundsPending: pending?.n ?? 0,
       newUsers: newUsers?.n ?? 0,
-      activeOrganizations: {
-        bus_company: activeOf('bus_company'),
-        taxi_line: activeOf('taxi_line'),
-        terminal: activeOf('terminal'),
-      },
+      activeOrganizations: Object.fromEntries(
+        ORGANIZATION_TYPES.map((type) => [type, activeOf(type)]),
+      ) as Record<OrganizationType, number>,
       taxiRides: taxi ?? { requested: 0, completed: 0, cancelledOrExpired: 0 },
     };
   }
