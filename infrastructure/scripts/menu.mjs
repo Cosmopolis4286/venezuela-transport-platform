@@ -80,6 +80,63 @@ function nodeOk() {
   return false;
 }
 
+/**
+ * Re-enters this script with the repository's supported Node major when a version manager
+ * is available. A child process cannot change its parent PowerShell/terminal environment,
+ * but fnm exec (or nvm use on Windows) guarantees this menu and all its child commands use it.
+ */
+function ensureNodeRuntime() {
+  const [major, minor] = process.versions.node.split('.').map(Number);
+  if (major === 24 && minor >= 15) return true;
+  if (process.env.VTP_NODE_BOOTSTRAPPED === '1') {
+    fail(`Node ${process.versions.node} sigue fuera del rango requerido después del cambio automático.`);
+    return false;
+  }
+
+  const script = fileURLToPath(import.meta.url);
+  const forwardedArgs = process.argv.slice(2);
+  const env = { ...process.env, VTP_NODE_BOOTSTRAPPED: '1' };
+  const runManager = (manager, args) =>
+    spawnSync(manager, args, { cwd: ROOT, stdio: 'inherit', env, windowsHide: true });
+
+  // fnm keeps the selected version scoped to the re-launched process tree.
+  if (spawnSync('fnm', ['--version'], { encoding: 'utf8', windowsHide: true }).status === 0) {
+    step('Node incompatible: preparando automáticamente Node 24 con fnm');
+    const installed = runManager('fnm', ['install', '24']);
+    if (installed.error || installed.status !== 0) {
+      fail('No se pudo instalar Node 24 con fnm. Comprueba tu conexión y vuelve a intentarlo.');
+      return false;
+    }
+    const relaunched = runManager('fnm', [
+      'exec', '--using', '24', 'node', script, ...forwardedArgs,
+    ]);
+    if (relaunched.error) fail(`No se pudo reiniciar el menú con Node 24: ${relaunched.error.message}`);
+    process.exit(relaunched.status ?? 1);
+  }
+
+  // nvm-windows changes its Node symlink globally; the re-launched process picks it up.
+  if (WINDOWS && spawnSync('nvm', ['version'], { encoding: 'utf8', windowsHide: true }).status === 0) {
+    step('Node incompatible: preparando automáticamente Node 24 con nvm-windows');
+    const installed = runManager('nvm', ['install', '24.15.0']);
+    if (installed.error || installed.status !== 0) {
+      fail('No se pudo instalar Node 24 con nvm-windows. Ejecuta PowerShell como administrador si lo solicita.');
+      return false;
+    }
+    const selected = runManager('nvm', ['use', '24.15.0']);
+    if (selected.error || selected.status !== 0) {
+      fail('No se pudo activar Node 24.15.0 con nvm-windows. Comprueba los permisos de NVM_SYMLINK.');
+      return false;
+    }
+    const relaunched = runManager('node', [script, ...forwardedArgs]);
+    if (relaunched.error) fail(`No se pudo reiniciar el menú con Node 24: ${relaunched.error.message}`);
+    process.exit(relaunched.status ?? 1);
+  }
+
+  fail(`Node ${process.versions.node}: el proyecto requiere Node 24.15 o más nuevo (y menor que 25).`);
+  console.log(dim('  Para automatizar el cambio, instala fnm (recomendado) o nvm-windows y vuelve a ejecutar el menú.'));
+  return false;
+}
+
 function pnpmOk() {
   let version = output('pnpm', ['--version']);
   if (!version) {
@@ -476,6 +533,8 @@ async function menu() {
   }
   releaseInput();
 }
+
+if (!ensureNodeRuntime()) process.exit(1);
 
 const [command, extra] = process.argv.slice(2);
 if (command) {
