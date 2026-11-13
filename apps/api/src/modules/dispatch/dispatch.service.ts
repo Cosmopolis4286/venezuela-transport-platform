@@ -370,7 +370,10 @@ export class DispatchService {
       .orderBy(asc(users.firstName), asc(users.lastName));
   }
 
-  /** Whether `column` = `id` on another scheduled trip overlapping `window`. */
+  /**
+   * Whether `column` = `id` on another scheduled trip overlapping `window`. A trip the driver
+   * marked as arrived frees the vehicle and the driver from its real arrival, not the planned one.
+   */
   private async busy(
     tx: Transaction,
     column: typeof trips.vehicleId | typeof trips.driverUserId,
@@ -379,7 +382,7 @@ export class DispatchService {
     window: { start: Date; end: Date },
   ): Promise<boolean> {
     const others = await tx
-      .select({ departsAt: trips.departsAt, routeId: trips.routeId })
+      .select({ departsAt: trips.departsAt, routeId: trips.routeId, arrivedAt: trips.arrivedAt })
       .from(trips)
       .where(
         and(
@@ -393,7 +396,9 @@ export class DispatchService {
     if (!others.length) return false;
     const ends = await this.routeEnds(others.map((o) => o.routeId));
     return others.some(
-      (o) => +o.departsAt + (ends.get(o.routeId)?.duration ?? 0) * MINUTE_MS > +window.start,
+      (o) =>
+        +(o.arrivedAt ?? +o.departsAt + (ends.get(o.routeId)?.duration ?? 0) * MINUTE_MS) >
+        +window.start,
     );
   }
 

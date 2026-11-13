@@ -67,6 +67,11 @@ pnpm dev                        # web (:3000) + API (:4000)
 curl http://localhost:4000/api/v1/health
 ```
 
+**Con menú** (lo más fácil): `node infrastructure/scripts/menu.mjs` (o `pnpm menu`) revisa lo
+necesario (Node 24, pnpm, Docker), prepara todo, arranca la API, la web y las apps, carga datos de
+ejemplo del suburbano y repara lo más común. Cada opción también corre sola, por ejemplo
+`pnpm menu setup` o `pnpm menu seed`.
+
 Instrucciones completas por sistema operativo:
 [docs/development/local-setup.md](docs/development/local-setup.md). Para correr la API y la web en
 Docker: [docs/development/docker.md](docs/development/docker.md).
@@ -79,6 +84,8 @@ Todos los comandos se ejecutan desde la raíz del repositorio.
 | -------------------------------------------------------- | --------------------------------------------------------- |
 | Instalar dependencias (desde el lockfile)                | `pnpm install` (CI: `pnpm install --frozen-lockfile`)     |
 | Crear los archivos de entorno locales                    | `pnpm env:init`                                           |
+| Menú para instalar, arrancar, cargar ejemplos y reparar  | `pnpm menu` (o `node infrastructure/scripts/menu.mjs`)    |
+| Datos de ejemplo del suburbano (API corriendo)           | `pnpm seed:suburban`                                      |
 | Correr la web + la API                                   | `pnpm dev`                                                |
 | Correr todo (web, API, los dos Metro)                    | `pnpm dev:all`                                            |
 | Correr solo la web                                       | `pnpm dev:web`                                            |

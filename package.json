@@ -27,6 +27,8 @@
     "format:check": "prettier --check .",
     "clean": "turbo run clean && rm -rf .turbo node_modules",
     "env:init": "node infrastructure/scripts/init-env.mjs",
+    "menu": "node infrastructure/scripts/menu.mjs",
+    "seed:suburban": "node infrastructure/scripts/seed-suburban.mjs",
     "infra:up": "docker compose up -d --wait postgres",
     "infra:up:redis": "docker compose --profile redis up -d --wait",
     "infra:up:mail": "docker compose --profile mail up -d mailpit",

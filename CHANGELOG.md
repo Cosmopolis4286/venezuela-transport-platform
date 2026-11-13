@@ -26,6 +26,10 @@ pull request.
 
 ### Agregado
 
+- **Menú local** (`pnpm menu` o `node infrastructure/scripts/menu.mjs`): revisa Node, pnpm y
+  Docker, prepara todo, arranca los servidores, carga **datos de ejemplo del suburbano**
+  (`pnpm seed:suburban`), da el rol de administrador, verifica y repara; con reintentos y mensajes
+  que dicen cómo arreglar cada problema.
 - **Reembolsos suburbanos**: las rutas urbanas o suburbanas de todas las empresas devuelven 100 %
   con 24 h o más, 75 % con 2 h, 50 % con 30 min y nada en los últimos 30 minutos (sobre la tarifa;
   el cargo por servicio no se devuelve). El administrador los edita en Liquidaciones; las rutas
@@ -103,6 +107,10 @@ pull request.
 
 ### Corregido
 
+- Despacho: un viaje que el conductor marcó como llegado seguía ocupando el vehículo y al
+  conductor hasta la llegada planificada; ahora quedan libres desde la llegada real.
+- La API no arrancaba con el `apps/api/.env` recién creado por `pnpm env:init` (`MAIL_DELIVERY=`,
+  `PUSH_DELIVERY=` y `PAYMENT_PROVIDER=` vacíos): un valor vacío ahora vale como no definido.
 - Los formularios de inicio de sesión y de registro conservan lo escrito tras un error.
 - Caddy permitía solo 1 MB por petición a la API: los documentos KYC no se podrían subir.
 - `nodemailer` actualizado a 10.3.1 (avisos de seguridad).

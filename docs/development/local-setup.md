@@ -3,6 +3,29 @@
 Probado en Linux (Ubuntu 24.04, Node 24.22.0, pnpm 10.34.7, Docker 29.8 / Compose 5.6). Los pasos
 de macOS y Windows siguen los instaladores oficiales; no se corren en la CI.
 
+## El camino corto: el menú
+
+Con Node 24 y Docker instalados (paso 1), desde la raíz del repositorio:
+
+```bash
+node infrastructure/scripts/menu.mjs
+```
+
+| Opción                                | Qué hace                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Preparar todo                         | Revisa Node, pnpm (lo activa con corepack) y Docker (espera a que arranque); instala dependencias, crea los `.env`, arranca PostgreSQL y aplica las migraciones, con reintentos                                                                                                                                                                           |
+| Arrancar API y web, apps, todo        | Asegura la base de datos, avisa si un puerto está ocupado y arranca los servidores; **Ctrl+C** vuelve al menú                                                                                                                                                                                                                                             |
+| Cargar datos de ejemplo del suburbano | Zona activa Casacoima – San Félix – Puerto Ordaz, paradas, rutas de bus cada 15 min, líneas de mototaxis y taxis con tarifas por tramo y dos paquetes de viajes, más cuentas de prueba (contraseña `vtp-demo-2026`). Si la API está apagada la arranca solo para esto. Se puede repetir sin duplicar nada. **Datos inventados: solo para tu computadora** |
+| Hacer administradora una cuenta       | `pnpm platform:grant --email … --role admin`                                                                                                                                                                                                                                                                                                              |
+| Ver el estado                         | Node, pnpm, Docker, base de datos y qué servidores están arriba                                                                                                                                                                                                                                                                                           |
+| Verificar el código, pruebas e2e      | `pnpm check` y las e2e de la API contra la base local                                                                                                                                                                                                                                                                                                     |
+| Reparar                               | Borra cachés (`.turbo`, `.next`, `.expo`, `dist`), reinstala y recompila los tipos compartidos                                                                                                                                                                                                                                                            |
+| Borrar los datos locales              | Pide confirmación, borra la base de datos local y la vuelve a crear vacía                                                                                                                                                                                                                                                                                 |
+
+Cada opción corre también sin menú: `pnpm menu setup`, `pnpm menu dev`, `pnpm menu seed`,
+`pnpm menu admin correo@ejemplo.com`, `pnpm menu status`, etc. El resto de esta guía explica lo
+mismo paso a paso.
+
 ## 1. Instalar las herramientas
 
 ### macOS

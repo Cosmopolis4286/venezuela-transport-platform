@@ -5,6 +5,13 @@ const booleanString = z
   .enum(['true', 'false', '1', '0', ''])
   .transform((value) => value === 'true' || value === '1');
 
+/**
+ * An optional choice where an empty value (`MAIL_DELIVERY=` as in `.env.example`) means "not
+ * set", so a fresh `pnpm env:init` boots with the defaults instead of failing validation.
+ */
+const optionalChoice = <T extends readonly [string, ...string[]]>(values: T) =>
+  z.preprocess((value) => (value === '' ? undefined : value), z.enum(values).optional());
+
 const optionalBoolean = (defaultValue: boolean) =>
   booleanString.optional().transform((value) => value ?? defaultValue);
 
@@ -71,7 +78,7 @@ export const envSchema = z
      * (Mailpit in development), `disabled` sends nothing. Default: console outside production,
      * disabled in production.
      */
-    MAIL_DELIVERY: z.enum(['console', 'smtp', 'disabled']).optional(),
+    MAIL_DELIVERY: optionalChoice(['console', 'smtp', 'disabled'] as const),
     SMTP_HOST: z.string().default(''),
     SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
     /** true for implicit TLS (port 465); false upgrades with STARTTLS when the server offers it. */
@@ -90,7 +97,7 @@ export const envSchema = z
      * How push notifications are sent. `console` logs them (development), `expo` uses the Expo
      * push service, `disabled` sends nothing. Default: console outside production, else disabled.
      */
-    PUSH_DELIVERY: z.enum(['console', 'expo', 'disabled']).optional(),
+    PUSH_DELIVERY: optionalChoice(['console', 'expo', 'disabled'] as const),
     /** Optional. Expo access token when "enhanced push security" is on. Secret. */
     EXPO_ACCESS_TOKEN: z.string().default(''),
     /** Hours before boarding when passengers get a trip reminder (0 turns reminders off). */
@@ -114,7 +121,7 @@ export const envSchema = z
      * receiving accounts and staff verify each reported payment (ADR-027); `disabled` turns online
      * payment off.
      */
-    PAYMENT_PROVIDER: z.enum(['simulated', 'manual', 'disabled']).optional(),
+    PAYMENT_PROVIDER: optionalChoice(['simulated', 'manual', 'disabled'] as const),
     /**
      * Who numbers the platform's service-fee invoices (ADR-031). `draft`: staff issue each one in
      * the SENIAT portal and type its numbers. `digital_printer`: an authorized digital printer's
