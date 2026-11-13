@@ -204,7 +204,7 @@ async function serve(label, script, ports) {
   step(`${label} (Ctrl+C para detener y volver al menú)`);
   // The server owns the terminal meanwhile (and Ctrl+C reaches it): release the menu's input.
   releaseInput();
-  await new Promise((resolve) => {
+  await new Promise((resolve, reject) => {
     const child = spawn('pnpm', [script], { cwd: ROOT, stdio: 'inherit', shell: WINDOWS });
     const stop = () => child.kill('SIGINT');
     process.once('SIGINT', stop);
@@ -215,13 +215,16 @@ async function serve(label, script, ports) {
     child.once('close', (code, signal) => {
       process.removeListener('SIGINT', stop);
       if (spawnError) {
-        throw new StepError(`No se pudo iniciar ${script}: ${spawnError.message}`);
+        reject(new StepError(`No se pudo iniciar ${script}: ${spawnError.message}`));
+        return;
       }
       if (signal && signal !== 'SIGINT') {
-        throw new StepError(`${script} terminó por la señal ${signal}.`);
+        reject(new StepError(`${script} terminó por la señal ${signal}.`));
+        return;
       }
       if (code !== 0) {
-        throw new StepError(`${script} terminó con código ${code ?? 'desconocido'}.`);
+        reject(new StepError(`${script} terminó con código ${code ?? 'desconocido'}.`));
+        return;
       }
       resolve();
     });
