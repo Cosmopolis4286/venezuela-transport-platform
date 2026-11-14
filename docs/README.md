@@ -9,6 +9,7 @@ Por dónde empezar según lo que necesites.
 - [Guía para conductores e inspectores](guides/conductores.md): app de transportistas.
 - [Guion del piloto suburbano](guides/piloto-suburbano.md): la prueba con gente real antes de abrir.
 - [Atención por WhatsApp](guides/whatsapp-soporte.md): mensajes automáticos, respuestas rápidas y qué hacer en cada caso.
+- [WhatsApp automático](guides/whatsapp-automatico.md): el bot del menú, taxis y motos por chat y avisos; cómo conectarlo con Meta.
 - [Manual de administración](guides/administracion.md): revisiones, políticas, pagos a empresas,
   reembolsos.
 - [Glosario](glossary.md).

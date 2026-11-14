@@ -15,6 +15,7 @@ import { otpChallenges, sessions, users } from '../identity/identity.schema.js';
 import { notifications } from '../notifications/notifications.schema.js';
 import { applicationDocuments, applications } from '../onboarding/onboarding.schema.js';
 import { taxiRides } from '../taxi/taxi.schema.js';
+import { whatsappChats, whatsappMessages } from '../whatsapp/whatsapp.schema.js';
 
 const SWEEP_EVERY_MS = 24 * 3_600_000;
 const DAY_MS = 24 * 3_600_000;
@@ -34,6 +35,10 @@ export const RETENTION = {
   kycYears: 5,
   /** Guests that never bought nor asked for a taxi (ADR-034) are removed after a month. */
   emptyGuestsDays: 30,
+  /** WhatsApp messages (ADR-038): kept briefly for support. */
+  whatsappMessagesDays: 90,
+  /** A WhatsApp chat (number, name, menu state) with no message for this long is deleted. */
+  whatsappChatsDays: 365,
 } as const;
 
 export interface RetentionResult {
@@ -46,6 +51,8 @@ export interface RetentionResult {
   applications: number;
   files: number;
   guests: number;
+  whatsappMessages: number;
+  whatsappChats: number;
 }
 
 /**
@@ -158,6 +165,15 @@ export class RetentionService implements OnApplicationBootstrap, OnApplicationSh
       )
       .returning({ id: users.id });
 
+    const chatMessages = await db
+      .delete(whatsappMessages)
+      .where(lt(whatsappMessages.createdAt, daysAgo(RETENTION.whatsappMessagesDays)))
+      .returning({ id: whatsappMessages.id });
+    const chats = await db
+      .delete(whatsappChats)
+      .where(lt(whatsappChats.lastInboundAt, daysAgo(RETENTION.whatsappChatsDays)))
+      .returning({ id: whatsappChats.id });
+
     return {
       otpChallenges: otp.length,
       notifications: sent.length,
@@ -168,6 +184,8 @@ export class RetentionService implements OnApplicationBootstrap, OnApplicationSh
       applications: erased,
       files,
       guests: guests.length,
+      whatsappMessages: chatMessages.length,
+      whatsappChats: chats.length,
     };
   }
 

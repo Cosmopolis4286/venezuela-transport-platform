@@ -26,6 +26,12 @@ pull request.
 
 ### Agregado
 
+- **WhatsApp automático** (ADR-038, apagado por defecto): con la API en la nube de Meta el número
+  responde solo al menú, pide taxis y motos por tramo paso a paso con el precio antes de pedir,
+  avisa cuando un conductor toma el viaje (placa y precio), pide la calificación al terminar y
+  pasa el chat a una persona para pagos y paquetes. Solo escribe dentro de las 24 horas
+  siguientes al último mensaje de la persona y sin plantillas, para no tener costo. Webhook con
+  firma de Meta; guía de configuración en `docs/guides/whatsapp-automatico.md`.
 - **Taxis y motos por WhatsApp** (ADR-037): el personal pide el viaje por el cliente en
   **Administración → Taxis por WhatsApp** (por tramo con la tarifa fija de la línea, o desde o hacia
   un terminal), le manda con un toque el mensaje de cada paso y un enlace (`/taxi/<token>`, sin
