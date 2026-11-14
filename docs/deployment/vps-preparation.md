@@ -40,6 +40,9 @@ es una alternativa válida si incluye copias de seguridad y PostGIS.
 - [ ] Reenvía `X-Forwarded-For`/`X-Forwarded-Proto` y define `API_TRUST_PROXY_HOPS=1` para que el
       límite de solicitudes vea las IPs reales de los clientes (si no, todas las solicitudes
       parecen venir del proxy).
+- [ ] Define `WEB_TRUST_PROXY_HOPS=1` en la web (ya está en `compose.yml`): la web llama a la API
+      desde el servidor y le pasa la IP del visitante; sin esto, entrar y renovar la sesión
+      comparten un solo límite por minuto para todos los usuarios de la web.
 - [ ] Agrega HSTS, `X-Content-Type-Options: nosniff`, `Referrer-Policy` y una CSP para la web.
 - [ ] Limita el tamaño del cuerpo de las solicitudes (por ejemplo 1 MB, más para los documentos
       KYC) y activa gzip/zstd en el proxy.

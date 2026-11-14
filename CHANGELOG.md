@@ -121,6 +121,13 @@ pull request.
 
 ### Corregido
 
+- **Límites por IP con la web en producción:** la web llama a la API desde su servidor, así que
+  todos sus visitantes contaban como una sola IP. Entrar y renovar la sesión compartían un límite
+  de 10 por minuto para toda la web, y al pasarlo se cerraban sesiones. Ahora la web pasa la IP y
+  el navegador del visitante (`WEB_TRUST_PROXY_HOPS=1` detrás de Caddy).
+- **Taxis por WhatsApp:** el mismo teléfono reutiliza su pasajero invitado en vez de crear uno en
+  cada pedido. Conserva su historial, tiene un viaje abierto a la vez y paga las tasas por
+  cancelar tarde que deba (ADR-036).
 - **Seguridad: permisos de organización a nivel de controlador.** El guardia solo leía el permiso
   de cada ruta y no el del controlador: cualquier miembro de una empresa (conductor, despachador,
   taquillero, inspector) podía ver sus **liquidaciones, movimientos y pagos** y usar las **ventas

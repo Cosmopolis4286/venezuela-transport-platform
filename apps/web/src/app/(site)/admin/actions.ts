@@ -147,6 +147,13 @@ export async function requestTaxiForCustomer(_: FormState, form: FormData): Prom
       },
     });
   } catch (error) {
+    // The same phone is the same guest passenger, with one open ride at a time.
+    if (error instanceof ApiError && error.reason === 'TAXI_RIDE_OPEN') {
+      return {
+        error:
+          'Este cliente ya tiene un viaje abierto: búscalo en la lista y reenvíale su enlace (desde ahí también se cancela).',
+      };
+    }
     return formFailure(error, {
       VALIDATION_FAILED:
         'Revisa los datos: nombre, teléfono, dirección y, por tramo, dos paradas distintas.',

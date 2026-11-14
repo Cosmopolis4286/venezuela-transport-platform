@@ -1,0 +1,1 @@
+CREATE INDEX "taxi_rides_whatsapp_phone_idx" ON "taxi_rides" USING btree ("contact_phone","created_at") WHERE "taxi_rides"."channel" = 'whatsapp';

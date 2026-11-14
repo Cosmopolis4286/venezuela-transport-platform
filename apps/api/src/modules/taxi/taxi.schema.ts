@@ -150,6 +150,10 @@ export const taxiRides = pgTable(
     index('taxi_rides_organization_idx').on(t.organizationId, t.createdAt),
     index('taxi_rides_passenger_idx').on(t.passengerUserId, t.createdAt),
     index('taxi_rides_stretch_status_idx').on(t.fromStopId, t.toStopId, t.status),
+    // The guest behind a WhatsApp phone (staff asking again for the same person).
+    index('taxi_rides_whatsapp_phone_idx')
+      .on(t.contactPhone, t.createdAt)
+      .where(sql`${t.channel} = 'whatsapp'`),
     check('taxi_rides_passengers_check', sql`${t.passengers} between 1 and 6`),
     check(
       'taxi_rides_kind_check',

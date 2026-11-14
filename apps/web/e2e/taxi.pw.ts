@@ -10,6 +10,9 @@ test('staff ask for a taxi for a WhatsApp customer, who follows and cancels it b
 }, info) => {
   const s = seed();
   const customer = `Carmen ${info.project.name} ${Date.now() % 100_000}`;
+  // Its own phone per run and project: the same phone is the same guest, with one open ride.
+  const prefix = info.project.name === 'phone' ? '414' : '416';
+  const digits = String(Date.now() % 10_000_000).padStart(7, '1');
   await page.goto('/login?next=/admin/taxi');
   await page.getByRole('tab', { name: 'Con contraseña' }).click();
   await page.getByLabel('Correo').fill(s.reviewerEmail);
@@ -18,7 +21,7 @@ test('staff ask for a taxi for a WhatsApp customer, who follows and cancels it b
 
   await expect(page.getByRole('heading', { name: 'Taxis y mototaxis por WhatsApp' })).toBeVisible();
   await page.getByLabel('Nombre del cliente').fill(customer);
-  await page.getByLabel('Teléfono (WhatsApp)').fill('0416-5551234');
+  await page.getByLabel('Teléfono (WhatsApp)').fill(`0${prefix}-${digits}`);
   await page.getByLabel('Viaje').selectOption('to_terminal');
   await page
     .getByLabel('Terminal', { exact: true })
@@ -31,7 +34,7 @@ test('staff ask for a taxi for a WhatsApp customer, who follows and cancels it b
   await expect(row).toContainText(`Taxi · Calle Bolívar, frente a la plaza → ${s.originName}`);
   await expect(row.getByRole('link', { name: 'Escribirle por WhatsApp' })).toHaveAttribute(
     'href',
-    /^https:\/\/wa\.me\/584165551234\?text=.*viaje%20en%20taxi/,
+    new RegExp(`^https://wa\\.me/58${prefix}${digits}\\?text=.*viaje%20en%20taxi`),
   );
   const tracking = await row
     .getByRole('link', { name: 'Ver lo que ve el cliente' })
@@ -46,7 +49,7 @@ test('staff ask for a taxi for a WhatsApp customer, who follows and cancels it b
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Taxi');
   await expect(page.getByText('Estamos buscando quien te lleve.')).toBeVisible();
   await expect(page.getByText(s.originName)).toBeVisible();
-  await expect(page.getByText('5551234')).toHaveCount(0);
+  await expect(page.getByText(digits)).toHaveCount(0);
   await page.getByRole('button', { name: 'Cancelar el viaje' }).click();
   await expect(page.getByText('Este viaje fue cancelado.')).toBeVisible();
 });

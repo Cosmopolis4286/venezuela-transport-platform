@@ -11,12 +11,19 @@ import type { AuthResponse } from '@vtp/shared-types';
  */
 const RECENT_MS = 30_000;
 
-type Refresher = (refreshToken: string) => Promise<AuthResponse | null>;
+/** `client`: the visitor's address and browser for the API (see client-headers.ts). */
+type Refresher = (
+  refreshToken: string,
+  client?: Record<string, string>,
+) => Promise<AuthResponse | null>;
 
 const inFlight = new Map<string, { promise: Promise<AuthResponse | null>; settledAt?: number }>();
 
 export function createDedupedRefresh(refresh: Refresher, now: () => number = Date.now) {
-  return async function dedupedRefresh(refreshToken: string): Promise<AuthResponse | null> {
+  return async function dedupedRefresh(
+    refreshToken: string,
+    client?: Record<string, string>,
+  ): Promise<AuthResponse | null> {
     for (const [token, entry] of inFlight) {
       if (entry.settledAt !== undefined && now() - entry.settledAt > RECENT_MS)
         inFlight.delete(token);
@@ -25,7 +32,7 @@ export function createDedupedRefresh(refresh: Refresher, now: () => number = Dat
     if (existing) return existing.promise;
 
     const entry: { promise: Promise<AuthResponse | null>; settledAt?: number } = {
-      promise: refresh(refreshToken).finally(() => {
+      promise: refresh(refreshToken, client).finally(() => {
         entry.settledAt = now();
       }),
     };

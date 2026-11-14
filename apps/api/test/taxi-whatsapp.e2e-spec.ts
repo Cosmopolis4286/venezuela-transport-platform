@@ -216,9 +216,19 @@ describe.runIf(expectDatabase)('Taxi by WhatsApp (e2e)', () => {
       });
       expect(JSON.stringify(view)).not.toContain('5551234');
 
-      // A second order: the customer cancels from the link.
-      const other = (await assisted({ customerName: 'Pedro', passengers: 3 }).expect(201))
-        .body as AssistedTaxiRide;
+      // The same phone is the same guest: one open ride at a time, as in the app.
+      expect((await assisted({ customerName: 'Carmen R.' }).expect(409)).body.error).toMatchObject({
+        reason: 'TAXI_RIDE_OPEN',
+      });
+
+      // A second customer: they cancel from the link.
+      const other = (
+        await assisted({
+          customerName: 'Pedro',
+          customerPhone: '0414-5550000',
+          passengers: 3,
+        }).expect(201)
+      ).body as AssistedTaxiRide;
       const otherToken = other.trackingPath.split('/').pop()!;
       const cancelled = (await http().post(`/api/v1/taxi/track/${otherToken}/cancel`).expect(200))
         .body as PublicTaxiRide;
@@ -283,6 +293,20 @@ describe.runIf(expectDatabase)('Taxi by WhatsApp (e2e)', () => {
         rating: 4,
         ratingComment: 'Muy amable',
       });
+
+      // Carmen writes again: staff get her same guest (her history and any fee she owes), renamed.
+      const again = (await assisted({ customerName: 'Carmen Rojas' }).expect(201))
+        .body as AssistedTaxiRide;
+      const passengerOf = async (rideId: string) =>
+        (
+          await db
+            .select({ id: taxiRides.passengerUserId })
+            .from(taxiRides)
+            .where(eq(taxiRides.id, rideId))
+        )[0]!.id;
+      expect(await passengerOf(again.ride.id)).toBe(await passengerOf(created.ride.id));
+      expect(await passengerOf(again.ride.id)).not.toBe(await passengerOf(other.ride.id));
+      expect(again.customer.name).toBe('Carmen Rojas');
     },
   );
 });

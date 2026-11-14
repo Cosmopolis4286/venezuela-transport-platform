@@ -690,10 +690,7 @@ export class TaxiService {
     const phone = normalizePhone(input.customerPhone);
     if (!phone) throw invalid("Enter the customer's phone number");
     const name = input.customerName.trim();
-    const [customer] = await this.database.db
-      .insert(users)
-      .values({ guest: true, firstName: name })
-      .returning();
+    const customer = await this.whatsappGuest(phone, name);
     const { customerName: _n, customerPhone: _p, ...ride } = input;
     const trackingToken = randomBytes(18).toString('base64url');
     const created = await this.request(
@@ -708,6 +705,40 @@ export class TaxiService {
       .where(eq(taxiRides.id, created.id));
     await this.record('taxi_ride.requested_for_whatsapp', row!, staff, meta);
     return this.toAssisted(row!, name);
+  }
+
+  /**
+   * The guest passenger behind a WhatsApp phone: the one of its latest WhatsApp ride, renamed to
+   * what the person said now, or a new one. So the same person keeps one history, one open ride at
+   * a time (as in the app) and the late-cancellation fees they owe (ADR-036). Never a registered
+   * account: a phone typed by staff proves nothing about who owns it.
+   */
+  private async whatsappGuest(phone: string, name: string): Promise<Actor['user']> {
+    const db = this.database.db;
+    const [previous] = await db
+      .select({ id: users.id })
+      .from(taxiRides)
+      .innerJoin(users, eq(users.id, taxiRides.passengerUserId))
+      .where(
+        and(
+          eq(taxiRides.channel, 'whatsapp'),
+          eq(taxiRides.contactPhone, phone),
+          eq(users.guest, true),
+          isNull(users.deletedAt),
+        ),
+      )
+      .orderBy(desc(taxiRides.createdAt))
+      .limit(1);
+    if (previous) {
+      const [renamed] = await db
+        .update(users)
+        .set({ firstName: name })
+        .where(eq(users.id, previous.id))
+        .returning();
+      if (renamed) return renamed;
+    }
+    const [created] = await db.insert(users).values({ guest: true, firstName: name }).returning();
+    return created!;
   }
 
   /** Rides staff asked for on WhatsApp in the last two days, newest first. */

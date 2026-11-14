@@ -239,6 +239,13 @@
       "when": 1794630616142,
       "tag": "0033_taxi_whatsapp_tracking",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794661318665,
+      "tag": "0034_taxi_whatsapp_phone_index",
+      "breakpoints": true
     }
   ]
 }

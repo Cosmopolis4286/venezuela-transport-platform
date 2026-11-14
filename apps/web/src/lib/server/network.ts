@@ -18,7 +18,7 @@ import { ApiError, apiRequest } from './api';
 async function cachedStops(): Promise<Stop[]> {
   'use cache';
   cacheLife('minutes');
-  return apiRequest<Stop[]>('/stops', { auth: false });
+  return apiRequest<Stop[]>('/stops', { auth: false, forwardClient: false });
 }
 
 export async function getStops(): Promise<Stop[]> {
@@ -29,7 +29,7 @@ export async function getStops(): Promise<Stop[]> {
 async function cachedSupport(): Promise<SupportContact> {
   'use cache';
   cacheLife('minutes');
-  return apiRequest<SupportContact>('/support', { auth: false });
+  return apiRequest<SupportContact>('/support', { auth: false, forwardClient: false });
 }
 
 /** Support WhatsApp and app download link; both null when not configured or the API is down. */
@@ -56,7 +56,10 @@ export async function searchDepartures(
   const query = new URLSearchParams({ from, to, date });
   try {
     return {
-      departures: await apiRequest<Departure[]>(`/search/departures?${query}`, { auth: false }),
+      departures: await apiRequest<Departure[]>(`/search/departures?${query}`, {
+        auth: false,
+        forwardClient: false,
+      }),
     };
   } catch (error) {
     if (error instanceof ApiError && error.code === 'VALIDATION_FAILED') {
