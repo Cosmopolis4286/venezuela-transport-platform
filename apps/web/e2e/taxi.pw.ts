@@ -20,7 +20,9 @@ test('staff ask for a taxi for a WhatsApp customer, who follows and cancels it b
   await page.getByLabel('Nombre del cliente').fill(customer);
   await page.getByLabel('Teléfono (WhatsApp)').fill('0416-5551234');
   await page.getByLabel('Viaje').selectOption('to_terminal');
-  await page.getByLabel('Terminal', { exact: true }).selectOption({ label: `${s.originName} · Caracas` });
+  await page
+    .getByLabel('Terminal', { exact: true })
+    .selectOption({ label: `${s.originName} · Caracas` });
   await page.getByLabel(/Dirección/).fill('Calle Bolívar, frente a la plaza');
   await page.getByRole('button', { name: 'Pedir' }).click();
   await expect(page.getByText('Pedido enviado a los conductores.')).toBeVisible();
