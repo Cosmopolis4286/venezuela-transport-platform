@@ -128,8 +128,7 @@ async function Organization({
           </div>
         </Card>
       ) : null}
-      {runsRoutes(organization.type) &&
-      permissions.includes('reports.view') ? (
+      {runsRoutes(organization.type) && permissions.includes('reports.view') ? (
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-col gap-1">
