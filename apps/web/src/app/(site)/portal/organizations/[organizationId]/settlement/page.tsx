@@ -17,6 +17,7 @@ import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { monthParam } from '@/lib/month';
 import { apiFetch } from '@/lib/server/api';
+import { requireOrganizationPermission } from '@/lib/server/organization-access';
 
 export default function SettlementPage({
   params,
@@ -37,6 +38,7 @@ async function Settlement({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { organizationId } = await params;
+  await requireOrganizationPermission(organizationId, 'finance.view');
   const month = monthParam((await searchParams).month);
   const base = `/organizations/${encodeURIComponent(organizationId)}`;
   const [{ organization }, settlement, entries, payouts] = await Promise.all([

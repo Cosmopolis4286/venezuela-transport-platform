@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { roleHasPermission, type OrganizationPermission } from '@vtp/shared-types';
+import { ApiException } from '../../common/errors/api.exception.js';
 import { and, eq } from 'drizzle-orm';
 import { DatabaseService } from '../../database/database.service.js';
 import type { AuthenticatedRequest } from '../identity/auth.decorators.js';
@@ -29,6 +30,19 @@ export interface OrganizationAccess {
 type AccessRequest = AuthenticatedRequest & { organizationAccess?: OrganizationAccess };
 
 const PERMISSION_KEY = 'vtp:organizationPermission';
+
+/**
+ * Permissions that run the business (trips, sales, tickets): only an approved (`active`)
+ * organization may use them to change anything. One in review can still set itself up (members,
+ * fleet, draft routes); a suspended or rejected one keeps read access, nothing more.
+ */
+const OPERATIONAL: readonly OrganizationPermission[] = [
+  'operations.dispatch',
+  'tickets.sell',
+  'tickets.validate',
+  'trips.drive',
+];
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
@@ -66,6 +80,17 @@ export class OrganizationAccessGuard implements CanActivate {
     );
     if (permission && !roleHasPermission(row.membership.role, permission)) {
       throw new ForbiddenException('Your role does not allow this action');
+    }
+    if (
+      permission &&
+      OPERATIONAL.includes(permission) &&
+      row.organization.status !== 'active' &&
+      !SAFE_METHODS.has(request.method)
+    ) {
+      throw ApiException.conflict(
+        'The organization is not active: it cannot operate',
+        'ORGANIZATION_NOT_ACTIVE',
+      );
     }
     request.organizationAccess = row;
     return true;

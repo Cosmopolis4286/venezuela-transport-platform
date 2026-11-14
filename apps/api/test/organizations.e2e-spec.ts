@@ -444,6 +444,113 @@ describe.runIf(expectDatabase)('Organizations (e2e)', () => {
         .expect(204);
       await http().get(base).set('Authorization', dispatcher.auth).expect(404);
     });
+
+    it('lets only owners appoint, change or remove administrators', async () => {
+      const owner = await newUser();
+      const { organization } = await createOrganization(owner.auth);
+      const base = `/api/v1/organizations/${organization.id}`;
+      const admin = await addMember(owner.auth, organization.id, 'admin');
+      const otherAdmin = await addMember(owner.auth, organization.id, 'admin');
+      const dispatcher = await addMember(admin.auth, organization.id, 'dispatcher');
+      const reason = (res: { body: { error: { reason?: string } } }) => res.body.error.reason;
+
+      // An admin manages the operating staff…
+      await http()
+        .patch(`${base}/members/${dispatcher.user.id}`)
+        .set('Authorization', admin.auth)
+        .send({ role: 'ticket_agent' })
+        .expect(204);
+      // …but never appoints, demotes or removes administrators.
+      expect(
+        reason(
+          await invite(admin.auth, organization.id, {
+            contactKind: 'email',
+            destination: `a-${randomUUID()}@example.com`,
+            role: 'admin',
+          }).expect(403),
+        ),
+      ).toBe('MANAGE_ADMINS_OWNER_ONLY');
+      expect(
+        reason(
+          await http()
+            .patch(`${base}/members/${dispatcher.user.id}`)
+            .set('Authorization', admin.auth)
+            .send({ role: 'admin' })
+            .expect(403),
+        ),
+      ).toBe('MANAGE_ADMINS_OWNER_ONLY');
+      await http()
+        .patch(`${base}/members/${otherAdmin.user.id}`)
+        .set('Authorization', admin.auth)
+        .send({ role: 'driver' })
+        .expect(403);
+      await http()
+        .delete(`${base}/members/${otherAdmin.user.id}`)
+        .set('Authorization', admin.auth)
+        .expect(403);
+      // The owner can.
+      await http()
+        .patch(`${base}/members/${otherAdmin.user.id}`)
+        .set('Authorization', owner.auth)
+        .send({ role: 'dispatcher' })
+        .expect(204);
+      await http()
+        .delete(`${base}/members/${admin.user.id}`)
+        .set('Authorization', owner.auth)
+        .expect(204);
+    });
+  });
+
+  describe('organization status', () => {
+    it('lets only active organizations operate; others keep read access', async () => {
+      const owner = await newUser();
+      const { organization } = await createOrganization(owner.auth);
+      const base = `/api/v1/organizations/${organization.id}`;
+      const reviewer = await newUser();
+      await makeReviewer(reviewer.user.id);
+      const operate = () =>
+        http().post(`${base}/cash-sales`).set('Authorization', owner.auth).send({});
+      const validate = () =>
+        http()
+          .post(`${base}/tickets/validate`)
+          .set('Authorization', owner.auth)
+          .send({ bookingCode: 'VTP-ABC123', seatNumber: '1' });
+      const today = new Date(Date.now() - 4 * 3_600_000).toISOString().slice(0, 10);
+      const notActive = (res: { body: { error: { reason?: string } } }) =>
+        expect(res.body.error.reason).toBe('ORGANIZATION_NOT_ACTIVE');
+
+      // In review: set-up and reading work, operating does not.
+      notActive(await operate().expect(409));
+      notActive(await validate().expect(409));
+      await http()
+        .get(`${base}/dispatch`)
+        .query({ date: today })
+        .set('Authorization', owner.auth)
+        .expect(200);
+      await http().get(`${base}/vehicles`).set('Authorization', owner.auth).expect(200);
+
+      // Approved: the same calls get past the status check (and fail on their own validation).
+      await http()
+        .post(`/api/v1/admin/organizations/${organization.id}/review`)
+        .set('Authorization', reviewer.auth)
+        .send({ decision: 'approve' })
+        .expect(200);
+      await operate().expect(400);
+      await validate().expect(404);
+
+      // Suspended: operating stops again.
+      await http()
+        .post(`/api/v1/admin/organizations/${organization.id}/review`)
+        .set('Authorization', reviewer.auth)
+        .send({ decision: 'suspend', notes: 'Documentos vencidos' })
+        .expect(200);
+      notActive(await operate().expect(409));
+      await http()
+        .get(`${base}/dispatch`)
+        .query({ date: today })
+        .set('Authorization', owner.auth)
+        .expect(200);
+    });
   });
 
   describe('platform review', () => {

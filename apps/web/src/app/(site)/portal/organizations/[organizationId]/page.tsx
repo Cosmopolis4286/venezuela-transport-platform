@@ -10,7 +10,6 @@ import {
   type OrganizationApplicant,
   type OrganizationInvitation,
   type OrganizationMember,
-  type OrganizationMembershipSummary,
   type OrganizationType,
   type RateCurrency,
   type RouteSummary,
@@ -26,6 +25,7 @@ import { Input, Select } from '@/components/ui/input';
 import { Field } from '@/components/ui/label';
 import { ORGANIZATION_STATUS_LABELS, formatDate, statusVariant } from '@/lib/labels';
 import { apiFetch } from '@/lib/server/api';
+import { requireOrganizationPermission } from '@/lib/server/organization-access';
 import {
   changeMemberRole,
   decideApplicant,
@@ -37,20 +37,26 @@ import { saveExchangeRates } from './exchange-rates/actions';
 
 export default function OrganizationPage({
   params,
+  searchParams,
 }: PageProps<'/portal/organizations/[organizationId]'>) {
   return (
     <Suspense fallback={<p className="text-muted-foreground">Cargando…</p>}>
-      <Organization params={params} />
+      <Organization params={params} searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function Organization({ params }: { params: Promise<{ organizationId: string }> }) {
+async function Organization({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ organizationId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { organizationId } = await params;
-  const id = encodeURIComponent(organizationId);
-  const { organization, role, permissions } = await apiFetch<OrganizationMembershipSummary>(
-    `/organizations/${id}`,
-  );
+  // A page the member's role cannot open sends them back here (organization-access.ts).
+  const denied = (await searchParams).denied === '1';
+  const { organization, role, permissions } = await requireOrganizationPermission(organizationId);
   const canViewMembers = permissions.includes('members.view');
   const canManage = permissions.includes('members.manage');
 
@@ -74,6 +80,12 @@ async function Organization({ params }: { params: Promise<{ organizationId: stri
           {organization.city ? ` · ${organization.city}` : ''} · Tu rol:{' '}
           {ORGANIZATION_ROLE_LABELS[role]}
         </p>
+        {denied ? (
+          <p role="alert" className="rounded-md border border-destructive/40 px-3 py-2 text-sm">
+            Tu rol ({ORGANIZATION_ROLE_LABELS[role]}) no permite abrir esa sección. Pídele al dueño
+            o a un administrador de la organización que cambie tu rol si la necesitas.
+          </p>
+        ) : null}
         {organization.status === 'pending_review' ? (
           <p className="text-sm text-muted-foreground">
             La administración está revisando esta organización. Mientras tanto puedes invitar a tu
@@ -411,8 +423,11 @@ async function SeatLayouts({
   );
 }
 
-function roleOptions(type: OrganizationType, includeOwner: boolean) {
-  return ROLES_BY_ORGANIZATION_TYPE[type].filter((r) => includeOwner || r !== 'owner');
+/** Owners assign any role; admins only the operating staff (the API enforces the same). */
+function roleOptions(type: OrganizationType, isOwner: boolean) {
+  return ROLES_BY_ORGANIZATION_TYPE[type].filter(
+    (r) => isOwner || (r !== 'owner' && r !== 'admin'),
+  );
 }
 
 async function Members({
@@ -438,7 +453,8 @@ async function Members({
             member.email ||
             member.phone ||
             'Sin nombre';
-          const editable = canManage && (isOwner || member.role !== 'owner');
+          const editable =
+            canManage && (isOwner || (member.role !== 'owner' && member.role !== 'admin'));
           return (
             <li
               key={member.userId}

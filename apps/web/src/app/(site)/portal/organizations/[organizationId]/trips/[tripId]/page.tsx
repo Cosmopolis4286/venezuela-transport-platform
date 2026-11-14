@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { assignmentText, statusVariant } from '@/lib/labels';
 import { apiFetch } from '@/lib/server/api';
+import { requireOrganizationPermission } from '@/lib/server/organization-access';
 
 export default function ManifestPage({
   params,
@@ -29,6 +30,7 @@ async function Manifest({
   params: Promise<{ organizationId: string; tripId: string }>;
 }) {
   const { organizationId, tripId } = await params;
+  await requireOrganizationPermission(organizationId, 'bookings.view');
   const base = `/organizations/${encodeURIComponent(organizationId)}`;
   const [{ organization }, manifest] = await Promise.all([
     apiFetch<OrganizationMembershipSummary>(base),

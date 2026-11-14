@@ -376,15 +376,28 @@ export class OrganizationsService {
     };
   }
 
-  /** Only owners may grant, change or remove the owner role. */
+  /**
+   * Only owners may grant, change or remove the owner and admin roles: an admin manages the
+   * operating staff, never their peers or bosses (an admin could otherwise remove the other admins
+   * or appoint accomplices with access to the money).
+   */
   assertCanManage(
     access: OrganizationAccess,
     targetRole: OrganizationRole,
     newRole?: OrganizationRole,
   ): void {
+    if (access.membership.role === 'owner') return;
     const touchesOwner = targetRole === 'owner' || newRole === 'owner';
-    if (touchesOwner && access.membership.role !== 'owner') {
+    if (touchesOwner) {
       throw new ApiException('FORBIDDEN', 'Only an owner can manage owners', HttpStatus.FORBIDDEN);
+    }
+    if (targetRole === 'admin' || newRole === 'admin') {
+      throw new ApiException(
+        'FORBIDDEN',
+        'Only an owner can manage administrators',
+        HttpStatus.FORBIDDEN,
+        'MANAGE_ADMINS_OWNER_ONLY',
+      );
     }
   }
 

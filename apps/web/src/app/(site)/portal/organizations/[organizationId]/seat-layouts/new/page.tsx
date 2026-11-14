@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import { SeatLayoutEditor } from '@/components/portal/seat-layout-editor';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { apiFetch } from '@/lib/server/api';
+import { requireOrganizationPermission } from '@/lib/server/organization-access';
 import { createSeatLayout } from '../actions';
 
 export default function NewSeatLayoutPage({
@@ -18,6 +19,7 @@ export default function NewSeatLayoutPage({
 
 async function NewSeatLayout({ params }: { params: Promise<{ organizationId: string }> }) {
   const { organizationId } = await params;
+  await requireOrganizationPermission(organizationId, 'fleet.manage');
   const { organization } = await apiFetch<OrganizationMembershipSummary>(
     `/organizations/${encodeURIComponent(organizationId)}`,
   );
