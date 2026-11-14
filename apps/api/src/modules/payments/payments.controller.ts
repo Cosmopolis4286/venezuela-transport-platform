@@ -24,7 +24,7 @@ import type {
 } from '@vtp/shared-types';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { CurrentAuth, ReqMeta } from '../identity/auth.decorators.js';
-import { RequirePlatformRole } from '../identity/platform-role.guard.js';
+import { RequirePlatformPermission } from '../identity/platform-role.guard.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import {
   CurrentOrganization,
@@ -144,7 +144,7 @@ export class ExchangeRatesController {
 /** Platform admins: receiving accounts and verification of reported payments (ADR-027). */
 @ApiTags('admin')
 @ApiBearerAuth()
-@RequirePlatformRole()
+@RequirePlatformPermission('finance.manage')
 @Controller({ path: 'admin', version: '1' })
 export class AdminPaymentsController {
   constructor(private readonly payments: PaymentsService) {}

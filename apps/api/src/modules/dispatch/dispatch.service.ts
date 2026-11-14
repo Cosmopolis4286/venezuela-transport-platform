@@ -455,6 +455,8 @@ export class DispatchService {
         and(
           eq(trips.driverUserId, userId),
           eq(trips.status, 'scheduled'),
+          // A suspended company's trips do not run (organization-access.ts, OPERATIONAL).
+          eq(organizations.status, 'active'),
           tripId ? eq(trips.id, tripId) : undefined,
           now
             ? gt(trips.departsAt, new Date(+now - MAX_MINUTES_FROM_ORIGIN * MINUTE_MS))

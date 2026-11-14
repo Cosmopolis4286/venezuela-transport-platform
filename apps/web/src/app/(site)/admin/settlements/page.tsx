@@ -13,11 +13,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { apiFetch } from '@/lib/server/api';
-import { requirePlatformAdmin } from '@/lib/server/session';
+import { requirePlatformPermission } from '@/lib/server/session';
 import { setPlatformPolicy } from './actions';
 
 export default async function AdminSettlementsPage() {
-  await requirePlatformAdmin();
+  await requirePlatformPermission('finance.manage');
   const [summaries, policy] = await Promise.all([
     apiFetch<AdminSettlementSummary[]>('/admin/settlements'),
     apiFetch<SettlementPolicy>('/admin/settlement-policy'),

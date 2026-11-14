@@ -1,7 +1,7 @@
 // Grants or removes a platform staff role. There is deliberately no HTTP endpoint for this:
 // the first admin must be created by someone with server/database access.
 //
-// Usage: pnpm platform:grant --email maria@example.com --role admin|reviewer|none
+// Usage: pnpm platform:grant --email maria@example.com --role admin|reviewer|finance|support|none
 //        pnpm platform:grant --phone 0414-1234567 --role reviewer
 import { parseArgs } from 'node:util';
 import { eq } from 'drizzle-orm';

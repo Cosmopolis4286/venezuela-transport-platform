@@ -13,9 +13,11 @@ import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { Input, Select } from '@/components/ui/input';
 import { Field } from '@/components/ui/label';
 import { apiFetch } from '@/lib/server/api';
+import { requirePlatformPermission } from '@/lib/server/session';
 import { createStop, setStopActive, setStopZone } from '../actions';
 
 export default async function StopsPage({ searchParams }: PageProps<'/admin/stops'>) {
+  await requirePlatformPermission('network.manage');
   const { q } = await searchParams;
   const query = typeof q === 'string' ? q : '';
   const [stops, zones] = await Promise.all([

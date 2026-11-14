@@ -8,7 +8,7 @@ import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Field } from '@/components/ui/label';
 import { apiFetch } from '@/lib/server/api';
-import { requirePlatformAdmin } from '@/lib/server/session';
+import { requirePlatformPermission } from '@/lib/server/session';
 import { createPurchase, deletePurchase } from '../actions';
 
 export const metadata: Metadata = { title: 'Libros fiscales' };
@@ -28,7 +28,7 @@ async function Books({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requirePlatformAdmin();
+  await requirePlatformPermission('finance.manage');
   const query = await searchParams;
   const today = todayInVenezuela();
   const month =

@@ -1,6 +1,11 @@
 import 'server-only';
 import { createHash } from 'node:crypto';
-import type { AuthResponse, UserProfile } from '@vtp/shared-types';
+import {
+  platformRoleHasPermission,
+  type AuthResponse,
+  type PlatformPermission,
+  type UserProfile,
+} from '@vtp/shared-types';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { apiFetch, apiRequest } from './api';
@@ -46,9 +51,14 @@ export async function requirePlatformStaff(): Promise<UserProfile> {
   return user;
 }
 
-/** Money pages (settlements, refunds): platform admins only; reviewers go back to /admin. */
-export async function requirePlatformAdmin(): Promise<UserProfile> {
+/**
+ * A platform page that needs `permission` (PLATFORM_ROLE_PERMISSIONS in shared-types): staff
+ * without it go back to /admin with a notice. The API checks the same permission on every call.
+ */
+export async function requirePlatformPermission(
+  permission: PlatformPermission,
+): Promise<UserProfile> {
   const user = await requirePlatformStaff();
-  if (user.platformRole !== 'admin') redirect('/admin');
+  if (!platformRoleHasPermission(user.platformRole, permission)) redirect('/admin?denied=1');
   return user;
 }

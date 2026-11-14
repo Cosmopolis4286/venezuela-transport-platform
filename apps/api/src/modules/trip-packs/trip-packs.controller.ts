@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from 
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { TripPack, TripPackProduct } from '@vtp/shared-types';
 import { CurrentAuth, Public, ReqMeta } from '../identity/auth.decorators.js';
-import { RequirePlatformRole } from '../identity/platform-role.guard.js';
+import { RequirePlatformPermission } from '../identity/platform-role.guard.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import {
   BuyTripPackDto,
@@ -54,7 +54,7 @@ export class TripPacksController {
 /** The catalog: platform admins only. */
 @ApiTags('admin')
 @ApiBearerAuth()
-@RequirePlatformRole()
+@RequirePlatformPermission('products.manage')
 @Controller({ path: 'admin/trip-pack-products', version: '1' })
 export class AdminTripPacksController {
   constructor(private readonly packs: TripPacksService) {}

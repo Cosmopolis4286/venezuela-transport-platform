@@ -13,7 +13,7 @@ import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { Input, Select } from '@/components/ui/input';
 import { Field } from '@/components/ui/label';
 import { apiFetch } from '@/lib/server/api';
-import { requirePlatformAdmin } from '@/lib/server/session';
+import { requirePlatformPermission } from '@/lib/server/session';
 import { createZone, setZoneStatus, updateZone } from './actions';
 
 export const metadata: Metadata = { title: 'Zonas operativas' };
@@ -32,7 +32,7 @@ const SWITCH: Record<ZoneStatus, string> = {
 };
 
 export default async function ZonesPage() {
-  await requirePlatformAdmin();
+  await requirePlatformPermission('zones.manage');
   const zones = await apiFetch<OperatingZone[]>('/admin/zones');
 
   return (

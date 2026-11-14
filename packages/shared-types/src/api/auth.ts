@@ -1,3 +1,5 @@
+import type { PlatformRole } from './organizations.js';
+
 /** Which application a session belongs to. Sessions are never shared between apps. */
 export const AUTH_CLIENTS = ['web', 'passenger', 'transport'] as const;
 export type AuthClient = (typeof AUTH_CLIENTS)[number];
@@ -28,7 +30,7 @@ export interface UserProfile {
   /** True once a platform reviewer approved the user's KYC application. */
   identityVerified: boolean;
   /** Platform staff role (`admin`, `reviewer`), or null for regular users. */
-  platformRole: 'admin' | 'reviewer' | null;
+  platformRole: PlatformRole | null;
   /** Version of the Terms and Privacy Policy the user accepted (`LEGAL_VERSION`), or null. */
   termsVersion: string | null;
   /**

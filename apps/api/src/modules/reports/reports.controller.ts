@@ -1,7 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { OccupancyReport, PlatformMetrics, SalesReport } from '@vtp/shared-types';
-import { RequirePlatformRole } from '../identity/platform-role.guard.js';
+import { RequirePlatformPermission } from '../identity/platform-role.guard.js';
 import {
   CurrentOrganization,
   RequireOrganizationAccess,
@@ -27,7 +27,7 @@ export class OrganizationReportsController {
   }
 
   @Get('occupancy')
-  @RequireOrganizationAccess('bookings.view')
+  @RequireOrganizationAccess('reports.view')
   occupancy(
     @CurrentOrganization() access: OrganizationAccess,
     @Query() query: ReportRangeQueryDto,
@@ -39,7 +39,7 @@ export class OrganizationReportsController {
 /** Platform admins: the whole platform in a range. */
 @ApiTags('admin')
 @ApiBearerAuth()
-@RequirePlatformRole()
+@RequirePlatformPermission('metrics.view')
 @Controller({ path: 'admin/metrics', version: '1' })
 export class AdminMetricsController {
   constructor(private readonly reports: ReportsService) {}

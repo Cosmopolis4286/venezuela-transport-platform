@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from 
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { NearbyStop, Stop } from '@vtp/shared-types';
 import { CurrentAuth, Public, ReqMeta } from '../identity/auth.decorators.js';
-import { RequirePlatformRole } from '../identity/platform-role.guard.js';
+import { RequirePlatformPermission } from '../identity/platform-role.guard.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import { NearbyStopsQueryDto, StopDto, StopSearchQueryDto, UpdateStopDto } from './network.dto.js';
 import { StopsService } from './stops.service.js';
@@ -30,11 +30,12 @@ export class StopsController {
 /** Platform staff curate the stop catalog every operator builds routes on. */
 @ApiTags('admin')
 @ApiBearerAuth()
-@RequirePlatformRole('reviewer')
+@RequirePlatformPermission('network.manage')
 @Controller({ path: 'admin/stops', version: '1' })
 export class AdminStopsController {
   constructor(private readonly stops: StopsService) {}
 
+  @RequirePlatformPermission('network.view')
   @Get()
   list(@Query() query: StopSearchQueryDto): Promise<Stop[]> {
     return this.stops.search({ ...query, includeInactive: true });

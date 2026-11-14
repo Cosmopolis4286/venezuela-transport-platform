@@ -253,6 +253,13 @@
       "when": 1794678457614,
       "tag": "0035_taxi_whatsapp_phone_index",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794697322867,
+      "tag": "0036_finance_support_accountant_supervisor_roles",
+      "breakpoints": true
     }
   ]
 }

@@ -12,7 +12,7 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Organization } from '@vtp/shared-types';
 import { CurrentAuth, ReqMeta } from '../identity/auth.decorators.js';
-import { RequirePlatformRole } from '../identity/platform-role.guard.js';
+import { RequirePlatformPermission } from '../identity/platform-role.guard.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import { OrganizationStatusQueryDto, ReviewOrganizationDto } from './organizations.dto.js';
 import { OrganizationsService } from './organizations.service.js';
@@ -20,11 +20,12 @@ import { OrganizationsService } from './organizations.service.js';
 /** Platform staff: review queue for newly registered organizations. */
 @ApiTags('admin')
 @ApiBearerAuth()
-@RequirePlatformRole('reviewer')
+@RequirePlatformPermission('organizations.review')
 @Controller({ path: 'admin/organizations', version: '1' })
 export class AdminOrganizationsController {
   constructor(private readonly organizations: OrganizationsService) {}
 
+  @RequirePlatformPermission('organizations.view')
   @Get()
   list(@Query() query: OrganizationStatusQueryDto): Promise<Organization[]> {
     return this.organizations.listByStatus(query.status ?? 'pending_review');

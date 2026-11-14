@@ -145,14 +145,16 @@ describe.runIf(expectDatabase)('Taxi by WhatsApp (e2e)', () => {
           .expect(201)
       ).body as FleetVehicle;
 
-      // --- Staff take the order written on WhatsApp.
+      // --- Staff take the order written on WhatsApp. Its own phone per run: the same phone is
+      // the same guest passenger, with one open ride at a time.
+      const digits = String(randomInt(1_000_000, 9_999_999));
       const assisted = (body: object = {}, auth = reviewer.auth) =>
         http()
           .post('/api/v1/admin/taxi-rides')
           .set('Authorization', auth)
           .send({
             customerName: 'Carmen',
-            customerPhone: '0416-5551234',
+            customerPhone: `0416-${digits}`,
             terminalStopId: terminal.id,
             direction: 'to_terminal',
             address: 'Calle Bolívar, frente a la plaza',
@@ -176,7 +178,7 @@ describe.runIf(expectDatabase)('Taxi by WhatsApp (e2e)', () => {
       ).toMatchObject({ reason: 'MOTORCYCLE_ONE_PASSENGER' });
       const created = (await assisted().expect(201)).body as AssistedTaxiRide;
       expect(created).toMatchObject({
-        customer: { name: 'Carmen', phone: '+584165551234' },
+        customer: { name: 'Carmen', phone: `+58416${digits}` },
         ride: {
           status: 'requested',
           kind: 'terminal',
@@ -214,7 +216,7 @@ describe.runIf(expectDatabase)('Taxi by WhatsApp (e2e)', () => {
         canRate: false,
         driverFirstName: null,
       });
-      expect(JSON.stringify(view)).not.toContain('5551234');
+      expect(JSON.stringify(view)).not.toContain(digits);
 
       // The same phone is the same guest: one open ride at a time, as in the app.
       expect((await assisted({ customerName: 'Carmen R.' }).expect(409)).body.error).toMatchObject({

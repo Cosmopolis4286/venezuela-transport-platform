@@ -2,11 +2,11 @@ import type { RefundDuePayment } from '@vtp/shared-types';
 import { RefundDueList } from '@/components/portal/payment-queues';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { apiFetch } from '@/lib/server/api';
-import { requirePlatformAdmin } from '@/lib/server/session';
+import { requirePlatformPermission } from '@/lib/server/session';
 import { markRefunded } from '../settlements/actions';
 
 export default async function AdminRefundsPage() {
-  await requirePlatformAdmin();
+  await requirePlatformPermission('finance.manage');
   const refunds = await apiFetch<RefundDuePayment[]>('/admin/refunds');
   return (
     <>

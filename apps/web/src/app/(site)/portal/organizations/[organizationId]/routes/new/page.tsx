@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import { RouteEditor } from '@/components/portal/route-editor';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { apiFetch } from '@/lib/server/api';
+import { requireOrganizationPermission } from '@/lib/server/organization-access';
 import { createRoute } from '../actions';
 
 export default function NewRoutePage({
@@ -18,6 +19,7 @@ export default function NewRoutePage({
 
 async function NewRoute({ params }: { params: Promise<{ organizationId: string }> }) {
   const { organizationId } = await params;
+  await requireOrganizationPermission(organizationId, 'routes.manage');
   const [{ organization }, stops] = await Promise.all([
     apiFetch<OrganizationMembershipSummary>(`/organizations/${encodeURIComponent(organizationId)}`),
     apiFetch<Stop[]>('/stops'),

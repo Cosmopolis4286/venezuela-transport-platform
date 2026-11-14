@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { apiFetch } from '@/lib/server/api';
-import { requirePlatformAdmin } from '@/lib/server/session';
+import { requirePlatformPermission } from '@/lib/server/session';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const day = (raw: string | string[] | undefined) =>
@@ -23,7 +23,7 @@ async function Metrics({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requirePlatformAdmin();
+  await requirePlatformPermission('metrics.view');
   const query = await searchParams;
   const to = day(query.to) ?? todayInVenezuela();
   const from =

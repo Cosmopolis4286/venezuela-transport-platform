@@ -6,11 +6,11 @@ import {
 import { PaymentAccountsEditor, PaymentReviewList } from '@/components/portal/payment-queues';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { apiFetch } from '@/lib/server/api';
-import { requirePlatformAdmin } from '@/lib/server/session';
+import { requirePlatformPermission } from '@/lib/server/session';
 import { confirmPayment, rejectPayment, removeAccount, saveAccount } from './actions';
 
 export default async function AdminPaymentsPage() {
-  await requirePlatformAdmin();
+  await requirePlatformPermission('finance.manage');
   const [queue, accounts] = await Promise.all([
     apiFetch<PaymentReview[]>('/admin/payments/review'),
     apiFetch<PaymentAccount[]>('/admin/payment-accounts'),

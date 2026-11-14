@@ -25,7 +25,7 @@ import type {
   TaxiTerminal,
 } from '@vtp/shared-types';
 import { AuthThrottle, CurrentAuth, Public, ReqMeta } from '../identity/auth.decorators.js';
-import { RequirePlatformRole } from '../identity/platform-role.guard.js';
+import { RequirePlatformPermission } from '../identity/platform-role.guard.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import {
   CurrentOrganization,
@@ -123,7 +123,7 @@ export class TaxiController {
 /** Platform staff ask for taxis for people who write on WhatsApp (ADR-037). */
 @ApiTags('admin')
 @ApiBearerAuth()
-@RequirePlatformRole('reviewer')
+@RequirePlatformPermission('taxi.assist')
 @Controller({ path: 'admin/taxi-rides', version: '1' })
 export class AdminTaxiController {
   constructor(private readonly taxi: TaxiService) {}

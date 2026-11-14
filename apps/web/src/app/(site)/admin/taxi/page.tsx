@@ -23,7 +23,7 @@ import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { Input, Select, Textarea } from '@/components/ui/input';
 import { Field } from '@/components/ui/label';
 import { apiFetch } from '@/lib/server/api';
-import { requirePlatformStaff } from '@/lib/server/session';
+import { requirePlatformPermission } from '@/lib/server/session';
 import { customerWhatsappLink } from '@/lib/taxi-whatsapp';
 import { requestTaxiForCustomer } from '../actions';
 
@@ -47,7 +47,7 @@ async function siteOrigin(): Promise<string> {
 }
 
 async function AssistedTaxi() {
-  await requirePlatformStaff();
+  await requirePlatformPermission('taxi.assist');
   const [terminals, rides, origin, zones] = await Promise.all([
     apiFetch<TaxiTerminal[]>('/taxi/terminals', { auth: false }),
     apiFetch<AssistedTaxiRide[]>('/admin/taxi-rides'),

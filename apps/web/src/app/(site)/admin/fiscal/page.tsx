@@ -15,13 +15,13 @@ import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { Input, Select } from '@/components/ui/input';
 import { Field } from '@/components/ui/label';
 import { apiFetch } from '@/lib/server/api';
-import { requirePlatformAdmin } from '@/lib/server/session';
+import { requirePlatformPermission } from '@/lib/server/session';
 import { saveBcvRate, saveFiscalSettings } from './actions';
 
 export const metadata: Metadata = { title: 'Facturación' };
 
 export default async function FiscalPage() {
-  await requirePlatformAdmin();
+  await requirePlatformPermission('finance.manage');
   const [settings, rates] = await Promise.all([
     apiFetch<FiscalSettings>('/admin/fiscal/settings'),
     apiFetch<BcvRate[]>('/admin/fiscal/bcv-rates'),

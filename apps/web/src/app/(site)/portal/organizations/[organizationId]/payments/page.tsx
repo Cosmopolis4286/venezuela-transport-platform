@@ -15,6 +15,7 @@ import {
 } from '@/components/portal/payment-queues';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { apiFetch } from '@/lib/server/api';
+import { requireOrganizationPermission } from '@/lib/server/organization-access';
 import {
   confirmOwnPayment,
   markOwnRefunded,
@@ -35,6 +36,7 @@ export default function OrganizationPaymentsPage({
 
 async function Payments({ params }: { params: Promise<{ organizationId: string }> }) {
   const { organizationId } = await params;
+  await requireOrganizationPermission(organizationId, 'finance.view');
   const base = `/organizations/${encodeURIComponent(organizationId)}`;
   const [{ organization, permissions }, settlement, accounts] = await Promise.all([
     apiFetch<OrganizationMembershipSummary>(base),

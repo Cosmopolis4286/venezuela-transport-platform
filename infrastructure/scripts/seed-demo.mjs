@@ -22,98 +22,211 @@ const API = argValue('--api') ?? process.env.VTP_API_URL ?? 'http://localhost:40
 const PASSWORD = 'vtp-demo-2026';
 const ZONE_SLUG = 'eje-casacoima-san-felix-puerto-ordaz';
 const INTERURBAN_MARK = 'Expresos Los Llanos (ejemplo)';
+/** Added with the accounts of every role: its presence means that part is loaded. */
+const ROLES_MARK = 'Terminal La Bandera (ejemplo)';
 
-/** Every account of the sample data; `role` is what the list at the end says about it. */
+/**
+ * Every account of the sample data, one per level of access: the platform's staff, each role of
+ * an organization (of each type) and passengers. `role` and `can` are what the list at the end
+ * shows; `group` sorts it.
+ */
 const ACCOUNTS = {
+  // --- Platform (not tied to a company).
   admin: {
+    group: 'Plataforma',
     email: 'admin@vtp.test',
     firstName: 'Ana',
     lastName: 'Administradora',
-    role: 'Administración de la plataforma',
+    role: 'Administradora de la plataforma',
+    can: 'Todo: aprobar empresas y KYC, zonas, paradas, pagos, liquidaciones, reembolsos, facturación, paquetes, métricas',
   },
   revisor: {
+    group: 'Plataforma',
     email: 'revisor@vtp.test',
     firstName: 'Rafael',
     lastName: 'Revisor',
-    role: 'Revisión (aprueba empresas y KYC)',
+    role: 'Revisor de la plataforma',
+    can: 'Aprobar empresas y KYC (con sus documentos), paradas, buscar reservas, taxis por WhatsApp; sin dinero',
   },
-  bus: {
-    email: 'empresa@vtp.test',
-    firstName: 'Bruno',
-    lastName: 'Dueño de buses',
-    role: 'Buses suburbanos (Transporte Guayana)',
+  finanzas: {
+    group: 'Plataforma',
+    email: 'finanzas@vtp.test',
+    firstName: 'Fernanda',
+    lastName: 'Finanzas',
+    role: 'Finanzas de la plataforma',
+    can: 'Pagos por revisar, liquidaciones y pagos a empresas, reembolsos, facturación, tasas y métricas (no aprueba nada)',
   },
-  moto: {
-    email: 'moto@vtp.test',
-    firstName: 'Marta',
-    lastName: 'Dueña de mototaxis',
-    role: 'Línea de mototaxis',
+  soporte: {
+    group: 'Plataforma',
+    email: 'soporte@vtp.test',
+    firstName: 'Sofía',
+    lastName: 'Soporte',
+    role: 'Soporte de la plataforma',
+    can: 'Buscar reservas, taxis por WhatsApp y ver las colas de revisión (sin cédulas, documentos ni dinero)',
   },
-  taxi: {
-    email: 'taxi@vtp.test',
-    firstName: 'Tomás',
-    lastName: 'Dueño de taxis',
-    role: 'Línea de taxis',
-  },
+  // --- Companies: owners (every permission of their company, including driving).
   llanos: {
+    group: 'Empresas (dueños)',
     email: 'llanos@vtp.test',
     firstName: 'Lorena',
     lastName: 'Dueña de Expresos',
-    role: 'Expresos Los Llanos (interurbano)',
-  },
-  despacho: {
-    email: 'despacho@vtp.test',
-    firstName: 'Diego',
-    lastName: 'Despachador',
-    role: 'Despachador de Expresos Los Llanos',
-  },
-  taquilla: {
-    email: 'taquilla@vtp.test',
-    firstName: 'Teresa',
-    lastName: 'Taquillera',
-    role: 'Taquilla de Expresos Los Llanos',
-  },
-  conductor: {
-    email: 'conductor@vtp.test',
-    firstName: 'Carlos',
-    lastName: 'Conductor',
-    role: 'Conductor de Expresos Los Llanos',
-  },
-  inspector: {
-    email: 'inspector@vtp.test',
-    firstName: 'Irene',
-    lastName: 'Inspectora',
-    role: 'Inspectora de Expresos Los Llanos',
+    role: 'Dueña · Expresos Los Llanos (buses interurbanos)',
+    can: 'Todo en su empresa, incluido nombrar administradores',
   },
   oriente: {
+    group: 'Empresas (dueños)',
     email: 'oriente@vtp.test',
     firstName: 'Óscar',
     lastName: 'Dueño de Aerobuses',
-    role: 'Aerobuses de Oriente (interurbano)',
+    role: 'Dueño · Aerobuses de Oriente (buses interurbanos)',
+    can: 'Todo en su empresa',
+  },
+  bus: {
+    group: 'Empresas (dueños)',
+    email: 'empresa@vtp.test',
+    firstName: 'Bruno',
+    lastName: 'Dueño de buses',
+    role: 'Dueño · Transporte Guayana (buses suburbanos)',
+    can: 'Todo en su empresa; también maneja y vende en efectivo',
+  },
+  taxi: {
+    group: 'Empresas (dueños)',
+    email: 'taxi@vtp.test',
+    firstName: 'Tomás',
+    lastName: 'Dueño de taxis',
+    role: 'Dueño · Taxis Unidos (línea de taxis)',
+    can: 'Todo en su línea; también toma viajes',
+  },
+  moto: {
+    group: 'Empresas (dueños)',
+    email: 'moto@vtp.test',
+    firstName: 'Marta',
+    lastName: 'Dueña de mototaxis',
+    role: 'Dueña · Mototaxis Caroní (línea de mototaxis)',
+    can: 'Todo en su línea; también toma viajes',
+  },
+  terminal: {
+    group: 'Empresas (dueños)',
+    email: 'terminal@vtp.test',
+    firstName: 'Teodoro',
+    lastName: 'Terminal',
+    role: 'Dueño · Terminal La Bandera (terminal)',
+    can: 'Todo en su terminal',
   },
   pendiente: {
+    group: 'Empresas (dueños)',
     email: 'pendiente@vtp.test',
     firstName: 'Paula',
     lastName: 'Pendiente',
-    role: 'Empresa esperando aprobación',
+    role: 'Dueña · Transporte Sucre (en revisión)',
+    can: 'Prepararse (equipo, flota, rutas en borrador); no opera hasta ser aprobada',
   },
+  // --- Staff of Expresos Los Llanos: one account per role.
+  gerente: {
+    group: 'Personal de Expresos Los Llanos',
+    email: 'gerente@vtp.test',
+    firstName: 'Gabriela',
+    lastName: 'Gerente',
+    role: 'Administradora',
+    can: 'Todo menos conducir y gestionar dueños o administradores',
+  },
+  despacho: {
+    group: 'Personal de Expresos Los Llanos',
+    email: 'despacho@vtp.test',
+    firstName: 'Diego',
+    lastName: 'Despachador',
+    role: 'Despachador',
+    can: 'Asignar bus y conductor, ver equipo, reservas y manifiestos',
+  },
+  taquilla: {
+    group: 'Personal de Expresos Los Llanos',
+    email: 'taquilla@vtp.test',
+    firstName: 'Teresa',
+    lastName: 'Taquillera',
+    role: 'Taquillera',
+    can: 'Vender boletos y ver reservas',
+  },
+  conductor: {
+    group: 'Personal de Expresos Los Llanos',
+    email: 'conductor@vtp.test',
+    firstName: 'Carlos',
+    lastName: 'Conductor',
+    role: 'Conductor (app de transportistas)',
+    can: 'Sus viajes, salida y llegada, validar boletos',
+  },
+  inspector: {
+    group: 'Personal de Expresos Los Llanos',
+    email: 'inspector@vtp.test',
+    firstName: 'Irene',
+    lastName: 'Inspectora',
+    role: 'Inspectora de boletos',
+    can: 'Validar boletos y ver reservas',
+  },
+  contador: {
+    group: 'Personal de Expresos Los Llanos',
+    email: 'contador@vtp.test',
+    firstName: 'Camilo',
+    lastName: 'Contador',
+    role: 'Contador',
+    can: 'Saldo, liquidaciones, cobros, reembolsos y reportes de ventas; no opera viajes ni personal',
+  },
+  supervisor: {
+    group: 'Personal de Expresos Los Llanos',
+    email: 'supervisor@vtp.test',
+    firstName: 'Silvia',
+    lastName: 'Supervisora',
+    role: 'Supervisora (jefa de patio)',
+    can: 'Despacho, validar boletos, ocupación y ver equipo; sin dinero ni rutas',
+  },
+  // --- Drivers of the taxi and motorcycle lines, and a driver waiting for KYC approval.
+  taxista: {
+    group: 'Conductores de taxi y moto',
+    email: 'taxista@vtp.test',
+    firstName: 'Tito',
+    lastName: 'Taxista',
+    role: 'Conductor · Taxis Unidos (app de transportistas)',
+    can: 'Tomar viajes de taxi de su línea',
+  },
+  mototaxista: {
+    group: 'Conductores de taxi y moto',
+    email: 'mototaxista@vtp.test',
+    firstName: 'Manuel',
+    lastName: 'Mototaxista',
+    role: 'Conductor · Mototaxis Caroní (app de transportistas)',
+    can: 'Tomar viajes en moto de su línea',
+  },
+  aspirante: {
+    group: 'Conductores de taxi y moto',
+    email: 'aspirante@vtp.test',
+    firstName: 'Alberto',
+    lastName: 'Aspirante',
+    role: 'Aspirante a conductor (KYC enviado a Taxis Unidos)',
+    can: 'Ver su solicitud; Administración → Solicitudes la revisa',
+  },
+  // --- Passengers.
   passenger: {
+    group: 'Pasajeros',
     email: 'pasajero@vtp.test',
     firstName: 'Pedro',
     lastName: 'Pasajero',
-    role: 'Pasajero (boletos, taxis, paquete)',
+    role: 'Pasajero',
+    can: 'Boletos pagados, viaje en moto calificado, paquete de viajes',
   },
   maria: {
+    group: 'Pasajeros',
     email: 'maria@vtp.test',
     firstName: 'María',
     lastName: 'González',
-    role: 'Pasajera (boletos y un Pago Móvil)',
+    role: 'Pasajera',
+    can: 'Boletos y un Pago Móvil; un taxi esperando conductor',
   },
   jose: {
+    group: 'Pasajeros',
     email: 'jose@vtp.test',
     firstName: 'José',
     lastName: 'Rodríguez',
-    role: 'Pasajero (boleto cancelado, reembolso)',
+    role: 'Pasajero',
+    can: 'Un boleto cancelado con reembolso y uno apartado sin pagar',
   },
 };
 
@@ -176,7 +289,7 @@ const sessions = new Map();
 /** Registers the account, or logs in if it already exists. Returns `Bearer …` (cached). */
 async function account(who) {
   if (sessions.has(who)) return sessions.get(who);
-  const { role: _role, ...a } = ACCOUNTS[who];
+  const { role: _role, can: _can, group: _group, ...a } = ACCOUNTS[who];
   let res;
   try {
     res = await call('POST', '/auth/register', {
@@ -211,6 +324,26 @@ function sql(statement, what) {
     { encoding: 'utf8' },
   );
   if (r.status !== 0) throw new Error(`${what}: ${(r.stderr || r.stdout).trim()}`);
+  return r.stdout;
+}
+
+/** One value from the local database (`psql -tA`). */
+function sqlValue(statement, what) {
+  const r = spawnSync(
+    'docker',
+    [
+      'compose',
+      'exec',
+      '-T',
+      'postgres',
+      'sh',
+      '-c',
+      `psql -tA -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "${statement}"`,
+    ],
+    { encoding: 'utf8' },
+  );
+  if (r.status !== 0) throw new Error(`${what}: ${(r.stderr || r.stdout).trim()}`);
+  return r.stdout.trim();
 }
 
 // Sample accounts only: they get their platform role and a verified e-mail (so invitations to
@@ -1048,13 +1181,168 @@ async function activity(admin, sub, net) {
   return paid;
 }
 
+// =====================================================================================
+// Every level of access: the roles still missing, a terminal and a KYC application.
+// =====================================================================================
+
+/** Invites `who` by e-mail to the organization with `role`; they accept in their account. */
+async function join(org, who, role) {
+  const auth = await account(who);
+  verifyEmails();
+  await call('POST', `${org.url}/invitations`, {
+    auth: org.auth,
+    body: { contactKind: 'email', destination: ACCOUNTS[who].email, role },
+    what: `invitar a ${ACCOUNTS[who].email}`,
+  });
+  const received = await call('GET', '/me/invitations', { auth });
+  const invitation = received.find((i) => i.organization?.id === org.id) ?? received[0];
+  await call('POST', `/me/invitations/${invitation.id}/accept`, {
+    auth,
+    what: `aceptar invitación (${who})`,
+  });
+  return auth;
+}
+
+async function everyRole(admin) {
+  const active = await call('GET', '/admin/organizations?status=active', { auth: admin });
+  const org = async (who, legalName) => {
+    const found = active.find((o) => o.legalName === legalName);
+    return found && { auth: await account(who), id: found.id, url: `/organizations/${found.id}` };
+  };
+  const llanos = await org('llanos', INTERURBAN_MARK);
+  const taxi = await org('taxi', 'Taxis Unidos (ejemplo)');
+  const moto = await org('moto', 'Mototaxis Caroní (ejemplo)');
+  const done = [];
+  if (
+    llanos &&
+    (await attempt('administradora de Expresos', () => join(llanos, 'gerente', 'admin')))
+  ) {
+    done.push('administradora de empresa');
+  }
+  if (taxi && (await attempt('taxista', () => join(taxi, 'taxista', 'driver'))))
+    done.push('taxista');
+  if (moto && (await attempt('mototaxista', () => join(moto, 'mototaxista', 'driver')))) {
+    done.push('mototaxista');
+  }
+  if (
+    await attempt('terminal', () =>
+      operator(admin, 'terminal', 'terminal', ROLES_MARK, 'J-40000007-7'),
+    )
+  ) {
+    done.push('terminal');
+  }
+  // A driver's KYC application, sent to Taxis Unidos: waits in Administración → Solicitudes.
+  if (taxi) {
+    const sent = await attempt('solicitud KYC del aspirante', async () => {
+      const auth = await account('aspirante');
+      await call('POST', '/me/application', {
+        auth,
+        body: {
+          desiredRole: 'driver',
+          organizationId: taxi.id,
+          firstName: ACCOUNTS.aspirante.firstName,
+          lastName: ACCOUNTS.aspirante.lastName,
+          documentType: 'V',
+          documentNumber: 'V-19876543',
+          birthDate: '1990-04-21',
+          state: 'Bolívar',
+          city: 'Puerto Ordaz',
+          providesVehicle: false,
+        },
+      });
+      const nextYear = `${new Date().getFullYear() + 1}-12-31`;
+      // Tiny sample files: a PNG and PDFs (the API checks the type by content).
+      const png = new Uint8Array([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x70, 0x6e, 0x67,
+      ]);
+      const pdf = (label) => new TextEncoder().encode(`%PDF-1.4\n% ${label} (ejemplo)\n`);
+      for (const [kind, bytes, name, type, expiresOn] of [
+        ['identity_document', png, 'cedula.png', 'image/png'],
+        ['driver_license', pdf('licencia'), 'licencia.pdf', 'application/pdf', nextYear],
+        ['medical_certificate', pdf('certificado médico'), 'medico.pdf', 'application/pdf'],
+      ]) {
+        const form = new FormData();
+        form.append('file', new Blob([bytes], { type }), name);
+        if (expiresOn) form.append('expiresOn', expiresOn);
+        const res = await fetch(`${API}/me/application/documents/${kind}`, {
+          method: 'PUT',
+          headers: { authorization: auth },
+          body: form,
+        });
+        if (!res.ok) throw new Error(`documento ${kind}: HTTP ${res.status} ${await res.text()}`);
+      }
+      await call('POST', '/me/application/submit', { auth, body: {} });
+      return true;
+    });
+    if (sent) done.push('aspirante con KYC enviado');
+  }
+  console.log(`  ✔ Todos los niveles: ${done.join(', ')}`);
+}
+
+/**
+ * The roles added last (finance and support staff of the platform, accountant and supervisor of
+ * Expresos Los Llanos): loaded on their own, so a database with older samples gets them too.
+ */
+async function latestRoles() {
+  const member = (who) =>
+    sqlValue(
+      `select count(*) from organization_memberships m join users u on u.id = m.user_id where u.email = '${ACCOUNTS[who].email}'`,
+      `buscar a ${ACCOUNTS[who].email}`,
+    ) !== '0';
+  const done = [];
+  for (const [who, role] of [
+    ['finanzas', 'finance'],
+    ['soporte', 'support'],
+  ]) {
+    const ok = await attempt(`cuenta ${who}`, async () => {
+      await account(who);
+      grantRole(who, role);
+      return true;
+    });
+    if (ok) done.push(ACCOUNTS[who].role.toLowerCase());
+  }
+  const pending = ['contador', 'supervisor'].filter((who) => !member(who));
+  if (pending.length) {
+    const admin = await account('admin');
+    const active = await call('GET', '/admin/organizations?status=active', { auth: admin });
+    const found = active.find((o) => o.legalName === INTERURBAN_MARK);
+    if (found) {
+      const llanos = {
+        auth: await account('llanos'),
+        id: found.id,
+        url: `/organizations/${found.id}`,
+      };
+      for (const [who, role] of [
+        ['contador', 'accountant'],
+        ['supervisor', 'supervisor'],
+      ]) {
+        if (pending.includes(who) && (await attempt(who, () => join(llanos, who, role)))) {
+          done.push(`${ACCOUNTS[who].role.toLowerCase()} de Expresos`);
+        }
+      }
+    }
+  }
+  if (done.length) console.log(`  ✔ Roles nuevos: ${done.join(', ')}`);
+}
+
 function printAccounts() {
   console.log(`\nCuentas de ejemplo (contraseña para todas: ${PASSWORD}):`);
-  for (const { email, role } of Object.values(ACCOUNTS)) {
-    console.log(`  ${email.padEnd(22)} ${role}`);
+  let group;
+  for (const account of Object.values(ACCOUNTS)) {
+    if (account.group !== group) {
+      group = account.group;
+      console.log(`\n  ${group}`);
+    }
+    console.log(`    ${account.email.padEnd(22)} ${account.role}`);
+    console.log(`    ${''.padEnd(22)} ↳ ${account.can}`);
   }
-  console.log('\nWeb: http://localhost:3000 · Portal y admin: http://localhost:3000/login');
-  console.log('Apps: entra con el mismo correo y contraseña.');
+  console.log(
+    '\n  Invitado (sin cuenta): en la app de pasajeros, al elegir puestos, "Continuar sin crear cuenta".',
+  );
+  console.log(
+    '\nWeb: http://localhost:3000 · Portal y administración: http://localhost:3000/login',
+  );
+  console.log('Apps: pasajeros y transportistas, con el mismo correo y contraseña.');
 }
 
 async function main() {
@@ -1071,9 +1359,21 @@ async function main() {
     auth: admin,
     what: 'listar empresas',
   });
-  if (orgs.some((o) => o.legalName === INTERURBAN_MARK)) {
+  const hasCore = orgs.some((o) => o.legalName === INTERURBAN_MARK);
+  const hasRoles = orgs.some((o) => o.legalName === ROLES_MARK);
+  const hasLatest =
+    sqlValue(
+      "select count(*) from users where email in ('finanzas@vtp.test', 'soporte@vtp.test') and platform_role is not null",
+      'buscar los roles nuevos',
+    ) === '2' &&
+    sqlValue(
+      "select count(*) from organization_memberships m join users u on u.id = m.user_id where u.email in ('contador@vtp.test', 'supervisor@vtp.test')",
+      'buscar los roles nuevos',
+    ) === '2';
+  if (hasCore && hasRoles && hasLatest) {
     console.log('  · Los datos de ejemplo ya estaban cargados: no se cambia nada.');
-  } else {
+  }
+  if (!hasCore) {
     const zones = await call('GET', '/admin/zones', { auth: admin, what: 'listar zonas' });
     let sub;
     if (zones.some((z) => z.slug === ZONE_SLUG)) {
@@ -1085,9 +1385,18 @@ async function main() {
     }
     const net = await interurban(admin, sub);
     await activity(admin, sub, net);
-    // Every sample account exists, even if a part of the activity failed.
-    for (const who of Object.keys(ACCOUNTS)) await account(who);
   }
+  if (!hasRoles) {
+    if (hasCore) console.log('  · Se agregan las cuentas de los roles que faltaban.');
+    await everyRole(admin);
+    // Every sample account exists, even if a part failed (on a full load; an upgrade only adds).
+    if (!hasCore) {
+      for (const who of Object.keys(ACCOUNTS)) {
+        if (!sessions.has(who)) await attempt(`cuenta ${who}`, () => account(who));
+      }
+    }
+  }
+  if (!hasLatest) await latestRoles();
   verifyEmails();
   printAccounts();
   if (warnings) {

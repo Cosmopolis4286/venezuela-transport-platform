@@ -22,7 +22,7 @@ import type {
   TripSummary,
 } from '@vtp/shared-types';
 import { CurrentAuth, Public, ReqMeta } from '../identity/auth.decorators.js';
-import { RequirePlatformRole } from '../identity/platform-role.guard.js';
+import { RequirePlatformPermission } from '../identity/platform-role.guard.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import {
   CurrentOrganization,
@@ -115,7 +115,7 @@ export class BookingsController {
 /** Platform staff: find a booking by the code a passenger sends to support. */
 @ApiTags('admin')
 @ApiBearerAuth()
-@RequirePlatformRole('reviewer')
+@RequirePlatformPermission('bookings.search')
 @Controller({ path: 'admin/bookings', version: '1' })
 export class AdminBookingsController {
   constructor(private readonly bookings: BookingsService) {}

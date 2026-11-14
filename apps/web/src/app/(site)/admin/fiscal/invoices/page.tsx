@@ -18,7 +18,7 @@ import { Input, Select } from '@/components/ui/input';
 import { Field } from '@/components/ui/label';
 import { formatDate } from '@/lib/labels';
 import { apiFetch } from '@/lib/server/api';
-import { requirePlatformAdmin } from '@/lib/server/session';
+import { requirePlatformPermission } from '@/lib/server/session';
 import { issueInvoice, updateInvoiceBuyer, voidInvoice } from '../actions';
 
 export const metadata: Metadata = { title: 'Facturas' };
@@ -48,7 +48,7 @@ async function Invoices({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requirePlatformAdmin();
+  await requirePlatformPermission('finance.manage');
   const query = await searchParams;
   const status = INVOICE_STATUSES.find((s) => s === query.status) ?? 'draft';
   const invoices = await apiFetch<Invoice[]>(`/admin/fiscal/invoices?status=${status}`);

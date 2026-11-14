@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardTitle } from '@/components/ui/card';
 import { APPLICATION_STATUS_LABELS, statusVariant } from '@/lib/labels';
 import { apiFetch } from '@/lib/server/api';
+import { requirePlatformPermission } from '@/lib/server/session';
 import { ReviewForm } from './review-form';
 
 export default function ApplicationReviewPage({
@@ -19,6 +20,8 @@ export default function ApplicationReviewPage({
 
 async function Application({ params }: { params: Promise<{ applicationId: string }> }) {
   const { applicationId } = await params;
+  // ID numbers and documents: reviewers only (support sees the list, not this).
+  await requirePlatformPermission('applications.review');
   const application = await apiFetch<ProviderApplication>(
     `/admin/applications/${encodeURIComponent(applicationId)}`,
   );

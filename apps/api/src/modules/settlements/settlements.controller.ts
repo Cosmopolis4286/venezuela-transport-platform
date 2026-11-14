@@ -22,7 +22,7 @@ import type {
   SettlementPolicy,
 } from '@vtp/shared-types';
 import { CurrentAuth, ReqMeta } from '../identity/auth.decorators.js';
-import { RequirePlatformRole } from '../identity/platform-role.guard.js';
+import { RequirePlatformPermission } from '../identity/platform-role.guard.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import {
   CurrentOrganization,
@@ -70,7 +70,7 @@ export class OrganizationSettlementsController {
 /** Platform admins: commissions, payouts to operators and refunds to payers. Money: admins only. */
 @ApiTags('admin')
 @ApiBearerAuth()
-@RequirePlatformRole()
+@RequirePlatformPermission('finance.manage')
 @Controller({ path: 'admin', version: '1' })
 export class AdminSettlementsController {
   constructor(private readonly settlements: SettlementsService) {}

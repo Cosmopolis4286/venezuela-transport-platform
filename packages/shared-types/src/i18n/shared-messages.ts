@@ -112,6 +112,9 @@ const es: SharedMessages = {
     INVITATION_PENDING: 'Ya hay una invitación pendiente para esa persona.',
     ORGANIZATION_WRONG_STATUS: 'La organización no está en un estado que permita esa acción.',
     ORGANIZATION_NOT_APPROVED: 'La organización debe estar aprobada para publicar rutas.',
+    ORGANIZATION_NOT_ACTIVE:
+      'La organización no está activa (en revisión, suspendida o rechazada): no puede operar viajes, ventas ni boletos.',
+    MANAGE_ADMINS_OWNER_ONLY: 'Solo un dueño puede nombrar, cambiar o quitar administradores.',
     ORGANIZATION_TYPE_NOT_ALLOWED: 'Este tipo de organización no puede hacer eso.',
     TRANSPORT_MODE_NOT_ALLOWED: 'Tu organización no opera ese tipo de vehículo.',
     SERVICE_NOT_ALLOWED: 'Las líneas de mototaxis solo publican rutas urbanas o suburbanas.',
@@ -281,6 +284,9 @@ const en: SharedMessages = {
     INVITATION_PENDING: 'That person already has a pending invitation.',
     ORGANIZATION_WRONG_STATUS: 'The organization is not in a state that allows that.',
     ORGANIZATION_NOT_APPROVED: 'The organization must be approved to publish routes.',
+    ORGANIZATION_NOT_ACTIVE:
+      'The organization is not active (in review, suspended or rejected): it cannot run trips, sales or tickets.',
+    MANAGE_ADMINS_OWNER_ONLY: 'Only an owner can appoint, change or remove administrators.',
     ORGANIZATION_TYPE_NOT_ALLOWED: 'This kind of organization cannot do that.',
     TRANSPORT_MODE_NOT_ALLOWED: 'Your organization does not run that kind of vehicle.',
     SERVICE_NOT_ALLOWED: 'Motorcycle taxi lines only publish urban or suburban routes.',
@@ -451,6 +457,9 @@ const ptBR: SharedMessages = {
     INVITATION_PENDING: 'Essa pessoa já tem um convite pendente.',
     ORGANIZATION_WRONG_STATUS: 'A organização não está em um estado que permita isso.',
     ORGANIZATION_NOT_APPROVED: 'A organização deve estar aprovada para publicar rotas.',
+    ORGANIZATION_NOT_ACTIVE:
+      'A organização não está ativa (em análise, suspensa ou rejeitada): não pode operar viagens, vendas nem passagens.',
+    MANAGE_ADMINS_OWNER_ONLY: 'Somente um dono pode nomear, alterar ou remover administradores.',
     ORGANIZATION_TYPE_NOT_ALLOWED: 'Este tipo de organização não pode fazer isso.',
     TRANSPORT_MODE_NOT_ALLOWED: 'Sua organização não opera esse tipo de veículo.',
     SERVICE_NOT_ALLOWED: 'Linhas de mototáxi só publicam rotas urbanas ou suburbanas.',

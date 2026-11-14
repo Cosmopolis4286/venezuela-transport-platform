@@ -17,6 +17,7 @@ import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { Input, Select } from '@/components/ui/input';
 import { Field } from '@/components/ui/label';
 import { apiFetch } from '@/lib/server/api';
+import { requireOrganizationPermission } from '@/lib/server/organization-access';
 import { assignTrip, cancelDeparture } from './actions';
 
 export default function DispatchPage({
@@ -50,6 +51,7 @@ async function Dispatch({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { organizationId } = await params;
+  await requireOrganizationPermission(organizationId, 'operations.dispatch');
   const { date: rawDate } = await searchParams;
   const date =
     typeof rawDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rawDate)
