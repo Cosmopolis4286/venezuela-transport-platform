@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post } from '@nestj
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { OperatingZone } from '@vtp/shared-types';
 import { CurrentAuth, Public, ReqMeta } from '../identity/auth.decorators.js';
-import { RequirePlatformRole } from '../identity/platform-role.guard.js';
+import { RequirePlatformPermission } from '../identity/platform-role.guard.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import { OperatingZoneDto, UpdateOperatingZoneDto } from './network.dto.js';
 import { ZonesService } from './zones.service.js';
@@ -23,13 +23,13 @@ export class ZonesController {
 /** Only admins open, pause or reconfigure a zone: it decides where money is taken. */
 @ApiTags('admin')
 @ApiBearerAuth()
-@RequirePlatformRole('admin')
+@RequirePlatformPermission('zones.manage')
 @Controller({ path: 'admin/zones', version: '1' })
 export class AdminZonesController {
   constructor(private readonly zones: ZonesService) {}
 
   // Reviewers curate stops and pick their zone.
-  @RequirePlatformRole('reviewer')
+  @RequirePlatformPermission('network.view')
   @Get()
   list(): Promise<OperatingZone[]> {
     return this.zones.list(true);

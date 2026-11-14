@@ -1,6 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
+import {
+  PLATFORM_ROLE_LABELS,
+  platformRoleHasPermission,
+  type PlatformPermission,
+} from '@vtp/shared-types';
 import { UserMenu } from '@/components/portal/user-menu';
 import { requirePlatformStaff } from '@/lib/server/session';
 
@@ -22,26 +27,37 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   );
 }
 
+/** Each section and the platform permission that opens it (the API checks the same). */
+const SECTIONS: [href: string, label: string, permission: PlatformPermission][] = [
+  ['/admin/stops', 'Terminales y paradas', 'network.manage'],
+  ['/admin/bookings', 'Buscar reserva', 'bookings.search'],
+  ['/admin/taxi', 'Taxis por WhatsApp', 'taxi.assist'],
+  ['/admin/zones', 'Zonas', 'zones.manage'],
+  ['/admin/payments', 'Pagos', 'finance.manage'],
+  ['/admin/settlements', 'Liquidaciones', 'finance.manage'],
+  ['/admin/refunds', 'Reembolsos', 'finance.manage'],
+  ['/admin/fiscal', 'Facturación', 'finance.manage'],
+  ['/admin/trip-packs', 'Paquetes', 'products.manage'],
+  ['/admin/metrics', 'Métricas', 'metrics.view'],
+];
+
 async function StaffShell({ children }: { children: React.ReactNode }) {
   const user = await requirePlatformStaff();
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-b bg-primary text-primary-foreground">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-6">
-          <nav className="flex items-center gap-5">
+        <div className="mx-auto flex min-h-14 max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-2">
+          <nav className="flex flex-wrap items-center gap-x-5 gap-y-1">
             <Link href="/admin" className="font-semibold">
-              VTP · Administración
+              VTP · {PLATFORM_ROLE_LABELS[user.platformRole!]}
             </Link>
-            <Link href="/admin/stops" className="text-sm opacity-90 hover:underline">
-              Terminales y paradas
-            </Link>
-            <Link href="/admin/bookings" className="text-sm opacity-90 hover:underline">
-              Buscar reserva
-            </Link>
-            <Link href="/admin/taxi" className="text-sm opacity-90 hover:underline">
-              Taxis por WhatsApp
-            </Link>
-            {user.platformRole === 'admin' ? <MoneyLinks /> : null}
+            {SECTIONS.filter(([, , permission]) =>
+              platformRoleHasPermission(user.platformRole, permission),
+            ).map(([href, label]) => (
+              <Link key={href} href={href} className="text-sm opacity-90 hover:underline">
+                {label}
+              </Link>
+            ))}
           </nav>
           <Suspense>
             <UserMenu />
@@ -54,34 +70,5 @@ async function StaffShell({ children }: { children: React.ReactNode }) {
         </Suspense>
       </main>
     </div>
-  );
-}
-
-/** Payments, settlements and refunds move money: only platform admins see them (the API agrees). */
-function MoneyLinks() {
-  return (
-    <>
-      <Link href="/admin/zones" className="text-sm opacity-90 hover:underline">
-        Zonas
-      </Link>
-      <Link href="/admin/payments" className="text-sm opacity-90 hover:underline">
-        Pagos
-      </Link>
-      <Link href="/admin/settlements" className="text-sm opacity-90 hover:underline">
-        Liquidaciones
-      </Link>
-      <Link href="/admin/refunds" className="text-sm opacity-90 hover:underline">
-        Reembolsos
-      </Link>
-      <Link href="/admin/fiscal" className="text-sm opacity-90 hover:underline">
-        Facturación
-      </Link>
-      <Link href="/admin/trip-packs" className="text-sm opacity-90 hover:underline">
-        Paquetes
-      </Link>
-      <Link href="/admin/metrics" className="text-sm opacity-90 hover:underline">
-        Métricas
-      </Link>
-    </>
   );
 }

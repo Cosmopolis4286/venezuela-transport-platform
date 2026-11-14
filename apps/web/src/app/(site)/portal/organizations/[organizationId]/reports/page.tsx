@@ -2,7 +2,6 @@ import {
   formatPaymentAmount,
   todayInVenezuela,
   type OccupancyReport,
-  type OrganizationMembershipSummary,
   type SalesReport,
 } from '@vtp/shared-types';
 import Link from 'next/link';
@@ -12,6 +11,7 @@ import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { formatDate } from '@/lib/labels';
 import { apiFetch } from '@/lib/server/api';
+import { requireOrganizationPermission } from '@/lib/server/organization-access';
 
 export default function ReportsPage({
   params,
@@ -46,12 +46,15 @@ async function Reports({
     new Date(Date.parse(`${to}T00:00:00Z`) - 29 * 86_400_000).toISOString().slice(0, 10);
   const base = `/organizations/${encodeURIComponent(organizationId)}`;
   const range = `from=${from}&to=${to}`;
-  const { organization, permissions } = await apiFetch<OrganizationMembershipSummary>(base);
+  // Occupancy needs reports.view; sales, which show money, also finance.view.
+  const { organization, permissions } = await requireOrganizationPermission(
+    organizationId,
+    'reports.view',
+  );
   const canSales = permissions.includes('finance.view');
-  const canOccupancy = permissions.includes('bookings.view');
   const [sales, occupancy] = await Promise.all([
     canSales ? apiFetch<SalesReport>(`${base}/reports/sales?${range}`) : null,
-    canOccupancy ? apiFetch<OccupancyReport>(`${base}/reports/occupancy?${range}`) : null,
+    apiFetch<OccupancyReport>(`${base}/reports/occupancy?${range}`),
   ]);
   const exportHref = (kind: string) =>
     `/portal/organizations/${organization.id}/reports/export?kind=${kind}&${range}`;

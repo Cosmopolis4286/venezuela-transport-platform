@@ -19,7 +19,7 @@ import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { formatDate } from '@/lib/labels';
 import { ApiError, apiFetch } from '@/lib/server/api';
-import { requirePlatformStaff } from '@/lib/server/session';
+import { requirePlatformPermission } from '@/lib/server/session';
 
 export const metadata: Metadata = { title: 'Buscar reserva' };
 
@@ -36,7 +36,7 @@ async function Lookup({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requirePlatformStaff();
+  await requirePlatformPermission('bookings.search');
   const query = await searchParams;
   const code = typeof query.code === 'string' ? query.code.trim() : '';
   let result: AdminBookingLookup | null = null;

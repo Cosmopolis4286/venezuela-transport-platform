@@ -18,6 +18,10 @@ export const ORGANIZATION_ROLES = [
   'ticket_agent',
   'driver',
   'inspector',
+  /** Money without operations: balance, settlements, collections, refunds and sales reports. */
+  'accountant',
+  /** Yard or terminal chief: dispatch, ticket checks and occupancy, without money or routes. */
+  'supervisor',
 ] as const;
 export type OrganizationRole = (typeof ORGANIZATION_ROLES)[number];
 
@@ -29,6 +33,8 @@ export const ORGANIZATION_ROLE_LABELS: Record<OrganizationRole, string> = {
   ticket_agent: 'Taquillero',
   driver: 'Conductor',
   inspector: 'Inspector de boletos',
+  accountant: 'Contador',
+  supervisor: 'Supervisor',
 };
 
 export const ORGANIZATION_TYPE_LABELS: Record<OrganizationType, string> =
@@ -42,10 +48,19 @@ export const ORGANIZATION_STATUS_LABELS: Record<OrganizationStatus, string> = {
 };
 
 export const ROLES_BY_ORGANIZATION_TYPE: Record<OrganizationType, readonly OrganizationRole[]> = {
-  bus_company: ['owner', 'admin', 'dispatcher', 'ticket_agent', 'driver', 'inspector'],
-  taxi_line: ['owner', 'admin', 'dispatcher', 'driver'],
-  moto_line: ['owner', 'admin', 'dispatcher', 'driver'],
-  terminal: ['owner', 'admin', 'dispatcher', 'inspector'],
+  bus_company: [
+    'owner',
+    'admin',
+    'dispatcher',
+    'ticket_agent',
+    'driver',
+    'inspector',
+    'accountant',
+    'supervisor',
+  ],
+  taxi_line: ['owner', 'admin', 'dispatcher', 'driver', 'accountant'],
+  moto_line: ['owner', 'admin', 'dispatcher', 'driver', 'accountant'],
+  terminal: ['owner', 'admin', 'dispatcher', 'inspector', 'accountant', 'supervisor'],
 };
 
 /** What a member may do inside their organization. Future modules add their own permissions here. */
@@ -61,6 +76,8 @@ export const ORGANIZATION_PERMISSIONS = [
   'tickets.validate',
   'trips.drive',
   'finance.view',
+  /** Operating reports without money (occupancy); sales reports also need `finance.view`. */
+  'reports.view',
   /** Receive passengers' payments in the organization's own accounts (ADR-027): accounts, verification, refunds. */
   'finance.manage',
 ] as const;
@@ -68,23 +85,19 @@ export type OrganizationPermission = (typeof ORGANIZATION_PERMISSIONS)[number];
 
 export const ROLE_PERMISSIONS: Record<OrganizationRole, readonly OrganizationPermission[]> = {
   owner: ORGANIZATION_PERMISSIONS,
-  admin: [
-    'organization.manage',
-    'members.view',
-    'members.manage',
-    'operations.dispatch',
-    'routes.manage',
-    'fleet.manage',
-    'bookings.view',
-    'tickets.sell',
-    'tickets.validate',
-    'finance.view',
-    'finance.manage',
-  ],
-  dispatcher: ['members.view', 'operations.dispatch', 'bookings.view'],
+  admin: ORGANIZATION_PERMISSIONS.filter((p) => p !== 'trips.drive'),
+  dispatcher: ['members.view', 'operations.dispatch', 'bookings.view', 'reports.view'],
   ticket_agent: ['tickets.sell', 'bookings.view'],
   driver: ['trips.drive', 'tickets.validate'],
   inspector: ['tickets.validate', 'bookings.view'],
+  accountant: ['bookings.view', 'reports.view', 'finance.view', 'finance.manage'],
+  supervisor: [
+    'members.view',
+    'operations.dispatch',
+    'bookings.view',
+    'tickets.validate',
+    'reports.view',
+  ],
 };
 
 export function roleAllowedFor(type: OrganizationType, role: OrganizationRole): boolean {
@@ -103,9 +116,85 @@ export function roleHasPermission(
   return ROLE_PERMISSIONS[role].includes(permission);
 }
 
-/** Platform staff (not tied to an organization). `reviewer` approves organizations and KYC. */
-export const PLATFORM_ROLES = ['admin', 'reviewer'] as const;
+/**
+ * Platform staff (not tied to an organization). `admin` can do everything; the others are
+ * scoped: `reviewer` approves organizations and KYC and curates stops, `finance` handles the money
+ * (payments, settlements, refunds, invoices) and `support` helps passengers (bookings, WhatsApp
+ * taxis) and can see organizations and applications without deciding on them.
+ */
+export const PLATFORM_ROLES = ['admin', 'reviewer', 'finance', 'support'] as const;
 export type PlatformRole = (typeof PLATFORM_ROLES)[number];
+
+export const PLATFORM_ROLE_LABELS: Record<PlatformRole, string> = {
+  admin: 'Administración',
+  reviewer: 'Revisión',
+  finance: 'Finanzas',
+  support: 'Soporte',
+};
+
+/** What platform staff may do. The API checks one of these on every admin route. */
+export const PLATFORM_PERMISSIONS = [
+  /** List organizations and their state. */
+  'organizations.view',
+  /** Approve, reject or suspend organizations. */
+  'organizations.review',
+  /** List KYC applications (who, for which organization, status): no ID numbers or documents. */
+  'applications.view',
+  /** Open an application (ID number, birth date, documents) and decide on it. */
+  'applications.review',
+  /** See zones and the stop catalog. */
+  'network.view',
+  /** Create and edit stops. */
+  'network.manage',
+  /** Create and edit operating zones (where the platform sells). */
+  'zones.manage',
+  /** Find a booking by its code (support at the counter or on WhatsApp). */
+  'bookings.search',
+  /** Ask for taxis and motorcycles for WhatsApp customers. */
+  'taxi.assist',
+  /** Payments, receiving accounts, rates, settlements, payouts, refunds and invoices. */
+  'finance.manage',
+  /** Trip pack products. */
+  'products.manage',
+  /** Platform metrics. */
+  'metrics.view',
+] as const;
+export type PlatformPermission = (typeof PLATFORM_PERMISSIONS)[number];
+
+export const PLATFORM_ROLE_PERMISSIONS: Record<PlatformRole, readonly PlatformPermission[]> = {
+  admin: PLATFORM_PERMISSIONS,
+  reviewer: [
+    'organizations.view',
+    'organizations.review',
+    'applications.view',
+    'applications.review',
+    'network.view',
+    'network.manage',
+    'bookings.search',
+    'taxi.assist',
+  ],
+  finance: [
+    'organizations.view',
+    'network.view',
+    'bookings.search',
+    'finance.manage',
+    'metrics.view',
+  ],
+  support: [
+    'organizations.view',
+    'applications.view',
+    'network.view',
+    'bookings.search',
+    'taxi.assist',
+  ],
+};
+
+export function platformRoleHasPermission(
+  role: PlatformRole | null | undefined,
+  permission: PlatformPermission,
+): boolean {
+  return !!role && PLATFORM_ROLE_PERMISSIONS[role].includes(permission);
+}
 
 export interface Organization {
   id: string;

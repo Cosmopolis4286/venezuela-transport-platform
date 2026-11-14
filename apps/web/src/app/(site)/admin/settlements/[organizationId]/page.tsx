@@ -23,7 +23,7 @@ import { Input, Select } from '@/components/ui/input';
 import { Field } from '@/components/ui/label';
 import { monthParam } from '@/lib/month';
 import { apiFetch } from '@/lib/server/api';
-import { requirePlatformAdmin } from '@/lib/server/session';
+import { requirePlatformPermission } from '@/lib/server/session';
 import { createPayout, setOrganizationPolicy, voidPayout } from '../actions';
 
 export default function AdminOrganizationSettlementPage({
@@ -44,7 +44,7 @@ async function OrganizationSettlementView({
   params: Promise<{ organizationId: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requirePlatformAdmin();
+  await requirePlatformPermission('finance.manage');
   const { organizationId } = await params;
   const month = monthParam((await searchParams).month);
   const base = `/admin/organizations/${encodeURIComponent(organizationId)}`;

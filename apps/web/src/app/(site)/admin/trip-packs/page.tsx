@@ -15,15 +15,13 @@ import {
   type TripPackProduct,
 } from '@vtp/shared-types';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { ActionForm, SubmitButton } from '@/components/portal/action-form';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { Input, Select } from '@/components/ui/input';
 import { Field } from '@/components/ui/label';
 import { apiFetch } from '@/lib/server/api';
-import { requirePlatformAdmin } from '@/lib/server/session';
-import { getCurrentUser } from '@/lib/server/session';
+import { requirePlatformPermission } from '@/lib/server/session';
 import { createTripPackProduct, savePlatformRates, setTripPackProductActive } from './actions';
 
 const RATE_LABELS: Record<RateCurrency, string> = {
@@ -36,10 +34,7 @@ const RATE_LABELS: Record<RateCurrency, string> = {
  * platform's exchange rates their prices are converted with. Platform admins only.
  */
 export default async function TripPacksPage() {
-  // Trip packs are money: platform admins only (reviewers go back to /admin; the API agrees).
-  await requirePlatformAdmin();
-  const user = await getCurrentUser();
-  if (user.platformRole !== 'admin') redirect('/admin');
+  await requirePlatformPermission('products.manage');
   const [products, zones, allStops, rates] = await Promise.all([
     apiFetch<TripPackProduct[]>('/admin/trip-pack-products'),
     apiFetch<OperatingZone[]>('/admin/zones'),

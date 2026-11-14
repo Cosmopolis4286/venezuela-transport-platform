@@ -501,6 +501,73 @@ describe.runIf(expectDatabase)('Organizations (e2e)', () => {
     });
   });
 
+  describe('accountant, supervisor and reports', () => {
+    it('gives each role its slice: money, yard operations or occupancy', async () => {
+      const owner = await newUser();
+      const { organization } = await createOrganization(owner.auth);
+      const base = `/api/v1/organizations/${organization.id}`;
+      const reviewer = await newUser();
+      await makeReviewer(reviewer.user.id);
+      await http()
+        .post(`/api/v1/admin/organizations/${organization.id}/review`)
+        .set('Authorization', reviewer.auth)
+        .send({ decision: 'approve' })
+        .expect(200);
+      const [accountant, supervisor, dispatcher, inspector] = [
+        await addMember(owner.auth, organization.id, 'accountant'),
+        await addMember(owner.auth, organization.id, 'supervisor'),
+        await addMember(owner.auth, organization.id, 'dispatcher'),
+        await addMember(owner.auth, organization.id, 'inspector'),
+      ];
+      const today = new Date(Date.now() - 4 * 3_600_000).toISOString().slice(0, 10);
+      const status = async (auth: string, method: 'get' | 'post', path: string, body?: object) =>
+        (await http()[method](`${base}${path}`).set('Authorization', auth).send(body)).status;
+      const checks: [string, string, 'get' | 'post', string, number][] = [
+        // Accountant: money and reports, no operations or team.
+        ['contador', accountant.auth, 'get', '/settlement', 200],
+        ['contador', accountant.auth, 'get', '/payment-accounts', 200],
+        ['contador', accountant.auth, 'get', `/reports/sales?from=${today}&to=${today}`, 200],
+        ['contador', accountant.auth, 'get', `/dispatch?date=${today}`, 403],
+        ['contador', accountant.auth, 'post', '/invitations', 403],
+        // Supervisor: dispatch, ticket checks and occupancy, no money.
+        ['supervisor', supervisor.auth, 'get', `/dispatch?date=${today}`, 200],
+        ['supervisor', supervisor.auth, 'get', `/reports/occupancy?from=${today}&to=${today}`, 200],
+        ['supervisor', supervisor.auth, 'get', `/reports/sales?from=${today}&to=${today}`, 403],
+        ['supervisor', supervisor.auth, 'get', '/settlement', 403],
+        ['supervisor', supervisor.auth, 'post', '/tickets/validate', 400],
+        // Dispatcher: occupancy (reports.view) but not sales; inspector: neither.
+        [
+          'despachador',
+          dispatcher.auth,
+          'get',
+          `/reports/occupancy?from=${today}&to=${today}`,
+          200,
+        ],
+        ['despachador', dispatcher.auth, 'get', `/reports/sales?from=${today}&to=${today}`, 403],
+        ['inspector', inspector.auth, 'get', `/reports/occupancy?from=${today}&to=${today}`, 403],
+      ];
+      const mismatches: string[] = [];
+      for (const [who, auth, method, path, expected] of checks) {
+        const got = await status(auth, method, path, method === 'post' ? {} : undefined);
+        if (got !== expected) mismatches.push(`${who} ${method} ${path}: ${got} ≠ ${expected}`);
+      }
+      expect(mismatches).toEqual([]);
+
+      // Roles exist only where they make sense: no supervisor in a taxi line.
+      const line = await createOrganization(owner.auth, 'taxi_line');
+      await invite(owner.auth, line.organization.id, {
+        contactKind: 'email',
+        destination: `s-${randomUUID()}@example.com`,
+        role: 'supervisor',
+      }).expect(400);
+      await invite(owner.auth, line.organization.id, {
+        contactKind: 'email',
+        destination: `c-${randomUUID()}@example.com`,
+        role: 'accountant',
+      }).expect(201);
+    });
+  });
+
   describe('organization status', () => {
     it('lets only active organizations operate; others keep read access', async () => {
       const owner = await newUser();

@@ -12,10 +12,10 @@ import {
   StreamableFile,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import type { ProviderApplication } from '@vtp/shared-types';
+import { platformRoleHasPermission, type ProviderApplication } from '@vtp/shared-types';
 import type { Response } from 'express';
 import { CurrentAuth, ReqMeta } from '../identity/auth.decorators.js';
-import { RequirePlatformRole } from '../identity/platform-role.guard.js';
+import { RequirePlatformPermission } from '../identity/platform-role.guard.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import { sendDocument } from './document-response.js';
 import { ApplicationStatusQueryDto, ReviewApplicationDto } from './onboarding.dto.js';
@@ -24,14 +24,29 @@ import { OnboardingService } from './onboarding.service.js';
 /** Platform staff: KYC review queue. */
 @ApiTags('admin')
 @ApiBearerAuth()
-@RequirePlatformRole('reviewer')
+@RequirePlatformPermission('applications.review')
 @Controller({ path: 'admin/applications', version: '1' })
 export class AdminApplicationsController {
   constructor(private readonly onboarding: OnboardingService) {}
 
+  @RequirePlatformPermission('applications.view')
   @Get()
-  list(@Query() query: ApplicationStatusQueryDto): Promise<ProviderApplication[]> {
-    return this.onboarding.listForReview(query.status ?? 'submitted');
+  async list(
+    @Query() query: ApplicationStatusQueryDto,
+    @CurrentAuth() auth: Authenticated,
+  ): Promise<ProviderApplication[]> {
+    const applications = await this.onboarding.listForReview(query.status ?? 'submitted');
+    if (platformRoleHasPermission(auth.user.platformRole, 'applications.review')) {
+      return applications;
+    }
+    // Staff who only follow the queue (support) never see ID numbers, birth dates or vehicles.
+    return applications.map((a) => ({
+      ...a,
+      documentNumber: '',
+      birthDate: '',
+      vehicle: null,
+      documents: a.documents.map((d) => ({ ...d, fileName: '' })),
+    }));
   }
 
   @Get(':applicationId')

@@ -22,7 +22,7 @@ import type {
   SalesBook,
 } from '@vtp/shared-types';
 import { CurrentAuth, ReqMeta } from '../identity/auth.decorators.js';
-import { RequirePlatformRole } from '../identity/platform-role.guard.js';
+import { RequirePlatformPermission } from '../identity/platform-role.guard.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import {
   BcvRateDto,
@@ -39,7 +39,7 @@ import { FiscalService } from './fiscal.service.js';
 /** The platform's invoices and fiscal books (ADR-031). Money: admins only. */
 @ApiTags('admin')
 @ApiBearerAuth()
-@RequirePlatformRole()
+@RequirePlatformPermission('finance.manage')
 @Controller({ path: 'admin/fiscal', version: '1' })
 export class AdminFiscalController {
   constructor(private readonly fiscal: FiscalService) {}
