@@ -5,11 +5,19 @@
 //
 //   node infrastructure/scripts/menu.mjs            # menu
 //   node infrastructure/scripts/menu.mjs setup      # or: pnpm menu setup
-//   … setup | dev | passenger | transport | all | seed | admin <email> | status | check | e2e
-//     | repair | reset
+//   … start | setup | update | dev | passenger | transport | all | seed | admin <email> | stop
+//     | reset | status | check | e2e | repair
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { createServer } from 'node:net';
 import { delimiter, dirname, join } from 'node:path';
 import { createInterface } from 'node:readline';
@@ -91,6 +99,34 @@ function usePath(dir) {
   process.env.PATH = `${dir}${delimiter}${process.env.PATH ?? ''}`;
 }
 
+/** Where the Node 24 the menu switched to lives (null: the computer's own Node fits). */
+let projectNodeDir = null;
+
+/**
+ * With fnm installed, the folder of its Node 24 (installing it first if needed), or null. Nothing
+ * global changes: the menu only puts that folder first in its own PATH.
+ */
+function fnmNode24() {
+  if (!output('fnm', ['--version'])) return null;
+  warn('Uso fnm para conseguir Node 24…');
+  const has24 = (output('fnm', ['list']) ?? '')
+    .split('\n')
+    .some((line) => nodeFits(line.match(/v24\.\d+\.\d+/)?.[0] ?? ''));
+  if (!has24 && !run('fnm', ['install', '24'])) return null;
+  const exec = output('fnm', ['exec', '--using=24', 'node', '-p', 'process.execPath']);
+  return exec && existsSync(exec) ? dirname(exec) : null;
+}
+
+/** Uses a Node 24 that is already there (.tools/ or fnm) without installing anything. */
+function useExistingProjectNode() {
+  if (nodeFits(output('node', ['-v']) ?? '')) return;
+  const local = localNode();
+  if (local) return usePath(nodeBin(local));
+  if (!output('fnm', ['--version'])) return;
+  const exec = output('fnm', ['exec', '--using=24', 'node', '-p', 'process.execPath']);
+  if (exec && nodeFits(output(exec, ['-v']) ?? '')) usePath(dirname(exec));
+}
+
 /** A Node 24 already downloaded into .tools/, newest first. */
 function localNode() {
   if (!existsSync(TOOLS)) return null;
@@ -128,6 +164,19 @@ async function ensureNode() {
   if (nodeFits(process.versions.node) && nodeFits(output('node', ['-v']) ?? '')) {
     ok(`Node ${process.versions.node}`);
     return true;
+  }
+  // Already using fnm? Ask it for Node 24 (installed per user, no global switch).
+  if (!localNode()) {
+    const fnmNode = fnmNode24();
+    if (fnmNode) {
+      usePath(fnmNode);
+      projectNodeDir = fnmNode;
+      const version = output('node', ['-v']);
+      if (version && nodeFits(version)) {
+        ok(`Node ${version} (de fnm, solo para el menú; tu Node por defecto no cambia)`);
+        return true;
+      }
+    }
   }
   let dir = localNode();
   if (!dir) {
@@ -174,6 +223,7 @@ async function ensureNode() {
     dir = join(TOOLS, name);
   }
   usePath(nodeBin(dir));
+  projectNodeDir = nodeBin(dir);
   const version = output('node', ['-v']);
   if (!version || !nodeFits(version)) {
     throw new StepError(`No se pudo usar el Node 24 de ${dir}.`, 'Prueba la opción "Reparar".');
@@ -187,10 +237,8 @@ function ensurePnpm() {
   process.env.COREPACK_ENABLE_DOWNLOAD_PROMPT = '0';
   // A pnpm installed with another Node may start with that Node (its shim points to it): with the
   // project's own Node, put a pnpm shim right next to it, first in PATH.
-  const nodeDir = dirname(output('node', ['-p', 'process.execPath']) ?? '');
-  const ownNode = nodeDir.startsWith(TOOLS);
-  const shim = join(nodeDir, WINDOWS ? 'pnpm.cmd' : 'pnpm');
-  if (ownNode && !existsSync(shim)) {
+  const nodeDir = projectNodeDir;
+  if (nodeDir && !existsSync(join(nodeDir, WINDOWS ? 'pnpm.cmd' : 'pnpm'))) {
     run('corepack', ['enable', 'pnpm', '--install-directory', nodeDir], { quiet: true });
   }
   let version = output('pnpm', ['--version']);
@@ -324,6 +372,13 @@ async function preflight({ docker = true } = {}) {
 
 // --- Steps ----------------------------------------------------------------------------------
 
+/** True when node_modules is missing or older than the lockfile (after a pull, for example). */
+function needsInstall() {
+  const marker = join(ROOT, 'node_modules', '.modules.yaml');
+  if (!existsSync(marker)) return true;
+  return statSync(join(ROOT, 'pnpm-lock.yaml')).mtimeMs > statSync(marker).mtimeMs;
+}
+
 async function install() {
   step('Instalando dependencias');
   const lock = ['install', '--frozen-lockfile'];
@@ -365,6 +420,37 @@ async function setup() {
   );
 }
 
+/** First time, all in one: prepare, load the sample data and start the API and web. */
+async function start() {
+  await setup();
+  await seed();
+  await serve('API y web', 'dev', WEB_PORTS, 'http://localhost:3000/es');
+}
+
+/** Brings the latest code: git pull, install if the lockfile changed, migrations. */
+async function update() {
+  await preflight();
+  step('Trayendo los cambios (git pull)');
+  if (!run('git', ['pull', '--ff-only'])) {
+    throw new StepError(
+      'No se pudieron traer los cambios.',
+      'Si tienes cambios propios sin guardar, guárdalos (git stash) o descártalos y repite.',
+    );
+  }
+  if (needsInstall()) await install();
+  else ok('Dependencias al día');
+  await database();
+}
+
+async function stop() {
+  step('Deteniendo la base de datos (los datos se conservan)');
+  // Straight to Docker (the same as `pnpm infra:down`): no Node version involved.
+  const down = ['compose', '--profile', 'app', '--profile', 'redis', '--profile', 'mail', 'down'];
+  if (!run('docker', down))
+    throw new StepError('No se pudo detener Docker.', '¿Está Docker abierto?');
+  ok('Detenida. "Arrancar…" la vuelve a encender.');
+}
+
 async function warnBusyPorts(ports) {
   for (const [port, what] of ports) {
     if (!(await portFree(port)))
@@ -372,12 +458,47 @@ async function warnBusyPorts(ports) {
   }
 }
 
+/** Opens `url` in the default browser (best effort; VTP_NO_BROWSER=1 turns it off). */
+function openBrowser(url) {
+  if (process.env.VTP_NO_BROWSER === '1' || !process.stdout.isTTY) return;
+  const [command, args] = WINDOWS
+    ? ['cmd', ['/c', 'start', '""', url]]
+    : process.platform === 'darwin'
+      ? ['open', [url]]
+      : ['xdg-open', [url]];
+  try {
+    spawn(command, args, { detached: true, stdio: 'ignore' }).unref();
+  } catch {
+    // No browser available: the URL is printed anyway.
+  }
+}
+
+/** Waits (in the background) until `url` answers, then announces it and opens the browser. */
+function watchAndOpen(url) {
+  void (async () => {
+    for (let i = 0; i < 180; i++) {
+      try {
+        const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+        if (res.status < 500) {
+          ok(`Listo: ${url}`);
+          openBrowser(url);
+          return;
+        }
+      } catch {
+        // Not up yet.
+      }
+      await sleep(2000);
+    }
+  })();
+}
+
 /** Long-running servers: they take over the terminal until Ctrl+C. */
-async function serve(label, script, ports) {
+async function serve(label, script, ports, openWhenReady = null) {
   await preflight();
-  if (!existsSync(join(ROOT, 'node_modules'))) await install();
+  if (needsInstall()) await install();
   await database();
   await warnBusyPorts(ports);
+  if (openWhenReady) watchAndOpen(openWhenReady);
   step(`${label} (Ctrl+C para detener y volver al menú)`);
   // The server owns the terminal meanwhile (and Ctrl+C reaches it): release the menu's input.
   releaseInput();
@@ -481,13 +602,17 @@ async function status() {
   const system = output('node', ['-v']) ?? process.versions.node;
   if (nodeFits(system)) ok(`Node ${system}`);
   else if (local) ok(`Node del proyecto en ${local} (tu Node ${system} no se usa)`);
+  else if (output('fnm', ['--version'])) ok(`Node ${system}; el menú usa el Node 24 de fnm`);
   else warn(`Node ${system}: "Preparar todo" descarga Node 24 para el proyecto`);
   const pnpm = output('pnpm', ['--version']);
   pnpm ? ok(`pnpm ${pnpm}`) : warn('pnpm no activo: "Preparar todo" lo activa');
   if (await dockerOk({ wait: false })) {
     const ps = output('docker', ['compose', 'ps', '--format', '{{.Service}}: {{.State}}']);
     console.log(ps ? dim(ps) : dim('  (no hay contenedores del proyecto)'));
-    run('pnpm', ['db:check']);
+    useExistingProjectNode();
+    if (nodeFits(output('node', ['-v']) ?? '') && existsSync(join(ROOT, 'node_modules'))) {
+      run('pnpm', ['db:check']);
+    }
   }
   (await apiUp()) ? ok('API en http://localhost:4000') : warn('API apagada');
   for (const [port, what] of [
@@ -585,51 +710,61 @@ function ask(question) {
   return new Promise((resolve) => waiting.push(resolve));
 }
 
+const WEB_PORTS = [
+  [3000, 'web'],
+  [4000, 'API'],
+];
+
+// [key, label, action] or a section title (string).
 const OPTIONS = [
-  ['setup', 'Preparar todo (primera vez: dependencias, .env, base de datos)', setup],
+  'Empezar',
+  ['start', 'Empezar (todo en uno): preparar, cargar ejemplos y abrir la web', start],
+  ['setup', 'Preparar todo (dependencias, .env, base de datos)', setup],
+  ['update', 'Actualizar (traer cambios, instalar y migrar)', update],
+  'Arrancar',
   [
     'dev',
-    'Arrancar API y web (http://localhost:3000)',
-    () =>
-      serve('API y web', 'dev', [
-        [3000, 'web'],
-        [4000, 'API'],
-      ]),
+    'API y web (http://localhost:3000)',
+    () => serve('API y web', 'dev', WEB_PORTS, 'http://localhost:3000/es'),
   ],
   [
     'passenger',
-    'Arrancar la app de pasajeros (Expo, :8081)',
+    'App de pasajeros (Expo, :8081)',
     () => serve('App de pasajeros', 'dev:passenger', [[8081, 'Metro']]),
   ],
   [
     'transport',
-    'Arrancar la app de transportistas (Expo, :8082)',
+    'App de transportistas (Expo, :8082)',
     () => serve('App de transportistas', 'dev:transport', [[8082, 'Metro']]),
   ],
   [
     'all',
-    'Arrancar todo junto (API, web y las dos apps)',
+    'Todo junto (API, web y las dos apps)',
     () =>
-      serve('Todo', 'dev:all', [
-        [3000, 'web'],
-        [4000, 'API'],
-        [8081, 'Metro'],
-        [8082, 'Metro'],
-      ]),
+      serve(
+        'Todo',
+        'dev:all',
+        [...WEB_PORTS, [8081, 'Metro'], [8082, 'Metro']],
+        'http://localhost:3000/es',
+      ),
   ],
+  'Datos',
   ['seed', 'Cargar datos de ejemplo del suburbano (zona, rutas, motos, paquetes)', seed],
   ['admin', 'Hacer administradora una cuenta', () => admin()],
-  ['status', 'Ver el estado (Docker, base de datos, servidores)', status],
+  ['stop', 'Detener la base de datos (se conservan los datos)', stop],
+  ['reset', 'Borrar los datos locales y empezar de cero', reset],
+  'Revisar y reparar',
+  ['status', 'Ver el estado (Node, Docker, base de datos, servidores)', status],
   ['check', 'Verificar el código (pnpm check)', check],
   ['e2e', 'Pruebas e2e de la API', e2e],
   ['repair', 'Reparar (borrar cachés y reinstalar)', repair],
-  ['reset', 'Borrar los datos locales y empezar de cero', reset],
 ];
+const ACTIONS = OPTIONS.filter((o) => typeof o !== 'string');
 
 async function runOption(name, extra) {
-  const option = OPTIONS.find(([key]) => key === name);
+  const option = ACTIONS.find(([key]) => key === name);
   if (!option) {
-    fail(`Opción desconocida: ${name}. Opciones: ${OPTIONS.map(([key]) => key).join(', ')}`);
+    fail(`Opción desconocida: ${name}. Opciones: ${ACTIONS.map(([key]) => key).join(', ')}`);
     return false;
   }
   try {
@@ -645,11 +780,15 @@ async function runOption(name, extra) {
 async function menu() {
   for (;;) {
     console.log(`\n${bold('VTP · menú local')} ${dim(`(${ROOT})`)}`);
-    OPTIONS.forEach(([, label], i) => console.log(`  ${String(i + 1).padStart(2)}. ${label}`));
+    let n = 0;
+    for (const option of OPTIONS) {
+      if (typeof option === 'string') console.log(dim(`  ${option}`));
+      else console.log(`  ${String(++n).padStart(2)}. ${option[1]}`);
+    }
     console.log('   0. Salir');
     const answer = (await ask('\nElige una opción: ')).trim();
     if (answer === '0' || answer.toLowerCase() === 'q') break;
-    const option = OPTIONS[Number(answer) - 1] ?? OPTIONS.find(([key]) => key === answer);
+    const option = ACTIONS[Number(answer) - 1] ?? ACTIONS.find(([key]) => key === answer);
     if (!option) {
       warn('Opción no válida.');
       continue;
