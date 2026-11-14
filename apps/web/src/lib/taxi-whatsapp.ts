@@ -8,7 +8,7 @@ import {
 } from '@vtp/shared-types';
 
 /**
- * What staff send the customer on WhatsApp at each step of a ride asked for them (ADR-035): the
+ * What staff send the customer on WhatsApp at each step of a ride asked for them (ADR-037): the
  * tracking link first, the plate once a driver takes it, the rating link at the end. Spanish, the
  * language of the chat. Staff press the link and WhatsApp opens with the text typed.
  */

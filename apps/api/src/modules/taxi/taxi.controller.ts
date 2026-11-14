@@ -149,6 +149,8 @@ export class AdminTaxiController {
 export class TaxiTrackingController {
   constructor(private readonly taxi: TaxiService) {}
 
+  // Only the global rate limit: the page refreshes itself every 15 s while the ride is open, and
+  // the token (144 random bits) cannot be guessed. Cancel and rate get the stricter one.
   @Public()
   @Get()
   view(@Param('token') token: string): Promise<PublicTaxiRide> {

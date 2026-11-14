@@ -138,7 +138,7 @@ export default async function seed(): Promise<void> {
   );
   await call('POST', `${org}/routes/${route.id}/status`, ot, { status: 'active' });
 
-  // A taxi line at the origin terminal, for taxis asked for by WhatsApp (ADR-035).
+  // A taxi line at the origin terminal, for taxis asked for by WhatsApp (ADR-037).
   const taxiOwner = await register('taxista');
   const line = await call<{ organization: { id: string } }>(
     'POST',

@@ -7,7 +7,7 @@ import { MESSAGES } from '@/i18n/messages';
 import { ApiError, apiRequest } from '@/lib/server/api';
 import { text } from '@/lib/server/form-actions';
 
-// The tracking link has no account: the token in the URL is what the API checks (ADR-035).
+// The tracking link has no account: the token in the URL is what the API checks (ADR-037).
 
 const texts = (form: FormData) => MESSAGES[localeFromSegment(text(form, 'lang')) ?? 'es'].track;
 

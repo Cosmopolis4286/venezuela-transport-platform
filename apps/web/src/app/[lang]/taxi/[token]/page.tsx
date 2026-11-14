@@ -24,7 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /**
  * `/es/taxi/<token>`: the link staff send on WhatsApp after asking for a taxi or moto for someone
- * (ADR-035). No account: it shows the ride, lets the person cancel before pickup and rate it after.
+ * (ADR-037). No account: it shows the ride, lets the person cancel before pickup and rate it after.
  */
 export default function TrackedRidePage({ params }: PageProps<'/[lang]/taxi/[token]'>) {
   return (

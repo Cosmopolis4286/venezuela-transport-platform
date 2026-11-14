@@ -121,6 +121,15 @@ pull request.
 
 ### Corregido
 
+- **Seguridad: permisos de organización a nivel de controlador.** El guardia solo leía el permiso
+  de cada ruta y no el del controlador: cualquier miembro de una empresa (conductor, despachador,
+  taquillero, inspector) podía ver sus **liquidaciones, movimientos y pagos** y usar las **ventas
+  en efectivo**. Ahora vale el permiso del controlador cuando la ruta no fija otro.
+- **Seguridad: el panel de administración ya no se envía a quien no es personal de la
+  plataforma.** La cabecera y el menú de `/admin` se dibujaban para cualquier sesión antes de la
+  redirección a `/portal` (los datos nunca salieron: la API los rechaza). Ahora no se envía nada
+  hasta comprobar el rol, y el perfil guardado en el navegador se separa por sesión, así que otra
+  cuenta en el mismo navegador no hereda el rol de la anterior.
 - Despacho: un viaje que el conductor marcó como llegado seguía ocupando el vehículo y al
   conductor hasta la llegada planificada; ahora quedan libres desde la llegada real.
 - La API no arrancaba con el `apps/api/.env` recién creado por `pnpm env:init` (`MAIL_DELIVERY=`,
