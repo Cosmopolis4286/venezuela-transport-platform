@@ -81,38 +81,38 @@ Docker: [docs/development/docker.md](docs/development/docker.md).
 
 Todos los comandos se ejecutan desde la raíz del repositorio.
 
-| Tarea                                                    | Comando                                                   |
-| -------------------------------------------------------- | --------------------------------------------------------- |
-| Instalar dependencias (desde el lockfile)                | `pnpm install` (CI: `pnpm install --frozen-lockfile`)     |
-| Crear los archivos de entorno locales                    | `pnpm env:init`                                           |
-| Menú para instalar, arrancar, cargar ejemplos y reparar  | `pnpm menu` (o `node infrastructure/scripts/menu.mjs`)    |
-| Datos de ejemplo del suburbano (API corriendo)           | `pnpm seed:suburban`                                      |
-| Correr la web + la API                                   | `pnpm dev`                                                |
-| Correr todo (web, API, los dos Metro)                    | `pnpm dev:all`                                            |
-| Correr solo la web                                       | `pnpm dev:web`                                            |
-| Correr solo la API                                       | `pnpm dev:api`                                            |
-| Correr solo la app de pasajeros                          | `pnpm dev:passenger`                                      |
-| Correr solo la app de transportistas                     | `pnpm dev:transport`                                      |
-| Lint                                                     | `pnpm lint`                                               |
-| Verificar tipos                                          | `pnpm typecheck`                                          |
-| Pruebas unitarias                                        | `pnpm test`                                               |
-| Pruebas e2e de la API (necesitan la base de datos)       | `E2E_EXPECT_DATABASE=true pnpm test:e2e`                  |
-| Lint + tipos + pruebas                                   | `pnpm check`                                              |
-| Formatear / comprobar el formato                         | `pnpm format` / `pnpm format:check`                       |
-| Compilar la web + la API (+ paquetes compartidos)        | `pnpm build` (o `pnpm build:web`, `pnpm build:api`)       |
-| Arrancar la base de datos                                | `pnpm infra:up`                                           |
-| Híbrido: base de datos + API en Docker                   | `pnpm stack:api` y luego `pnpm dev:web`                   |
-| Todo en Docker (base de datos, API, web)                 | `pnpm stack:app` (detener: `pnpm stack:down`)             |
-| Arrancar la base de datos + Redis                        | `pnpm infra:up:redis`                                     |
-| Arrancar Mailpit (correos de desarrollo en :8025)        | `pnpm infra:up:mail`                                      |
-| Detener la infraestructura (conserva los datos)          | `pnpm infra:down`                                         |
-| Estado / logs de los contenedores                        | `pnpm infra:ps` / `pnpm infra:logs`                       |
-| Comprobar la conexión a la base de datos y PostGIS       | `pnpm db:check`                                           |
-| Aplicar las migraciones                                  | `pnpm db:migrate`                                         |
-| Generar una migración tras cambiar el esquema            | `pnpm db:generate --name=<cambio>`                        |
-| Abrir `psql` en el contenedor                            | `pnpm db:psql`                                            |
-| Dar un rol de personal de la plataforma                  | `pnpm platform:grant --email tu@ejemplo.com --role admin` |
-| **Borrar** los datos locales de la base de datos y Redis | `pnpm infra:reset` (pide confirmación)                    |
+| Tarea                                                       | Comando                                                   |
+| ----------------------------------------------------------- | --------------------------------------------------------- |
+| Instalar dependencias (desde el lockfile)                   | `pnpm install` (CI: `pnpm install --frozen-lockfile`)     |
+| Crear los archivos de entorno locales                       | `pnpm env:init`                                           |
+| Menú para instalar, arrancar, cargar ejemplos y reparar     | `pnpm menu` (o `node infrastructure/scripts/menu.mjs`)    |
+| Datos de ejemplo: empresas, rutas, boletos… (API corriendo) | `pnpm seed:demo`                                          |
+| Correr la web + la API                                      | `pnpm dev`                                                |
+| Correr todo (web, API, los dos Metro)                       | `pnpm dev:all`                                            |
+| Correr solo la web                                          | `pnpm dev:web`                                            |
+| Correr solo la API                                          | `pnpm dev:api`                                            |
+| Correr solo la app de pasajeros                             | `pnpm dev:passenger`                                      |
+| Correr solo la app de transportistas                        | `pnpm dev:transport`                                      |
+| Lint                                                        | `pnpm lint`                                               |
+| Verificar tipos                                             | `pnpm typecheck`                                          |
+| Pruebas unitarias                                           | `pnpm test`                                               |
+| Pruebas e2e de la API (necesitan la base de datos)          | `E2E_EXPECT_DATABASE=true pnpm test:e2e`                  |
+| Lint + tipos + pruebas                                      | `pnpm check`                                              |
+| Formatear / comprobar el formato                            | `pnpm format` / `pnpm format:check`                       |
+| Compilar la web + la API (+ paquetes compartidos)           | `pnpm build` (o `pnpm build:web`, `pnpm build:api`)       |
+| Arrancar la base de datos                                   | `pnpm infra:up`                                           |
+| Híbrido: base de datos + API en Docker                      | `pnpm stack:api` y luego `pnpm dev:web`                   |
+| Todo en Docker (base de datos, API, web)                    | `pnpm stack:app` (detener: `pnpm stack:down`)             |
+| Arrancar la base de datos + Redis                           | `pnpm infra:up:redis`                                     |
+| Arrancar Mailpit (correos de desarrollo en :8025)           | `pnpm infra:up:mail`                                      |
+| Detener la infraestructura (conserva los datos)             | `pnpm infra:down`                                         |
+| Estado / logs de los contenedores                           | `pnpm infra:ps` / `pnpm infra:logs`                       |
+| Comprobar la conexión a la base de datos y PostGIS          | `pnpm db:check`                                           |
+| Aplicar las migraciones                                     | `pnpm db:migrate`                                         |
+| Generar una migración tras cambiar el esquema               | `pnpm db:generate --name=<cambio>`                        |
+| Abrir `psql` en el contenedor                               | `pnpm db:psql`                                            |
+| Dar un rol de personal de la plataforma                     | `pnpm platform:grant --email tu@ejemplo.com --role admin` |
+| **Borrar** los datos locales de la base de datos y Redis    | `pnpm infra:reset` (pide confirmación)                    |
 
 > ⚠️ `pnpm infra:reset` ejecuta `docker compose down --volumes`. Borrar los volúmenes de Docker
 > **elimina para siempre todos los datos locales de la base de datos.** Antes te pide escribir

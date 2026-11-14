@@ -5,8 +5,8 @@
 //
 //   node infrastructure/scripts/menu.mjs            # menu
 //   node infrastructure/scripts/menu.mjs setup      # or: pnpm menu setup
-//   … start | setup | update | dev | passenger | transport | all | seed | admin <email> | stop
-//     | reset | status | check | e2e | repair
+//   … start | setup | update | dev | passenger | transport | all | seed | demo | accounts
+//     | admin <email> | stop | reset | status | check | e2e | repair
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
@@ -569,11 +569,25 @@ async function seed() {
   await preflight();
   await database();
   await withApi(async () => {
-    step('Cargando datos de ejemplo del suburbano');
-    if (!run('node', ['infrastructure/scripts/seed-suburban.mjs'])) {
+    step('Cargando datos de ejemplo (empresas, rutas, boletos, ventas, taxis, paquetes…)');
+    console.log(dim('  Tarda uno o dos minutos: la API limita las cuentas nuevas por minuto.'));
+    if (!run('node', ['infrastructure/scripts/seed-demo.mjs'])) {
       throw new StepError('La carga de datos de ejemplo falló (mira el mensaje de arriba).');
     }
   });
+}
+
+/**
+ * The sample tickets are for tomorrow and the day after: after a few days they are old. This
+ * erases the local data and loads the samples again, with fresh dates.
+ */
+async function freshDemo() {
+  if (!(await reset())) return;
+  await seed();
+}
+
+function accounts() {
+  run('node', ['infrastructure/scripts/seed-demo.mjs', '--accounts']);
 }
 
 async function admin(email) {
@@ -668,11 +682,15 @@ async function reset() {
       'Esto BORRA todos los datos locales (base de datos y Redis). Escribe "vtp" para confirmar: ',
     ),
   );
-  if (answer.trim() !== 'vtp') return warn('Cancelado: no se borró nada.');
+  if (answer.trim() !== 'vtp') {
+    warn('Cancelado: no se borró nada.');
+    return false;
+  }
   if (!run('node', ['infrastructure/scripts/reset-local-data.mjs', '--yes'])) {
     throw new StepError('No se pudieron borrar los datos.');
   }
   await database();
+  return true;
 }
 
 // --- Menu -----------------------------------------------------------------------------------
@@ -749,7 +767,13 @@ const OPTIONS = [
       ),
   ],
   'Datos',
-  ['seed', 'Cargar datos de ejemplo del suburbano (zona, rutas, motos, paquetes)', seed],
+  [
+    'seed',
+    'Cargar datos de ejemplo (empresas, personal, rutas, boletos, ventas, taxis, paquetes)',
+    seed,
+  ],
+  ['demo', 'Datos de ejemplo frescos (borra lo local y los vuelve a cargar)', freshDemo],
+  ['accounts', 'Ver las cuentas de ejemplo y su contraseña', accounts],
   ['admin', 'Hacer administradora una cuenta', () => admin()],
   ['stop', 'Detener la base de datos (se conservan los datos)', stop],
   ['reset', 'Borrar los datos locales y empezar de cero', reset],

@@ -1,0 +1,1108 @@
+// Loads SAMPLE data into a LOCAL database, through the API, so everything goes through the same
+// validations as the real app. Coordinates, fares, rates, companies and people are made up: never
+// run this against production.
+//
+// What it loads (each part only once; running it again only prints the accounts):
+// - Suburban service Casacoima – San Félix – Puerto Ordaz: zone, buses every 15 minutes,
+//   motorcycle taxis and taxis per stretch, taxis at terminals and trip packs.
+// - Interurban network: two bus companies with staff (dispatcher, ticket agent, driver,
+//   inspector), seat maps, buses, routes with intermediate stops, fares and daily departures.
+// - Activity: paid tickets, a reservation waiting for payment, a Pago Móvil payment waiting for
+//   review, a cancelled ticket in the refund queue, trips assigned to a bus and driver, cash sales,
+//   taxi and motorcycle rides (one finished and rated), a WhatsApp ride, trip packs, and an
+//   operator waiting for approval.
+//
+// Usage: node infrastructure/scripts/seed-demo.mjs [--api http://localhost:4000/api/v1]
+//        node infrastructure/scripts/seed-demo.mjs --accounts   (only lists the accounts)
+// The API must be running (pnpm dev:api) with PAYMENT_PROVIDER empty or `simulated`, and the
+// database migrated (the menu does all this: option "Cargar datos de ejemplo").
+import { spawnSync } from 'node:child_process';
+
+const API = argValue('--api') ?? process.env.VTP_API_URL ?? 'http://localhost:4000/api/v1';
+const PASSWORD = 'vtp-demo-2026';
+const ZONE_SLUG = 'eje-casacoima-san-felix-puerto-ordaz';
+const INTERURBAN_MARK = 'Expresos Los Llanos (ejemplo)';
+
+/** Every account of the sample data; `role` is what the list at the end says about it. */
+const ACCOUNTS = {
+  admin: {
+    email: 'admin@vtp.test',
+    firstName: 'Ana',
+    lastName: 'Administradora',
+    role: 'Administración de la plataforma',
+  },
+  revisor: {
+    email: 'revisor@vtp.test',
+    firstName: 'Rafael',
+    lastName: 'Revisor',
+    role: 'Revisión (aprueba empresas y KYC)',
+  },
+  bus: {
+    email: 'empresa@vtp.test',
+    firstName: 'Bruno',
+    lastName: 'Dueño de buses',
+    role: 'Buses suburbanos (Transporte Guayana)',
+  },
+  moto: {
+    email: 'moto@vtp.test',
+    firstName: 'Marta',
+    lastName: 'Dueña de mototaxis',
+    role: 'Línea de mototaxis',
+  },
+  taxi: {
+    email: 'taxi@vtp.test',
+    firstName: 'Tomás',
+    lastName: 'Dueño de taxis',
+    role: 'Línea de taxis',
+  },
+  llanos: {
+    email: 'llanos@vtp.test',
+    firstName: 'Lorena',
+    lastName: 'Dueña de Expresos',
+    role: 'Expresos Los Llanos (interurbano)',
+  },
+  despacho: {
+    email: 'despacho@vtp.test',
+    firstName: 'Diego',
+    lastName: 'Despachador',
+    role: 'Despachador de Expresos Los Llanos',
+  },
+  taquilla: {
+    email: 'taquilla@vtp.test',
+    firstName: 'Teresa',
+    lastName: 'Taquillera',
+    role: 'Taquilla de Expresos Los Llanos',
+  },
+  conductor: {
+    email: 'conductor@vtp.test',
+    firstName: 'Carlos',
+    lastName: 'Conductor',
+    role: 'Conductor de Expresos Los Llanos',
+  },
+  inspector: {
+    email: 'inspector@vtp.test',
+    firstName: 'Irene',
+    lastName: 'Inspectora',
+    role: 'Inspectora de Expresos Los Llanos',
+  },
+  oriente: {
+    email: 'oriente@vtp.test',
+    firstName: 'Óscar',
+    lastName: 'Dueño de Aerobuses',
+    role: 'Aerobuses de Oriente (interurbano)',
+  },
+  pendiente: {
+    email: 'pendiente@vtp.test',
+    firstName: 'Paula',
+    lastName: 'Pendiente',
+    role: 'Empresa esperando aprobación',
+  },
+  passenger: {
+    email: 'pasajero@vtp.test',
+    firstName: 'Pedro',
+    lastName: 'Pasajero',
+    role: 'Pasajero (boletos, taxis, paquete)',
+  },
+  maria: {
+    email: 'maria@vtp.test',
+    firstName: 'María',
+    lastName: 'González',
+    role: 'Pasajera (boletos y un Pago Móvil)',
+  },
+  jose: {
+    email: 'jose@vtp.test',
+    firstName: 'José',
+    lastName: 'Rodríguez',
+    role: 'Pasajero (boleto cancelado, reembolso)',
+  },
+};
+
+function argValue(name) {
+  const i = process.argv.indexOf(name);
+  return i > 0 ? process.argv[i + 1] : undefined;
+}
+
+class ApiError extends Error {
+  constructor(status, body, what) {
+    super(
+      `${what}: HTTP ${status} ${body?.error?.reason ?? body?.error?.code ?? ''} ${body?.error?.message ?? ''}`,
+    );
+    this.status = status;
+    this.reason = body?.error?.reason;
+  }
+}
+
+/** One API call, retried on network errors (the API may still be starting) and on 429. */
+async function call(method, path, { auth, body, what = `${method} ${path}` } = {}) {
+  for (let attempt = 1; ; attempt++) {
+    let res;
+    try {
+      res = await fetch(API + path, {
+        method,
+        headers: { 'content-type': 'application/json', ...(auth ? { authorization: auth } : {}) },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+    } catch (error) {
+      if (attempt >= 5) throw new Error(`${what}: no answer from ${API} (${error.message})`);
+      await new Promise((r) => setTimeout(r, attempt * 1000));
+      continue;
+    }
+    if (res.status === 429 && attempt < 4) {
+      // Per-IP limits of a development API (sign-in: 10 a minute): wait and try again.
+      process.stdout.write('  (límite de solicitudes de la API: esperando un minuto…)\n');
+      await new Promise((r) => setTimeout(r, 61_000));
+      continue;
+    }
+    const text = await res.text();
+    const json = text ? JSON.parse(text) : null;
+    if (!res.ok) throw new ApiError(res.status, json, what);
+    return json;
+  }
+}
+
+/** Part of the activity that may not apply right now (e.g. no departure near): warn, go on. */
+let warnings = 0;
+async function attempt(what, fn) {
+  try {
+    return await fn();
+  } catch (error) {
+    warnings++;
+    console.log(`  ⚠ ${what}: ${error.message}`);
+    return undefined;
+  }
+}
+
+const sessions = new Map();
+/** Registers the account, or logs in if it already exists. Returns `Bearer …` (cached). */
+async function account(who) {
+  if (sessions.has(who)) return sessions.get(who);
+  const { role: _role, ...a } = ACCOUNTS[who];
+  let res;
+  try {
+    res = await call('POST', '/auth/register', {
+      body: { ...a, password: PASSWORD, client: 'web', acceptTerms: true },
+      what: `crear ${a.email}`,
+    });
+  } catch (error) {
+    if (error.status !== 409) throw error;
+    res = await call('POST', '/auth/login', {
+      body: { email: a.email, password: PASSWORD, client: 'web' },
+      what: `entrar como ${a.email}`,
+    });
+  }
+  const auth = `Bearer ${res.tokens.accessToken}`;
+  sessions.set(who, auth);
+  return auth;
+}
+
+/** SQL straight in the local database (the Postgres of docker compose). */
+function sql(statement, what) {
+  const r = spawnSync(
+    'docker',
+    [
+      'compose',
+      'exec',
+      '-T',
+      'postgres',
+      'sh',
+      '-c',
+      `psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "${statement}"`,
+    ],
+    { encoding: 'utf8' },
+  );
+  if (r.status !== 0) throw new Error(`${what}: ${(r.stderr || r.stdout).trim()}`);
+}
+
+// Sample accounts only: they get their platform role and a verified e-mail (so invitations to
+// organizations reach them) the same way `pnpm platform:grant` and the e-mail code would.
+const grantRole = (who, role) =>
+  sql(
+    `update users set platform_role = '${role}' where email = '${ACCOUNTS[who].email}'`,
+    `rol de ${ACCOUNTS[who].email}`,
+  );
+const verifyEmails = () =>
+  sql(
+    `update users set email_verified_at = now() where email like '%@vtp.test' and email_verified_at is null`,
+    'verificar correos de ejemplo',
+  );
+
+// --- Dates in Venezuela (UTC-4 all year).
+const VE_OFFSET = 4 * 3600_000;
+const dayInVenezuela = (plusDays = 0) =>
+  new Date(Date.now() - VE_OFFSET + plusDays * 86_400_000).toISOString().slice(0, 10);
+
+// --- Seat maps (the same presets the portal offers).
+function grid(deck, rows, columns, first) {
+  const seats = [];
+  for (let row = 0; row < rows; row++) {
+    for (const column of columns)
+      seats.push({ number: String(first + seats.length), deck, row, column });
+  }
+  return seats;
+}
+const COACH = {
+  name: 'Autobús 2-2',
+  decks: 1,
+  rows: 11,
+  columns: 5,
+  seats: grid(0, 11, [0, 1, 3, 4], 1),
+};
+const SLEEPER = {
+  name: 'Buscama 2-1',
+  decks: 1,
+  rows: 10,
+  columns: 4,
+  seats: grid(0, 10, [0, 2, 3], 1),
+};
+
+let docCounter = 15_000_000;
+const traveller = (firstName, lastName, seatNumber) => ({
+  seatNumber,
+  firstName,
+  lastName,
+  documentType: 'V',
+  documentNumber: String(docCounter++),
+});
+
+// =====================================================================================
+// Suburban service (the first sample data; unchanged).
+// =====================================================================================
+async function suburban(admin) {
+  const zone = await call('POST', '/admin/zones', {
+    auth: admin,
+    body: {
+      name: 'Eje Casacoima – San Félix – Puerto Ordaz',
+      slug: ZONE_SLUG,
+      status: 'active',
+      defaultCurrency: 'USD',
+      latitude: 8.35,
+      longitude: -62.55,
+      radiusKm: 45,
+    },
+    what: 'crear la zona',
+  });
+  const stop = (kind, name, city, latitude, longitude) =>
+    call('POST', '/admin/stops', {
+      auth: admin,
+      body: { kind, name, city, state: 'Bolívar', latitude, longitude },
+      what: `crear la parada ${name}`,
+    });
+  const casacoima = await stop('stop', 'Parada Casacoima', 'Casacoima', 8.4, -62.3);
+  const sanFelix = await stop('terminal', 'Terminal de San Félix', 'San Félix', 8.3725, -62.642);
+  const puertoOrdaz = await stop(
+    'terminal',
+    'Terminal de Puerto Ordaz',
+    'Puerto Ordaz',
+    8.29,
+    -62.73,
+  );
+  for (const s of [casacoima, sanFelix, puertoOrdaz]) {
+    if (s.zoneId !== zone.id) {
+      await call('PATCH', `/admin/stops/${s.id}`, { auth: admin, body: { zoneId: zone.id } });
+    }
+  }
+
+  const bus = await operator(
+    admin,
+    'bus',
+    'bus_company',
+    'Transporte Guayana (ejemplo)',
+    'J-40000001-1',
+  );
+  const moto = await operator(
+    admin,
+    'moto',
+    'moto_line',
+    'Mototaxis Caroní (ejemplo)',
+    'J-40000002-2',
+  );
+  const taxi = await operator(admin, 'taxi', 'taxi_line', 'Taxis Unidos (ejemplo)', 'J-40000003-3');
+
+  const today = dayInVenezuela();
+  const busRoute = async (name, from, to, minutes, fare) => {
+    const route = await call('POST', `${bus.url}/routes`, {
+      auth: bus.auth,
+      body: {
+        name,
+        scope: 'suburban',
+        stops: [
+          { stopId: from.id, minutesFromOrigin: 0 },
+          { stopId: to.id, minutesFromOrigin: minutes },
+        ],
+      },
+      what: `crear la ruta ${name}`,
+    });
+    await call('PUT', `${bus.url}/routes/${route.id}/fares`, {
+      auth: bus.auth,
+      body: { fares: [{ fromStopId: from.id, toStopId: to.id, amount: fare, currency: 'USD' }] },
+    });
+    await call('POST', `${bus.url}/routes/${route.id}/schedules`, {
+      auth: bus.auth,
+      body: {
+        departureTime: '05:00',
+        lastDepartureTime: '20:00',
+        headwayMinutes: 15,
+        daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
+        validFrom: today,
+        serviceClass: 'standard',
+        seats: 30,
+      },
+      what: `horario de ${name}`,
+    });
+    await call('POST', `${bus.url}/routes/${route.id}/status`, {
+      auth: bus.auth,
+      body: { status: 'active' },
+    });
+    return route;
+  };
+  const sfPo = await busRoute('San Félix – Puerto Ordaz', sanFelix, puertoOrdaz, 40, '0.75');
+  await busRoute('Casacoima – San Félix', casacoima, sanFelix, 35, '1.00');
+  await call('POST', `${bus.url}/vehicles`, { auth: bus.auth, body: { plate: 'BUS001A' } });
+
+  const motoVehicle = await call('POST', `${moto.url}/vehicles`, {
+    auth: moto.auth,
+    body: { plate: 'MOT001A' },
+  });
+  await call('PUT', `${moto.url}/taxi/stretch-fares`, {
+    auth: moto.auth,
+    body: {
+      fares: [
+        {
+          stopIds: [sanFelix.id, puertoOrdaz.id],
+          mode: 'motorcycle',
+          amount: '2.00',
+          currency: 'USD',
+        },
+        {
+          stopIds: [casacoima.id, sanFelix.id],
+          mode: 'motorcycle',
+          amount: '2.50',
+          currency: 'USD',
+        },
+      ],
+    },
+    what: 'tarifas por tramo de los mototaxis',
+  });
+  const taxiVehicle = await call('POST', `${taxi.url}/vehicles`, {
+    auth: taxi.auth,
+    body: { plate: 'TAX001A' },
+  });
+  await call('PUT', `${taxi.url}/taxi/stretch-fares`, {
+    auth: taxi.auth,
+    body: {
+      fares: [
+        { stopIds: [sanFelix.id, puertoOrdaz.id], mode: 'car', amount: '4.00', currency: 'USD' },
+      ],
+    },
+    what: 'tarifas por tramo de los taxis',
+  });
+  await call('PUT', `${taxi.url}/taxi/terminals`, {
+    auth: taxi.auth,
+    body: { stopIds: [sanFelix.id, puertoOrdaz.id] },
+    what: 'terminales de los taxis',
+  });
+
+  for (const org of [bus, moto]) {
+    await call('PUT', `/admin/organizations/${org.id}/policy`, {
+      auth: admin,
+      body: { commissionRate: null, refundTiers: null, acceptsTripPacks: true },
+      what: 'habilitar paquetes',
+    });
+  }
+  const product = (mode, trips, price, maxFare) =>
+    call('POST', '/admin/trip-pack-products', {
+      auth: admin,
+      body: {
+        zoneId: zone.id,
+        stopIds: [sanFelix.id, puertoOrdaz.id],
+        mode,
+        trips,
+        price,
+        currency: 'USD',
+        validityDays: 60,
+        maxFare,
+      },
+      what: `paquete de ${mode}`,
+    });
+  const busPack = await product('bus', 20, '12.00', '0.75');
+  await product('motorcycle', 10, '17.00', '2.00');
+  console.log('  ✔ Suburbano: zona, 3 paradas, buses cada 15 min, mototaxis, taxis y 2 paquetes');
+  return { bus, moto, taxi, sanFelix, puertoOrdaz, sfPo, busPack, motoVehicle, taxiVehicle };
+}
+
+/** An operator registered by its owner and approved by the platform. */
+async function operator(admin, who, type, legalName, rif) {
+  const auth = await account(who);
+  const { organization } = await call('POST', '/organizations', {
+    auth,
+    body: { type, legalName, tradeName: legalName, rif },
+    what: `registrar ${legalName}`,
+  });
+  await call('POST', `/admin/organizations/${organization.id}/review`, {
+    auth: admin,
+    body: { decision: 'approve' },
+    what: `aprobar ${legalName}`,
+  });
+  return { auth, id: organization.id, url: `/organizations/${organization.id}` };
+}
+
+/** Finds the sample objects of the suburban part when it was loaded by an earlier run. */
+async function existingSuburban(admin) {
+  const orgs = await call('GET', '/admin/organizations?status=active', {
+    auth: admin,
+    what: 'listar empresas',
+  });
+  const list = Array.isArray(orgs) ? orgs : (orgs.items ?? orgs.organizations ?? []);
+  const byName = (name) => list.find((o) => o.legalName === name);
+  const make = async (who, name) => {
+    const org = byName(name);
+    if (!org) return null;
+    return { auth: await account(who), id: org.id, url: `/organizations/${org.id}` };
+  };
+  const stops = await call('GET', '/stops');
+  const stopNamed = (name) => stops.find((s) => s.name === name);
+  const bus = await make('bus', 'Transporte Guayana (ejemplo)');
+  const moto = await make('moto', 'Mototaxis Caroní (ejemplo)');
+  const taxi = await make('taxi', 'Taxis Unidos (ejemplo)');
+  const vehicleOf = async (org) =>
+    org ? (await call('GET', `${org.url}/vehicles`, { auth: org.auth }))[0] : undefined;
+  const routes = bus ? await call('GET', `${bus.url}/routes`, { auth: bus.auth }) : [];
+  const products = await call('GET', '/trip-pack-products').catch(() => []);
+  return {
+    bus,
+    moto,
+    taxi,
+    sanFelix: stopNamed('Terminal de San Félix'),
+    puertoOrdaz: stopNamed('Terminal de Puerto Ordaz'),
+    sfPo: (Array.isArray(routes) ? routes : []).find((r) => r.name === 'San Félix – Puerto Ordaz'),
+    busPack: (Array.isArray(products) ? products : []).find((p) => p.mode === 'bus'),
+    motoVehicle: await vehicleOf(moto),
+    taxiVehicle: await vehicleOf(taxi),
+  };
+}
+
+// =====================================================================================
+// Interurban network: two companies, staff, buses, routes, fares and departures.
+// =====================================================================================
+async function interurban(admin, sub) {
+  const terminal = (name, city, state, latitude, longitude) =>
+    call('POST', '/admin/stops', {
+      auth: admin,
+      body: { kind: 'terminal', name, city, state, latitude, longitude },
+      what: `crear ${name}`,
+    });
+  const caracas = await terminal(
+    'Terminal La Bandera',
+    'Caracas',
+    'Distrito Capital',
+    10.478,
+    -66.902,
+  );
+  const maracay = await terminal('Terminal de Maracay', 'Maracay', 'Aragua', 10.246, -67.594);
+  const valencia = await terminal(
+    'Terminal Big Low Center',
+    'Valencia',
+    'Carabobo',
+    10.153,
+    -67.996,
+  );
+  const barquisimeto = await terminal(
+    'Terminal de Barquisimeto',
+    'Barquisimeto',
+    'Lara',
+    10.066,
+    -69.319,
+  );
+  const plc = await terminal(
+    'Terminal de Puerto La Cruz',
+    'Puerto La Cruz',
+    'Anzoátegui',
+    10.215,
+    -64.633,
+  );
+  const maturin = await terminal('Terminal de Maturín', 'Maturín', 'Monagas', 9.749, -63.177);
+  const ciudadBolivar = await terminal(
+    'Terminal de Ciudad Bolívar',
+    'Ciudad Bolívar',
+    'Bolívar',
+    8.124,
+    -63.547,
+  );
+
+  const llanos = await operator(admin, 'llanos', 'bus_company', INTERURBAN_MARK, 'J-40000004-4');
+  const oriente = await operator(
+    admin,
+    'oriente',
+    'bus_company',
+    'Aerobuses de Oriente (ejemplo)',
+    'J-40000005-5',
+  );
+
+  // Staff of Expresos Los Llanos: invited by e-mail, they accept in their account.
+  verifyEmails();
+  const staff = {};
+  for (const [who, role] of [
+    ['despacho', 'dispatcher'],
+    ['taquilla', 'ticket_agent'],
+    ['conductor', 'driver'],
+    ['inspector', 'inspector'],
+  ]) {
+    const auth = await account(who);
+    verifyEmails();
+    await call('POST', `${llanos.url}/invitations`, {
+      auth: llanos.auth,
+      body: { contactKind: 'email', destination: ACCOUNTS[who].email, role },
+      what: `invitar a ${ACCOUNTS[who].email}`,
+    });
+    const received = await call('GET', '/me/invitations', { auth });
+    const invitation = received.find((i) => i.organization?.id === llanos.id) ?? received[0];
+    await call('POST', `/me/invitations/${invitation.id}/accept`, {
+      auth,
+      what: `aceptar invitación (${who})`,
+    });
+    staff[who] = auth;
+  }
+
+  const company = async (org, plates) => {
+    const coach = await call('POST', `${org.url}/seat-layouts`, { auth: org.auth, body: COACH });
+    const sleeper = await call('POST', `${org.url}/seat-layouts`, {
+      auth: org.auth,
+      body: SLEEPER,
+    });
+    const vehicles = [];
+    for (const [plate, label, layout] of plates) {
+      vehicles.push(
+        await call('POST', `${org.url}/vehicles`, {
+          auth: org.auth,
+          body: { plate, label, seatLayoutId: (layout === 'sleeper' ? sleeper : coach).id },
+          what: `vehículo ${plate}`,
+        }),
+      );
+    }
+    return { coach, sleeper, vehicles };
+  };
+  const llanosFleet = await company(llanos, [
+    ['AB123CD', 'Unidad 01', 'coach'],
+    ['AB124CD', 'Unidad 02', 'coach'],
+    ['AB125CD', 'Unidad 03', 'sleeper'],
+  ]);
+  const orienteFleet = await company(oriente, [
+    ['AE501BC', 'Buscama 10', 'sleeper'],
+    ['AE502BC', 'Buscama 11', 'sleeper'],
+    ['AE503BC', 'Autobús 20', 'coach'],
+  ]);
+
+  const today = dayInVenezuela();
+  /** stops: [stop, minutes]; fares: [fromIndex, toIndex, amount]; departures: [time, class, layout]. */
+  const route = async (org, name, stops, fares, departures) => {
+    const created = await call('POST', `${org.url}/routes`, {
+      auth: org.auth,
+      body: {
+        name,
+        stops: stops.map(([stop, minutes]) => ({ stopId: stop.id, minutesFromOrigin: minutes })),
+      },
+      what: `crear la ruta ${name}`,
+    });
+    await call('PUT', `${org.url}/routes/${created.id}/fares`, {
+      auth: org.auth,
+      body: {
+        fares: fares.map(([a, b, amount]) => ({
+          fromStopId: stops[a][0].id,
+          toStopId: stops[b][0].id,
+          amount,
+          currency: 'USD',
+        })),
+      },
+      what: `tarifas de ${name}`,
+    });
+    const schedules = [];
+    for (const [departureTime, serviceClass, layout] of departures) {
+      const res = await call('POST', `${org.url}/routes/${created.id}/schedules`, {
+        auth: org.auth,
+        body: {
+          departureTime,
+          daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
+          validFrom: today,
+          serviceClass,
+          seatLayoutId: layout.id,
+        },
+        what: `salida ${departureTime} de ${name}`,
+      });
+      schedules.push(...(res.schedules ?? [res]));
+    }
+    await call('POST', `${org.url}/routes/${created.id}/status`, {
+      auth: org.auth,
+      body: { status: 'active' },
+    });
+    return { ...created, stops: stops.map(([s]) => s), schedules };
+  };
+
+  // Each company converts its fares to bolívares with its own rate (Pago Móvil shows the amount).
+  for (const org of [llanos, oriente]) {
+    await call('PUT', `${org.url}/exchange-rates`, {
+      auth: org.auth,
+      body: { rates: [{ currency: 'VES', unitsPerUsd: '40' }] },
+      what: 'tasa de cambio de la empresa',
+    });
+  }
+
+  const { coach, sleeper } = llanosFleet;
+  const ccsVal = await route(
+    llanos,
+    'Caracas – Valencia',
+    [
+      [caracas, 0],
+      [maracay, 80],
+      [valencia, 150],
+    ],
+    [
+      [0, 1, '6'],
+      [0, 2, '10'],
+      [1, 2, '5'],
+    ],
+    [
+      ['06:00', 'standard', coach],
+      ['10:00', 'standard', coach],
+      ['14:00', 'standard', coach],
+      ['18:00', 'standard', coach],
+    ],
+  );
+  const ccsBqto = await route(
+    llanos,
+    'Caracas – Barquisimeto',
+    [
+      [caracas, 0],
+      [valencia, 150],
+      [barquisimeto, 330],
+    ],
+    [
+      [0, 1, '10'],
+      [0, 2, '18'],
+      [1, 2, '9'],
+    ],
+    [
+      ['08:00', 'standard', coach],
+      ['22:00', 'executive', sleeper],
+    ],
+  );
+  const valCcs = await route(
+    llanos,
+    'Valencia – Caracas',
+    [
+      [valencia, 0],
+      [maracay, 70],
+      [caracas, 150],
+    ],
+    [
+      [0, 1, '5'],
+      [0, 2, '10'],
+      [1, 2, '6'],
+    ],
+    [
+      ['07:00', 'standard', coach],
+      ['15:00', 'standard', coach],
+    ],
+  );
+  const ccsPlc = await route(
+    oriente,
+    'Caracas – Puerto La Cruz',
+    [
+      [caracas, 0],
+      [plc, 300],
+    ],
+    [[0, 1, '15']],
+    [
+      ['07:30', 'executive', orienteFleet.sleeper],
+      ['21:00', 'executive', orienteFleet.sleeper],
+    ],
+  );
+  const poCcs = await route(
+    oriente,
+    'Puerto Ordaz – Caracas',
+    [
+      [sub?.puertoOrdaz ?? ciudadBolivar, 0],
+      [ciudadBolivar, 90],
+      [caracas, 660],
+    ],
+    [
+      [0, 1, '4'],
+      [0, 2, '30'],
+      [1, 2, '27'],
+    ],
+    [['19:00', 'executive', orienteFleet.sleeper]],
+  );
+  await route(
+    oriente,
+    'Maturín – Puerto La Cruz',
+    [
+      [maturin, 0],
+      [plc, 180],
+    ],
+    [[0, 1, '8']],
+    [
+      ['09:00', 'standard', orienteFleet.coach],
+      ['16:00', 'standard', orienteFleet.coach],
+    ],
+  );
+  console.log(
+    '  ✔ Interurbano: 7 terminales, 2 empresas, 6 vehículos, 6 rutas y 12 salidas diarias',
+  );
+  console.log('  ✔ Personal de Expresos Los Llanos: despacho, taquilla, conductor e inspectora');
+  return {
+    llanos,
+    oriente,
+    staff,
+    llanosFleet,
+    ccsVal,
+    ccsBqto,
+    valCcs,
+    ccsPlc,
+    poCcs,
+    caracas,
+    valencia,
+    maracay,
+  };
+}
+
+// =====================================================================================
+// Activity: tickets, payments, refunds, dispatch, cash sales, taxis, packs, a pending operator.
+// =====================================================================================
+async function activity(admin, sub, net) {
+  const tomorrow = dayInVenezuela(1);
+  const inTwoDays = dayInVenezuela(2);
+
+  // The platform's accounts for manual payments (Pago Móvil) and the exchange rate.
+  await attempt('tasa de cambio', () =>
+    call('PUT', '/admin/exchange-rates', {
+      auth: admin,
+      body: { rates: [{ currency: 'VES', unitsPerUsd: '40' }] },
+    }),
+  );
+  await attempt('cuenta de Pago Móvil de la plataforma', () =>
+    call('PUT', '/admin/payment-accounts/pago_movil', {
+      auth: admin,
+      body: {
+        fields: {
+          bank: '0102 – Banco de Venezuela',
+          phone: '0414-1234567',
+          document: 'J-40000000-0',
+        },
+        active: true,
+      },
+    }),
+  );
+
+  const book = (who, routeObj, schedule, date, fromIndex, toIndex, travellers) =>
+    attempt(`reserva de ${ACCOUNTS[who].email} en ${routeObj.name}`, async () =>
+      call('POST', '/bookings', {
+        auth: await account(who),
+        body: {
+          scheduleId: schedule.id,
+          serviceDate: date,
+          fromStopId: routeObj.stops[fromIndex].id,
+          toStopId: routeObj.stops[toIndex].id,
+          passengers: travellers,
+        },
+      }),
+    );
+  const paySimulated = (who, booking) =>
+    booking &&
+    attempt(`pago de ${booking.code}`, async () => {
+      const auth = await account(who);
+      const payment = await call('POST', `/me/bookings/${booking.id}/payments`, {
+        auth,
+        body: { method: 'usdt' },
+      });
+      await call('POST', `/me/payments/${payment.id}/simulate`, { auth, body: {} });
+      return payment;
+    });
+
+  let tickets = 0;
+  const paid = [];
+  // Pedro: Caracas → Valencia tomorrow at 06:00 (two seats) and Caracas → Barquisimeto by night.
+  const pedro1 = await book('passenger', net.ccsVal, net.ccsVal.schedules[0], tomorrow, 0, 2, [
+    traveller('Pedro', 'Pasajero', '5'),
+    traveller('Lucía', 'Pasajero', '6'),
+  ]);
+  if (await paySimulated('passenger', pedro1)) ((tickets += 2), paid.push(pedro1));
+  const pedro2 = await book('passenger', net.ccsBqto, net.ccsBqto.schedules[1], inTwoDays, 0, 2, [
+    traveller('Pedro', 'Pasajero', '1'),
+  ]);
+  if (await paySimulated('passenger', pedro2)) tickets++;
+  // María: Maracay → Valencia tomorrow (paid) and Caracas → Puerto La Cruz with Pago Móvil, reported.
+  const maria1 = await book('maria', net.ccsVal, net.ccsVal.schedules[0], tomorrow, 1, 2, [
+    traveller('María', 'González', '9'),
+  ]);
+  if (await paySimulated('maria', maria1)) (tickets++, paid.push(maria1));
+  const maria2 = await book('maria', net.ccsPlc, net.ccsPlc.schedules[0], inTwoDays, 0, 1, [
+    traveller('María', 'González', '3'),
+  ]);
+  const manual =
+    maria2 &&
+    (await attempt('Pago Móvil reportado', async () => {
+      const auth = await account('maria');
+      const payment = await call('POST', `/me/bookings/${maria2.id}/payments`, {
+        auth,
+        body: { method: 'pago_movil' },
+      });
+      // Reporting it (for the admins' review queue) only exists with PAYMENT_PROVIDER=manual; with
+      // the simulated provider it stays started, with the Pago Móvil instructions to show.
+      const reported = await call('POST', `/me/payments/${payment.id}/report`, {
+        auth,
+        body: { operationNumber: '004512873301' },
+      }).then(
+        () => true,
+        () => false,
+      );
+      return reported ? 'por revisar en Administración → Pagos' : 'iniciado, esperando el pago';
+    }));
+  // José: Valencia → Caracas tomorrow, paid and then cancelled (refund queue); Puerto Ordaz →
+  // Caracas waiting for payment.
+  const jose1 = await book('jose', net.valCcs, net.valCcs.schedules[1], inTwoDays, 0, 2, [
+    traveller('José', 'Rodríguez', '12'),
+  ]);
+  if (await paySimulated('jose', jose1)) {
+    await attempt('cancelar el boleto de José', async () =>
+      call('POST', `/me/bookings/${jose1.id}/cancel`, { auth: await account('jose'), body: {} }),
+    );
+  }
+  await book('jose', net.poCcs, net.poCcs.schedules[0], inTwoDays, 0, 2, [
+    traveller('José', 'Rodríguez', '7'),
+  ]);
+  // More passengers on tomorrow's 06:00 so the manifest and the occupancy have something to show.
+  for (const [i, seat] of ['14', '15', '21', '22', '30'].entries()) {
+    const b = await book(
+      'passenger',
+      net.ccsVal,
+      net.ccsVal.schedules[0],
+      tomorrow,
+      0,
+      i % 2 ? 1 : 2,
+      [
+        traveller(
+          ['Ana', 'Luis', 'Rosa', 'Jesús', 'Carmen'][i],
+          ['Pérez', 'Medina', 'Silva', 'Torres', 'Rojas'][i],
+          seat,
+        ),
+      ],
+    );
+    if (await paySimulated('passenger', b)) tickets++;
+  }
+  console.log(
+    `  ✔ Boletos: ${tickets} pagados, 1 apartado sin pagar, 1 Pago Móvil ${manual ?? '(no se pudo)'} y 1 cancelado con reembolso`,
+  );
+
+  // Dispatch: tomorrow's departures of Expresos Los Llanos get a free bus with their seat map; the
+  // first one also gets the driver. A bus or driver cannot be on two trips at once.
+  const assigned = await attempt('asignar buses y conductor', async () => {
+    const board = await call('GET', `${net.llanos.url}/dispatch?date=${tomorrow}`, {
+      auth: net.staff.despacho,
+    });
+    const driver = board.drivers.find((d) => d.firstName === 'Carlos') ?? board.drivers[0];
+    const busy = new Map(); // vehicle id → [departs, arrives][]
+    const free = (v, from, to) => (busy.get(v.id) ?? []).every(([a, b]) => to <= a || from >= b);
+    let count = 0;
+    for (const departure of board.departures) {
+      const from = Date.parse(departure.departsAt);
+      // Back at the terminal and cleaned: one hour between trips.
+      const to = Date.parse(departure.arrivesAt) + 3600_000;
+      const vehicle = board.vehicles.find(
+        (v) => v.seatLayoutId === departure.seatLayoutId && free(v, from, to),
+      );
+      if (!vehicle) continue;
+      const ok = await attempt(
+        `asignar ${departure.route.name} ${departure.departsAt.slice(11, 16)}`,
+        () =>
+          call('PUT', `${net.llanos.url}/dispatch/assignment`, {
+            auth: net.staff.despacho,
+            body: {
+              scheduleId: departure.scheduleId,
+              serviceDate: departure.serviceDate,
+              vehicleId: vehicle.id,
+              driverUserId: count === 0 ? (driver?.userId ?? null) : null,
+            },
+          }),
+      );
+      if (ok) {
+        busy.set(vehicle.id, [...(busy.get(vehicle.id) ?? []), [from, to]]);
+        count++;
+      }
+    }
+    return { count, total: board.departures.length };
+  });
+  if (assigned) {
+    console.log(
+      `  ✔ Despacho de mañana: ${assigned.count} de ${assigned.total} salidas con bus (la primera con conductor); las demás quedan para el despachador`,
+    );
+  }
+
+  // Cash sales on the suburban bus (the owner drives too).
+  if (sub.bus && sub.sfPo) {
+    let cash = 0;
+    for (const passengers of [1, 2, 1, 3]) {
+      const ok = await attempt('venta en efectivo', () =>
+        call('POST', `${sub.bus.url}/cash-sales`, {
+          auth: sub.bus.auth,
+          body: {
+            routeId: sub.sfPo.id,
+            fromStopId: sub.sanFelix.id,
+            toStopId: sub.puertoOrdaz.id,
+            passengers,
+          },
+        }),
+      );
+      if (ok) cash += passengers;
+    }
+    console.log(`  ✔ Ventas en efectivo del bus suburbano: ${cash} pasajeros`);
+  }
+
+  // Taxis and motorcycles: a motorcycle ride taken, finished and rated; a taxi waiting at the terminal.
+  if (sub.moto && sub.motoVehicle && sub.sanFelix && sub.puertoOrdaz) {
+    const done = await attempt('viaje en moto completo', async () => {
+      const auth = await account('passenger');
+      const ride = await call('POST', '/me/taxi-rides', {
+        auth,
+        body: {
+          kind: 'stretch',
+          fromStopId: sub.sanFelix.id,
+          toStopId: sub.puertoOrdaz.id,
+          mode: 'motorcycle',
+          address: 'Av. Guayana, frente a la panadería',
+          passengers: 1,
+        },
+      });
+      const step = (path, body = {}) =>
+        call('POST', `/me/taxi/rides/${ride.id}/${path}`, { auth: sub.moto.auth, body });
+      await step('accept', { organizationId: sub.moto.id, vehicleId: sub.motoVehicle.id });
+      const seen = await call('GET', `/me/taxi-rides/${ride.id}`, { auth });
+      await step('pickup', seen.pickupCode ? { pickupCode: seen.pickupCode } : {});
+      await step('complete', {});
+      await call('POST', `/me/taxi-rides/${ride.id}/rate`, {
+        auth,
+        body: { rating: 5, comment: 'Rápido y amable' },
+      });
+      return true;
+    });
+    const waiting = await attempt('taxi esperando en el terminal', async () =>
+      call('POST', '/me/taxi-rides', {
+        auth: await account('maria'),
+        body: {
+          kind: 'terminal',
+          terminalStopId: sub.puertoOrdaz.id,
+          direction: 'from_terminal',
+          address: 'Urb. Alta Vista, calle 5, casa 12',
+          passengers: 2,
+        },
+      }),
+    );
+    const whatsapp = await attempt('taxi pedido por WhatsApp', () =>
+      call('POST', '/admin/taxi-rides', {
+        auth: admin,
+        body: {
+          customerName: 'Carmen',
+          customerPhone: '0416-5551234',
+          kind: 'terminal',
+          terminalStopId: sub.sanFelix.id,
+          direction: 'to_terminal',
+          address: 'Calle Bolívar, frente a la plaza',
+          passengers: 1,
+        },
+      }),
+    );
+    console.log(
+      `  ✔ Taxis y motos: ${[done && '1 viaje en moto terminado y calificado', waiting && '1 taxi esperando conductor', whatsapp && '1 pedido por WhatsApp'].filter(Boolean).join(', ')}`,
+    );
+  }
+
+  // A trip pack bought and paid by Pedro.
+  if (sub.busPack) {
+    const pack = await attempt('paquete de viajes', async () => {
+      const auth = await account('passenger');
+      const bought = await call('POST', '/me/trip-packs', {
+        auth,
+        body: { productId: sub.busPack.id },
+      });
+      const payment = await call('POST', `/me/trip-packs/${bought.id}/payments`, {
+        auth,
+        body: { method: 'usdt' },
+      });
+      await call('POST', `/me/payments/${payment.id}/simulate`, { auth, body: {} });
+      return bought;
+    });
+    if (pack) console.log('  ✔ Paquete de 20 viajes en bus comprado por Pedro');
+  }
+
+  // An operator that registered and waits for the platform's review.
+  const pending = await attempt('empresa pendiente de aprobación', async () =>
+    call('POST', '/organizations', {
+      auth: await account('pendiente'),
+      body: {
+        type: 'bus_company',
+        legalName: 'Transporte Sucre (ejemplo)',
+        tradeName: 'Transporte Sucre (ejemplo)',
+        rif: 'J-40000006-6',
+      },
+    }),
+  );
+  if (pending) console.log('  ✔ Transporte Sucre espera aprobación en Administración');
+  return paid;
+}
+
+function printAccounts() {
+  console.log(`\nCuentas de ejemplo (contraseña para todas: ${PASSWORD}):`);
+  for (const { email, role } of Object.values(ACCOUNTS)) {
+    console.log(`  ${email.padEnd(22)} ${role}`);
+  }
+  console.log('\nWeb: http://localhost:3000 · Portal y admin: http://localhost:3000/login');
+  console.log('Apps: entra con el mismo correo y contraseña.');
+}
+
+async function main() {
+  if (process.argv.includes('--accounts')) return printAccounts();
+  console.log(`Cargando datos de ejemplo en ${API} …`);
+  await call('GET', '/health', { what: 'comprobar la API' });
+
+  const admin = await account('admin');
+  grantRole('admin', 'admin');
+  await account('revisor');
+  grantRole('revisor', 'reviewer');
+
+  const orgs = await call('GET', '/admin/organizations?status=active', {
+    auth: admin,
+    what: 'listar empresas',
+  });
+  if (orgs.some((o) => o.legalName === INTERURBAN_MARK)) {
+    console.log('  · Los datos de ejemplo ya estaban cargados: no se cambia nada.');
+  } else {
+    const zones = await call('GET', '/admin/zones', { auth: admin, what: 'listar zonas' });
+    let sub;
+    if (zones.some((z) => z.slug === ZONE_SLUG)) {
+      // Loaded by the first version of this script: add the rest on top of it.
+      console.log('  · El suburbano ya estaba cargado: se agrega lo demás.');
+      sub = await existingSuburban(admin);
+    } else {
+      sub = await suburban(admin);
+    }
+    const net = await interurban(admin, sub);
+    await activity(admin, sub, net);
+    // Every sample account exists, even if a part of the activity failed.
+    for (const who of Object.keys(ACCOUNTS)) await account(who);
+  }
+  verifyEmails();
+  printAccounts();
+  if (warnings) {
+    console.log(
+      `\n${warnings} parte(s) de la actividad no se pudieron cargar (ver ⚠ arriba); el resto está listo.`,
+    );
+  }
+}
+
+main().catch((error) => {
+  console.error(`\n✖ ${error.message}`);
+  if (error.reason === 'EMAIL_TAKEN' || error.status === 409) {
+    console.error(
+      '  Parece que hay datos a medias. Puedes reiniciar la base (opción del menú) y repetir.',
+    );
+  }
+  process.exit(1);
+});
