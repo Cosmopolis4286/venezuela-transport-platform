@@ -8,9 +8,10 @@
 //   … setup | dev | passenger | transport | all | seed | admin <email> | status | check | e2e
 //     | repair | reset
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
-import { dirname, join } from 'node:path';
+import { delimiter, dirname, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
@@ -72,44 +73,220 @@ async function retry(label, attempt, { tries = 4, waitMs = 2000, hint } = {}) {
 
 // --- Checks ---------------------------------------------------------------------------------
 
-function nodeOk() {
-  const [major, minor] = process.versions.node.split('.').map(Number);
-  if (major === 24 && minor >= 15) return (ok(`Node ${process.versions.node}`), true);
-  fail(`Node ${process.versions.node}: hace falta Node 24.15 o más nuevo (y menor que 25).`);
-  console.log(dim('  Instálalo con fnm o nvm: fnm install 24 && fnm use 24'));
-  return false;
+// --- Node 24, pnpm and Docker: installed or started when missing --------------------------------
+
+/** Node the project needs: 24.15 or newer, below 25 (see package.json "engines"). */
+const nodeFits = (version) => {
+  const [major, minor] = version.replace(/^v/, '').split('.').map(Number);
+  return major === 24 && minor >= 15;
+};
+
+const TOOLS = join(ROOT, '.tools');
+const nodeArch = process.arch === 'arm64' ? 'arm64' : 'x64';
+const nodeOs = WINDOWS ? 'win' : process.platform === 'darwin' ? 'darwin' : 'linux';
+/** Where `node` (and corepack) live inside an extracted Node folder. */
+const nodeBin = (dir) => (WINDOWS ? dir : join(dir, 'bin'));
+
+function usePath(dir) {
+  process.env.PATH = `${dir}${delimiter}${process.env.PATH ?? ''}`;
 }
 
-function pnpmOk() {
+/** A Node 24 already downloaded into .tools/, newest first. */
+function localNode() {
+  if (!existsSync(TOOLS)) return null;
+  const found = readdirSync(TOOLS)
+    .filter((name) => name.startsWith(`node-v24.`) && name.endsWith(`-${nodeOs}-${nodeArch}`))
+    .filter((name) => nodeFits(name.split('-')[1]))
+    .sort()
+    .reverse();
+  return found.length ? join(TOOLS, found[0]) : null;
+}
+
+async function download(url, file) {
+  await retry(
+    `Descargar ${url.split('/').pop()}`,
+    async () => {
+      try {
+        const res = await fetch(url, { signal: AbortSignal.timeout(300_000) });
+        if (!res.ok) return false;
+        writeFileSync(file, Buffer.from(await res.arrayBuffer()));
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    { hint: 'Revisa tu conexión a internet (o el proxy) y repite.' },
+  );
+}
+
+/**
+ * Makes Node 24 the `node` of every command the menu runs. With another version installed, it
+ * downloads the official Node 24 into .tools/ (checked against nodejs.org's SHA-256 list), only
+ * for this project: the computer's Node is not touched and no administrator rights are needed.
+ */
+async function ensureNode() {
+  if (nodeFits(process.versions.node) && nodeFits(output('node', ['-v']) ?? '')) {
+    ok(`Node ${process.versions.node}`);
+    return true;
+  }
+  let dir = localNode();
+  if (!dir) {
+    warn(
+      `Tienes Node ${output('node', ['-v']) ?? process.versions.node}; el proyecto usa Node 24. ` +
+        'Lo descargo solo para este proyecto (carpeta .tools/, no cambia tu instalación)…',
+    );
+    let version;
+    try {
+      const index = await (await fetch('https://nodejs.org/dist/index.json')).json();
+      version = index.find((r) => r.version.startsWith('v24.'))?.version;
+    } catch {
+      version = undefined;
+    }
+    version ??= 'v24.15.0';
+    const name = `node-${version}-${nodeOs}-${nodeArch}`;
+    const archive = `${name}.${WINDOWS ? 'zip' : 'tar.gz'}`;
+    const base = `https://nodejs.org/dist/${version}`;
+    mkdirSync(TOOLS, { recursive: true });
+    const file = join(TOOLS, archive);
+    await download(`${base}/${archive}`, file);
+    // Integrity: the archive must match the checksum nodejs.org publishes.
+    const sums = await (await fetch(`${base}/SHASUMS256.txt`)).text().catch(() => '');
+    const expected = sums
+      .split('\n')
+      .find((line) => line.endsWith(`  ${archive}`))
+      ?.split(' ')[0];
+    const actual = createHash('sha256').update(readFileSync(file)).digest('hex');
+    if (!expected || expected !== actual) {
+      rmSync(file, { force: true });
+      throw new StepError('La descarga de Node no coincide con la suma de nodejs.org.', 'Repite.');
+    }
+    // tar comes with Windows 10+, macOS and Linux, and also opens .zip on Windows.
+    const extracted =
+      run('tar', [WINDOWS ? '-xf' : '-xzf', file, '-C', TOOLS], { quiet: true }) ||
+      (WINDOWS &&
+        run(
+          'powershell',
+          ['-NoProfile', '-Command', `Expand-Archive -Force '${file}' '${TOOLS}'`],
+          { quiet: true },
+        ));
+    rmSync(file, { force: true });
+    if (!extracted) throw new StepError('No se pudo descomprimir Node.');
+    dir = join(TOOLS, name);
+  }
+  usePath(nodeBin(dir));
+  const version = output('node', ['-v']);
+  if (!version || !nodeFits(version)) {
+    throw new StepError(`No se pudo usar el Node 24 de ${dir}.`, 'Prueba la opción "Reparar".');
+  }
+  ok(`Node ${version} (del proyecto, en .tools/)`);
+  return true;
+}
+
+/** pnpm in the version of package.json "packageManager", through corepack (comes with Node). */
+function ensurePnpm() {
+  process.env.COREPACK_ENABLE_DOWNLOAD_PROMPT = '0';
+  // A pnpm installed with another Node may start with that Node (its shim points to it): with the
+  // project's own Node, put a pnpm shim right next to it, first in PATH.
+  const nodeDir = dirname(output('node', ['-p', 'process.execPath']) ?? '');
+  const ownNode = nodeDir.startsWith(TOOLS);
+  const shim = join(nodeDir, WINDOWS ? 'pnpm.cmd' : 'pnpm');
+  if (ownNode && !existsSync(shim)) {
+    run('corepack', ['enable', 'pnpm', '--install-directory', nodeDir], { quiet: true });
+  }
   let version = output('pnpm', ['--version']);
   if (!version) {
-    warn('pnpm no está activo; lo activo con corepack…');
-    run('corepack', ['enable'], { quiet: true });
+    warn('Activo pnpm con corepack…');
+    run('corepack', ['enable', 'pnpm'], { quiet: true });
     version = output('pnpm', ['--version']);
   }
   if (version) return (ok(`pnpm ${version}`), true);
-  fail(
-    'pnpm no está disponible. Ejecuta "corepack enable" (con permisos de administrador si hace falta).',
-  );
+  fail('pnpm no está disponible ni con corepack.');
+  console.log(dim('  Prueba "npm install -g pnpm@10" y vuelve a abrir el menú.'));
   return false;
+}
+
+/** Docker Desktop's program on Windows, if installed. */
+function dockerDesktopExe() {
+  for (const base of [process.env.ProgramFiles, process.env.LOCALAPPDATA].filter(Boolean)) {
+    const exe = join(base, 'Docker', 'Docker', 'Docker Desktop.exe');
+    if (existsSync(exe)) return exe;
+  }
+  return null;
+}
+
+/** Offers to install Docker when it is missing (it needs the user's consent and a restart). */
+async function installDocker() {
+  const yes = async (question) => /^s/i.test((await ask(`${question} (s/n): `)).trim());
+  if (WINDOWS && output('winget', ['--version'])) {
+    if (!(await yes('Docker Desktop no está instalado. ¿Lo instalo ahora con winget?'))) return;
+    const done = run('winget', [
+      'install',
+      '-e',
+      '--id',
+      'Docker.DockerDesktop',
+      '--accept-package-agreements',
+      '--accept-source-agreements',
+    ]);
+    if (done) {
+      warn(
+        'Docker Desktop quedó instalado. Windows puede pedir reiniciar; después ábrelo una vez ' +
+          '(acepta sus términos y WSL 2) y vuelve a abrir este menú.',
+      );
+    }
+    return;
+  }
+  if (process.platform === 'darwin' && output('brew', ['--version'])) {
+    if (await yes('Docker Desktop no está instalado. ¿Lo instalo con Homebrew?')) {
+      run('brew', ['install', '--cask', 'docker']);
+      run('open', ['-a', 'Docker']);
+    }
+    return;
+  }
+  if (process.platform === 'linux') {
+    if (await yes('Docker no está instalado. ¿Lo instalo con el script oficial (pide sudo)?')) {
+      run('sh', ['-c', 'curl -fsSL https://get.docker.com | sudo sh']);
+      run('sudo', ['usermod', '-aG', 'docker', process.env.USER ?? '']);
+      warn('Cierra sesión y vuelve a entrar para usar Docker sin sudo.');
+    }
+    return;
+  }
+  console.log(dim('  Instálalo desde https://docs.docker.com/get-docker/'));
+}
+
+/** Starts Docker when it is installed but not running. */
+function startDocker() {
+  const exe = WINDOWS ? dockerDesktopExe() : null;
+  if (exe) {
+    spawn(exe, [], { detached: true, stdio: 'ignore' }).unref();
+    return warn('Abrí Docker Desktop; espero a que arranque (puede tardar un par de minutos)…');
+  }
+  if (process.platform === 'darwin') {
+    run('open', ['-a', 'Docker'], { quiet: true });
+    return warn('Abrí Docker Desktop; espero a que arranque…');
+  }
+  if (process.platform === 'linux') {
+    run('sudo', ['-n', 'systemctl', 'start', 'docker'], { quiet: true });
+    return warn('Intento arrancar Docker (systemctl); espero…');
+  }
 }
 
 async function dockerOk({ wait = true } = {}) {
   if (!output('docker', ['--version'])) {
-    fail('Docker no está instalado: https://docs.docker.com/get-docker/');
-    return false;
+    fail('Docker no está instalado.');
+    if (wait) await installDocker();
+    if (!output('docker', ['--version'])) return false;
   }
   if (!output('docker', ['compose', 'version'])) {
     fail('Falta Docker Compose v2 (el plugin "docker compose").');
     return false;
   }
-  for (let i = 0; i < (wait ? 15 : 1); i++) {
+  for (let i = 0; i < (wait ? 90 : 1); i++) {
     if (output('docker', ['info', '--format', '{{.ServerVersion}}'])) {
       ok('Docker está corriendo');
       return true;
     }
-    if (i === 0 && wait)
-      warn('Docker no responde todavía; espero hasta 30 s (¿abriste Docker Desktop?)…');
+    // Not running: start it once, then wait up to 3 minutes (Docker Desktop is slow to start).
+    if (i === 0 && wait) startDocker();
     await sleep(2000);
   }
   fail('Docker no está corriendo. Abre Docker Desktop (o "sudo systemctl start docker") y repite.');
@@ -137,8 +314,8 @@ async function apiUp() {
 
 async function preflight({ docker = true } = {}) {
   step('Revisando lo necesario');
-  const okNode = nodeOk();
-  const okPnpm = pnpmOk();
+  const okNode = await ensureNode();
+  const okPnpm = okNode && ensurePnpm();
   const okDocker = docker ? await dockerOk() : true;
   if (!okNode || !okPnpm || !okDocker) {
     throw new StepError('Falta algo para continuar (mira los ✖ de arriba).');
@@ -300,8 +477,13 @@ async function admin(email) {
 
 async function status() {
   step('Estado');
-  nodeOk();
-  pnpmOk();
+  const local = localNode();
+  const system = output('node', ['-v']) ?? process.versions.node;
+  if (nodeFits(system)) ok(`Node ${system}`);
+  else if (local) ok(`Node del proyecto en ${local} (tu Node ${system} no se usa)`);
+  else warn(`Node ${system}: "Preparar todo" descarga Node 24 para el proyecto`);
+  const pnpm = output('pnpm', ['--version']);
+  pnpm ? ok(`pnpm ${pnpm}`) : warn('pnpm no activo: "Preparar todo" lo activa');
   if (await dockerOk({ wait: false })) {
     const ps = output('docker', ['compose', 'ps', '--format', '{{.Service}}: {{.State}}']);
     console.log(ps ? dim(ps) : dim('  (no hay contenedores del proyecto)'));

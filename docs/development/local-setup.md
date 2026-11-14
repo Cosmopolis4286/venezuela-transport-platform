@@ -5,11 +5,23 @@ de macOS y Windows siguen los instaladores oficiales; no se corren en la CI.
 
 ## El camino corto: el menú
 
-Con Node 24 y Docker instalados (paso 1), desde la raíz del repositorio:
+Solo hace falta haber clonado el repositorio. En **Windows**, doble clic en `menu.cmd` (o
+`.\menu.cmd` en PowerShell); en **macOS o Linux**, `./menu.sh`. Si ya tienes cualquier Node:
 
 ```bash
 node infrastructure/scripts/menu.mjs
 ```
+
+El menú instala lo que falte:
+
+- **Node 24**: si no tienes Node, el lanzador lo instala (winget, Homebrew o fnm). Si tienes otra
+  versión (por ejemplo 22 o 25), el menú descarga el Node 24 oficial **solo para el proyecto** en
+  `.tools/`, comprueba su suma SHA-256 y lo usa para todo, sin tocar tu instalación ni pedir
+  permisos de administrador.
+- **pnpm**: lo activa con corepack sobre ese Node 24 (la versión de `packageManager`).
+- **Docker**: si no está instalado, ofrece instalarlo (winget en Windows, Homebrew en macOS, el
+  script oficial en Linux); Windows puede pedir reiniciar y abrir Docker Desktop una vez. Si está
+  instalado pero apagado, el menú lo abre y espera hasta 3 minutos.
 
 | Opción                                | Qué hace                                                                                                                                                                                                                                                                                                                                                  |
 | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
