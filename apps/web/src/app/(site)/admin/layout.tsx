@@ -38,6 +38,9 @@ async function StaffShell({ children }: { children: React.ReactNode }) {
             <Link href="/admin/bookings" className="text-sm opacity-90 hover:underline">
               Buscar reserva
             </Link>
+            <Link href="/admin/taxi" className="text-sm opacity-90 hover:underline">
+              Taxis por WhatsApp
+            </Link>
             {user.platformRole === 'admin' ? <MoneyLinks /> : null}
           </nav>
           <Suspense>

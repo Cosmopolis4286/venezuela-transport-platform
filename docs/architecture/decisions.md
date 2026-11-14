@@ -646,3 +646,25 @@ Cobrarla en el siguiente viaje funciona igual con pasajeros que pagan en efectiv
 **Compromisos.** Si el pasajero no vuelve a pedir un taxi o una moto, o borra su cuenta, la tasa
 no se cobra. El conductor del siguiente viaje cobra dinero que no es de su línea; las
 liquidaciones lo compensan.
+
+## ADR-037: Taxis y motos pedidos por WhatsApp, con enlace de seguimiento y calificación
+
+**Decisión** (del dueño del producto). Quien escribe al WhatsApp de soporte (opción 2 del menú)
+puede pedir un taxi o una moto sin instalar la app ni crear cuenta. El personal carga el pedido en
+**Administración → Taxis por WhatsApp** con el nombre y el teléfono del cliente; la API crea un
+usuario invitado (ADR-034) y pide el viaje por él con las reglas de siempre (por tramo con la
+tarifa fija de la línea, ADR-035, o desde o hacia un terminal). El viaje queda marcado
+`channel = 'whatsapp'` con un token aleatorio. El personal le manda al cliente, con un toque, el
+mensaje de cada paso y un enlace público `/taxi/<token>` donde sigue el viaje, lo cancela antes
+de subir (con la tasa por cancelar tarde del ADR-036) y lo califica de 1 a 5. Las calificaciones
+también se dan desde la app, y la línea las ve.
+
+**Por qué.** Muchos pasajeros del piloto se comunican solo por WhatsApp y no instalarán una app
+para pedir una moto. La app gratuita de WhatsApp Business no se conecta al sistema; un enlace que
+se abre en el navegador da el seguimiento sin ninguna integración. La calificación le da a la
+línea y a la plataforma una medida del servicio.
+
+**Compromisos.** Mientras no se conecte la API de WhatsApp de Meta, los avisos al cliente
+dependen de que alguien del personal toque el botón. El enlace es secreto (quien lo tenga ve el
+viaje y puede cancelarlo), no muestra teléfonos y vence a los 7 días. El teléfono que da el
+cliente no se verifica. Política de Privacidad actualizada (versión 2026-11-14).

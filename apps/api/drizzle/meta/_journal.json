@@ -232,6 +232,13 @@
       "when": 1794531033121,
       "tag": "0032_trip_packs_and_stretch_rides",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1794630616142,
+      "tag": "0033_taxi_whatsapp_tracking",
+      "breakpoints": true
     }
   ]
 }

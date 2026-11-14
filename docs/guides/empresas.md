@@ -76,6 +76,9 @@ y sus documentos; en el despacho asignas moto y conductor a cada salida.
    escribirla. Un viaje programado que tomas no te impide tomar otros hasta la hora de recoger.
    Si tu línea **acepta paquetes de viajes** (lo activa VTP), también ves los viajes pagados con
    paquete ("Pagado con paquete": no cobres); VTP te paga tu tarifa del tramo al terminarlos.
+5. En los viajes terminados ves la calificación del pasajero (1 a 5 estrellas y su comentario).
+   Algunos pedidos los carga el soporte por un cliente que escribió por WhatsApp: se atienden
+   igual.
 
 ## 6. Cobros y liquidaciones
 

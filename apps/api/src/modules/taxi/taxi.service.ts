@@ -1,4 +1,4 @@
-import { randomInt } from 'node:crypto';
+import { randomBytes, randomInt } from 'node:crypto';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   formatMoney,
@@ -9,6 +9,12 @@ import {
   TRIP_PACK_RETURN_MINUTES,
   rolesWith,
   TAXI_REQUEST_MINUTES,
+  TAXI_TRACKING_DAYS,
+  type AssistedTaxiRequest,
+  type AssistedTaxiRide,
+  type PublicTaxiRide,
+  type RateTaxiRideRequest,
+  type TaxiChannel,
   type OnDemandFare,
   type OnDemandMode,
   type ReplaceOnDemandFaresRequest,
@@ -202,6 +208,16 @@ const fareMatchesRide = () =>
     eq(onDemandFares.mode, taxiRides.mode),
   );
 
+/** Who asks or acts: a signed-in user, or a guest passenger staff created (ADR-037). */
+type Actor = Pick<Authenticated, 'user'>;
+
+/** Where a request came from: the app, or a WhatsApp chat with its tracking link. */
+interface RideOrigin {
+  channel: TaxiChannel;
+  trackingToken: string | null;
+}
+const FROM_APP: RideOrigin = { channel: 'app', trackingToken: null };
+
 @Injectable()
 export class TaxiService {
   constructor(
@@ -237,11 +253,12 @@ export class TaxiService {
   }
 
   async request(
-    auth: Authenticated,
+    auth: Actor,
     input: RequestTaxiRequest,
     meta: RequestMeta,
+    origin: RideOrigin = FROM_APP,
   ): Promise<TaxiRide> {
-    if (input.kind === 'stretch') return this.requestStretch(auth, input, meta);
+    if (input.kind === 'stretch') return this.requestStretch(auth, input, meta, origin);
     if (!input.terminalStopId || !input.direction) {
       throw invalid('Choose the terminal and whether you leave from it or go to it');
     }
@@ -269,6 +286,7 @@ export class TaxiService {
           passengers: input.passengers,
           contactPhone,
           expiresAt: new Date(Date.now() + TAXI_REQUEST_MINUTES * MINUTE_MS),
+          ...origin,
         })
         .returning()) as [TaxiRideRow];
     } catch (error) {
@@ -336,9 +354,10 @@ export class TaxiService {
 
   /** On demand between two stops of a zone, now or at a set time (ADR-028). */
   private async requestStretch(
-    auth: Authenticated,
+    auth: Actor,
     input: RequestTaxiRequest,
     meta: RequestMeta,
+    origin: RideOrigin,
   ): Promise<TaxiRide> {
     const { fromStopId, toStopId, mode } = input;
     if (!fromStopId || !toStopId || !mode || fromStopId === toStopId) {
@@ -414,6 +433,7 @@ export class TaxiService {
             passengers: input.passengers,
             contactPhone,
             expiresAt: new Date(waitFrom + TAXI_REQUEST_MINUTES * MINUTE_MS),
+            ...origin,
           })
           .returning()) as [TaxiRideRow];
         return inserted;
@@ -606,6 +626,16 @@ export class TaxiService {
   /** Before pickup only; afterwards the ride is between the passenger and the driver. */
   async cancelMine(auth: Authenticated, rideId: string, meta: RequestMeta): Promise<TaxiRide> {
     const ride = await this.requireMine(auth.user.id, rideId);
+    return (await this.toRides([await this.cancel(ride, auth, meta, 'taxi_ride.cancelled')]))[0]!;
+  }
+
+  /** Same rules as in the app, late-cancellation fee included (ADR-030). */
+  private async cancel(
+    ride: TaxiRideRow,
+    actor: Actor,
+    meta: RequestMeta,
+    action: string,
+  ): Promise<TaxiRideRow> {
     const now = new Date();
     const policy = ride.organizationId
       ? (await policyFor(this.database.db, ride.organizationId)).rideCancellation
@@ -642,8 +672,171 @@ export class TaxiService {
       return cancelled;
     });
     if (!row) throw conflict('This ride can no longer be cancelled', 'TAXI_RIDE_NOT_CANCELLABLE');
-    await this.record('taxi_ride.cancelled', row, auth, meta, fee ? { lateFee: fee } : {});
-    return (await this.toRides([row]))[0]!;
+    await this.record(action, row, actor, meta, fee ? { lateFee: fee } : {});
+    return row;
+  }
+
+  // --- WhatsApp (ADR-037) -----------------------------------------------------------------
+
+  /**
+   * Platform staff ask for a taxi or motorcycle for someone who wrote on WhatsApp. The person
+   * becomes a guest passenger (ADR-034) and follows the ride with a secret link.
+   */
+  async assistedRequest(
+    staff: Authenticated,
+    input: AssistedTaxiRequest,
+    meta: RequestMeta,
+  ): Promise<AssistedTaxiRide> {
+    const phone = normalizePhone(input.customerPhone);
+    if (!phone) throw invalid("Enter the customer's phone number");
+    const name = input.customerName.trim();
+    const [customer] = await this.database.db
+      .insert(users)
+      .values({ guest: true, firstName: name })
+      .returning();
+    const { customerName: _n, customerPhone: _p, ...ride } = input;
+    const trackingToken = randomBytes(18).toString('base64url');
+    const created = await this.request(
+      { user: customer! },
+      { ...ride, contactPhone: phone },
+      meta,
+      { channel: 'whatsapp', trackingToken },
+    );
+    const [row] = await this.database.db
+      .select()
+      .from(taxiRides)
+      .where(eq(taxiRides.id, created.id));
+    await this.record('taxi_ride.requested_for_whatsapp', row!, staff, meta);
+    return this.toAssisted(row!, name);
+  }
+
+  /** Rides staff asked for on WhatsApp in the last two days, newest first. */
+  async assistedList(): Promise<AssistedTaxiRide[]> {
+    await expireTaxiRequests(this.database.db);
+    const rows = await this.database.db
+      .select({ ride: taxiRides, name: users.firstName })
+      .from(taxiRides)
+      .innerJoin(users, eq(users.id, taxiRides.passengerUserId))
+      .where(
+        and(
+          eq(taxiRides.channel, 'whatsapp'),
+          gt(taxiRides.createdAt, new Date(Date.now() - 2 * 86_400_000)),
+        ),
+      )
+      .orderBy(desc(taxiRides.createdAt))
+      .limit(100);
+    const rides = await this.toRides(rows.map((r) => r.ride));
+    return rows.map(({ ride, name }, i) => ({
+      ride: rides[i]!,
+      customer: { name: name ?? '—', phone: ride.contactPhone ?? '' },
+      trackingPath: `/taxi/${ride.trackingToken}`,
+    }));
+  }
+
+  /** The public tracking page of a WhatsApp ride: no account, the link is the secret. */
+  async tracking(token: string): Promise<PublicTaxiRide> {
+    return this.toPublic(await this.requireTracked(token));
+  }
+
+  /** The person cancels from the link, before pickup, with the same rules as in the app. */
+  async trackingCancel(token: string, meta: RequestMeta): Promise<PublicTaxiRide> {
+    const ride = await this.requireTracked(token);
+    const passenger = await this.passengerOf(ride);
+    return this.toPublic(
+      await this.cancel(ride, { user: passenger }, meta, 'taxi_ride.cancelled_from_link'),
+    );
+  }
+
+  async trackingRate(token: string, input: RateTaxiRideRequest): Promise<PublicTaxiRide> {
+    const ride = await this.requireTracked(token);
+    return this.toPublic(await this.rate(ride.id, input));
+  }
+
+  /** The passenger rates a finished ride from the app. */
+  async rateMine(userId: string, rideId: string, input: RateTaxiRideRequest): Promise<TaxiRide> {
+    const ride = await this.requireMine(userId, rideId);
+    return (await this.toRides([await this.rate(ride.id, input)]))[0]!;
+  }
+
+  /** Once, after the ride is completed. */
+  private async rate(rideId: string, input: RateTaxiRideRequest): Promise<TaxiRideRow> {
+    const [row] = await this.database.db
+      .update(taxiRides)
+      .set({
+        rating: input.rating,
+        ratingComment: input.comment?.trim() || null,
+        ratedAt: new Date(),
+      })
+      .where(
+        and(eq(taxiRides.id, rideId), eq(taxiRides.status, 'completed'), isNull(taxiRides.ratedAt)),
+      )
+      .returning();
+    if (!row) throw conflict('Only a finished ride can be rated, once', 'TAXI_RIDE_WRONG_STEP');
+    return row;
+  }
+
+  private async requireTracked(token: string): Promise<TaxiRideRow> {
+    await expireTaxiRequests(this.database.db);
+    const [ride] = /^[A-Za-z0-9_-]{20,40}$/.test(token)
+      ? await this.database.db.select().from(taxiRides).where(eq(taxiRides.trackingToken, token))
+      : [];
+    // An old link forwarded around should not keep showing an address.
+    if (!ride || Date.now() - ride.createdAt.getTime() > TAXI_TRACKING_DAYS * 86_400_000) {
+      throw notFound();
+    }
+    return ride;
+  }
+
+  private async passengerOf(ride: TaxiRideRow) {
+    const [user] = await this.database.db
+      .select()
+      .from(users)
+      .where(eq(users.id, ride.passengerUserId));
+    return user!;
+  }
+
+  private async toAssisted(row: TaxiRideRow, name: string): Promise<AssistedTaxiRide> {
+    return {
+      ride: (await this.toRides([row]))[0]!,
+      customer: { name, phone: row.contactPhone ?? '' },
+      trackingPath: `/taxi/${row.trackingToken}`,
+    };
+  }
+
+  /** What the link shows: the driver's first name and the vehicle, never phones or surnames. */
+  private async toPublic(ride: TaxiRideRow): Promise<PublicTaxiRide> {
+    const { user, line, vehicle, stop } = await this.related([ride]);
+    const driver = ride.driverUserId ? user.get(ride.driverUserId) : undefined;
+    const company = ride.organizationId ? line.get(ride.organizationId) : undefined;
+    const unit = ride.vehicleId ? vehicle.get(ride.vehicleId) : undefined;
+    const name = (id: string | null) => (id ? (stop.get(id)?.name ?? null) : null);
+    return {
+      kind: ride.kind,
+      status: ride.status,
+      mode: ride.mode as OnDemandMode,
+      direction: ride.direction,
+      terminal: name(ride.terminalStopId),
+      from: name(ride.fromStopId),
+      to: name(ride.toStopId),
+      scheduledFor: ride.scheduledFor?.toISOString() ?? null,
+      address: ride.address,
+      passengers: ride.passengers,
+      line: company ? (company.tradeName ?? company.legalName) : null,
+      driverFirstName: driver?.firstName ?? null,
+      vehicle: unit ? { plate: unit.plate, label: unit.label } : null,
+      fare:
+        ride.fareAmount && ride.fareCurrency
+          ? { amount: ride.fareAmount, currency: ride.fareCurrency }
+          : null,
+      requestedAt: ride.createdAt.toISOString(),
+      expiresAt: ride.expiresAt.toISOString(),
+      acceptedAt: ride.acceptedAt?.toISOString() ?? null,
+      pickedUpAt: ride.pickedUpAt?.toISOString() ?? null,
+      completedAt: ride.completedAt?.toISOString() ?? null,
+      canCancel: ride.status === 'requested' || ride.status === 'accepted',
+      canRate: ride.status === 'completed' && ride.ratedAt === null,
+      rating: ride.rating,
+    };
   }
 
   /** Late-cancellation fees the passenger still owes; paid in cash on the next ride. */
@@ -1285,6 +1478,8 @@ export class TaxiService {
         pickedUpAt: ride.pickedUpAt?.toISOString() ?? null,
         completedAt: ride.completedAt?.toISOString() ?? null,
         cancelledAt: ride.cancelledAt?.toISOString() ?? null,
+        channel: ride.channel,
+        rating: ride.rating,
       };
     });
   }
@@ -1316,6 +1511,8 @@ export class TaxiService {
           acceptedAt: ride.acceptedAt.toISOString(),
           pickedUpAt: ride.pickedUpAt?.toISOString() ?? null,
           completedAt: ride.completedAt?.toISOString() ?? null,
+          rating: ride.rating,
+          ratingComment: ride.ratingComment,
         },
       ];
     });
@@ -1324,7 +1521,7 @@ export class TaxiService {
   private record(
     action: string,
     ride: TaxiRideRow,
-    actor: Authenticated,
+    actor: Actor,
     meta: RequestMeta,
     metadata: Record<string, unknown> = {},
   ) {

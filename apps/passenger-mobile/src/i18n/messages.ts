@@ -335,6 +335,11 @@ const es = {
     cancel: 'Cancelar el viaje',
     another: 'Pedir otro taxi',
     driver: 'Conductor',
+    rateTitle: '¿Cómo te fue?',
+    rateComment: 'Comentario (opcional)',
+    rateSend: 'Enviar calificación',
+    rated: (n: number) => `Calificaste este viaje con ${n} de 5.`,
+    stars: (n: number) => plural(n, 'estrella', 'estrellas'),
   },
 };
 
@@ -665,6 +670,11 @@ const en: Messages = {
     cancel: 'Cancel ride',
     another: 'Request another taxi',
     driver: 'Driver',
+    rateTitle: 'How was it?',
+    rateComment: 'Comment (optional)',
+    rateSend: 'Send rating',
+    rated: (n) => `You rated this ride ${n} out of 5.`,
+    stars: (n) => plural(n, 'star', 'stars'),
   },
 };
 
@@ -998,6 +1008,11 @@ const ptBR: Messages = {
     cancel: 'Cancelar a viagem',
     another: 'Pedir outro táxi',
     driver: 'Motorista',
+    rateTitle: 'Como foi?',
+    rateComment: 'Comentário (opcional)',
+    rateSend: 'Enviar avaliação',
+    rated: (n) => `Você avaliou esta corrida com ${n} de 5.`,
+    stars: (n) => plural(n, 'estrela', 'estrelas'),
   },
 };
 

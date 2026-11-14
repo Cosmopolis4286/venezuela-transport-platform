@@ -19,6 +19,16 @@ Los roles se otorgan desde el servidor, nunca desde la web:
   pedir cambios o rechazar. Para conductores de una **línea de mototaxis**, verifica que la
   licencia sea del grado que permite conducir motos.
 
+## Taxis por WhatsApp (`/admin/taxi`)
+
+Para pedir un taxi o una moto por alguien que escribió al WhatsApp (opción 2 del menú). Llena el
+nombre y el teléfono del cliente y el viaje: **entre dos paradas** de una zona (taxi o moto, con
+la tarifa fija de la línea) o **desde o hacia un terminal** (la línea dice la tarifa al tomarlo).
+Los conductores lo ven en su app. En la lista, **Escribirle por WhatsApp** abre el chat con el
+mensaje que toca según el estado (enlace de seguimiento, placa y tarifa, calificación) y **Ver lo
+que ve el cliente** abre su página. La lista se actualiza sola. Paso a paso en la
+[guía de WhatsApp](whatsapp-soporte.md#5-pedir-un-taxi-o-una-moto-por-whatsapp).
+
 ## Buscar reserva (`/admin/bookings`)
 
 Para atender por WhatsApp o correo: con el código que envía el pasajero (`VTP-7K3QXA` o solo

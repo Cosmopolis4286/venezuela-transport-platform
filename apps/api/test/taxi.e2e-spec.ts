@@ -339,6 +339,14 @@ describe.runIf(expectDatabase)('Taxi dispatch (e2e)', () => {
         ((await step(a1.auth, ride1.id, 'complete').expect(200)).body as OperatorTaxiRide).status,
       ).toBe('completed');
       expect((await board(a1.auth)).current).toBeNull();
+      // Ana rates it once from the app; the line sees it.
+      const rateRide = (rating: number) =>
+        http()
+          .post(`/api/v1/me/taxi-rides/${ride1.id}/rate`)
+          .set('Authorization', ana.auth)
+          .send({ rating });
+      await rateRide(5).expect(200);
+      await rateRide(4).expect(409);
 
       // The winner gives ride 2 back; a dispatcher of line A assigns it.
       await step(winner.auth, ride2.id, 'release').expect(204);
@@ -363,6 +371,7 @@ describe.runIf(expectDatabase)('Taxi dispatch (e2e)', () => {
           [ride2.id, 'accepted'],
         ]),
       );
+      expect(dispatch.rides.find((r) => r.id === ride1.id)?.rating).toBe(5);
       expect(dispatch.drivers.find((d) => d.userId === a1.user.id)?.busy).toBe(true);
       expect(dispatch.vehicles.find((v) => v.id === carA2.id)?.busy).toBe(false);
       await http().get(`${lineA.url}/taxi`).set('Authorization', a2.auth).expect(403);

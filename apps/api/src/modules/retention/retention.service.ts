@@ -124,7 +124,7 @@ export class RetentionService implements OnApplicationBootstrap, OnApplicationSh
 
     const rides = await db
       .update(taxiRides)
-      .set({ address: ERASED, notes: null, contactPhone: null })
+      .set({ address: ERASED, notes: null, contactPhone: null, ratingComment: null })
       .where(
         and(
           lt(taxiRides.createdAt, yearsAgo(RETENTION.taxiRidesYears)),

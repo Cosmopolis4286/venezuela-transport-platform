@@ -74,9 +74,13 @@ solo si está verificado.
 | `GET`/`PUT /organizations/:id/taxi/terminals`                           | Miembros / `routes.manage`                     |
 | `GET /organizations/:id/taxi`                                           | `operations.dispatch` — tablero de la línea    |
 | `POST /organizations/:id/taxi/rides/:id/assign`, `…/release`            | `operations.dispatch`                          |
+| `POST /me/taxi-rides/:id/rate`                                          | El pasajero, una vez, con el viaje terminado   |
+| `POST`/`GET /admin/taxi-rides`                                          | Personal (`reviewer`): pedidos por WhatsApp    |
+| `GET /taxi/track/:token`, `POST …/cancel`, `POST …/rate`                | Público, con el enlace (límite por IP)         |
 
 Eventos de auditoría: `taxi_ride.requested`, `.accepted`, `.picked_up`, `.completed`,
-`.cancelled`, `.released`, `taxi_terminals.replaced`.
+`.cancelled`, `.released`, `taxi_terminals.replaced`, `taxi_ride.requested_for_whatsapp`,
+`taxi_ride.cancelled_from_link`.
 
 ## Viajes por tramo, bajo demanda (ADR-035)
 
@@ -149,9 +153,37 @@ días adelante):
 | `GET /me/taxi-fees`                               | El pasajero — tasas pendientes |
 | `GET`/`PUT /organizations/:id/taxi/stretch-fares` | Miembros / `routes.manage`     |
 
+## Calificaciones
+
+Al terminar un viaje (de terminal o por tramo), el pasajero lo califica una sola vez, de 1 a 5
+estrellas con un comentario opcional, desde la app (`POST /me/taxi-rides/:id/rate`) o desde el
+enlace de WhatsApp. La línea ve la calificación en su tablero. Un segundo intento o un viaje sin
+terminar responden `409 TAXI_RIDE_WRONG_STEP`.
+
+## Pedidos por WhatsApp (ADR-037)
+
+Para quien escribe al WhatsApp de soporte y no usa la app:
+
+1. El personal (rol `reviewer` o superior) llena **Administración → Taxis por WhatsApp**
+   (`POST /admin/taxi-rides`): nombre y teléfono del cliente y el viaje, que puede ser **por
+   tramo** (dos paradas de una zona, taxi o moto, con la tarifa fija de la línea) o **desde o
+   hacia un terminal**. La API crea un usuario **invitado** con ese nombre (ADR-034) y pide el
+   viaje por él con las mismas reglas que la app (la moto lleva a uno; los paquetes de viajes son
+   solo de la app). El viaje queda `channel = 'whatsapp'` con un `tracking_token` aleatorio.
+2. Los conductores lo ven y lo toman como cualquier otro pedido.
+3. En la lista (`GET /admin/taxi-rides`, últimas 48 horas, se actualiza cada 20 segundos) el botón
+   **Escribirle por WhatsApp** abre el chat con el mensaje del estado: el enlace de seguimiento al
+   pedirlo, la placa, el conductor y la tarifa cuando lo toman, el enlace para calificar al
+   terminar (`apps/web/src/lib/taxi-whatsapp.ts`).
+4. El cliente abre `https://DOMINIO/taxi/<token>` (la web lo lleva a su idioma), sin cuenta: ve el
+   estado, la placa, el nombre de pila del conductor, la línea y la tarifa; puede **cancelar**
+   antes de que lo recojan (con las mismas reglas y tasa por cancelar tarde que en la app,
+   ADR-036) y **calificar** al terminar. No ve teléfonos. El enlace deja de funcionar a los
+   `TAXI_TRACKING_DAYS` (7) días.
+
 ## Todavía no
 
 Cobro del taxi dentro de la plataforma, tarifas fijas por zona para los taxis de terminal,
 ubicación en vivo del taxi y del pasajero en un mapa, avisos push de cada cambio de estado (hoy:
-solicitud nueva y aceptada), recordatorio al conductor antes de un viaje programado y
-calificaciones.
+solicitud nueva y aceptada), recordatorio al conductor antes de un viaje programado y avisos
+automáticos por WhatsApp (los manda el personal con un toque).
