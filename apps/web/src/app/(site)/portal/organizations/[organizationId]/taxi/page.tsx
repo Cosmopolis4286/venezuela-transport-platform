@@ -1,15 +1,16 @@
 import {
   TAXI_DIRECTION_LABELS,
   TAXI_RIDE_STATUS_LABELS,
+  TAXI_VEHICLE_TYPE_LABELS,
   formatMoney,
   localPhone,
+  taxiRideRoute as route,
   networkClock,
   vehicleName,
   type OrganizationMembershipSummary,
   type Stop,
   type StopSummary,
   type TaxiDispatchBoard,
-  type TaxiRequest,
 } from '@vtp/shared-types';
 import Link from 'next/link';
 import { Suspense } from 'react';
@@ -34,11 +35,6 @@ export default function TaxiPage({
 
 const person = (p: { firstName: string | null; lastName: string | null }) =>
   [p.firstName, p.lastName].filter(Boolean).join(' ') || 'Sin nombre';
-
-const route = (ride: Pick<TaxiRequest, 'direction' | 'terminal' | 'address'>) =>
-  ride.direction === 'from_terminal'
-    ? `${ride.terminal.name} → ${ride.address}`
-    : `${ride.address} → ${ride.terminal.name}`;
 
 async function Taxi({ params }: { params: Promise<{ organizationId: string }> }) {
   const { organizationId } = await params;
@@ -123,6 +119,7 @@ async function Taxi({ params }: { params: Promise<{ organizationId: string }> })
                     <div>
                       <p className="font-medium">{route(request)}</p>
                       <p className="text-sm text-muted-foreground">
+                        {TAXI_VEHICLE_TYPE_LABELS[request.vehicleType]} ·{' '}
                         {TAXI_DIRECTION_LABELS[request.direction]} · {request.passengers}{' '}
                         {request.passengers === 1 ? 'pasajero' : 'pasajeros'} · pedido a las{' '}
                         {networkClock(request.requestedAt)} · vence a las{' '}
@@ -226,6 +223,8 @@ async function Taxi({ params }: { params: Promise<{ organizationId: string }> })
                         {person(ride.passenger)}
                         {ride.passenger.phone ? ` (${localPhone(ride.passenger.phone)})` : ''} ·
                         tomado a las {networkClock(ride.acceptedAt)}
+                        {ride.rating ? ` · ${'★'.repeat(ride.rating)} ${ride.rating}/5` : ''}
+                        {ride.ratingComment ? ` «${ride.ratingComment}»` : ''}
                       </p>
                     </div>
                     {ride.status === 'accepted' ? (

@@ -25,6 +25,16 @@ Para atender por WhatsApp o correo: con el código que envía el pasajero (`VTP-
 pasajeros y sus boletos, y cómo contactar al cliente. Cada búsqueda queda en la auditoría. Ver
 [atención por WhatsApp](whatsapp-soporte.md).
 
+## Taxis por WhatsApp (`/admin/taxi`)
+
+Para pedir un taxi o mototaxi por alguien que escribió al WhatsApp (opción 2 del menú). Llena el
+nombre y teléfono del cliente, taxi o mototaxi, la zona (terminal o parada de taxis), el viaje
+(**dentro de la ciudad** pide también el destino), dónde lo buscan y cuántos son. Los conductores
+de la zona lo ven en su app. En la lista, **Escribirle por WhatsApp** abre el chat con el mensaje
+que toca según el estado (enlace de seguimiento, placa y tarifa, calificación), y **Ver lo que ve
+el cliente** abre su página. La lista se actualiza sola. Paso a paso en la
+[guía de WhatsApp](whatsapp-soporte.md#5-pedir-un-taxi-o-mototaxi-por-whatsapp).
+
 ## Terminales y paradas (`/admin/stops`)
 
 Agrega los terminales y paradas que usan las rutas (nombre, ciudad, estado y, si la tienes, la

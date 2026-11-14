@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url';
 
 /**
  * Creates, through the real API, what the browser tests need: an approved bus company with a
- * route, fares and daily departures, and a passenger with a paid booking for tomorrow. The
+ * route, fares and daily departures, a passenger with a paid booking for tomorrow, and a taxi
+ * line serving the origin terminal (taxis asked for by WhatsApp). The
  * reviewer role is granted with the same CLI an operator uses (`pnpm platform:grant`).
  */
 const API = process.env.API_BASE_URL ?? 'http://localhost:4000/api/v1';
@@ -16,6 +17,7 @@ export const SEED_FILE = join(here, '..', '..', 'test-results', 'seed.json');
 export interface Seed {
   password: string;
   ownerEmail: string;
+  reviewerEmail: string;
   organizationId: string;
   originId: string;
   destinationId: string;
@@ -136,6 +138,28 @@ export default async function seed(): Promise<void> {
   );
   await call('POST', `${org}/routes/${route.id}/status`, ot, { status: 'active' });
 
+  // A taxi line at the origin terminal, for taxis asked for by WhatsApp (ADR-035).
+  const taxiOwner = await register('taxista');
+  const line = await call<{ organization: { id: string } }>(
+    'POST',
+    '/organizations',
+    taxiOwner.tokens.accessToken,
+    {
+      type: 'taxi_line',
+      legalName: `Mototaxis Prueba ${run}`,
+      rif: `J-${Math.floor(10_000_000 + Math.random() * 80_000_000)}-2`,
+    },
+  );
+  await call('POST', `/admin/organizations/${line.organization.id}/review`, rt, {
+    decision: 'approve',
+  });
+  await call(
+    'PUT',
+    `/organizations/${line.organization.id}/taxi/terminals`,
+    taxiOwner.tokens.accessToken,
+    { stopIds: [origin.id] },
+  );
+
   // The passenger books and pays (simulated provider: development and CI only).
   const pt = passenger.tokens.accessToken;
   const booking = await call<{ id: string }>('POST', '/bookings', pt, {
@@ -161,6 +185,7 @@ export default async function seed(): Promise<void> {
   const data: Seed = {
     password,
     ownerEmail: owner.user.email,
+    reviewerEmail: reviewer.user.email,
     organizationId: organization.id,
     originId: origin.id,
     destinationId: destination.id,

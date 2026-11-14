@@ -26,6 +26,13 @@ pull request.
 
 ### Agregado
 
+- **Taxis y mototaxis por WhatsApp** (ADR-035): el personal pide el viaje por el cliente en
+  **Administración → Taxis por WhatsApp**, le manda con un toque el mensaje de cada paso y un
+  enlace (`/taxi/<token>`, sin cuenta, vence a los 7 días) para seguirlo, cancelarlo y
+  calificarlo. Los taxis ahora pueden ser **mototaxis** (un pasajero) y viajes **dentro de la
+  ciudad** con destino, y el pasajero califica el viaje de 1 a 5 (también en la app). La línea ve
+  las calificaciones. Menú y respuestas rápidas de WhatsApp actualizados; Política de Privacidad
+  2026-11-14.
 - **Comprar sin registrarse** (ADR-034): en la app de pasajeros, "Continuar sin crear cuenta"
   guarda una cuenta de invitado en el teléfono con sus viajes y boletos. "Crear mi cuenta" la
   convierte en cuenta normal sin perder nada, e iniciar sesión en una cuenta existente le pasa los

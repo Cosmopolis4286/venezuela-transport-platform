@@ -62,6 +62,8 @@ En la página de la organización:
 2. El tablero muestra las solicitudes de esos terminales. Un despachador puede asignar una a un
    conductor y vehículo con su tarifa, o tus conductores la toman desde su app.
 3. Por ahora el pasajero le paga al conductor; la plataforma no cobra los taxis.
+4. En los viajes terminados ves la calificación que dejó el pasajero (1 a 5 estrellas y su
+   comentario).
 
 ## 6. Cobros y liquidaciones
 

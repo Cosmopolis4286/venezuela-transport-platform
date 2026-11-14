@@ -1,9 +1,16 @@
+import { randomBytes } from 'node:crypto';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   formatMoney,
+  MAX_MOTO_PASSENGERS,
+  TAXI_TRACKING_DAYS,
   rolesWith,
   TAXI_REQUEST_MINUTES,
   type AcceptTaxiRideRequest,
+  type AssistedTaxiRequest,
+  type AssistedTaxiRide,
+  type PublicTaxiRide,
+  type RateTaxiRideRequest,
   type DriverTaxiBoard,
   type OperatorTaxiRide,
   type RequestTaxiRequest,
@@ -13,7 +20,7 @@ import {
   type TaxiRide,
   type TaxiTerminal,
 } from '@vtp/shared-types';
-import { and, asc, count, desc, eq, gt, inArray, lte, ne, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNull, lte, ne, or } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService, type Database } from '../../database/database.service.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -100,15 +107,144 @@ export class TaxiService {
     input: RequestTaxiRequest,
     meta: RequestMeta,
   ): Promise<TaxiRide> {
+    let contactPhone: string | null = auth.user.phoneVerifiedAt ? auth.user.phone : null;
+    if (input.contactPhone?.trim()) {
+      contactPhone = normalizePhone(input.contactPhone);
+      if (!contactPhone) throw invalid('Enter a valid phone number');
+    }
+    const row = await this.create(auth.user.id, input, contactPhone, 'app', null);
+    await this.record('taxi_ride.requested', row, auth, meta);
+    return (await this.toRides([row]))[0]!;
+  }
+
+  /**
+   * WhatsApp (ADR-035): platform staff ask for a taxi or a motorcycle taxi for someone who wrote
+   * to support. The person becomes a guest passenger and follows the ride with a public link.
+   */
+  async assistedRequest(
+    actor: Authenticated,
+    input: AssistedTaxiRequest,
+    meta: RequestMeta,
+  ): Promise<AssistedTaxiRide> {
+    const phone = normalizePhone(input.customerPhone);
+    if (!phone) throw invalid("Enter the customer's phone number");
+    const name = input.customerName.trim();
+    const [customer] = await this.database.db
+      .insert(users)
+      .values({ guest: true, firstName: name })
+      .returning({ id: users.id });
+    const token = randomBytes(18).toString('base64url');
+    const row = await this.create(customer!.id, input, phone, 'whatsapp', token);
+    await this.record('taxi_ride.requested_for_whatsapp', row, actor, meta);
+    return this.toAssisted(row, name);
+  }
+
+  /** Rides staff asked for on WhatsApp in the last two days, newest first. */
+  async assistedList(): Promise<AssistedTaxiRide[]> {
+    await expireTaxiRequests(this.database.db);
+    const rows = await this.database.db
+      .select({ ride: taxiRides, name: users.firstName })
+      .from(taxiRides)
+      .innerJoin(users, eq(users.id, taxiRides.passengerUserId))
+      .where(
+        and(
+          eq(taxiRides.channel, 'whatsapp'),
+          gt(taxiRides.createdAt, new Date(Date.now() - 2 * RECENT_MS)),
+        ),
+      )
+      .orderBy(desc(taxiRides.createdAt))
+      .limit(100);
+    const rides = await this.toRides(rows.map((r) => r.ride));
+    return rows.map(({ ride, name }, i) => ({
+      ride: rides[i]!,
+      customer: { name: name ?? '—', phone: ride.contactPhone ?? '' },
+      trackingPath: `/taxi/${ride.trackingToken}`,
+    }));
+  }
+
+  /** The public tracking page of a WhatsApp ride: no account, only the link's secret. */
+  async tracking(token: string): Promise<PublicTaxiRide> {
+    await expireTaxiRequests(this.database.db);
+    return this.toPublic(await this.requireTracked(token));
+  }
+
+  /** The person cancels from the link, before the driver picks them up. */
+  async trackingCancel(token: string): Promise<PublicTaxiRide> {
+    const ride = await this.requireTracked(token);
+    const [row] = await this.database.db
+      .update(taxiRides)
+      .set({ status: 'cancelled', cancelledAt: new Date() })
+      .where(and(eq(taxiRides.id, ride.id), inArray(taxiRides.status, ['requested', 'accepted'])))
+      .returning();
+    if (!row) throw conflict('This ride can no longer be cancelled', 'TAXI_RIDE_NOT_CANCELLABLE');
+    await this.audit.record({
+      action: 'taxi_ride.cancelled_from_link',
+      targetType: 'taxi_ride',
+      targetId: row.id,
+    });
+    return this.toPublic(row);
+  }
+
+  async trackingRate(token: string, input: RateTaxiRideRequest): Promise<PublicTaxiRide> {
+    const ride = await this.requireTracked(token);
+    return this.toPublic(await this.rate(ride.id, input));
+  }
+
+  /** The passenger rates a finished ride from the app. */
+  async rateMine(userId: string, rideId: string, input: RateTaxiRideRequest): Promise<TaxiRide> {
+    const ride = await this.requireMine(userId, rideId);
+    return (await this.toRides([await this.rate(ride.id, input)]))[0]!;
+  }
+
+  private async rate(rideId: string, input: RateTaxiRideRequest): Promise<TaxiRideRow> {
+    const [row] = await this.database.db
+      .update(taxiRides)
+      .set({
+        rating: input.rating,
+        ratingComment: input.comment?.trim() || null,
+        ratedAt: new Date(),
+      })
+      .where(
+        and(eq(taxiRides.id, rideId), eq(taxiRides.status, 'completed'), isNull(taxiRides.ratedAt)),
+      )
+      .returning();
+    if (!row) {
+      throw conflict('Only a finished ride can be rated, once', 'TAXI_RIDE_WRONG_STEP');
+    }
+    return row;
+  }
+
+  private async requireTracked(token: string): Promise<TaxiRideRow> {
+    const [ride] = /^[A-Za-z0-9_-]{20,40}$/.test(token)
+      ? await this.database.db.select().from(taxiRides).where(eq(taxiRides.trackingToken, token))
+      : [];
+    // An old link forwarded around should not keep showing an address.
+    if (!ride || Date.now() - ride.createdAt.getTime() > TAXI_TRACKING_DAYS * 86_400_000) {
+      throw notFound();
+    }
+    return ride;
+  }
+
+  /** Validates and stores a request, then tells the drivers of the lines at that terminal. */
+  private async create(
+    passengerUserId: string,
+    input: RequestTaxiRequest,
+    contactPhone: string | null,
+    channel: TaxiRideRow['channel'],
+    trackingToken: string | null,
+  ): Promise<TaxiRideRow> {
     const terminal = (await this.terminals()).find((t) => t.id === input.terminalStopId);
     if (!terminal) throw conflict('No taxi line serves this terminal', 'TAXI_TERMINAL_NOT_SERVED');
     await this.stops.assertServed([terminal.id]);
     const address = input.address.trim();
     if (address.length < 5) throw invalid('Describe the address in at least 5 characters');
-    let contactPhone: string | null = auth.user.phoneVerifiedAt ? auth.user.phone : null;
-    if (input.contactPhone?.trim()) {
-      contactPhone = normalizePhone(input.contactPhone);
-      if (!contactPhone) throw invalid('Enter a valid phone number');
+    const destination = input.destination?.trim() || null;
+    if (input.direction === 'local' && (!destination || destination.length < 3)) {
+      throw invalid('Say where the passenger is going');
+    }
+    const vehicleType = input.vehicleType ?? 'car';
+    if (vehicleType === 'moto' && input.passengers > MAX_MOTO_PASSENGERS) {
+      throw invalid(`A motorcycle taxi takes ${MAX_MOTO_PASSENGERS} passenger`);
     }
     await expireTaxiRequests(this.database.db);
     let row: TaxiRideRow;
@@ -116,10 +252,14 @@ export class TaxiService {
       [row] = (await this.database.db
         .insert(taxiRides)
         .values({
-          passengerUserId: auth.user.id,
+          passengerUserId,
           terminalStopId: terminal.id,
           direction: input.direction,
           address,
+          destination,
+          vehicleType,
+          channel,
+          trackingToken,
           notes: input.notes?.trim() || null,
           passengers: input.passengers,
           contactPhone,
@@ -132,7 +272,6 @@ export class TaxiService {
       }
       throw error;
     }
-    await this.record('taxi_ride.requested', row, auth, meta);
     const ride = row;
     this.notifications.later(async () => {
       // Drivers of the active taxi lines that serve this terminal (not the passenger).
@@ -158,7 +297,7 @@ export class TaxiService {
         text: (m) => m.taxiRequested(terminal.name, ride.passengers),
       };
     });
-    return (await this.toRides([row]))[0]!;
+    return row;
   }
 
   async listMine(userId: string): Promise<TaxiRide[]> {
@@ -617,12 +756,16 @@ export class TaxiService {
         terminal: terminal.get(ride.terminalStopId)!,
         direction: ride.direction,
         address: ride.address,
+        destination: ride.destination,
+        vehicleType: ride.vehicleType,
+        channel: ride.channel,
         notes: ride.notes,
         passengers: ride.passengers,
         fare:
           ride.fareAmount && ride.fareCurrency
             ? { amount: ride.fareAmount, currency: ride.fareCurrency }
             : null,
+        rating: ride.rating,
         organization: (ride.organizationId && line.get(ride.organizationId)) || null,
         driver: driver
           ? {
@@ -668,9 +811,51 @@ export class TaxiService {
           acceptedAt: ride.acceptedAt.toISOString(),
           pickedUpAt: ride.pickedUpAt?.toISOString() ?? null,
           completedAt: ride.completedAt?.toISOString() ?? null,
+          rating: ride.rating,
+          ratingComment: ride.ratingComment,
         },
       ];
     });
+  }
+
+  private async toAssisted(row: TaxiRideRow, name: string): Promise<AssistedTaxiRide> {
+    return {
+      ride: (await this.toRides([row]))[0]!,
+      customer: { name, phone: row.contactPhone ?? '' },
+      trackingPath: `/taxi/${row.trackingToken}`,
+    };
+  }
+
+  /** What the link shows: the driver's first name and the vehicle, never phones or surnames. */
+  private async toPublic(ride: TaxiRideRow): Promise<PublicTaxiRide> {
+    const { user, line, vehicle, terminal } = await this.related([ride]);
+    const driver = ride.driverUserId ? user.get(ride.driverUserId) : undefined;
+    const company = ride.organizationId ? line.get(ride.organizationId) : undefined;
+    const unit = ride.vehicleId ? vehicle.get(ride.vehicleId) : undefined;
+    return {
+      status: ride.status,
+      vehicleType: ride.vehicleType,
+      direction: ride.direction,
+      terminal: terminal.get(ride.terminalStopId)!.name,
+      address: ride.address,
+      destination: ride.destination,
+      passengers: ride.passengers,
+      line: company ? (company.tradeName ?? company.legalName) : null,
+      driverFirstName: driver?.firstName ?? null,
+      vehicle: unit ? { plate: unit.plate, label: unit.label } : null,
+      fare:
+        ride.fareAmount && ride.fareCurrency
+          ? { amount: ride.fareAmount, currency: ride.fareCurrency }
+          : null,
+      requestedAt: ride.createdAt.toISOString(),
+      expiresAt: ride.expiresAt.toISOString(),
+      acceptedAt: ride.acceptedAt?.toISOString() ?? null,
+      pickedUpAt: ride.pickedUpAt?.toISOString() ?? null,
+      completedAt: ride.completedAt?.toISOString() ?? null,
+      canCancel: ride.status === 'requested' || ride.status === 'accepted',
+      canRate: ride.status === 'completed' && ride.ratedAt === null,
+      rating: ride.rating,
+    };
   }
 
   private record(
@@ -708,6 +893,8 @@ function requestFields(ride: TaxiRideRow, terminal: StopSummary) {
     terminal,
     direction: ride.direction,
     address: ride.address,
+    destination: ride.destination,
+    vehicleType: ride.vehicleType,
     notes: ride.notes,
     passengers: ride.passengers,
     requestedAt: ride.createdAt.toISOString(),

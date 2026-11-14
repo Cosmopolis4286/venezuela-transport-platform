@@ -53,7 +53,9 @@ el código de reserva y el número de puesto. El resultado sale al instante:
 ## 5. Taxis (taxistas)
 
 1. **Taxis** muestra las solicitudes de los terminales donde opera tu línea (te llega un aviso
-   cuando hay una nueva).
+   cuando hay una nueva). Cada una dice si es **Taxi** o **Mototaxi**, si va desde o hacia el
+   terminal o dentro de la ciudad, y el destino. Algunas las pidió el soporte por WhatsApp por el
+   cliente: se atienden igual.
 2. **Tomar el viaje**: elige el vehículo, escribe la tarifa y confirma con **Tomar**. Si otra línea fue más rápida, la app te lo
    dice.
 3. Al recoger al pasajero, **Pasajero a bordo**; al llegar, **Terminar viaje**. Si no puedes

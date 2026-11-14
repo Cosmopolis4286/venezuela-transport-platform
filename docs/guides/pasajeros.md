@@ -87,14 +87,20 @@ El reembolso se hace por el mismo medio con el que pagaste. Te avisamos cuando s
 cancelación y cuando se envía el dinero. No se puede cancelar después de abordar ni cuando el
 autobús ya salió.
 
-## 6. Pedir un taxi en el terminal
+## 6. Pedir un taxi o mototaxi
 
-1. **Pedir un taxi**: elige el terminal, si vas **desde** o **hacia** él, la dirección, cuántos
-   pasajeros son y, si quieres, notas y un teléfono de contacto.
+1. En **Taxi** elige **Taxi** o **Mototaxi** (lleva a una sola persona), el terminal o parada de
+   tu zona, y el viaje: **desde** el terminal, **hacia** el terminal o **dentro de la ciudad**
+   (entonces escribe también a dónde vas). Agrega la dirección, cuántos pasajeros son y, si
+   quieres, notas y un teléfono de contacto.
 2. Las líneas de taxis de ese terminal ven tu solicitud; la primera que la toma te asigna un taxi
    y una tarifa. Te llega un aviso con la placa y la tarifa.
 3. Sigue el estado en la app. Puedes cancelar mientras no hayas subido. **Al taxi se le paga
    directamente al conductor.**
+4. Al terminar, califica el viaje de 1 a 5 estrellas: la línea ve tu calificación.
+
+¿No tienes la app? Escribe al WhatsApp de soporte y elige la opción 2: te pedimos el taxi o
+mototaxi y te mandamos un enlace para seguirlo, cancelarlo y calificarlo desde el navegador.
 
 ## Ayuda
 

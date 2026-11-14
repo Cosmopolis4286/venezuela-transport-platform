@@ -14,6 +14,7 @@ import {
 } from '@vtp/mobile-core';
 import {
   TAXI_RIDE_STATUS_LABELS,
+  TAXI_VEHICLE_TYPE_LABELS,
   formatMoney,
   localPhone,
   vehicleName,
@@ -91,7 +92,8 @@ export default function TaxiScreen() {
               {current.passenger.phone ? ` · ${localPhone(current.passenger.phone)}` : ''}
             </Body>
             <Body muted>
-              {current.passengers} {current.passengers === 1 ? 'pasajero' : 'pasajeros'}
+              {TAXI_VEHICLE_TYPE_LABELS[current.vehicleType]} · {current.passengers}{' '}
+              {current.passengers === 1 ? 'pasajero' : 'pasajeros'}
               {current.notes ? ` · ${current.notes}` : ''}
             </Body>
             <Body muted>

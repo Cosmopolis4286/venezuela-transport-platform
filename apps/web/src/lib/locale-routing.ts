@@ -11,7 +11,7 @@ import {
 export const LOCALE_COOKIE = 'vtp-locale';
 
 /** Public pages that live under `/[lang]`; requests without a language prefix are redirected. */
-export const LOCALIZED_PATHS = ['/', '/buscar'];
+export const LOCALIZED_PATHS = ['/', '/buscar', '/taxi'];
 
 /**
  * Where a public request goes: a path without a language prefix is redirected to the remembered

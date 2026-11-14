@@ -6,7 +6,7 @@ import { createDedupedRefresh } from './lib/server/refresh';
 
 /**
  * Two jobs:
- * - Public pages: sends `/` and `/buscar` to the visitor's language (`/es`, `/en`, `/pt-br`) and
+ * - Public pages: sends `/`, `/buscar` and `/taxi/…` (WhatsApp tracking links) to the visitor's language (`/es`, `/en`, `/pt-br`) and
  *   remembers the language of every localized page visited.
  * - Signed-in areas: redirects to /login without a session and refreshes the access token shortly
  *   before it expires. Real authorization happens in the API on every call.
@@ -91,6 +91,7 @@ export const config = {
     '/admin/:path*',
     '/',
     '/buscar',
+    '/taxi/:path*',
     '/(es|en|pt-br)',
     '/(es|en|pt-br)/:path*',
   ],

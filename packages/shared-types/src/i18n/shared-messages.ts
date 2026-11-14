@@ -4,7 +4,7 @@ import type { ApiErrorCode, ApiErrorReason } from '../api/errors.js';
 import type { ServiceClass, StopKind } from '../api/network.js';
 import type { OrganizationType } from '../api/organizations.js';
 import type { PaymentMethod, PaymentStatus } from '../api/payments.js';
-import type { TaxiDirection, TaxiRideStatus } from '../api/taxi.js';
+import type { TaxiDirection, TaxiVehicleType, TaxiRideStatus } from '../api/taxi.js';
 import type { Locale } from './locales.js';
 
 /**
@@ -19,6 +19,7 @@ export interface SharedMessages {
   paymentMethod: Record<PaymentMethod, string>;
   paymentStatus: Record<PaymentStatus, string>;
   taxiDirection: Record<TaxiDirection, string>;
+  taxiVehicleType: Record<TaxiVehicleType, string>;
   taxiRideStatus: Record<TaxiRideStatus, string>;
   /** What the passenger should do next, by ride status. */
   taxiRideHint: Record<Exclude<TaxiRideStatus, 'accepted'>, string> & {
@@ -59,9 +60,14 @@ const es: SharedMessages = {
     refund_due: 'Por reembolsar',
     refunded: 'Reembolsado',
   },
-  taxiDirection: { from_terminal: 'Desde el terminal', to_terminal: 'Hacia el terminal' },
+  taxiDirection: {
+    from_terminal: 'Desde el terminal',
+    to_terminal: 'Hacia el terminal',
+    local: 'Dentro de la ciudad',
+  },
+  taxiVehicleType: { car: 'Taxi', moto: 'Mototaxi' },
   taxiRideStatus: {
-    requested: 'Buscando taxi',
+    requested: 'Buscando conductor',
     accepted: 'Taxi asignado',
     in_progress: 'En camino',
     completed: 'Terminado',
@@ -202,9 +208,14 @@ const en: SharedMessages = {
     refund_due: 'To be refunded',
     refunded: 'Refunded',
   },
-  taxiDirection: { from_terminal: 'From the terminal', to_terminal: 'To the terminal' },
+  taxiDirection: {
+    from_terminal: 'From the terminal',
+    to_terminal: 'To the terminal',
+    local: 'Within the city',
+  },
+  taxiVehicleType: { car: 'Taxi', moto: 'Motorcycle taxi' },
   taxiRideStatus: {
-    requested: 'Looking for a taxi',
+    requested: 'Looking for a driver',
     accepted: 'Taxi assigned',
     in_progress: 'On the way',
     completed: 'Completed',
@@ -345,9 +356,14 @@ const ptBR: SharedMessages = {
     refund_due: 'A reembolsar',
     refunded: 'Reembolsado',
   },
-  taxiDirection: { from_terminal: 'Saindo do terminal', to_terminal: 'Indo para o terminal' },
+  taxiDirection: {
+    from_terminal: 'Saindo do terminal',
+    to_terminal: 'Indo para o terminal',
+    local: 'Dentro da cidade',
+  },
+  taxiVehicleType: { car: 'Táxi', moto: 'Mototáxi' },
   taxiRideStatus: {
-    requested: 'Procurando táxi',
+    requested: 'Procurando motorista',
     accepted: 'Táxi a caminho',
     in_progress: 'Em viagem',
     completed: 'Concluída',

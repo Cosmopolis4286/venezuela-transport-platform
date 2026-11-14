@@ -122,3 +122,32 @@ export async function setStopActive(_: FormState, form: FormData): Promise<FormS
   refresh();
   return {};
 }
+
+export async function requestTaxiForCustomer(_: FormState, form: FormData): Promise<FormState> {
+  const direction = text(form, 'direction');
+  try {
+    await apiRequest('/admin/taxi-rides', {
+      method: 'POST',
+      body: {
+        customerName: text(form, 'customerName'),
+        customerPhone: text(form, 'customerPhone'),
+        vehicleType: text(form, 'vehicleType'),
+        terminalStopId: text(form, 'terminalStopId'),
+        direction,
+        address: text(form, 'address'),
+        destination: direction === 'local' ? text(form, 'destination') || undefined : undefined,
+        passengers: Number(text(form, 'passengers') || '1'),
+        notes: text(form, 'notes') || undefined,
+      },
+    });
+  } catch (error) {
+    return formFailure(error, {
+      VALIDATION_FAILED:
+        'Revisa los datos: nombre, teléfono, dirección (y destino si es dentro de la ciudad). El mototaxi lleva a una sola persona.',
+    });
+  }
+  refresh();
+  return {
+    success: 'Pedido enviado a los conductores. Mándale el enlace al cliente desde la lista.',
+  };
+}

@@ -590,3 +590,25 @@ boletos no se recuperan desde la app; el soporte los encuentra por código de re
 documento. Un invitado puede crear varias cuentas para apartar más puestos: lo frenan el límite
 por IP de los endpoints de acceso y la caducidad de los apartados. Términos (2.1.1) y Privacidad
 actualizados (versión 2026-11-12).
+
+## ADR-035: Taxis y mototaxis pedidos por WhatsApp, con enlace de seguimiento
+
+**Decisión** (del dueño del producto). Quien escribe al WhatsApp de soporte (opción 2 del menú)
+puede pedir un taxi o mototaxi sin instalar la app. El personal carga el pedido en
+**Administración → Taxis por WhatsApp** con el nombre y el teléfono del cliente; la API crea un
+usuario invitado (ADR-034) y un viaje `channel = 'whatsapp'` con un token aleatorio. Los
+conductores lo toman como cualquier pedido. El personal le manda al cliente, con un toque, el
+mensaje del estado (enlace, placa y tarifa, calificación) y un enlace público `/taxi/<token>` donde
+sigue el viaje, lo cancela antes de subir y lo califica de 1 a 5. Al mismo tiempo los taxis ganan
+el tipo de vehículo (taxi o mototaxi, este con un pasajero), los viajes dentro de la zona del
+terminal (`local`, con destino) y las calificaciones, también desde la app.
+
+**Por qué.** Muchos pasajeros del piloto se comunican solo por WhatsApp y no instalarán una app
+para pedir un mototaxi. La app gratuita de WhatsApp Business no se puede conectar al sistema, y la
+API de Meta cuesta por mensaje: un enlace que la persona abre en el navegador da el mismo
+seguimiento sin costo. La calificación le da a la línea y a la plataforma una medida del servicio.
+
+**Compromisos.** Los avisos al cliente dependen de que alguien del personal toque el botón; no hay
+mensajes automáticos. El enlace es secreto (quien lo tenga ve el viaje y puede cancelarlo), no
+muestra teléfonos y vence a los 7 días. El teléfono que da el cliente no se verifica. Política de
+Privacidad actualizada (versión 2026-11-14).

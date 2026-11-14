@@ -14,8 +14,11 @@ import {
   userMessage,
 } from '@vtp/mobile-core';
 import {
+  MAX_MOTO_PASSENGERS,
   TAXI_DIRECTIONS,
+  TAXI_VEHICLE_TYPES,
   type TaxiDirection,
+  type TaxiVehicleType,
   type TaxiRide,
   type TaxiTerminal,
 } from '@vtp/shared-types';
@@ -28,7 +31,7 @@ import { useRefreshOnFocus } from '@/lib/use-refresh-on-focus';
 
 const PASSENGERS = (['1', '2', '3', '4'] as const).map((value) => ({ value, label: value }));
 
-/** Ask for a taxi to or from a terminal; the taxi lines there take it. */
+/** Ask for a taxi or moto to or from a terminal, or within its area; the lines there take it. */
 export default function RequestTaxiScreen() {
   const { api } = useAuth();
   const colors = useColors();
@@ -37,12 +40,18 @@ export default function RequestTaxiScreen() {
     value,
     label: shared.taxiDirection[value],
   }));
+  const vehicleTypes = TAXI_VEHICLE_TYPES.map((value) => ({
+    value,
+    label: shared.taxiVehicleType[value],
+  }));
   const terminals = useApi<TaxiTerminal[]>('/taxi/terminals', { auth: false });
   const rides = useApi<TaxiRide[]>('/me/taxi-rides');
   useRefreshOnFocus(rides.reload);
   const [terminalId, setTerminalId] = useState<string | null>(null);
   const [direction, setDirection] = useState<TaxiDirection>('from_terminal');
+  const [vehicleType, setVehicleType] = useState<TaxiVehicleType>('car');
   const [address, setAddress] = useState('');
+  const [destination, setDestination] = useState('');
   const [notes, setNotes] = useState('');
   const [passengers, setPassengers] = useState<(typeof PASSENGERS)[number]['value']>('1');
   const [phone, setPhone] = useState('');
@@ -50,7 +59,18 @@ export default function RequestTaxiScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const open = rides.data?.find(isOpenRide);
-  const ready = terminalId !== null && address.trim().length >= 5 && !busy;
+  const local = direction === 'local';
+  const moto = vehicleType === 'moto';
+  const ready =
+    terminalId !== null &&
+    address.trim().length >= 5 &&
+    (!local || destination.trim().length >= 3) &&
+    !busy;
+
+  const chooseVehicle = (value: TaxiVehicleType) => {
+    setVehicleType(value);
+    if (value === 'moto') setPassengers(String(MAX_MOTO_PASSENGERS) as typeof passengers);
+  };
 
   const submit = async () => {
     setBusy(true);
@@ -62,6 +82,8 @@ export default function RequestTaxiScreen() {
           terminalStopId: terminalId,
           direction,
           address: address.trim(),
+          destination: local ? destination.trim() : undefined,
+          vehicleType,
           notes: notes.trim() || undefined,
           passengers: Number(passengers),
           contactPhone: phone.trim() || undefined,
@@ -123,6 +145,12 @@ export default function RequestTaxiScreen() {
 
           <Card>
             <Segmented
+              label={t.taxi.vehicle}
+              options={vehicleTypes}
+              value={vehicleType}
+              onChange={chooseVehicle}
+            />
+            <Segmented
               label={t.taxi.trip}
               options={directions}
               value={direction}
@@ -135,12 +163,25 @@ export default function RequestTaxiScreen() {
               onChangeText={setAddress}
               maxLength={200}
             />
-            <Segmented
-              label={t.taxi.passengers}
-              options={PASSENGERS}
-              value={passengers}
-              onChange={setPassengers}
-            />
+            {local ? (
+              <Field
+                label={t.taxi.whereTo}
+                placeholder={t.taxi.addressPlaceholder}
+                value={destination}
+                onChangeText={setDestination}
+                maxLength={200}
+              />
+            ) : null}
+            {moto ? (
+              <Body muted>{t.taxi.motoOne}</Body>
+            ) : (
+              <Segmented
+                label={t.taxi.passengers}
+                options={PASSENGERS}
+                value={passengers}
+                onChange={setPassengers}
+              />
+            )}
             <Field
               label={t.taxi.notes}
               placeholder={t.taxi.notesPlaceholder}
@@ -158,7 +199,7 @@ export default function RequestTaxiScreen() {
             />
             {error ? <Banner tone="error">{error}</Banner> : null}
             <Button
-              title={t.taxi.request}
+              title={t.taxi.request(shared.taxiVehicleType[vehicleType])}
               loading={busy}
               disabled={!ready}
               onPress={() => void submit()}
@@ -181,10 +222,12 @@ export default function RequestTaxiScreen() {
               >
                 <Card>
                   <Body>
+                    {shared.taxiVehicleType[ride.vehicleType]} ·{' '}
                     {shared.taxiDirection[ride.direction]} · {ride.terminal.name}
                   </Body>
                   <Body muted>
-                    {ride.address} · {shared.taxiRideStatus[ride.status]}
+                    {ride.destination ? `${ride.address} → ${ride.destination}` : ride.address} ·{' '}
+                    {shared.taxiRideStatus[ride.status]}
                   </Body>
                 </Card>
               </Pressable>

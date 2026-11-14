@@ -12,7 +12,12 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { TAXI_DIRECTIONS, TAXI_RIDE_STATUSES } from '@vtp/shared-types';
+import {
+  TAXI_CHANNELS,
+  TAXI_DIRECTIONS,
+  TAXI_RIDE_STATUSES,
+  TAXI_VEHICLE_TYPES,
+} from '@vtp/shared-types';
 import { vehicles } from '../fleet/fleet.schema.js';
 import { timestamps, users } from '../identity/identity.schema.js';
 import { currency, stops } from '../network/network.schema.js';
@@ -20,6 +25,8 @@ import { organizations } from '../organizations/organizations.schema.js';
 
 export const taxiDirection = pgEnum('taxi_direction', TAXI_DIRECTIONS);
 export const taxiRideStatus = pgEnum('taxi_ride_status', TAXI_RIDE_STATUSES);
+export const taxiVehicleType = pgEnum('taxi_vehicle_type', TAXI_VEHICLE_TYPES);
+export const taxiChannel = pgEnum('taxi_channel', TAXI_CHANNELS);
 
 /** Terminals where a taxi line picks up and drops off passengers. */
 export const taxiServiceAreas = pgTable(
@@ -52,6 +59,13 @@ export const taxiRides = pgTable(
       .references(() => stops.id, { onDelete: 'restrict' }),
     direction: taxiDirection().notNull(),
     address: text().notNull(),
+    /** Where a `local` ride goes (ADR-035). */
+    destination: text(),
+    vehicleType: taxiVehicleType().notNull().default('car'),
+    /** `whatsapp`: asked by platform staff for someone who wrote on WhatsApp. */
+    channel: taxiChannel().notNull().default('app'),
+    /** Secret of the public tracking link (`/taxi/:token`), for rides asked on WhatsApp. */
+    trackingToken: text(),
     notes: text(),
     passengers: smallint().notNull(),
     contactPhone: text(),
@@ -66,6 +80,10 @@ export const taxiRides = pgTable(
     pickedUpAt: timestamp({ withTimezone: true }),
     completedAt: timestamp({ withTimezone: true }),
     cancelledAt: timestamp({ withTimezone: true }),
+    /** The passenger's rating once completed (1–5), with an optional comment. */
+    rating: smallint(),
+    ratingComment: text(),
+    ratedAt: timestamp({ withTimezone: true }),
     ...timestamps,
   },
   (t) => [
@@ -83,6 +101,10 @@ export const taxiRides = pgTable(
     index('taxi_rides_organization_idx').on(t.organizationId, t.createdAt),
     index('taxi_rides_passenger_idx').on(t.passengerUserId, t.createdAt),
     check('taxi_rides_passengers_check', sql`${t.passengers} between 1 and 6`),
+    check('taxi_rides_rating_check', sql`${t.rating} is null or ${t.rating} between 1 and 5`),
+    uniqueIndex('taxi_rides_tracking_token_key')
+      .on(t.trackingToken)
+      .where(sql`${t.trackingToken} is not null`),
     check(
       'taxi_rides_taken_check',
       // Taken rides always name the line, driver, vehicle and fare.

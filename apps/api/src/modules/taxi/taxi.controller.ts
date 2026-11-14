@@ -11,14 +11,17 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type {
+  AssistedTaxiRide,
   DriverTaxiBoard,
+  PublicTaxiRide,
   OperatorTaxiRide,
   StopSummary,
   TaxiDispatchBoard,
   TaxiRide,
   TaxiTerminal,
 } from '@vtp/shared-types';
-import { CurrentAuth, Public, ReqMeta } from '../identity/auth.decorators.js';
+import { AuthThrottle, CurrentAuth, Public, ReqMeta } from '../identity/auth.decorators.js';
+import { RequirePlatformRole } from '../identity/platform-role.guard.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import {
   CurrentOrganization,
@@ -28,10 +31,64 @@ import {
 import {
   AcceptTaxiRideDto,
   AssignTaxiRideDto,
+  AssistedTaxiDto,
+  RateTaxiRideDto,
   ReplaceTaxiTerminalsDto,
   RequestTaxiDto,
 } from './taxi.dto.js';
 import { TaxiService } from './taxi.service.js';
+
+/** Platform staff ask for taxis for people who write on WhatsApp (ADR-035). */
+@ApiTags('admin')
+@ApiBearerAuth()
+@RequirePlatformRole('reviewer')
+@Controller({ path: 'admin/taxi-rides', version: '1' })
+export class AdminTaxiController {
+  constructor(private readonly taxi: TaxiService) {}
+
+  @Post()
+  request(
+    @Body() body: AssistedTaxiDto,
+    @CurrentAuth() auth: Authenticated,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<AssistedTaxiRide> {
+    return this.taxi.assistedRequest(auth, body, meta);
+  }
+
+  @Get()
+  list(): Promise<AssistedTaxiRide[]> {
+    return this.taxi.assistedList();
+  }
+}
+
+/** The tracking link sent on WhatsApp: no account, the token is the secret. */
+@ApiTags('taxi')
+@Controller({ path: 'taxi/track/:token', version: '1' })
+export class TaxiTrackingController {
+  constructor(private readonly taxi: TaxiService) {}
+
+  @Public()
+  @Get()
+  view(@Param('token') token: string): Promise<PublicTaxiRide> {
+    return this.taxi.tracking(token);
+  }
+
+  @Public()
+  @AuthThrottle()
+  @Post('cancel')
+  @HttpCode(HttpStatus.OK)
+  cancel(@Param('token') token: string): Promise<PublicTaxiRide> {
+    return this.taxi.trackingCancel(token);
+  }
+
+  @Public()
+  @AuthThrottle()
+  @Post('rate')
+  @HttpCode(HttpStatus.OK)
+  rate(@Param('token') token: string, @Body() body: RateTaxiRideDto): Promise<PublicTaxiRide> {
+    return this.taxi.trackingRate(token, body);
+  }
+}
 
 /** Passengers ask for a taxi at a terminal and follow it. */
 @ApiTags('taxi')
@@ -79,6 +136,17 @@ export class TaxiController {
     @ReqMeta() meta: RequestMeta,
   ): Promise<TaxiRide> {
     return this.taxi.cancelMine(auth, rideId, meta);
+  }
+
+  @ApiBearerAuth()
+  @Post('me/taxi-rides/:rideId/rate')
+  @HttpCode(HttpStatus.OK)
+  rate(
+    @CurrentAuth() auth: Authenticated,
+    @Param('rideId', ParseUUIDPipe) rideId: string,
+    @Body() body: RateTaxiRideDto,
+  ): Promise<TaxiRide> {
+    return this.taxi.rateMine(auth.user.id, rideId, body);
   }
 }
 

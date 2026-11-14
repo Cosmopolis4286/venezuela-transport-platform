@@ -207,9 +207,9 @@ const es = {
     created: 'Listo: tu cuenta quedó creada y tus viajes siguen aquí.',
   },
   taxi: {
-    heading: 'Taxi desde o hacia el terminal',
+    heading: 'Taxi o mototaxi',
     intro:
-      'Las líneas de taxi del terminal ven tu solicitud; la primera que la toma te dice la tarifa. Pagas al conductor.',
+      'Las líneas de taxi de la zona ven tu solicitud; la primera que la toma te dice la tarifa. Pagas al conductor.',
     alreadyHave: (status: string) => `Ya tienes un taxi: ${status.toLowerCase()}.`,
     viewMine: 'Ver mi taxi',
     terminal: 'Terminal',
@@ -225,7 +225,7 @@ const es = {
     phone: 'Teléfono de contacto (opcional)',
     phoneHint:
       'Solo lo ve el conductor que tome tu viaje. Si no lo escribes, usamos el de tu cuenta.',
-    request: 'Pedir taxi',
+    request: (vehicle: string) => `Pedir ${vehicle.toLowerCase()}`,
     previous: 'Taxis anteriores',
     waitsFor: (clock: string) => `La solicitud espera ${clock} más.`,
     yourTaxi: 'Tu taxi',
@@ -239,6 +239,14 @@ const es = {
     cancel: 'Cancelar el taxi',
     another: 'Pedir otro taxi',
     driver: 'Conductor',
+    vehicle: 'Vehículo',
+    motoOne: 'El mototaxi lleva a una sola persona.',
+    near: (terminal: string, city: string) => `Zona de ${terminal} (${city})`,
+    rateTitle: '¿Cómo te fue?',
+    rateComment: 'Comentario (opcional)',
+    rateSend: 'Enviar calificación',
+    rated: (n: number) => `Calificaste este viaje con ${n} de 5.`,
+    stars: (n: number) => plural(n, 'estrella', 'estrellas'),
   },
 };
 
@@ -442,9 +450,9 @@ const en: Messages = {
     created: 'Done: your account is ready and your trips are still here.',
   },
   taxi: {
-    heading: 'Taxi to or from the terminal',
+    heading: 'Taxi or motorcycle taxi',
     intro:
-      'The taxi companies at the terminal see your request; the first to take it tells you the fare. You pay the driver.',
+      'The taxi companies in the area see your request; the first to take it tells you the fare. You pay the driver.',
     alreadyHave: (status) => `You already have a taxi: ${status.toLowerCase()}.`,
     viewMine: 'See my taxi',
     terminal: 'Terminal',
@@ -460,7 +468,7 @@ const en: Messages = {
     phone: 'Contact phone (optional)',
     phoneHint:
       'Only the driver who takes your ride sees it. If you leave it empty, we use your account’s.',
-    request: 'Request taxi',
+    request: (vehicle) => `Request ${vehicle.toLowerCase()}`,
     previous: 'Previous taxis',
     waitsFor: (clock) => `The request waits ${clock} more.`,
     yourTaxi: 'Your taxi',
@@ -474,6 +482,14 @@ const en: Messages = {
     cancel: 'Cancel taxi',
     another: 'Request another taxi',
     driver: 'Driver',
+    vehicle: 'Vehicle',
+    motoOne: 'A motorcycle taxi carries one person.',
+    near: (terminal, city) => `Near ${terminal} (${city})`,
+    rateTitle: 'How was it?',
+    rateComment: 'Comment (optional)',
+    rateSend: 'Send rating',
+    rated: (n) => `You rated this ride ${n} out of 5.`,
+    stars: (n) => plural(n, 'star', 'stars'),
   },
 };
 
@@ -678,9 +694,9 @@ const ptBR: Messages = {
     created: 'Pronto: sua conta foi criada e suas viagens continuam aqui.',
   },
   taxi: {
-    heading: 'Táxi para ou do terminal',
+    heading: 'Táxi ou mototáxi',
     intro:
-      'As cooperativas de táxi do terminal veem seu pedido; a primeira que aceitar informa a tarifa. Você paga ao motorista.',
+      'As cooperativas de táxi da região veem seu pedido; a primeira que aceitar informa a tarifa. Você paga ao motorista.',
     alreadyHave: (status) => `Você já tem um táxi: ${status.toLowerCase()}.`,
     viewMine: 'Ver meu táxi',
     terminal: 'Terminal',
@@ -696,7 +712,7 @@ const ptBR: Messages = {
     phone: 'Telefone de contato (opcional)',
     phoneHint:
       'Só o motorista que aceitar sua viagem vê. Se você deixar vazio, usamos o da sua conta.',
-    request: 'Pedir táxi',
+    request: (vehicle) => `Pedir ${vehicle.toLowerCase()}`,
     previous: 'Táxis anteriores',
     waitsFor: (clock) => `O pedido espera mais ${clock}.`,
     yourTaxi: 'Seu táxi',
@@ -710,6 +726,14 @@ const ptBR: Messages = {
     cancel: 'Cancelar o táxi',
     another: 'Pedir outro táxi',
     driver: 'Motorista',
+    vehicle: 'Veículo',
+    motoOne: 'O mototáxi leva uma só pessoa.',
+    near: (terminal, city) => `Região de ${terminal} (${city})`,
+    rateTitle: 'Como foi?',
+    rateComment: 'Comentário (opcional)',
+    rateSend: 'Enviar avaliação',
+    rated: (n) => `Você avaliou esta corrida com ${n} de 5.`,
+    stars: (n) => plural(n, 'estrela', 'estrelas'),
   },
 };
 

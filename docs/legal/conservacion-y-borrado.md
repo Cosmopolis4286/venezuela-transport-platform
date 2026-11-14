@@ -20,8 +20,8 @@ revisión legal (ver [README](README.md#lista-para-el-abogado)).
 **Purga automática:** la API ejecuta una vez al día `RetentionService`
 (`apps/api/src/modules/retention`), que aplica estos plazos: borra los códigos, avisos y auditoría
 vencidos y las sesiones revocadas o vencidas hace más de 30 días; reemplaza por «—» el nombre y el
-documento de los pasajeros de más de 10 años y la dirección, notas y teléfono de los taxis de más
-de 5 años; y borra los archivos y datos de los expedientes KYC rechazados o de cuentas borradas a
+documento de los pasajeros de más de 10 años y la dirección, destino, notas, teléfono y comentario
+de calificación de los taxis de más de 5 años; y borra los archivos y datos de los expedientes KYC rechazados o de cuentas borradas a
 los 5 años de su revisión. Las reservas, pagos y liquidaciones se conservan como comprobantes
 contables (sin datos personales al vencer). Si cambia un plazo, cambiar también `RETENTION` en
 `retention.service.ts`. El resultado queda en los registros (`Retention sweep`).
