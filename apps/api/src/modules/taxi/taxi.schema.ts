@@ -12,7 +12,12 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { TAXI_DIRECTIONS, TAXI_RIDE_KINDS, TAXI_RIDE_STATUSES } from '@vtp/shared-types';
+import {
+  TAXI_CHANNELS,
+  TAXI_DIRECTIONS,
+  TAXI_RIDE_KINDS,
+  TAXI_RIDE_STATUSES,
+} from '@vtp/shared-types';
 import { transportMode, vehicles } from '../fleet/fleet.schema.js';
 import { timestamps, users } from '../identity/identity.schema.js';
 import { currency, operatingZones, stops } from '../network/network.schema.js';
@@ -22,6 +27,7 @@ import { tripPacks } from '../trip-packs/trip-packs.schema.js';
 export const taxiDirection = pgEnum('taxi_direction', TAXI_DIRECTIONS);
 export const taxiRideStatus = pgEnum('taxi_ride_status', TAXI_RIDE_STATUSES);
 export const taxiRideKind = pgEnum('taxi_ride_kind', TAXI_RIDE_KINDS);
+export const taxiChannel = pgEnum('taxi_channel', TAXI_CHANNELS);
 
 /**
  * A line's fixed fare to ride on demand between two stops of a zone, either way (ADR-028).
@@ -111,9 +117,20 @@ export const taxiRides = pgTable(
     pickedUpAt: timestamp({ withTimezone: true }),
     completedAt: timestamp({ withTimezone: true }),
     cancelledAt: timestamp({ withTimezone: true }),
+    /** WhatsApp rides (ADR-037): asked for by staff, followed with a secret link. */
+    channel: taxiChannel().notNull().default('app'),
+    trackingToken: text(),
+    /** The passenger's rating of the finished ride, once. */
+    rating: smallint(),
+    ratingComment: text(),
+    ratedAt: timestamp({ withTimezone: true }),
     ...timestamps,
   },
   (t) => [
+    uniqueIndex('taxi_rides_tracking_token_key')
+      .on(t.trackingToken)
+      .where(sql`${t.trackingToken} is not null`),
+    check('taxi_rides_rating_check', sql`${t.rating} is null or ${t.rating} between 1 and 5`),
     // One open ride per passenger, one active ride per driver and per vehicle.
     uniqueIndex('taxi_rides_passenger_open_key')
       .on(t.passengerUserId)

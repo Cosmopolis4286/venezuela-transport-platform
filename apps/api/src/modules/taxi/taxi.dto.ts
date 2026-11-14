@@ -1,5 +1,7 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import {
+  type AssistedTaxiRequest,
+  type RateTaxiRideRequest,
   CURRENCIES,
   MAX_TAXI_PASSENGERS,
   ON_DEMAND_MODES,
@@ -194,4 +196,34 @@ export class PickUpTaxiRideDto implements PickUpTaxiRideRequest {
   @IsOptional()
   @Matches(/^\d{4}$/, { message: 'pickupCode must be 4 digits' })
   pickupCode?: string;
+}
+
+/** Staff ask for a taxi or motorcycle for someone on WhatsApp (ADR-037); packs are app-only. */
+export class AssistedTaxiDto
+  extends OmitType(RequestTaxiDto, ['contactPhone', 'tripPackId'] as const)
+  implements AssistedTaxiRequest
+{
+  @ApiProperty({ example: 'Carmen' })
+  @IsString()
+  @Length(2, 80)
+  customerName!: string;
+
+  @ApiProperty({ example: '0416-5551234' })
+  @IsString()
+  @Length(7, 20)
+  customerPhone!: string;
+}
+
+export class RateTaxiRideDto implements RateTaxiRideRequest {
+  @ApiProperty({ minimum: 1, maximum: 5 })
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  rating!: number;
+
+  @ApiPropertyOptional({ example: 'Muy amable y puntual' })
+  @IsOptional()
+  @IsString()
+  @Length(0, 300)
+  comment?: string;
 }

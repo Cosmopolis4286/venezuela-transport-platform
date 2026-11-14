@@ -5,7 +5,13 @@ import { IdentityModule } from '../identity/identity.module.js';
 import { NetworkModule } from '../network/network.module.js';
 import { OrganizationsModule } from '../organizations/organizations.module.js';
 import { TripPacksModule } from '../trip-packs/trip-packs.module.js';
-import { TaxiController, TaxiDriverController, TaxiLineController } from './taxi.controller.js';
+import {
+  AdminTaxiController,
+  TaxiController,
+  TaxiDriverController,
+  TaxiLineController,
+  TaxiTrackingController,
+} from './taxi.controller.js';
 import { TaxiService } from './taxi.service.js';
 
 /** Taxis to and from the terminals: requests, taking them, and the ride's lifecycle. */
@@ -18,7 +24,13 @@ import { TaxiService } from './taxi.service.js';
     FleetModule,
     TripPacksModule,
   ],
-  controllers: [TaxiController, TaxiDriverController, TaxiLineController],
+  controllers: [
+    TaxiController,
+    TaxiDriverController,
+    TaxiLineController,
+    AdminTaxiController,
+    TaxiTrackingController,
+  ],
   providers: [TaxiService],
 })
 export class TaxiModule {}

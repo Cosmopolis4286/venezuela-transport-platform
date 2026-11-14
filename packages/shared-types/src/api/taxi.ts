@@ -54,6 +54,13 @@ export const TAXI_RIDE_STATUS_LABELS: Record<TaxiRideStatus, string> =
 export const OPEN_TAXI_RIDE_STATUSES = ['requested', 'accepted', 'in_progress'] as const;
 
 export const TAXI_REQUEST_MINUTES = 20;
+
+/** How the ride was asked for: in the passenger app, or by staff for a WhatsApp chat (ADR-037). */
+export const TAXI_CHANNELS = ['app', 'whatsapp'] as const;
+export type TaxiChannel = (typeof TAXI_CHANNELS)[number];
+
+/** A WhatsApp tracking link works this many days after the request (to follow, cancel, rate). */
+export const TAXI_TRACKING_DAYS = 7;
 export const MAX_TAXI_PASSENGERS = 6;
 
 /** `GET /taxi/terminals` — terminals with at least one active taxi line. */
@@ -137,6 +144,9 @@ export interface TaxiRide {
   pickedUpAt: string | null;
   completedAt: string | null;
   cancelledAt: string | null;
+  channel: TaxiChannel;
+  /** 1–5 once the passenger rated the finished ride. */
+  rating: number | null;
 }
 
 /** An open request as drivers and dispatchers see it before taking it: no contact details. */
@@ -172,6 +182,9 @@ export interface OperatorTaxiRide extends TaxiRequest {
   acceptedAt: string;
   pickedUpAt: string | null;
   completedAt: string | null;
+  /** The passenger's rating of the finished ride (1–5) and comment. */
+  rating: number | null;
+  ratingComment: string | null;
 }
 
 /** Taking a request: by the driver (`POST /me/taxi/rides/:id/accept`) or a dispatcher. */
@@ -290,6 +303,76 @@ export function taxiRideHint(
   if (ride.status !== 'accepted') return hints[ride.status];
   if (ride.kind === 'stretch') return hints.acceptedStretch;
   return ride.direction === 'from_terminal' ? hints.acceptedFromTerminal : hints.acceptedToTerminal;
+}
+
+/**
+ * `POST /admin/taxi-rides` (ADR-037): platform staff ask for a taxi or motorcycle for someone who
+ * wrote on WhatsApp. The person becomes a guest passenger; trip packs are app-only.
+ */
+export interface AssistedTaxiRequest extends Omit<RequestTaxiRequest, 'contactPhone' | 'tripPackId'> {
+  customerName: string;
+  customerPhone: string;
+}
+
+/** A ride asked for on WhatsApp, as staff see it, with the path of its public tracking page. */
+export interface AssistedTaxiRide {
+  ride: TaxiRide;
+  customer: { name: string; phone: string };
+  /** `/taxi/<token>` on the website (the web adds the language). */
+  trackingPath: string;
+}
+
+/** `GET /taxi/track/:token`: what anyone with the link sees, without an account or phones. */
+export interface PublicTaxiRide {
+  kind: TaxiRideKind;
+  status: TaxiRideStatus;
+  mode: OnDemandMode;
+  direction: TaxiDirection | null;
+  /** Names: the terminal (terminal rides) or both stops (stretch rides). */
+  terminal: string | null;
+  from: string | null;
+  to: string | null;
+  scheduledFor: string | null;
+  address: string;
+  passengers: number;
+  line: string | null;
+  driverFirstName: string | null;
+  vehicle: { plate: string; label: string | null } | null;
+  fare: { amount: string; currency: Currency } | null;
+  requestedAt: string;
+  expiresAt: string;
+  acceptedAt: string | null;
+  pickedUpAt: string | null;
+  completedAt: string | null;
+  /** Before the driver picks the person up (late-cancellation fees still apply, ADR-030). */
+  canCancel: boolean;
+  /** Completed and not rated yet. */
+  canRate: boolean;
+  rating: number | null;
+}
+
+/** Rating a finished ride (app or link): 1 to 5 stars and an optional comment. */
+export interface RateTaxiRideRequest {
+  rating: number;
+  comment?: string;
+}
+
+/**
+ * Where the ride goes, in the direction of travel: "Terminal → Av. Bolívar", "Av. Bolívar →
+ * Terminal", or between two stops "San Félix → Puerto Ordaz".
+ */
+export function taxiRideRoute(
+  ride: Pick<TaxiRequest, 'direction' | 'address'> & {
+    terminal: { name: string } | null;
+    from: { name: string } | null;
+    to: { name: string } | null;
+  },
+): string {
+  if (ride.from && ride.to) return `${ride.from.name} → ${ride.to.name}`;
+  const terminal = ride.terminal?.name ?? '?';
+  return ride.direction === 'from_terminal'
+    ? `${terminal} → ${ride.address}`
+    : `${ride.address} → ${terminal}`;
 }
 
 /** `+584141234567` → `0414-1234567`, how Venezuelans write phone numbers; others unchanged. */
