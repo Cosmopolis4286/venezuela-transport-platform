@@ -80,3 +80,6 @@ apps/api/var/
 # Playwright
 test-results/
 playwright-report/
+
+# Node 24 que descarga el menú local para este proyecto
+.tools/

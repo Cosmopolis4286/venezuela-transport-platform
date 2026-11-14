@@ -26,6 +26,10 @@ pull request.
 
 ### Agregado
 
+- **El menú local instala lo que falta**: `menu.cmd` (Windows) y `menu.sh` (macOS/Linux) lo
+  abren e instalan Node si no hay; con otra versión de Node, el menú descarga Node 24 solo para el
+  proyecto en `.tools/` (con suma SHA-256) y activa pnpm sobre él; ofrece instalar Docker y lo
+  abre si está apagado.
 - **Menú local** (`pnpm menu` o `node infrastructure/scripts/menu.mjs`): revisa Node, pnpm y
   Docker, prepara todo, arranca los servidores, carga **datos de ejemplo del suburbano**
   (`pnpm seed:suburban`), da el rol de administrador, verifica y repara; con reintentos y mensajes
