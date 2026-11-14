@@ -5,8 +5,9 @@ import {
   type ApiErrorReason,
   type ApiFieldError,
 } from '@vtp/shared-types';
-import { cookies } from 'next/headers';
+import { cookies, headers as requestHeaders } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { clientHeaders, webTrustedHops } from '../client-headers';
 import { errorMessage } from '../errors';
 import { cookieNames } from './cookies';
 import { apiBaseUrl, isProduction } from './env';
@@ -35,6 +36,16 @@ interface ApiRequest {
   auth?: boolean;
   /** Override the token (e.g. right after login, before cookies reach the browser). */
   accessToken?: string;
+  /**
+   * Defaults to true: tell the API the visitor's address and browser (per-IP limits, sessions).
+   * Pass false inside `'use cache'` functions, which run outside any one visitor's request.
+   */
+  forwardClient?: boolean;
+}
+
+/** The visitor's address and browser, for the API (see client-headers.ts). */
+async function visitorHeaders(): Promise<Record<string, string>> {
+  return clientHeaders(await requestHeaders(), webTrustedHops());
 }
 
 async function accessTokenFromCookies(): Promise<string | undefined> {
@@ -43,7 +54,10 @@ async function accessTokenFromCookies(): Promise<string | undefined> {
 
 /** Raw call; throws ApiError on non-2xx. */
 export async function apiRequest<T>(path: string, options: ApiRequest = {}): Promise<T> {
-  const headers: Record<string, string> = { accept: 'application/json' };
+  const headers: Record<string, string> = {
+    ...(options.forwardClient === false ? {} : await visitorHeaders()),
+    accept: 'application/json',
+  };
   if (options.body !== undefined) headers['content-type'] = 'application/json';
   if (options.auth !== false) {
     const token = options.accessToken ?? (await accessTokenFromCookies());
@@ -86,7 +100,10 @@ export async function apiFetch<T>(path: string, options: ApiRequest = {}): Promi
 export async function apiFile(path: string): Promise<Response> {
   const token = await accessTokenFromCookies();
   return fetch(`${apiBaseUrl}${path}`, {
-    headers: token ? { authorization: `Bearer ${token}` } : {},
+    headers: {
+      ...(await visitorHeaders()),
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
     cache: 'no-store',
   });
 }

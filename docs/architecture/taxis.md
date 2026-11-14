@@ -167,9 +167,12 @@ Para quien escribe al WhatsApp de soporte y no usa la app:
 1. El personal (rol `reviewer` o superior) llena **Administración → Taxis por WhatsApp**
    (`POST /admin/taxi-rides`): nombre y teléfono del cliente y el viaje, que puede ser **por
    tramo** (dos paradas de una zona, taxi o moto, con la tarifa fija de la línea) o **desde o
-   hacia un terminal**. La API crea un usuario **invitado** con ese nombre (ADR-034) y pide el
-   viaje por él con las mismas reglas que la app (la moto lleva a uno; los paquetes de viajes son
+   hacia un terminal**. La API usa el **invitado** de ese teléfono (el de su último pedido por
+   WhatsApp, con el nombre que dio ahora) o crea uno (ADR-034), y pide el viaje por él con las mismas reglas que la app (la moto lleva a uno; los paquetes de viajes son
    solo de la app). El viaje queda `channel = 'whatsapp'` con un `tracking_token` aleatorio.
+   Así la misma persona tiene un historial, **un viaje abierto a la vez** (si ya tiene uno, el
+   personal le reenvía su enlace) y paga las tasas por cancelar tarde que deba (ADR-036). Nunca se
+   usa una cuenta registrada: un teléfono escrito por el personal no prueba quién es su dueño.
 2. Los conductores lo ven y lo toman como cualquier otro pedido.
 3. En la lista (`GET /admin/taxi-rides`, últimas 48 horas, se actualiza cada 20 segundos) el botón
    **Escribirle por WhatsApp** abre el chat con el mensaje del estado: el enlace de seguimiento al

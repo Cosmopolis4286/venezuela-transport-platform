@@ -690,10 +690,7 @@ export class TaxiService {
     const phone = normalizePhone(input.customerPhone);
     if (!phone) throw invalid("Enter the customer's phone number");
     const name = input.customerName.trim();
-    const [customer] = await this.database.db
-      .insert(users)
-      .values({ guest: true, firstName: name })
-      .returning();
+    const customer = await this.whatsappGuest(phone, name);
     const { customerName: _n, customerPhone: _p, ...ride } = input;
     const trackingToken = randomBytes(18).toString('base64url');
     const created = await this.request(
@@ -708,6 +705,49 @@ export class TaxiService {
       .where(eq(taxiRides.id, created.id));
     await this.record('taxi_ride.requested_for_whatsapp', row!, staff, meta);
     return this.toAssisted(row!, name);
+  }
+
+  /**
+   * The guest passenger behind a WhatsApp phone: the one of its latest WhatsApp ride, renamed to
+   * what the person said now, or a new one. So the same person keeps one history, one open ride at
+   * a time (as in the app) and the late-cancellation fees they owe (ADR-036). Never a registered
+   * account: a phone typed by staff proves nothing about who owns it.
+   */
+  private async whatsappGuest(phone: string, name: string): Promise<Actor['user']> {
+    const previous = await this.guestOfPhone(phone);
+    if (previous) {
+      const [renamed] = await this.database.db
+        .update(users)
+        .set({ firstName: name })
+        .where(eq(users.id, previous.id))
+        .returning();
+      if (renamed) return renamed;
+    }
+    const [created] = await this.database.db
+      .insert(users)
+      .values({ guest: true, firstName: name })
+      .returning();
+    return created!;
+  }
+
+  /** The guest of the latest WhatsApp ride for this phone, staff's or the chat's (null if none). */
+  private async guestOfPhone(phone: string): Promise<Actor['user'] | null> {
+    const db = this.database.db;
+    const [previous] = await db
+      .select({ user: users })
+      .from(taxiRides)
+      .innerJoin(users, eq(users.id, taxiRides.passengerUserId))
+      .where(
+        and(
+          eq(taxiRides.channel, 'whatsapp'),
+          eq(taxiRides.contactPhone, phone),
+          eq(users.guest, true),
+          isNull(users.deletedAt),
+        ),
+      )
+      .orderBy(desc(taxiRides.createdAt))
+      .limit(1);
+    return previous?.user ?? null;
   }
 
   /**
@@ -783,6 +823,10 @@ export class TaxiService {
       ? await this.database.db.select().from(users).where(eq(users.id, chat.userId))
       : [];
     if (!user || user.deletedAt) {
+      // The same person as staff's WhatsApp rides for this phone, if any (one history, one open ride).
+      user = (await this.guestOfPhone(chat.phone)) ?? undefined;
+    }
+    if (!user) {
       [user] = await this.database.db
         .insert(users)
         .values({ guest: true, firstName: name })

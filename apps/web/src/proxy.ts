@@ -1,5 +1,6 @@
 import type { AuthResponse } from '@vtp/shared-types';
 import { NextResponse, type NextRequest } from 'next/server';
+import { clientHeaders, webTrustedHops } from './lib/client-headers';
 import { LOCALE_COOKIE, localeRoute } from './lib/locale-routing';
 import { cookieNames, needsRefresh, sessionCookies } from './lib/server/cookies';
 import { createDedupedRefresh } from './lib/server/refresh';
@@ -19,10 +20,10 @@ const apiBase = (
   ''
 ).replace(/\/+$/, '');
 
-const refresh = createDedupedRefresh(async (refreshToken) => {
+const refresh = createDedupedRefresh(async (refreshToken, client) => {
   const response = await fetch(`${apiBase}/auth/refresh`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { ...client, 'content-type': 'application/json' },
     body: JSON.stringify({ refreshToken }),
     cache: 'no-store',
   });
@@ -74,7 +75,10 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   if (!needsRefresh(access, request.cookies.get(names.accessExpiry)?.value))
     return NextResponse.next();
 
-  const renewed = await refresh(refreshToken).catch(() => null);
+  const renewed = await refresh(
+    refreshToken,
+    clientHeaders(request.headers, webTrustedHops()),
+  ).catch(() => null);
   if (!renewed) return toLogin(request, true);
 
   const cookies = sessionCookies(renewed.tokens, production);
