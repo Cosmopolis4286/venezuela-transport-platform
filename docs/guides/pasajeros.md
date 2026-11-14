@@ -134,6 +134,11 @@ hora que pediste), puedes cancelar sin costo.
    y una tarifa. Te llega un aviso con la placa y la tarifa.
 3. Sigue el estado en la app. Puedes cancelar mientras no hayas subido. **Al taxi se le paga
    directamente al conductor.**
+4. Al terminar cualquier viaje de taxi o moto, califícalo de 1 a 5 estrellas: la línea ve tu
+   calificación.
+
+¿No tienes la app? Escribe al WhatsApp de soporte y elige la opción 2: te pedimos el taxi o la
+moto y te mandamos un enlace para seguirlo, cancelarlo y calificarlo desde el navegador.
 
 ## Ayuda
 

@@ -309,7 +309,10 @@ export function taxiRideHint(
  * `POST /admin/taxi-rides` (ADR-037): platform staff ask for a taxi or motorcycle for someone who
  * wrote on WhatsApp. The person becomes a guest passenger; trip packs are app-only.
  */
-export interface AssistedTaxiRequest extends Omit<RequestTaxiRequest, 'contactPhone' | 'tripPackId'> {
+export interface AssistedTaxiRequest extends Omit<
+  RequestTaxiRequest,
+  'contactPhone' | 'tripPackId'
+> {
   customerName: string;
   customerPhone: string;
 }

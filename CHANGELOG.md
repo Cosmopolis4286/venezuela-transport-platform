@@ -26,6 +26,12 @@ pull request.
 
 ### Agregado
 
+- **Taxis y motos por WhatsApp** (ADR-037): el personal pide el viaje por el cliente en
+  **Administración → Taxis por WhatsApp** (por tramo con la tarifa fija de la línea, o desde o hacia
+  un terminal), le manda con un toque el mensaje de cada paso y un enlace (`/taxi/<token>`, sin
+  cuenta, vence a los 7 días) para seguirlo, cancelarlo y calificarlo. Los pasajeros también
+  califican sus viajes de taxi y moto en la app, y la línea ve las calificaciones. Menú y
+  respuestas rápidas de WhatsApp actualizados; Política de Privacidad 2026-11-14.
 - **Menú local más completo**: «Empezar (todo en uno)» prepara, carga ejemplos, arranca la API y
   la web y abre el navegador; «Actualizar» trae los cambios, reinstala solo si cambió el lockfile y
   migra; «Detener la base de datos»; opciones agrupadas por sección. Con **fnm** instalado usa su

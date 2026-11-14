@@ -358,6 +358,8 @@ async function Taxi({ params }: { params: Promise<{ organizationId: string }> })
                         · pasajero {person(ride.passenger)}
                         {ride.passenger.phone ? ` (${localPhone(ride.passenger.phone)})` : ''} ·
                         tomado a las {networkClock(ride.acceptedAt)}
+                        {ride.rating ? ` · ${'★'.repeat(ride.rating)} ${ride.rating}/5` : ''}
+                        {ride.ratingComment ? ` «${ride.ratingComment}»` : ''}
                       </p>
                     </div>
                     {ride.status === 'accepted' ? (

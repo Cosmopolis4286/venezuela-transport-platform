@@ -177,7 +177,12 @@ describe.runIf(expectDatabase)('Taxi by WhatsApp (e2e)', () => {
       const created = (await assisted().expect(201)).body as AssistedTaxiRide;
       expect(created).toMatchObject({
         customer: { name: 'Carmen', phone: '+584165551234' },
-        ride: { status: 'requested', kind: 'terminal', direction: 'to_terminal', channel: 'whatsapp' },
+        ride: {
+          status: 'requested',
+          kind: 'terminal',
+          direction: 'to_terminal',
+          channel: 'whatsapp',
+        },
         trackingPath: expect.stringMatching(/^\/taxi\/[A-Za-z0-9_-]{20,40}$/),
       });
       const token = created.trackingPath.split('/').pop()!;
@@ -212,9 +217,8 @@ describe.runIf(expectDatabase)('Taxi by WhatsApp (e2e)', () => {
       expect(JSON.stringify(view)).not.toContain('5551234');
 
       // A second order: the customer cancels from the link.
-      const other = (
-        await assisted({ customerName: 'Pedro', passengers: 3 }).expect(201)
-      ).body as AssistedTaxiRide;
+      const other = (await assisted({ customerName: 'Pedro', passengers: 3 }).expect(201))
+        .body as AssistedTaxiRide;
       const otherToken = other.trackingPath.split('/').pop()!;
       const cancelled = (await http().post(`/api/v1/taxi/track/${otherToken}/cancel`).expect(200))
         .body as PublicTaxiRide;

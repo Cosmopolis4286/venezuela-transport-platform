@@ -4,8 +4,10 @@ import {
   Body,
   Button,
   Card,
+  Field,
   Heading,
   Screen,
+  Segmented,
   Subheading,
   useApi,
   useAuth,
@@ -18,6 +20,7 @@ import {
   taxiRideHint,
   toNetworkIso,
   vehicleName,
+  type RateTaxiRideRequest,
   type TaxiRide,
 } from '@vtp/shared-types';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -27,6 +30,11 @@ import { useFeeTotal } from '@/components/pending-fees';
 import { useT } from '@/i18n/use-t';
 import { driverLine, isOpenRide, ridePlace } from '@/lib/taxi';
 import { formatClock, useSecondsLeft } from '@/lib/use-countdown';
+
+const STARS = (['1', '2', '3', '4', '5'] as const).map((value) => ({
+  value,
+  label: '★'.repeat(Number(value)),
+}));
 
 /** While the ride is open, it is reloaded this often to show the taxi as soon as one takes it. */
 const POLL_MS = 5000;
@@ -48,6 +56,8 @@ export default function TaxiRideScreen() {
   const { reload, mutate } = ride;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [stars, setStars] = useState<(typeof STARS)[number]['value']>('5');
+  const [comment, setComment] = useState('');
   const data = ride.data;
   const open = data ? isOpenRide(data) : false;
   const secondsLeft = useSecondsLeft(data?.status === 'requested' ? data.expiresAt : null);
@@ -74,6 +84,22 @@ export default function TaxiRideScreen() {
     setError(null);
     try {
       mutate(await api.request<TaxiRide>(`/me/taxi-rides/${id}/cancel`, { method: 'POST' }));
+    } catch (e) {
+      setError(userMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const rate = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const body: RateTaxiRideRequest = {
+        rating: Number(stars),
+        comment: comment.trim() || undefined,
+      };
+      mutate(await api.request<TaxiRide>(`/me/taxi-rides/${id}/rate`, { method: 'POST', body }));
     } catch (e) {
       setError(userMessage(e));
     } finally {
@@ -172,6 +198,31 @@ export default function TaxiRideScreen() {
               <Body muted>{t.ride.driverLate}</Body>
             )
           ) : null}
+          {data.status === 'completed' ? (
+            <Card>
+              {data.rating ? (
+                <Body>{t.taxi.rated(data.rating)}</Body>
+              ) : (
+                <>
+                  <Subheading>{t.taxi.rateTitle}</Subheading>
+                  <Segmented
+                    label={t.taxi.stars(Number(stars))}
+                    options={STARS}
+                    value={stars}
+                    onChange={setStars}
+                  />
+                  <Field
+                    label={t.taxi.rateComment}
+                    value={comment}
+                    onChangeText={setComment}
+                    maxLength={300}
+                  />
+                  <Button title={t.taxi.rateSend} loading={busy} onPress={() => void rate()} />
+                </>
+              )}
+            </Card>
+          ) : null}
+
           {error ? <Banner tone="error">{error}</Banner> : null}
           {data.status === 'requested' || data.status === 'accepted' ? (
             <Button

@@ -122,3 +122,38 @@ export async function setStopActive(_: FormState, form: FormData): Promise<FormS
   refresh();
   return {};
 }
+
+export async function requestTaxiForCustomer(_: FormState, form: FormData): Promise<FormState> {
+  // "from_terminal" / "to_terminal": taxi to or from a terminal; "stretch": between two stops.
+  const trip = text(form, 'trip');
+  const stretch = trip === 'stretch';
+  try {
+    await apiRequest('/admin/taxi-rides', {
+      method: 'POST',
+      body: {
+        customerName: text(form, 'customerName'),
+        customerPhone: text(form, 'customerPhone'),
+        kind: stretch ? 'stretch' : 'terminal',
+        ...(stretch
+          ? {
+              fromStopId: text(form, 'fromStopId'),
+              toStopId: text(form, 'toStopId'),
+              mode: text(form, 'mode'),
+            }
+          : { terminalStopId: text(form, 'terminalStopId'), direction: trip }),
+        address: text(form, 'address'),
+        passengers: Number(text(form, 'passengers') || '1'),
+        notes: text(form, 'notes') || undefined,
+      },
+    });
+  } catch (error) {
+    return formFailure(error, {
+      VALIDATION_FAILED:
+        'Revisa los datos: nombre, teléfono, dirección y, por tramo, dos paradas distintas.',
+    });
+  }
+  refresh();
+  return {
+    success: 'Pedido enviado a los conductores. Mándale el enlace al cliente desde la lista.',
+  };
+}
