@@ -42,7 +42,9 @@ Un rol por persona en cada organización. Una persona puede pertenecer a varias 
 
 Reglas además de la matriz:
 
-- Solo un **dueño** puede invitar, ascender, degradar o quitar a un dueño.
+- Solo un **dueño** puede invitar, ascender, degradar o quitar a un dueño **o a un
+  administrador**. Un administrador gestiona al personal operativo (despachador, taquillero,
+  conductor, inspector), nunca a sus pares (`MANAGE_ADMINS_OWNER_ONLY`).
 - Una organización siempre conserva **al menos un dueño** (se verifica dentro de la misma
   transacción).
 - Los roles deben existir para el tipo de organización (no hay `ticket_agent` en una línea de
@@ -57,8 +59,19 @@ create(@CurrentOrganization() access: OrganizationAccess) { … }
 ```
 
 Quien no es miembro recibe **404** (no se revela que la organización existe); los miembros sin el
-permiso reciben **403**. Los módulos operativos además deben exigir
-`access.organization.status === 'active'`.
+permiso reciben **403**. Si la ruta va en el controlador, el permiso de la ruta manda y, si no
+tiene, vale el del controlador.
+
+Los permisos operativos (`operations.dispatch`, `tickets.sell`, `tickets.validate`,
+`trips.drive`) solo cambian algo en una organización `active`: en otro estado el mismo guard
+responde **409 `ORGANIZATION_NOT_ACTIVE`** a todo lo que no sea lectura (GET). Las rutas fuera
+de `/organizations/:id` (por ejemplo `/me/driving`, aceptar un taxi) filtran ellas mismas por
+`organizations.status = 'active'`.
+
+En el portal web, cada página de una sección pide `requireOrganizationPermission(id, permiso)`
+(`apps/web/src/lib/server/organization-access.ts`) antes de pedir datos: quien no es miembro ve
+404 y quien no tiene el permiso vuelve al panel de la organización con un aviso. La API vuelve a
+comprobar todo en cada llamada.
 
 ## Ciclo de vida
 
@@ -68,9 +81,10 @@ registrar (cualquier usuario con sesión, queda como dueño)
              └──reject──▶ rejected ──approve──▶ active
 ```
 
-Mientras está en `pending_review`, el dueño puede completar el perfil e invitar al personal, pero
-las operaciones (vender boletos, despachar, publicar rutas) quedan bloqueadas hasta que un revisor
-de la plataforma la apruebe. Rechazar o suspender exige notas, que el dueño puede ver. Una persona
+Mientras está en `pending_review`, el dueño puede completar el perfil, invitar al personal y
+preparar flota y rutas en borrador, pero las operaciones (vender y validar boletos, despachar,
+conducir, ventas en efectivo, publicar rutas) quedan bloqueadas hasta que un revisor de la
+plataforma la apruebe. Una organización `suspended` o `rejected` conserva la lectura y nada más. Rechazar o suspender exige notas, que el dueño puede ver. Una persona
 puede tener como máximo 5 organizaciones esperando revisión a la vez.
 
 ## Invitaciones

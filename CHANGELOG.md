@@ -26,6 +26,10 @@ pull request.
 
 ### Agregado
 
+- **Demo con todos los niveles de acceso**: los datos de ejemplo traen una cuenta por cada rol de
+  plataforma y de empresa (también terminal, conductores de taxi y moto y un aspirante con su KYC
+  enviado), y "Ver las cuentas de ejemplo" las agrupa por nivel con lo que puede hacer cada una.
+  Una base con los ejemplos anteriores solo recibe lo que falta.
 - **Datos de ejemplo completos** (`pnpm seed:demo`, menú "Cargar datos de ejemplo"): además
   del suburbano, dos empresas interurbanas con su personal (despacho, taquilla, conductor,
   inspectora), buses, rutas con paradas intermedias y salidas diarias, boletos pagados, apartados,
@@ -133,6 +137,16 @@ pull request.
 
 ### Corregido
 
+- **Seguridad: empresas no activas ya no operan.** Una organización en revisión, suspendida o
+  rechazada podía despachar, vender, validar boletos, conducir y registrar ventas en efectivo; solo
+  publicar rutas estaba bloqueado. Ahora todo eso responde `ORGANIZATION_NOT_ACTIVE` y conserva la
+  lectura.
+- **Seguridad: solo un dueño gestiona administradores.** Un administrador de empresa podía nombrar
+  administradores o quitar a los otros; ahora solo gestiona al personal operativo.
+- **Portal por permiso:** abrir por URL una sección que el rol no permite (liquidación, cobros,
+  despacho, viajes, nueva ruta o mapa) devolvía una página de error; ahora vuelve al panel de la
+  empresa con un aviso. Portal y administración tienen página de error en español, y "Paquetes" de
+  administración es solo para administradores de la plataforma.
 - **Límites por IP con la web en producción:** la web llama a la API desde su servidor, así que
   todos sus visitantes contaban como una sola IP. Entrar y renovar la sesión compartían un límite
   de 10 por minuto para toda la web, y al pasarlo se cerraban sesiones. Ahora la web pasa la IP y
