@@ -3,12 +3,18 @@
 Para el personal de VTP. El panel está en `/admin` de la web y en español. Hay dos roles
 ([organizaciones](../architecture/organizations.md#personal-de-la-plataforma)):
 
-- **Revisor**: aprueba organizaciones y solicitudes KYC, y mantiene el catálogo de paradas.
-- **Administrador**: todo lo anterior, más el dinero (cuentas de cobro y verificación de pagos,
-  políticas, pagos a las empresas, reembolsos).
+- **Revisión**: aprueba organizaciones y solicitudes KYC (con sus documentos), mantiene el
+  catálogo de paradas, busca reservas y pide taxis por WhatsApp.
+- **Finanzas**: el dinero (pagos por revisar, cuentas de cobro y tasas, liquidaciones y pagos a
+  las empresas, reembolsos, facturación) y las métricas; ve las colas pero no aprueba nada.
+- **Soporte**: atiende a los pasajeros (buscar reservas, taxis por WhatsApp) y ve las colas de
+  empresas y KYC sin cédulas ni documentos; no aprueba ni toca dinero.
+- **Administración**: todo lo anterior, más las zonas y los paquetes de viajes.
 
-Los roles se otorgan desde el servidor, nunca desde la web:
-`pnpm platform:grant --email persona@ejemplo.com --role admin` (o `reviewer`, `none`).
+Cada rol ve en el menú solo sus secciones; si abre otra por su dirección, vuelve al inicio con un
+aviso (la API lo rechaza igual). Los roles se otorgan desde el servidor, nunca desde la web:
+`pnpm platform:grant --email persona@ejemplo.com --role admin` (o `reviewer`, `finance`,
+`support`, `none`).
 
 ## Revisiones (`/admin`)
 

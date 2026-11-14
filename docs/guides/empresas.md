@@ -2,7 +2,8 @@
 
 Cómo usar el **portal** (`/portal` en la web) para registrar tu empresa, publicar rutas, vender,
 despachar y cobrar. El portal está en español. Lo que cada persona puede hacer depende de su rol
-(dueño, administrador, despachador, taquillero, conductor, inspector); ver
+(dueño, administrador, despachador, taquillero, conductor, inspector, contador, supervisor);
+ver
 [organizaciones y roles](../architecture/organizations.md).
 
 ## 1. Registrar la empresa
@@ -10,7 +11,9 @@ despachar y cobrar. El portal está en español. Lo que cada persona puede hacer
 1. Crea una cuenta en `/register` (o entra en `/login`).
 2. **Registrar organización**: tipo (empresa de autobuses, línea de taxis o terminal), razón
    social, nombre comercial y RIF (`J-12345678-9`).
-3. La administración de VTP la revisa. Mientras tanto puedes invitar a tu equipo, pero no vender.
+3. La administración de VTP la revisa. Mientras tanto puedes invitar a tu equipo y preparar
+   flota y rutas en borrador, pero no vender, despachar ni validar boletos. Si VTP suspende la
+   empresa, el portal sigue mostrando los datos pero no deja operar.
 
 ## 2. Tu equipo
 
@@ -20,7 +23,12 @@ En la página de la organización:
   tiene cuenta) y entra con ese contacto para aceptar la invitación.
 - **Solicitantes verificados**: conductores y personal que enviaron sus documentos (KYC) y fueron
   aprobados por VTP; acéptalos para sumarlos.
-- Cambiar roles o quitar miembros (dueño y administrador).
+- Cambiar roles o quitar miembros: el dueño a cualquiera; el administrador solo al personal
+  operativo (no puede nombrar, cambiar ni quitar administradores ni dueños).
+- Roles para la oficina: **Contador** (saldo, liquidaciones, cobros, reembolsos y reportes de
+  ventas, sin operar) y **Supervisor** (despacho, validar boletos y ocupación, sin dinero).
+- Si alguien abre una sección que su rol no permite, el portal lo devuelve a la página de la
+  empresa con un aviso.
 
 ## 3. Publicar rutas (empresas de autobuses)
 

@@ -15,6 +15,12 @@ los permisos.**
 | `ticket_agent` | Taquillero           |          ✅          |        —         |         —          |     —      |
 | `driver`       | Conductor            |          ✅          |        ✅        |         ✅         |     —      |
 | `inspector`    | Inspector de boletos |          ✅          |        —         |         —          |     ✅     |
+| `accountant`   | Contador             |          ✅          |        ✅        |         ✅         |     ✅     |
+| `supervisor`   | Supervisor           |          ✅          |        —         |         —          |     ✅     |
+
+El **contador** maneja el dinero de la empresa (saldo, liquidaciones, cobros, reembolsos y
+reportes de ventas) sin operar viajes ni gestionar personal. El **supervisor** es el jefe de patio
+o de terminal: despacha, valida boletos y ve la ocupación y el equipo, sin dinero ni rutas.
 
 Las **líneas de mototaxis** (`moto_line`, ADR-035) solo publican rutas **suburbanas** de moto:
 cada salida es una moto con **un pasajero**, sin mapa de puestos (`MOTORCYCLE_ONE_PASSENGER`), y
@@ -25,20 +31,21 @@ Un rol por persona en cada organización. Una persona puede pertenecer a varias 
 
 ## Permisos
 
-| Permiso                                                                      | owner | admin | dispatcher | ticket_agent | driver | inspector |
-| ---------------------------------------------------------------------------- | :---: | :---: | :--------: | :----------: | :----: | :-------: |
-| `organization.manage`                                                        |  ✅   |  ✅   |            |              |        |           |
-| `members.view`                                                               |  ✅   |  ✅   |     ✅     |              |        |           |
-| `members.manage` (invitar, cambiar roles, quitar)                            |  ✅   |  ✅   |            |              |        |           |
-| `operations.dispatch`                                                        |  ✅   |  ✅   |     ✅     |              |        |           |
-| `routes.manage` (rutas, tarifas, horarios, tasas)                            |  ✅   |  ✅   |            |              |        |           |
-| `fleet.manage` (mapas de puestos)                                            |  ✅   |  ✅   |            |              |        |           |
-| `bookings.view` (viajes y lista de pasajeros)                                |  ✅   |  ✅   |     ✅     |      ✅      |        |    ✅     |
-| `tickets.sell`                                                               |  ✅   |  ✅   |            |      ✅      |        |           |
-| `tickets.validate` (escanear boletos)                                        |  ✅   |  ✅   |            |              |   ✅   |    ✅     |
-| `trips.drive`                                                                |  ✅   |       |            |              |   ✅   |           |
-| `finance.view` (saldo y liquidaciones)                                       |  ✅   |  ✅   |            |              |        |           |
-| `finance.manage` (cuentas, verificar pagos y reembolsos si cobra la empresa) |  ✅   |  ✅   |            |              |        |           |
+| Permiso                                                                      | owner | admin | dispatcher | ticket_agent | driver | inspector | accountant | supervisor |
+| ---------------------------------------------------------------------------- | :---: | :---: | :--------: | :----------: | :----: | :-------: | :--------: | :--------: |
+| `organization.manage`                                                        |  ✅   |  ✅   |            |              |        |           |            |            |
+| `members.view`                                                               |  ✅   |  ✅   |     ✅     |              |        |           |            |     ✅     |
+| `members.manage` (invitar, cambiar roles, quitar)                            |  ✅   |  ✅   |            |              |        |           |            |            |
+| `operations.dispatch`                                                        |  ✅   |  ✅   |     ✅     |              |        |           |            |     ✅     |
+| `routes.manage` (rutas, tarifas, horarios, tasas)                            |  ✅   |  ✅   |            |              |        |           |            |            |
+| `fleet.manage` (mapas de puestos)                                            |  ✅   |  ✅   |            |              |        |           |            |            |
+| `bookings.view` (viajes y lista de pasajeros)                                |  ✅   |  ✅   |     ✅     |      ✅      |        |    ✅     |     ✅     |     ✅     |
+| `tickets.sell`                                                               |  ✅   |  ✅   |            |      ✅      |        |           |            |            |
+| `tickets.validate` (escanear boletos)                                        |  ✅   |  ✅   |            |              |   ✅   |    ✅     |            |     ✅     |
+| `trips.drive`                                                                |  ✅   |       |            |              |   ✅   |           |            |            |
+| `reports.view` (ocupación; ventas también pide `finance.view`)               |  ✅   |  ✅   |     ✅     |              |        |           |     ✅     |     ✅     |
+| `finance.view` (saldo y liquidaciones)                                       |  ✅   |  ✅   |            |              |        |           |     ✅     |            |
+| `finance.manage` (cuentas, verificar pagos y reembolsos si cobra la empresa) |  ✅   |  ✅   |            |              |        |           |     ✅     |            |
 
 Reglas además de la matriz:
 
@@ -107,15 +114,32 @@ documentos para la revisión KYC ([onboarding.md](onboarding.md)).
 
 ## Personal de la plataforma
 
-Los usuarios pueden tener un rol de plataforma: `reviewer` (revisa organizaciones y solicitudes
-KYC, y administra el catálogo de paradas) o `admin` (todo lo que puede un revisor, más el dinero:
-política de comisión y reembolsos, pagos a las empresas y cola de reembolsos, ver
-[settlements.md](settlements.md)). No hay un endpoint HTTP
-para otorgarlo; alguien con acceso a la base de datos ejecuta:
+Los usuarios pueden tener un rol de plataforma. Igual que en las empresas, cada rol tiene una
+lista de permisos (`PLATFORM_ROLE_PERMISSIONS`) y cada ruta de administración pide uno con
+`@RequirePlatformPermission(permiso)`; la web de administración muestra a cada rol solo sus
+secciones (`requirePlatformPermission` en `apps/web/src/lib/server/session.ts`).
+
+| Permiso de plataforma                                                                              | admin | reviewer | finance | support |
+| -------------------------------------------------------------------------------------------------- | :---: | :------: | :-----: | :-----: |
+| `organizations.view` (cola de empresas)                                                            |  ✅   |    ✅    |   ✅    |   ✅    |
+| `organizations.review` (aprobar, rechazar, suspender)                                              |  ✅   |    ✅    |         |         |
+| `applications.view` (cola KYC, sin cédula ni documentos)                                           |  ✅   |    ✅    |         |   ✅    |
+| `applications.review` (abrir la solicitud y sus documentos)                                        |  ✅   |    ✅    |         |         |
+| `network.view` (zonas y paradas)                                                                   |  ✅   |    ✅    |   ✅    |   ✅    |
+| `network.manage` (crear y editar paradas)                                                          |  ✅   |    ✅    |         |         |
+| `zones.manage` (dónde vende la plataforma)                                                         |  ✅   |          |         |         |
+| `bookings.search` (buscar una reserva por código)                                                  |  ✅   |    ✅    |   ✅    |   ✅    |
+| `taxi.assist` (taxis por WhatsApp)                                                                 |  ✅   |    ✅    |         |   ✅    |
+| `finance.manage` (pagos, cuentas, tasas, liquidaciones, pagos a empresas, reembolsos, facturación) |  ✅   |          |   ✅    |         |
+| `products.manage` (paquetes de viajes)                                                             |  ✅   |          |         |         |
+| `metrics.view` (métricas de la plataforma)                                                         |  ✅   |          |   ✅    |         |
+
+No hay un endpoint HTTP para otorgar un rol de plataforma; alguien con acceso a la base de datos
+ejecuta:
 
 ```bash
-pnpm platform:grant --email persona@example.com --role admin      # o reviewer | none
-pnpm platform:grant --phone 0414-1234567 --role reviewer
+pnpm platform:grant --email persona@example.com --role admin      # o reviewer | finance | support | none
+pnpm platform:grant --phone 0414-1234567 --role support
 ```
 
 La persona debe haberse registrado antes. Cola de revisión:
@@ -135,7 +159,7 @@ con `approve | reject | suspend` (+ `notes`).
 | `PATCH/DELETE /organizations/:id/members/:userId`                               | `members.manage`                                                                             |
 | `POST/GET /organizations/:id/invitations`, `DELETE …/invitations/:invitationId` | `members.manage`                                                                             |
 | `GET /me/invitations`, `POST /me/invitations/:id/accept` · `/decline`           | La persona invitada                                                                          |
-| `GET /admin/organizations`, `POST /admin/organizations/:id/review`              | Revisor o administrador de la plataforma                                                     |
+| `GET /admin/organizations`, `POST /admin/organizations/:id/review`              | `organizations.view` / `organizations.review` de la plataforma                               |
 
 Eventos de auditoría: `organization.created`, `.updated`, `.approved`, `.rejected`, `.suspended`,
 `.member_role_changed`, `.member_removed`, `.invitation_created`, `.invitation_revoked`,

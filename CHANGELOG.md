@@ -26,6 +26,13 @@ pull request.
 
 ### Agregado
 
+- **Roles nuevos.** En la plataforma: **Finanzas** (pagos, liquidaciones, reembolsos,
+  facturación y métricas, sin aprobar nada) y **Soporte** (buscar reservas, taxis por WhatsApp y
+  ver las colas, sin cédulas, documentos ni dinero). Cada rol de plataforma tiene ahora una lista de
+  permisos y la administración web muestra solo sus secciones. En las empresas: **Contador**
+  (finanzas y reportes de ventas, sin operar) y **Supervisor** (despacho, validar boletos y
+  ocupación, sin dinero), y el permiso `reports.view` para ver la ocupación sin ver dinero. Los
+  datos de ejemplo traen una cuenta de cada uno.
 - **Demo con todos los niveles de acceso**: los datos de ejemplo traen una cuenta por cada rol de
   plataforma y de empresa (también terminal, conductores de taxi y moto y un aspirante con su KYC
   enviado), y "Ver las cuentas de ejemplo" las agrupa por nivel con lo que puede hacer cada una.

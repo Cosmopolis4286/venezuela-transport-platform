@@ -46,7 +46,23 @@ const ACCOUNTS = {
     firstName: 'Rafael',
     lastName: 'Revisor',
     role: 'Revisor de la plataforma',
-    can: 'Aprobar empresas y KYC, paradas, buscar reservas, taxis por WhatsApp (sin dinero)',
+    can: 'Aprobar empresas y KYC (con sus documentos), paradas, buscar reservas, taxis por WhatsApp; sin dinero',
+  },
+  finanzas: {
+    group: 'Plataforma',
+    email: 'finanzas@vtp.test',
+    firstName: 'Fernanda',
+    lastName: 'Finanzas',
+    role: 'Finanzas de la plataforma',
+    can: 'Pagos por revisar, liquidaciones y pagos a empresas, reembolsos, facturación, tasas y métricas (no aprueba nada)',
+  },
+  soporte: {
+    group: 'Plataforma',
+    email: 'soporte@vtp.test',
+    firstName: 'Sofía',
+    lastName: 'Soporte',
+    role: 'Soporte de la plataforma',
+    can: 'Buscar reservas, taxis por WhatsApp y ver las colas de revisión (sin cédulas, documentos ni dinero)',
   },
   // --- Companies: owners (every permission of their company, including driving).
   llanos: {
@@ -145,6 +161,22 @@ const ACCOUNTS = {
     lastName: 'Inspectora',
     role: 'Inspectora de boletos',
     can: 'Validar boletos y ver reservas',
+  },
+  contador: {
+    group: 'Personal de Expresos Los Llanos',
+    email: 'contador@vtp.test',
+    firstName: 'Camilo',
+    lastName: 'Contador',
+    role: 'Contador',
+    can: 'Saldo, liquidaciones, cobros, reembolsos y reportes de ventas; no opera viajes ni personal',
+  },
+  supervisor: {
+    group: 'Personal de Expresos Los Llanos',
+    email: 'supervisor@vtp.test',
+    firstName: 'Silvia',
+    lastName: 'Supervisora',
+    role: 'Supervisora (jefa de patio)',
+    can: 'Despacho, validar boletos, ocupación y ver equipo; sin dinero ni rutas',
   },
   // --- Drivers of the taxi and motorcycle lines, and a driver waiting for KYC approval.
   taxista: {
@@ -292,6 +324,26 @@ function sql(statement, what) {
     { encoding: 'utf8' },
   );
   if (r.status !== 0) throw new Error(`${what}: ${(r.stderr || r.stdout).trim()}`);
+  return r.stdout;
+}
+
+/** One value from the local database (`psql -tA`). */
+function sqlValue(statement, what) {
+  const r = spawnSync(
+    'docker',
+    [
+      'compose',
+      'exec',
+      '-T',
+      'postgres',
+      'sh',
+      '-c',
+      `psql -tA -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "${statement}"`,
+    ],
+    { encoding: 'utf8' },
+  );
+  if (r.status !== 0) throw new Error(`${what}: ${(r.stderr || r.stdout).trim()}`);
+  return r.stdout.trim();
 }
 
 // Sample accounts only: they get their platform role and a verified e-mail (so invitations to
@@ -1227,6 +1279,52 @@ async function everyRole(admin) {
   console.log(`  ✔ Todos los niveles: ${done.join(', ')}`);
 }
 
+/**
+ * The roles added last (finance and support staff of the platform, accountant and supervisor of
+ * Expresos Los Llanos): loaded on their own, so a database with older samples gets them too.
+ */
+async function latestRoles() {
+  const member = (who) =>
+    sqlValue(
+      `select count(*) from organization_memberships m join users u on u.id = m.user_id where u.email = '${ACCOUNTS[who].email}'`,
+      `buscar a ${ACCOUNTS[who].email}`,
+    ) !== '0';
+  const done = [];
+  for (const [who, role] of [
+    ['finanzas', 'finance'],
+    ['soporte', 'support'],
+  ]) {
+    const ok = await attempt(`cuenta ${who}`, async () => {
+      await account(who);
+      grantRole(who, role);
+      return true;
+    });
+    if (ok) done.push(ACCOUNTS[who].role.toLowerCase());
+  }
+  const pending = ['contador', 'supervisor'].filter((who) => !member(who));
+  if (pending.length) {
+    const admin = await account('admin');
+    const active = await call('GET', '/admin/organizations?status=active', { auth: admin });
+    const found = active.find((o) => o.legalName === INTERURBAN_MARK);
+    if (found) {
+      const llanos = {
+        auth: await account('llanos'),
+        id: found.id,
+        url: `/organizations/${found.id}`,
+      };
+      for (const [who, role] of [
+        ['contador', 'accountant'],
+        ['supervisor', 'supervisor'],
+      ]) {
+        if (pending.includes(who) && (await attempt(who, () => join(llanos, who, role)))) {
+          done.push(`${ACCOUNTS[who].role.toLowerCase()} de Expresos`);
+        }
+      }
+    }
+  }
+  if (done.length) console.log(`  ✔ Roles nuevos: ${done.join(', ')}`);
+}
+
 function printAccounts() {
   console.log(`\nCuentas de ejemplo (contraseña para todas: ${PASSWORD}):`);
   let group;
@@ -1263,7 +1361,16 @@ async function main() {
   });
   const hasCore = orgs.some((o) => o.legalName === INTERURBAN_MARK);
   const hasRoles = orgs.some((o) => o.legalName === ROLES_MARK);
-  if (hasCore && hasRoles) {
+  const hasLatest =
+    sqlValue(
+      "select count(*) from users where email in ('finanzas@vtp.test', 'soporte@vtp.test') and platform_role is not null",
+      'buscar los roles nuevos',
+    ) === '2' &&
+    sqlValue(
+      "select count(*) from organization_memberships m join users u on u.id = m.user_id where u.email in ('contador@vtp.test', 'supervisor@vtp.test')",
+      'buscar los roles nuevos',
+    ) === '2';
+  if (hasCore && hasRoles && hasLatest) {
     console.log('  · Los datos de ejemplo ya estaban cargados: no se cambia nada.');
   }
   if (!hasCore) {
@@ -1289,6 +1396,7 @@ async function main() {
       }
     }
   }
+  if (!hasLatest) await latestRoles();
   verifyEmails();
   printAccounts();
   if (warnings) {
