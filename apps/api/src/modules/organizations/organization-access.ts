@@ -58,9 +58,11 @@ export class OrganizationAccessGuard implements CanActivate {
       .limit(1);
     if (!row) throw new NotFoundException('Organization not found');
 
-    const permission = this.reflector.get<OrganizationPermission | undefined>(
+    // The route's own permission wins; otherwise the controller's. Reading only the handler
+    // ignored a permission set on the class (any member could use those routes).
+    const permission = this.reflector.getAllAndOverride<OrganizationPermission | undefined>(
       PERMISSION_KEY,
-      context.getHandler(),
+      [context.getHandler(), context.getClass()],
     );
     if (permission && !roleHasPermission(row.membership.role, permission)) {
       throw new ForbiddenException('Your role does not allow this action');
