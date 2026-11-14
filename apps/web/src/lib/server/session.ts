@@ -1,4 +1,5 @@
 import 'server-only';
+import { createHash } from 'node:crypto';
 import type { AuthResponse, UserProfile } from '@vtp/shared-types';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -23,12 +24,19 @@ export async function endSession(): Promise<void> {
 
 /**
  * The signed-in user (Data Access Layer). Reads the session cookie, so callers must render inside
- * a <Suspense> boundary. Cached per browser for a short while to keep navigations instant.
+ * a <Suspense> boundary. Cached per browser for a short while to keep navigations instant, keyed
+ * by the session: another account signed in on the same browser never gets this one's profile
+ * (and with it, its platform role).
  */
 export async function getCurrentUser(): Promise<UserProfile> {
-  'use cache: private';
   const jar = await cookies();
-  if (!jar.get(cookieNames(isProduction).refresh)) redirect('/login');
+  const refreshToken = jar.get(cookieNames(isProduction).refresh)?.value;
+  if (!refreshToken) redirect('/login');
+  return userOfSession(createHash('sha256').update(refreshToken).digest('hex'));
+}
+
+async function userOfSession(_session: string): Promise<UserProfile> {
+  'use cache: private';
   return apiFetch<UserProfile>('/me');
 }
 

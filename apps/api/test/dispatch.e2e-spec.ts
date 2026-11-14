@@ -212,6 +212,16 @@ describe.runIf(expectDatabase)('Dispatch (e2e)', () => {
         http().post(`${org}/vehicles`).set('Authorization', auth).send(body);
       await addVehicle(owner.auth, { plate: 'A1' }).expect(400);
       await addVehicle(dispatcher.auth, { plate: 'AB123CD' }).expect(403);
+      // A permission set on a whole controller applies to every route of it: members whose role
+      // lacks it are refused (the finances need finance.view; cash sales need trips.drive).
+      for (const member of [driver, dispatcher, agent]) {
+        for (const path of ['settlement', 'settlement/entries', 'payouts']) {
+          await http().get(`${org}/${path}`).set('Authorization', member.auth).expect(403);
+        }
+      }
+      await http().get(`${org}/settlement`).set('Authorization', owner.auth).expect(200);
+      await http().post(`${org}/cash-sales`).set('Authorization', agent.auth).send({}).expect(403);
+      await http().get(`${org}/cash-sales/mine`).set('Authorization', dispatcher.auth).expect(403);
       const bus = (
         await addVehicle(owner.auth, {
           plate: ' ab-123 cd ',
