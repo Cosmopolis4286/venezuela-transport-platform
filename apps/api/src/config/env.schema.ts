@@ -140,6 +140,31 @@ export const envSchema = z
       }),
     /** Optional. Download page of the Android passenger app (APK or Google Play), https only. */
     ANDROID_APP_URL: z.union([z.url({ protocol: /^https$/ }), z.literal('')]).default(''),
+    /**
+     * Public address of the website (e.g. https://example.com), for links the API writes in
+     * messages: WhatsApp tracking links and the app download page.
+     */
+    PUBLIC_WEB_URL: z.union([z.url({ protocol: /^https?$/ }), z.literal('')]).default(''),
+
+    /**
+     * Automatic WhatsApp (ADR-038): `cloud` answers the menu and sends ride notices through Meta's
+     * WhatsApp Cloud API, only inside the free 24-hour window after the person's last message;
+     * `console` logs them (development); `disabled` (default) does nothing.
+     */
+    WHATSAPP_DELIVERY: optionalChoice(['cloud', 'console', 'disabled'] as const),
+    /** Meta's id of the WhatsApp number (WhatsApp Manager → API setup). Not a secret. */
+    WHATSAPP_PHONE_NUMBER_ID: z.string().default(''),
+    /** Permanent token of a Meta system user with whatsapp_business_messaging. Secret. */
+    WHATSAPP_ACCESS_TOKEN: z.string().default(''),
+    /** The Meta app's secret: checks that webhook calls come from Meta. Secret. */
+    WHATSAPP_APP_SECRET: z.string().default(''),
+    /** Any random text you also type in Meta's webhook setup, to confirm it. Secret. */
+    WHATSAPP_VERIFY_TOKEN: z.string().default(''),
+    /** Version of Meta's Graph API used to send messages. */
+    WHATSAPP_GRAPH_VERSION: z
+      .string()
+      .regex(/^v\d+\.\d+$/)
+      .default('v23.0'),
 
     REDIS_URL: z
       .union([z.url({ protocol: /^rediss?$/ }), z.literal('')])
@@ -162,7 +187,31 @@ export const envSchema = z
         message: 'E-mail codes need MAIL_DELIVERY=smtp (or console in development)',
       });
     }
+    if (env.WHATSAPP_DELIVERY === 'cloud') {
+      for (const key of [
+        'WHATSAPP_PHONE_NUMBER_ID',
+        'WHATSAPP_ACCESS_TOKEN',
+        'WHATSAPP_APP_SECRET',
+        'WHATSAPP_VERIFY_TOKEN',
+        'PUBLIC_WEB_URL',
+      ] as const) {
+        if (!env[key]) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [key],
+            message: 'Required with WHATSAPP_DELIVERY=cloud',
+          });
+        }
+      }
+    }
     if (env.NODE_ENV !== 'production') return;
+    if (env.WHATSAPP_DELIVERY === 'console') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['WHATSAPP_DELIVERY'],
+        message: 'console delivery writes messages to the logs; use cloud or disabled',
+      });
+    }
     for (const key of ['MAIL_DELIVERY', 'PUSH_DELIVERY'] as const) {
       if (env[key] === 'console') {
         ctx.addIssue({
@@ -217,6 +266,7 @@ export const envSchema = z
       env.PAYMENT_PROVIDER ?? (env.NODE_ENV === 'production' ? 'manual' : 'simulated'),
     MAIL_DELIVERY: env.MAIL_DELIVERY ?? (env.NODE_ENV === 'production' ? 'disabled' : 'console'),
     PUSH_DELIVERY: env.PUSH_DELIVERY ?? (env.NODE_ENV === 'production' ? 'disabled' : 'console'),
+    WHATSAPP_DELIVERY: env.WHATSAPP_DELIVERY ?? 'disabled',
   }));
 
 export type Env = z.output<typeof envSchema>;

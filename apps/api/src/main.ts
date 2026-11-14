@@ -7,7 +7,11 @@ import { configureApp } from './app.setup.js';
 import { AppConfigService } from './config/app-config.service.js';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true });
+  // rawBody: the WhatsApp webhook checks Meta's signature over the exact bytes received.
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: true,
+    rawBody: true,
+  });
   configureApp(app);
 
   const config = app.get(AppConfigService);

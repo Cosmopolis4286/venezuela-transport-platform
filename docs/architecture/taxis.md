@@ -184,6 +184,15 @@ Para quien escribe al WhatsApp de soporte y no usa la app:
    ADR-036) y **calificar** al terminar. No ve teléfonos. El enlace deja de funcionar a los
    `TAXI_TRACKING_DAYS` (7) días.
 
+### WhatsApp automático (ADR-038)
+
+Con `WHATSAPP_DELIVERY=cloud` la persona también puede pedir un viaje por tramo escribiendo al
+número: el bot (`apps/api/src/modules/whatsapp`) la guía paso a paso y crea el viaje con
+`TaxiService.requestForChat`, a nombre del pasajero invitado de ese número. Cada 30 segundos se
+avisan por el mismo chat los viajes de WhatsApp tomados (placa y precio), terminados (estrellas) y
+vencidos, solo dentro de las 24 horas siguientes al último mensaje de la persona. Configuración en
+[la guía](../guides/whatsapp-automatico.md).
+
 ## Todavía no
 
 Cobro del taxi dentro de la plataforma, tarifas fijas por zona para los taxis de terminal,

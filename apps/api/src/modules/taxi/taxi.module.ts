@@ -32,5 +32,6 @@ import { TaxiService } from './taxi.service.js';
     TaxiTrackingController,
   ],
   providers: [TaxiService],
+  exports: [TaxiService],
 })
 export class TaxiModule {}

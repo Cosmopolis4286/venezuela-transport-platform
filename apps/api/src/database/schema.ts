@@ -15,3 +15,4 @@ export * from '../modules/settlements/settlements.schema.js';
 export * from '../modules/notifications/notifications.schema.js';
 export * from '../modules/fiscal/fiscal.schema.js';
 export * from '../modules/cash-sales/cash-sales.schema.js';
+export * from '../modules/whatsapp/whatsapp.schema.js';
