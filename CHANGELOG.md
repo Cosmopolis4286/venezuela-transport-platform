@@ -26,6 +26,10 @@ pull request.
 
 ### Agregado
 
+- **Menú local más completo**: «Empezar (todo en uno)» prepara, carga ejemplos, arranca la API y
+  la web y abre el navegador; «Actualizar» trae los cambios, reinstala solo si cambió el lockfile y
+  migra; «Detener la base de datos»; opciones agrupadas por sección. Con **fnm** instalado usa su
+  Node 24 en vez de descargar otro (reemplaza la propuesta de #85).
 - **El menú local instala lo que falta**: `menu.cmd` (Windows) y `menu.sh` (macOS/Linux) lo
   abren e instalan Node si no hay; con otra versión de Node, el menú descarga Node 24 solo para el
   proyecto en `.tools/` (con suma SHA-256) y activa pnpm sobre él; ofrece instalar Docker y lo
