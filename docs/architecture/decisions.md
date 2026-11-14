@@ -668,3 +668,24 @@ línea y a la plataforma una medida del servicio.
 dependen de que alguien del personal toque el botón. El enlace es secreto (quien lo tenga ve el
 viaje y puede cancelarlo), no muestra teléfonos y vence a los 7 días. El teléfono que da el
 cliente no se verifica. Política de Privacidad actualizada (versión 2026-11-14).
+
+## ADR-038: WhatsApp automático con la API en la nube de Meta, solo dentro de la ventana gratis
+
+**Decisión** (del dueño del producto). La API puede conectarse a la WhatsApp Cloud API de Meta
+(`WHATSAPP_DELIVERY=cloud`, apagada por defecto). Un webhook firmado (`POST /whatsapp/webhook`,
+HMAC-SHA256 con el app secret) recibe los mensajes; un bot responde el menú y pide taxis y motos
+por tramo paso a paso, con la tarifa antes de pedir, a nombre de un pasajero invitado por número
+(ADR-034, ADR-037). Cada 30 segundos se avisan los cambios de los viajes de WhatsApp (tomado,
+terminado con pedido de estrellas, vencido), una vez por estado. **Solo se escribe dentro de las
+24 horas siguientes al último mensaje de la persona** y nunca con plantillas: fuera de esa
+ventana el mensaje se registra como `outside_window` y no sale. Las opciones de pagos y paquetes
+pasan el chat a una persona por 12 horas. El bot nunca escribe datos bancarios.
+
+**Por qué.** Las respuestas dentro de la ventana de atención son gratis; escribir solo ahí
+mantiene el canal sin costo y evita mensajes no pedidos. Usar la API oficial (y no bibliotecas que
+imitan WhatsApp Web) evita que Meta bloquee el número.
+
+**Compromisos.** Requiere verificar la empresa en Meta, un dominio con HTTPS y, salvo que Meta
+ofrezca la coexistencia en Venezuela, un número dedicado. Si Meta empieza a cobrar las respuestas
+dentro de la ventana, se apaga con una variable. Los chats y mensajes son datos personales que
+también trata Meta: los mensajes se borran a los 90 días y los chats al año sin actividad.

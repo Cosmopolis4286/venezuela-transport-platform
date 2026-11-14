@@ -15,11 +15,14 @@ revisión legal (ver [README](README.md#lista-para-el-abogado)).
 | Códigos de un solo uso                        | Minutos (registro 12 meses)       | Seguridad                                                                               | Vencen solos; se borran a los 12 meses                                                   |
 | Identificadores push                          | Hasta desinstalar o cerrar sesión | Contrato                                                                                | Se eliminan al cerrar sesión, al fallar la entrega o al borrar la cuenta                 |
 | Registro de avisos                            | 12 meses                          | Soporte                                                                                 | Se borra a los 12 meses                                                                  |
+| Mensajes de WhatsApp                          | 90 días                           | Soporte                                                                                 |
+| Chats de WhatsApp (número, nombre)            | 1 año sin mensajes                | Contrato; soporte                                                                       |
 | Auditoría                                     | 2 años                            | Seguridad; prueba                                                                       | Se borra a los 2 años                                                                    |
 
 **Purga automática:** la API ejecuta una vez al día `RetentionService`
 (`apps/api/src/modules/retention`), que aplica estos plazos: borra los códigos, avisos y auditoría
-vencidos y las sesiones revocadas o vencidas hace más de 30 días; reemplaza por «—» el nombre y el
+vencidos, las sesiones revocadas o vencidas hace más de 30 días, los mensajes de WhatsApp de más
+de 90 días y los chats de WhatsApp sin mensajes en un año; reemplaza por «—» el nombre y el
 documento de los pasajeros de más de 10 años y la dirección, notas, teléfono y comentario de calificación de los taxis de más
 de 5 años; y borra los archivos y datos de los expedientes KYC rechazados o de cuentas borradas a
 los 5 años de su revisión. Las reservas, pagos y liquidaciones se conservan como comprobantes

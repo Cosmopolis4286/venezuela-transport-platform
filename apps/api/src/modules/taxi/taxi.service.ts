@@ -710,19 +710,17 @@ export class TaxiService {
     return this.toAssisted(row!, name);
   }
 
-  /** Rides staff asked for on WhatsApp in the last two days, newest first. */
-  async assistedList(): Promise<AssistedTaxiRide[]> {
+  /**
+   * WhatsApp rides (asked for by staff or in the chat) changed since `since`, newest first: the
+   * last two days for staff, the last minutes for the chat's notices (ADR-038).
+   */
+  async assistedList(since = new Date(Date.now() - 2 * 86_400_000)): Promise<AssistedTaxiRide[]> {
     await expireTaxiRequests(this.database.db);
     const rows = await this.database.db
       .select({ ride: taxiRides, name: users.firstName })
       .from(taxiRides)
       .innerJoin(users, eq(users.id, taxiRides.passengerUserId))
-      .where(
-        and(
-          eq(taxiRides.channel, 'whatsapp'),
-          gt(taxiRides.createdAt, new Date(Date.now() - 2 * 86_400_000)),
-        ),
-      )
+      .where(and(eq(taxiRides.channel, 'whatsapp'), gt(taxiRides.updatedAt, since)))
       .orderBy(desc(taxiRides.createdAt))
       .limit(100);
     const rides = await this.toRides(rows.map((r) => r.ride));
@@ -731,6 +729,77 @@ export class TaxiService {
       customer: { name: name ?? '—', phone: ride.contactPhone ?? '' },
       trackingPath: `/taxi/${ride.trackingToken}`,
     }));
+  }
+
+  /**
+   * The stretches a vehicle rides on demand now, with their fare range: what the WhatsApp menu
+   * offers (ADR-038). Both stops in one selling zone, as for the app (ADR-028).
+   */
+  async stretchCatalog(
+    mode: OnDemandMode,
+  ): Promise<
+    { stops: [StopSummary, StopSummary]; currency: Currency; minFare: string; maxFare: string }[]
+  > {
+    const rows = await this.database.db
+      .select({
+        a: onDemandFares.stopAId,
+        b: onDemandFares.stopBId,
+        currency: onDemandFares.currency,
+        minFare: sql<string>`min(${onDemandFares.amount})::text`,
+        maxFare: sql<string>`max(${onDemandFares.amount})::text`,
+      })
+      .from(onDemandFares)
+      .innerJoin(
+        organizations,
+        and(eq(organizations.id, onDemandFares.organizationId), eq(organizations.status, 'active')),
+      )
+      .where(eq(onDemandFares.mode, mode))
+      .groupBy(onDemandFares.stopAId, onDemandFares.stopBId, onDemandFares.currency);
+    const open: typeof rows = [];
+    for (const row of rows) {
+      if ((await this.zoneOf(row.a, row.b)) && (await this.stops.areServed([row.a, row.b]))) {
+        open.push(row);
+      }
+    }
+    const names = await this.stops.summaries(open.flatMap((r) => [r.a, r.b]));
+    return open.map((r) => ({
+      stops: [names.get(r.a)!, names.get(r.b)!],
+      currency: r.currency,
+      minFare: r.minFare,
+      maxFare: r.maxFare,
+    }));
+  }
+
+  /**
+   * A ride asked for in a WhatsApp chat (ADR-038). The chat's guest passenger asks it, made on
+   * its first ride, so its rides stay together; packs are app-only.
+   */
+  async requestForChat(
+    chat: { phone: string; name: string | null; userId: string | null },
+    input: RequestTaxiRequest,
+  ): Promise<{ userId: string; ride: AssistedTaxiRide }> {
+    const name = chat.name?.trim().slice(0, 80) || 'Cliente WhatsApp';
+    let [user] = chat.userId
+      ? await this.database.db.select().from(users).where(eq(users.id, chat.userId))
+      : [];
+    if (!user || user.deletedAt) {
+      [user] = await this.database.db
+        .insert(users)
+        .values({ guest: true, firstName: name })
+        .returning();
+    }
+    const trackingToken = randomBytes(18).toString('base64url');
+    const created = await this.request(
+      { user: user! },
+      { ...input, tripPackId: undefined, contactPhone: chat.phone },
+      {},
+      { channel: 'whatsapp', trackingToken },
+    );
+    const [row] = await this.database.db
+      .select()
+      .from(taxiRides)
+      .where(eq(taxiRides.id, created.id));
+    return { userId: user!.id, ride: await this.toAssisted(row!, user!.firstName ?? name) };
   }
 
   /** The public tracking page of a WhatsApp ride: no account, the link is the secret. */

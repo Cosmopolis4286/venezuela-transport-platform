@@ -113,10 +113,9 @@ deber la tasa por cancelar tarde, como en la app). El enlace no muestra teléfon
 funcionar a los 7 días. Al taxi se le paga directamente al conductor; nunca cobres un viaje por el
 chat.
 
-## 6. Más adelante
+## 6. WhatsApp automático
 
-Responder solo al número del menú, o enviar confirmaciones de pago automáticas por WhatsApp,
-necesita la **API oficial de Meta** (las respuestas dentro de las 24 horas siguientes al mensaje
-del cliente son gratis; los mensajes que inicia la empresa se cobran por mensaje). Se evaluará
-después del piloto. No uses bibliotecas no oficiales que imitan WhatsApp Web: violan las
-condiciones de WhatsApp y el número puede ser bloqueado.
+Con la API de Meta el número puede responder solo al menú, pedir taxis y motos por chat y avisar
+de cada paso, gratis dentro de las 24 horas siguientes al mensaje del cliente. Está apagado hasta
+configurarlo: ver [WhatsApp automático](whatsapp-automatico.md). No uses bibliotecas no oficiales
+que imitan WhatsApp Web: violan las condiciones de WhatsApp y el número puede ser bloqueado.
