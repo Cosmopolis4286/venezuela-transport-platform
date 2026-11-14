@@ -26,6 +26,12 @@ pull request.
 
 ### Agregado
 
+- **Datos de ejemplo completos** (`pnpm seed:demo`, menú "Cargar datos de ejemplo"): además
+  del suburbano, dos empresas interurbanas con su personal (despacho, taquilla, conductor,
+  inspectora), buses, rutas con paradas intermedias y salidas diarias, boletos pagados, apartados,
+  un Pago Móvil y un reembolso, despacho con bus y conductor, ventas en efectivo, viajes en moto y
+  taxi, un paquete comprado y una empresa esperando aprobación. El menú suma "Datos de ejemplo
+  frescos" (borra y recarga con fechas nuevas) y "Ver las cuentas de ejemplo".
 - **WhatsApp automático** (ADR-038, apagado por defecto): con la API en la nube de Meta el número
   responde solo al menú, pide taxis y motos por tramo paso a paso con el precio antes de pedir,
   avisa cuando un conductor toma el viaje (placa y precio), pide la calificación al terminar y
