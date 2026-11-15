@@ -201,12 +201,16 @@ plataforma (`POST /admin/independent-lines`, permiso `independents.manage`) y qu
 maneja desde el portal como cualquier línea (tarifas por tramo, terminales, despacho,
 calificaciones, liquidación).
 
-- Se entra enviando el KYC a esa línea, como conductor y **con vehículo propio**
-  (`INDEPENDENT_NEEDS_VEHICLE` si falta). Al aprobarlo, el conductor entra solo a la línea y su
-  vehículo pasa a la flota con `vehicles.owner_user_id`.
+- Hay **una línea por tipo de vehículo**. Se entra enviando el KYC desde «Conduce con VTP»,
+  eligiendo carro o moto y **con vehículo propio** (`INDEPENDENT_NEEDS_VEHICLE` si falta); la API
+  elige la línea, que el conductor nunca ve. Al aprobarlo, entra solo y su vehículo pasa a la flota
+  con `vehicles.owner_user_id` y su póliza RCV como seguro del vehículo.
+- Ningún vehículo con la póliza RCV vencida toma viajes (`VEHICLE_INSURANCE_EXPIRED`), en cualquier
+  línea.
 - En esas líneas cada conductor toma viajes **solo con su vehículo** (`VEHICLE_NOT_YOURS`, también
   al asignar desde el despacho) y su tablero solo le muestra los suyos.
-- El cobro no cambia: el pasajero le paga al conductor (o con un paquete).
+- El cobro no cambia: el pasajero le paga al conductor; los viajes con paquete se le acreditan al
+  conductor (no a la línea) en su saldo.
 - Camino a un perfil de conductor independiente propio: la marca de la línea, el dueño de cada
   vehículo y el conductor de cada viaje permiten separarlos más adelante sin perder historial.
 

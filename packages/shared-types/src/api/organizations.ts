@@ -255,15 +255,6 @@ export interface ReceivedInvitation {
 }
 
 /**
- * `GET /api/v1/organizations/directory?type=&q=` — active organizations people can apply to.
- * Public listing data only: no RIF, contacts or members.
- */
-export type OrganizationDirectoryEntry = Pick<
-  Organization,
-  'id' | 'type' | 'legalName' | 'tradeName' | 'state' | 'city' | 'operatedByPlatform'
->;
-
-/**
  * `POST /api/v1/admin/independent-lines` (ADR-039): a taxi or motorcycle line the platform runs
  * for independent drivers. Active at once; the admin who creates it becomes its owner.
  */

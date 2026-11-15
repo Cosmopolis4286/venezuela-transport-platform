@@ -1,30 +1,37 @@
-# Solicitudes de conductores y personal (KYC)
+# Solicitudes de conductores independientes (KYC)
 
 Implementado en `apps/api/src/modules/onboarding`, con el almacenamiento de archivos en
 `apps/api/src/storage`. Contratos en `packages/shared-types/src/api/onboarding.ts`.
 
-Una persona puede unirse a una organización de dos formas:
+Hay dos caminos para trabajar en la plataforma, y no se mezclan (ADR-039):
 
-1. **Invitación** de la organización ([organizations.md](organizations.md)).
-2. **Solicitud** (este módulo): la persona llena un formulario, sube documentos, un **revisor de
-   la plataforma** los verifica (KYC) y — si indicó una organización — esa organización decide si
-   la incorpora. Nadie entra a una organización sin su consentimiento.
+1. **El personal de una empresa o línea** (conductores, despachadores, taquilleros…) entra **solo
+   por invitación** de esa empresa ([organizations.md](organizations.md)). Las empresas no
+   aparecen en ningún buscador y nadie se postula a ellas.
+2. **Los conductores independientes** «conducen con VTP», como en las apps de viajes: eligen
+   **carro o moto**, envían sus datos, su vehículo y sus documentos (este módulo), un **revisor de
+   la plataforma** los verifica y, al aprobarlos, entran solos a la línea de la plataforma de ese
+   vehículo. Nunca eligen ni ven una «línea».
 
 ## Flujo
 
 ```
-solicitante: crear (borrador) → subir documentos → enviar ──▶ submitted
+conductor: elegir carro o moto → datos y vehículo (borrador) → subir documentos → enviar ──▶ submitted
 revisor:                          request_changes ◀──┤ (notas + veredicto por documento)
-solicitante: corregir / reemplazar documentos → enviar de nuevo ─┤
+conductor: corregir / reemplazar documentos → enviar de nuevo ─┤
 revisor:                     reject (definitivo) ◀────┤
-                             approve ─────────────────┘──▶ approved  → user.identityVerified = true
-organización (si se indicó una): accept → membresía con el rol pedido | decline
+                             approve ─────────────────┘──▶ approved
+   → identidad verificada, conductor de la línea de VTP del vehículo, vehículo propio en su flota
+     (vehicles.owner_user_id) con la póliza RCV revisada como seguro del vehículo
 ```
 
-- **Línea de independientes de la plataforma** (ADR-039): solo acepta conductores con vehículo
-  propio (carnet de circulación y RCV). Al aprobar la solicitud, la persona entra directo como
-  conductor, sin paso de aceptación de la organización (`organizationDecision = accepted`), y su
-  vehículo pasa a la flota de la línea como suyo.
+- La API elige la línea por el vehículo (`mode`: `car` → la línea de taxis de la plataforma,
+  `motorcycle` → la de motos); hay **una por tipo** (índice `organizations_platform_line_key`). Si
+  todavía no existe, la solicitud responde `INDEPENDENTS_NOT_AVAILABLE`.
+- No se puede pedir otro rol ni una organización (la validación rechaza esos campos). El vehículo es
+  obligatorio (`INDEPENDENT_NEEDS_VEHICLE`).
+- Con la póliza RCV vencida, el vehículo no puede tomar viajes (`VEHICLE_INSURANCE_EXPIRED`).
+
 - Una sola solicitud **abierta** por persona (`draft`, `submitted`, `changes_requested`). Después
   de un rechazo la persona puede empezar otra.
 - El solicitante solo puede editar en `draft` o `changes_requested`.
@@ -84,20 +91,18 @@ existentes con sus mismos nombres.
 
 ## Endpoints (`/api/v1`)
 
-| Método y ruta                                                                               | Quién                               |
-| ------------------------------------------------------------------------------------------- | ----------------------------------- |
-| `GET/POST/PATCH /me/application`                                                            | Solicitante                         |
-| `PUT /me/application/documents/:kind` (multipart `file`, `expiresOn` opcional)              | Solicitante                         |
-| `GET /me/application/documents/:documentId/file`                                            | Solicitante                         |
-| `POST /me/application/submit`                                                               | Solicitante                         |
-| `GET /admin/applications?status=submitted`, `GET /admin/applications/:id`                   | Revisor de la plataforma            |
-| `GET /admin/applications/:id/documents/:documentId/file`                                    | Revisor de la plataforma (auditado) |
-| `POST /admin/applications/:id/review` — `approve \| reject \| request_changes`              | Revisor de la plataforma            |
-| `GET /organizations/:id/applicants`, `POST …/applicants/:applicationId/accept` · `/decline` | `members.manage`                    |
+| Método y ruta                                                                  | Quién                               |
+| ------------------------------------------------------------------------------ | ----------------------------------- |
+| `GET/POST/PATCH /me/application`                                               | Solicitante                         |
+| `PUT /me/application/documents/:kind` (multipart `file`, `expiresOn` opcional) | Solicitante                         |
+| `GET /me/application/documents/:documentId/file`                               | Solicitante                         |
+| `POST /me/application/submit`                                                  | Solicitante                         |
+| `GET /admin/applications?status=submitted`, `GET /admin/applications/:id`      | Revisor de la plataforma            |
+| `GET /admin/applications/:id/documents/:documentId/file`                       | Revisor de la plataforma (auditado) |
+| `POST /admin/applications/:id/review` — `approve \| reject \| request_changes` | Revisor de la plataforma            |
 
 ## Todavía no implementado
 
-Avisos a los solicitantes cuando cambia su solicitud (el módulo de notificaciones ya existe; falta
-conectarlo a la revisión, ver [notifications.md](notifications.md)), recordatorios
+Recordatorios
 automáticos de vencimiento de licencias y pólizas, proveedores de verificación de identidad
 (prueba de vida / selfie) y el driver de almacenamiento en la nube.

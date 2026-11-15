@@ -53,6 +53,10 @@ export const organizations = pgTable(
   (t) => [
     uniqueIndex('organizations_rif_key').on(t.rif),
     index('organizations_status_idx').on(t.status),
+    // One line for independent drivers per vehicle type (ADR-039): they join it without choosing.
+    uniqueIndex('organizations_platform_line_key')
+      .on(t.type)
+      .where(sql`${t.operatedByPlatform}`),
   ],
 );
 

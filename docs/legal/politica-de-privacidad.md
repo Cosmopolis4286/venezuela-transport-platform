@@ -49,7 +49,7 @@ actualización y cancelación. No vendemos datos personales.
 | Pedidos por WhatsApp         | El nombre y el teléfono que nos da por WhatsApp para pedirle un taxi o una moto, y un enlace privado para seguir el viaje (deja de funcionar a los 7 días)                                                                                                                          | Al pedirnos un taxi o una moto por WhatsApp. Se conservan como los demás taxis                  |
 | Conversaciones de WhatsApp   | Su número, el nombre de su perfil de WhatsApp, los mensajes que nos escribe (incluida la ubicación si la comparte) y los que le respondemos, y en qué paso del menú va                                                                                                              | Al escribirnos por WhatsApp. Los mensajes se borran a los 90 días; el chat, al año sin mensajes |
 | Paquetes de viajes           | Tramo, tipo de vehículo, viajes comprados y usados, vencimiento, pago y reservas o viajes pagados con el paquete                                                                                                                                                                    | Al comprar y usar un paquete                                                                    |
-| Conductores y personal (KYC) | Nombre, documento de identidad, fecha de nacimiento, estado y ciudad, rol solicitado, datos del vehículo, y copias de: documento de identidad, licencia de conducir, **certificado médico**, carnet de circulación y póliza de responsabilidad civil, con sus fechas de vencimiento | Al solicitar trabajar con una Empresa o como conductor independiente                            |
+| Conductores y personal (KYC) | Nombre, documento de identidad, fecha de nacimiento, estado y ciudad, rol solicitado, datos del vehículo, y copias de: documento de identidad, licencia de conducir, **certificado médico**, carnet de circulación y póliza de responsabilidad civil, con sus fechas de vencimiento | Al solicitar conducir como independiente con {{nombre_comercial}}                               |
 | Empresas                     | Razón social, nombre comercial, RIF, teléfono, correo, dirección, miembros y sus roles, cuentas de cobro                                                                                                                                                                            | Al registrar una Empresa                                                                        |
 | Dispositivo y uso            | Identificador de notificaciones push del teléfono, plataforma (Android, iOS, web), dirección IP y navegador o aplicación de cada sesión, registro de acciones de seguridad (auditoría)                                                                                              | Al usar la Plataforma                                                                           |
 | Comunicaciones               | Avisos enviados (tipo, canal, fecha y si se entregó), reclamos y mensajes a soporte                                                                                                                                                                                                 | Al avisarle o al escribirnos                                                                    |
@@ -59,8 +59,8 @@ marca, modelo, año y color), los viajes que acepta, sus calificaciones y lo que
 
 El **certificado médico** es un dato de salud y por tanto **sensible**: lo tratamos solo para
 verificar la aptitud para conducir que exige la normativa de transporte, con su consentimiento
-expreso al subirlo, con acceso restringido al personal de revisión y sin compartirlo con nadie más
-que la Empresa que usted eligió cuando esta lo requiera por ley.
+expreso al subirlo, con acceso restringido al personal de revisión y sin compartirlo con nadie,
+salvo obligación legal.
 
 No usamos la ubicación GPS del teléfono. No tratamos datos biométricos.
 
@@ -96,9 +96,6 @@ momento.
   recogerle.
 - **Los pasajeros** de un taxi o una moto ven, cuando el viaje es aceptado, el nombre de pila del
   conductor, la placa y la descripción del vehículo, y la línea; nunca el documento del conductor.
-- **La Empresa que usted eligió** al solicitar trabajar con ella (KYC) ve su nombre, rol, ciudad
-  y datos del vehículo, y la decisión de la revisión; no ve las copias de sus documentos ni su
-  número de identidad.
 - **Nuestro personal** accede solo a lo que necesita según su función: el equipo de revisión, a
   las solicitudes KYC y sus documentos; el de finanzas, a pagos, liquidaciones y reembolsos; el de
   soporte, a las reservas que busca por su código y a las colas de revisión, **sin** números de

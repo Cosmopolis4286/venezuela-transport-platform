@@ -10,9 +10,10 @@ acepta.
 
 ## 1. Qué es la línea de conductores independientes
 
-1.1. Es un espacio de la Plataforma, identificado como «operado por {{nombre_comercial}}», que
-agrupa a conductores verificados que no pertenecen a una línea de taxis o de mototaxis, para que
-los pasajeros puedan pedirles viajes. {{nombre_comercial}} lo administra con las mismas
+1.1. Es el modo en que los conductores verificados que trabajan por su cuenta, con su carro o su
+moto, reciben viajes en la Plataforma bajo el nombre comercial de {{nombre_comercial}} («Conduce con
+{{nombre_comercial}}»). Hay una línea por tipo de vehículo, que el Conductor no elige: se le asigna
+según el vehículo que registra. {{nombre_comercial}} lo administra con las mismas
 herramientas que usan las líneas: publica las tarifas por tramo, organiza la recepción de
 solicitudes y lleva el registro de los viajes.
 
@@ -24,14 +25,17 @@ sin horario ni exclusividad, y puede trabajar con otras plataformas o líneas.
 
 ## 2. Requisitos para entrar
 
-2.1. El Conductor envía su solicitud desde la aplicación VTP Transporte eligiendo la línea de
-conductores independientes, con sus datos y los de **su vehículo**, y sube: documento de identidad,
+2.1. El Conductor envía su solicitud desde la aplicación VTP Transporte («Conduce con
+{{nombre_comercial}}»), eligiendo si trabaja con carro o con moto, con sus datos y los de **su
+vehículo**, y sube: documento de identidad,
 licencia de conducir del grado requerido, certificado médico vigente, carnet de circulación y póliza
 de responsabilidad civil de vehículos (RCV) vigente.
 
 2.2. Una persona de {{nombre_comercial}} revisa los documentos (verificación de identidad o KYC).
 Si la aprueba, el Conductor entra a la línea y su vehículo queda registrado a su nombre: **solo él
-puede usarlo** en la Plataforma, y él solo puede tomar viajes con un vehículo suyo.
+puede usarlo** en la Plataforma, y él solo puede tomar viajes con un vehículo suyo. La póliza RCV
+revisada queda como seguro del vehículo: cuando vence, el vehículo no puede tomar viajes hasta que
+se registre una vigente.
 
 2.3. El Conductor se obliga a mantener vigentes, mientras use la Plataforma, su licencia, su
 certificado médico, el carnet de circulación y la póliza RCV, y los **permisos que exija el INTT o

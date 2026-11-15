@@ -7,7 +7,6 @@ import {
   RATE_CURRENCIES,
   runsRoutes,
   type ExchangeRate,
-  type OrganizationApplicant,
   type OrganizationInvitation,
   type OrganizationMember,
   type OrganizationType,
@@ -26,13 +25,7 @@ import { Field } from '@/components/ui/label';
 import { ORGANIZATION_STATUS_LABELS, formatDate, statusVariant } from '@/lib/labels';
 import { apiFetch } from '@/lib/server/api';
 import { requireOrganizationPermission } from '@/lib/server/organization-access';
-import {
-  changeMemberRole,
-  decideApplicant,
-  inviteMember,
-  removeMember,
-  revokeInvitation,
-} from '../../actions';
+import { changeMemberRole, inviteMember, removeMember, revokeInvitation } from '../../actions';
 import { saveExchangeRates } from './exchange-rates/actions';
 
 export default function OrganizationPage({
@@ -242,7 +235,6 @@ async function Organization({
             type={organization.type}
             isOwner={role === 'owner'}
           />
-          <Applicants organizationId={organization.id} />
         </>
       ) : null}
       {!canViewMembers ? (
@@ -530,16 +522,18 @@ async function Invite({
   return (
     <Card>
       <div className="flex flex-col gap-1">
-        <CardTitle>Invitar</CardTitle>
+        <CardTitle>Invitar a tu equipo</CardTitle>
         <CardDescription>
-          La persona verá la invitación al iniciar sesión con ese correo o teléfono. Vence en 7
-          días.
+          Tus conductores y tu personal entran solo por invitación tuya: no se postulan ni ven tu
+          empresa en ningún buscador. Por correo les llega un aviso; entran a la app VTP
+          Transportistas (o al portal) con ese correo y aceptan. Por teléfono, solo la ven si ya
+          verificaron ese número en su cuenta. Vence en 7 días.
         </CardDescription>
       </div>
       <ActionForm action={inviteMember} hidden={{ organizationId }} resetOnSuccess>
         <div className="grid gap-3 sm:grid-cols-[10rem_1fr_12rem_auto] sm:items-end">
           <Field label="Por" htmlFor="contactKind">
-            <Select id="contactKind" name="contactKind" defaultValue="phone">
+            <Select id="contactKind" name="contactKind" defaultValue="email">
               <option value="phone">Teléfono</option>
               <option value="email">Correo</option>
             </Select>
@@ -586,62 +580,6 @@ async function Invite({
           ))}
         </ul>
       ) : null}
-    </Card>
-  );
-}
-
-async function Applicants({ organizationId }: { organizationId: string }) {
-  const applicants = await apiFetch<OrganizationApplicant[]>(
-    `/organizations/${organizationId}/applicants`,
-  );
-  const pending = applicants.filter((a) => a.decision === 'pending');
-  return (
-    <Card>
-      <div className="flex flex-col gap-1">
-        <CardTitle>Solicitantes verificados ({pending.length})</CardTitle>
-        <CardDescription>
-          Personas aprobadas por la administración (KYC) que pidieron unirse a esta organización.
-        </CardDescription>
-      </div>
-      {pending.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No hay solicitudes pendientes.</p>
-      ) : (
-        <ul className="flex flex-col divide-y">
-          {pending.map((applicant) => (
-            <li
-              key={applicant.applicationId}
-              className="flex flex-wrap items-center justify-between gap-3 py-3"
-            >
-              <div>
-                <p className="font-medium">
-                  {applicant.firstName} {applicant.lastName} ·{' '}
-                  {ORGANIZATION_ROLE_LABELS[applicant.desiredRole]}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {[applicant.city, applicant.state].filter(Boolean).join(', ')}
-                  {applicant.vehicle
-                    ? ` · ${applicant.vehicle.make} ${applicant.vehicle.model} ${applicant.vehicle.year} (${applicant.vehicle.plate})`
-                    : ''}
-                </p>
-              </div>
-              <ActionForm
-                action={decideApplicant}
-                hidden={{ organizationId, applicationId: applicant.applicationId }}
-                className="flex-row"
-              >
-                <div className="flex gap-2">
-                  <SubmitButton name="decision" value="accept" size="sm">
-                    Incorporar
-                  </SubmitButton>
-                  <SubmitButton name="decision" value="decline" size="sm" variant="outline">
-                    Rechazar
-                  </SubmitButton>
-                </div>
-              </ActionForm>
-            </li>
-          ))}
-        </ul>
-      )}
     </Card>
   );
 }

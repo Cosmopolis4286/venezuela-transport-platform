@@ -125,20 +125,6 @@ export async function removeMember(_: FormState, form: FormData): Promise<FormSt
   return { success: 'Miembro eliminado.' };
 }
 
-export async function decideApplicant(_: FormState, form: FormData): Promise<FormState> {
-  const decision = text(form, 'decision') === 'accept' ? 'accept' : 'decline';
-  try {
-    await apiRequest(
-      `/organizations/${encodeURIComponent(text(form, 'organizationId'))}/applicants/${encodeURIComponent(text(form, 'applicationId'))}/${decision}`,
-      { method: 'POST' },
-    );
-  } catch (error) {
-    return failure(error);
-  }
-  refresh();
-  return { success: decision === 'accept' ? 'Solicitante incorporado.' : 'Solicitud rechazada.' };
-}
-
 /** Accepts the current Terms and Privacy Policy (after a new version is published). */
 export async function acceptTerms(): Promise<void> {
   await apiRequest('/me/terms', { method: 'POST', body: { version: LEGAL_VERSION } });

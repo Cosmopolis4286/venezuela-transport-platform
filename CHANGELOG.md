@@ -13,6 +13,14 @@ pull request.
 
 ### Cambiado
 
+- **«Conduce con VTP», como en las apps de viajes** (enmienda del ADR-039):
+  - las empresas y líneas ya no aparecen en ningún buscador, y su personal entra solo por
+    invitación (se quitaron el directorio de organizaciones y las solicitudes a una empresa);
+  - la solicitud (KYC) es solo para conductores independientes: eligen carro o moto y su vehículo,
+    y al aprobarse entran solos a la línea de VTP de ese vehículo, que nunca ven («VTP · Conductor
+    independiente»). Hay una línea de independientes por tipo de vehículo;
+  - la póliza RCV revisada pasa a ser el seguro del vehículo, y ningún vehículo con la póliza
+    vencida puede tomar viajes de taxi o moto.
 - **Documentos legales, versión 2026-11-15** (los usuarios aceptan de nuevo):
   - nuevas **Condiciones para Conductores Independientes**: VTP intermedia y no los emplea; vehículo
     propio, permisos y póliza a cargo del conductor; tarifas, comisión futura, suspensión y paso a

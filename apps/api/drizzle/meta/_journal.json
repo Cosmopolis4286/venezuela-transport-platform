@@ -267,6 +267,13 @@
       "when": 1794715690487,
       "tag": "0037_independent_drivers",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1794752105085,
+      "tag": "0038_one_independent_line_per_type",
+      "breakpoints": true
     }
   ]
 }

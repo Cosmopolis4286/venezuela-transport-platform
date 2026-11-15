@@ -27,11 +27,12 @@ export default async function IndependentsPage() {
         </Link>
         <h1 className="text-2xl font-semibold">Conductores independientes</h1>
         <p className="text-sm text-muted-foreground">
-          Los taxistas y mototaxistas que no pertenecen a una línea trabajan en una línea operada
-          por la plataforma. Envían su KYC eligiéndola, con su propio vehículo; al aprobarlo entran
-          solos como conductores, y su vehículo queda en la flota marcado como suyo (solo ellos lo
-          usan). Cada línea se administra desde el portal: tarifas por tramo, terminales, despacho,
-          equipo y liquidación.
+          Los taxistas y mototaxistas que trabajan por su cuenta «conducen con VTP», como en las
+          apps de viajes: en la app de transportistas eligen carro o moto, envían su KYC con su
+          propio vehículo y, al aprobarlo, entran solos a la línea de VTP de ese vehículo. Nunca ven
+          una «línea» ni eligen empresa; los pasajeros ven el nombre comercial (VTP). Hay una línea
+          por tipo de vehículo, y cada una se administra desde el portal: tarifas por tramo,
+          terminales, despacho, equipo y liquidación.
         </p>
       </div>
 
@@ -67,8 +68,9 @@ export default async function IndependentsPage() {
       <Card>
         <CardTitle>Nueva línea de independientes</CardTitle>
         <CardDescription>
-          Queda activa al crearla y tú como su dueña o dueño. Cada organización necesita su propio
-          RIF.
+          Una por tipo de vehículo (taxis y motos). Queda activa al crearla y tú como su dueña o
+          dueño. El nombre comercial es lo que ven pasajeros y conductores. Cada organización
+          necesita su propio RIF.
         </CardDescription>
         <ActionForm action={createIndependentLine} resetOnSuccess>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -89,8 +91,11 @@ export default async function IndependentsPage() {
                 placeholder="VTP Conductores Independientes – Mototaxis"
               />
             </Field>
-            <Field label="Nombre comercial (opcional)" htmlFor="tradeName">
-              <Input id="tradeName" name="tradeName" placeholder="VTP Mototaxis" />
+            <Field
+              label="Nombre comercial (lo que ven pasajeros y conductores)"
+              htmlFor="tradeName"
+            >
+              <Input id="tradeName" name="tradeName" defaultValue="VTP" />
             </Field>
           </div>
           <SubmitButton>Crear línea</SubmitButton>

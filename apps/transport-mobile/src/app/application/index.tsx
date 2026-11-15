@@ -1,6 +1,5 @@
 import {
   APPLICATION_STATUS_LABELS,
-  ORGANIZATION_ROLE_LABELS,
   requiredDocuments,
   type ProviderApplication,
 } from '@vtp/shared-types';
@@ -29,11 +28,8 @@ import { useRefreshOnFocus } from '@/lib/use-refresh-on-focus';
 
 const EDITABLE = new Set(['draft', 'changes_requested']);
 
-const DECISION_TEXT = {
-  pending: 'La empresa aún no ha respondido.',
-  accepted: 'La empresa te incorporó a su equipo.',
-  declined: 'La empresa no te incorporó por ahora.',
-} as const;
+/** What they drive with VTP (ADR-039); older applications had no vehicle type. */
+const MODE_TITLE = { car: 'Conductor de VTP · Carro', motorcycle: 'Conductor de VTP · Moto' };
 
 export default function ApplicationScreen() {
   const { api, reload: reloadUser } = useAuth();
@@ -91,7 +87,7 @@ export default function ApplicationScreen() {
       }
     >
       <Row>
-        <Heading>{ORGANIZATION_ROLE_LABELS[application.desiredRole]}</Heading>
+        <Heading>{application.mode ? MODE_TITLE[application.mode] : 'Conductor de VTP'}</Heading>
         <Badge
           label={APPLICATION_STATUS_LABELS[application.status]}
           tone={statusTone(application.status)}
@@ -111,11 +107,6 @@ export default function ApplicationScreen() {
         {application.city || application.state ? (
           <Body muted>{[application.city, application.state].filter(Boolean).join(', ')}</Body>
         ) : null}
-        <Body muted>
-          {application.organization
-            ? `Empresa: ${application.organization.legalName}`
-            : 'Sin empresa elegida'}
-        </Body>
         {application.vehicle ? (
           <Body muted>
             Vehículo: {application.vehicle.make} {application.vehicle.model}{' '}
@@ -186,10 +177,8 @@ function StatusExplanation({ application }: { application: ProviderApplication }
     case 'approved':
       return (
         <Banner tone="success">
-          ¡Tu identidad fue verificada!
-          {application.organization && application.organizationDecision
-            ? ` ${DECISION_TEXT[application.organizationDecision]}`
-            : ''}
+          ¡Bienvenido a VTP! Tus documentos fueron verificados: ya puedes recibir viajes desde el
+          inicio, en Solicitudes de {application.mode === 'motorcycle' ? 'moto' : 'taxi'}.
         </Banner>
       );
     case 'rejected':

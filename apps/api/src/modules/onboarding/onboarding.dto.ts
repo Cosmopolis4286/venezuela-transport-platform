@@ -1,21 +1,20 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import {
-  APPLICATION_ROLES,
   APPLICATION_STATUSES,
   DOCUMENT_KINDS,
   IDENTITY_DOCUMENT_TYPES,
+  ON_DEMAND_MODES,
   type ApplicationInput,
-  type ApplicationRole,
   type ApplicationStatus,
   type DocumentKind,
   type IdentityDocumentType,
+  type OnDemandMode,
   type ReviewApplicationRequest,
   type Vehicle,
 } from '@vtp/shared-types';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
-  IsBoolean,
   IsIn,
   IsInt,
   IsOptional,
@@ -59,19 +58,11 @@ export class VehicleDto implements Vehicle {
   color!: string;
 }
 
+/** An independent driver's application (ADR-039): their vehicle type and their own vehicle. */
 export class ApplicationDto implements ApplicationInput {
-  @ApiProperty({ enum: APPLICATION_ROLES })
-  @IsIn(APPLICATION_ROLES)
-  desiredRole!: ApplicationRole;
-
-  @ApiPropertyOptional({
-    format: 'uuid',
-    nullable: true,
-    description: 'Organization to join (must be active)',
-  })
-  @IsOptional()
-  @IsUUID()
-  organizationId?: string | null;
+  @ApiProperty({ enum: ON_DEMAND_MODES, description: 'car (taxi) or motorcycle (mototaxi)' })
+  @IsIn(ON_DEMAND_MODES)
+  mode!: OnDemandMode;
 
   @ApiProperty({ example: 'José' })
   @IsString()
@@ -111,15 +102,10 @@ export class ApplicationDto implements ApplicationInput {
   @MaxLength(80)
   city?: string;
 
-  @ApiProperty({ description: 'Drivers who work with their own vehicle (taxis)' })
-  @IsBoolean()
-  providesVehicle!: boolean;
-
-  @ApiPropertyOptional({ type: VehicleDto, nullable: true })
-  @IsOptional()
+  @ApiProperty({ type: VehicleDto })
   @ValidateNested()
   @Type(() => VehicleDto)
-  vehicle?: VehicleDto | null;
+  vehicle!: VehicleDto;
 }
 
 export class UpdateApplicationDto extends PartialType(ApplicationDto) {}
