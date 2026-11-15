@@ -219,9 +219,15 @@ describe.runIf(expectDatabase)('Independent drivers (e2e)', () => {
           .send({ plate: `VT${randomInt(100, 999)}PL` })
           .expect(201)
       ).body as FleetVehicle;
+      // The approved independent goes online to take rides.
       const board = (
-        await http().get('/api/v1/me/taxi').set('Authorization', driver.auth).expect(200)
+        await http()
+          .put('/api/v1/me/taxi/availability')
+          .set('Authorization', driver.auth)
+          .send({ online: true })
+          .expect(200)
       ).body as DriverTaxiBoard;
+      expect(board.online).toBe(true);
       expect(
         board.lines.find((l) => l.organization.id === line.id)?.vehicles.map((v) => v.id),
       ).toEqual([own.id]);

@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import {
   type AssistedTaxiRequest,
+  type DriverAvailabilityRequest,
   type RateTaxiRideRequest,
   CURRENCIES,
   MAX_TAXI_PASSENGERS,
@@ -226,4 +227,10 @@ export class RateTaxiRideDto implements RateTaxiRideRequest {
   @IsString()
   @Length(0, 300)
   comment?: string;
+}
+
+export class DriverAvailabilityDto implements DriverAvailabilityRequest {
+  @ApiProperty({ description: 'true: online, taking requests; false: offline' })
+  @IsBoolean()
+  online!: boolean;
 }

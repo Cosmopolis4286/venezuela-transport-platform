@@ -35,6 +35,7 @@ import {
 import {
   AcceptTaxiRideDto,
   AssistedTaxiDto,
+  DriverAvailabilityDto,
   RateTaxiRideDto,
   CompleteTaxiRideDto,
   PickUpTaxiRideDto,
@@ -184,6 +185,16 @@ export class TaxiDriverController {
   @Get()
   board(@CurrentAuth() auth: Authenticated): Promise<DriverTaxiBoard> {
     return this.taxi.driverBoard(auth.user.id);
+  }
+
+  /** "En línea" / "Desconectado": only online drivers see, accept and hear about requests. */
+  @Put('availability')
+  availability(
+    @CurrentAuth() auth: Authenticated,
+    @Body() body: DriverAvailabilityDto,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<DriverTaxiBoard> {
+    return this.taxi.setAvailability(auth, body.online, meta);
   }
 
   @Post('rides/:rideId/accept')

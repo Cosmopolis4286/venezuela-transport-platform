@@ -167,6 +167,9 @@ const es: SharedMessages = {
     VEHICLE_LAYOUT_MISMATCH: 'Ese vehículo tiene otro mapa de puestos que esta salida.',
     VEHICLE_MODE_MISMATCH: 'Ese vehículo es de otro tipo (bus, taxi o moto) que esta ruta.',
     VEHICLE_BUSY: 'Ese vehículo ya está en otro viaje a esa hora.',
+    DRIVER_OFFLINE: 'Conéctate (En línea) para tomar viajes.',
+    DRIVER_NO_LINE:
+      'Para conectarte debes ser conductor de una línea de taxis o de mototaxis, o conducir con VTP.',
     VEHICLE_NOT_YOURS: 'En la línea de independientes solo puedes usar tu propio vehículo.',
     INDEPENDENT_LINE_EXISTS: 'Ya existe la línea de independientes para ese tipo de vehículo.',
     INDEPENDENTS_NOT_AVAILABLE:
@@ -347,6 +350,8 @@ const en: SharedMessages = {
     VEHICLE_MODE_MISMATCH:
       'That vehicle is of a different kind (bus, taxi or motorcycle) than this route.',
     VEHICLE_BUSY: 'That vehicle is already on another trip at that time.',
+    DRIVER_OFFLINE: 'Go online to take rides.',
+    DRIVER_NO_LINE: 'To go online you must drive for a taxi or motorcycle line, or drive with VTP.',
     VEHICLE_NOT_YOURS: 'On the independent drivers line you can only use your own vehicle.',
     INDEPENDENT_LINE_EXISTS:
       'There is already an independent drivers line for that kind of vehicle.',
@@ -525,6 +530,9 @@ const ptBR: SharedMessages = {
     VEHICLE_LAYOUT_MISMATCH: 'Esse veículo tem outro mapa de assentos que esta partida.',
     VEHICLE_MODE_MISMATCH: 'Esse veículo é de outro tipo (ônibus, táxi ou moto) que esta rota.',
     VEHICLE_BUSY: 'Esse veículo já está em outra viagem nesse horário.',
+    DRIVER_OFFLINE: 'Fique online para aceitar viagens.',
+    DRIVER_NO_LINE:
+      'Para ficar online você precisa dirigir para uma linha de táxis ou mototáxis, ou dirigir com a VTP.',
     VEHICLE_NOT_YOURS: 'Na linha de independentes você só pode usar o seu próprio veículo.',
     INDEPENDENT_LINE_EXISTS: 'Já existe a linha de independentes para esse tipo de veículo.',
     INDEPENDENTS_NOT_AVAILABLE:

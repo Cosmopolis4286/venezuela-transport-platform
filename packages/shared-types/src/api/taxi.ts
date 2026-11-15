@@ -202,7 +202,25 @@ export interface AssignTaxiRideRequest extends Omit<AcceptTaxiRideRequest, 'orga
 }
 
 /** `GET /me/taxi` — what a taxi driver needs on one screen. */
+/**
+ * A driver who goes online but stops opening the app is set offline after this long: requests go
+ * only to drivers who are really there.
+ */
+export const DRIVER_ONLINE_TIMEOUT_MINUTES = 10;
+
+/** `PUT /me/taxi/availability`: take requests ("en línea") or stop ("desconectado"). */
+export interface DriverAvailabilityRequest {
+  online: boolean;
+}
+
 export interface DriverTaxiBoard {
+  /**
+   * Taking requests: only online drivers see `requests` (empty while offline), accept them and get
+   * their notices. Each look at the board keeps them online.
+   */
+  online: boolean;
+  /** When they went online this time; null while offline. */
+  onlineSince: string | null;
   /** The ride the driver is on, or the next one due, if any (one at a time on the road). */
   current: OperatorTaxiRide | null;
   /** Rides booked for later that the driver took, soonest first. */
@@ -222,7 +240,14 @@ export interface TaxiDispatchBoard {
   requests: TaxiRequest[];
   /** Accepted and in-progress rides of the line, plus the ones finished today. */
   rides: OperatorTaxiRide[];
-  drivers: { userId: string; firstName: string | null; lastName: string | null; busy: boolean }[];
+  drivers: {
+    userId: string;
+    firstName: string | null;
+    lastName: string | null;
+    busy: boolean;
+    /** Taking requests right now in the transport app. */
+    online: boolean;
+  }[];
   vehicles: (TripVehicle & { busy: boolean })[];
 }
 

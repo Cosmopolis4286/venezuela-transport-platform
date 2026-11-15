@@ -161,6 +161,12 @@ describe.runIf(expectDatabase)('On-demand stretch rides (e2e)', () => {
           .set('Authorization', admin.auth)
           .send({ decision: 'approve' })
           .expect(200);
+        // The owner also drives: online ("en línea") to see and take requests.
+        await http()
+          .put('/api/v1/me/taxi/availability')
+          .set('Authorization', owner.auth)
+          .send({ online: true })
+          .expect(200);
         const url = `/api/v1/organizations/${organization.id}`;
         const vehicle = (
           await http()
@@ -329,6 +335,12 @@ describe.runIf(expectDatabase)('On-demand stretch rides (e2e)', () => {
         .post(`/api/v1/admin/organizations/${organization.id}/review`)
         .set('Authorization', admin.auth)
         .send({ decision: 'approve' })
+        .expect(200);
+      // The owner also drives: online ("en línea") to see and take requests.
+      await http()
+        .put('/api/v1/me/taxi/availability')
+        .set('Authorization', owner.auth)
+        .send({ online: true })
         .expect(200);
       const url = `/api/v1/organizations/${organization.id}`;
       const vehicle = (
@@ -519,6 +531,12 @@ describe.runIf(expectDatabase)('On-demand stretch rides (e2e)', () => {
           .post(`/api/v1/admin/organizations/${organization.id}/review`)
           .set('Authorization', admin.auth)
           .send({ decision: 'approve' })
+          .expect(200);
+        // The owner also drives: online ("en línea") to see and take requests.
+        await http()
+          .put('/api/v1/me/taxi/availability')
+          .set('Authorization', owner.auth)
+          .send({ online: true })
           .expect(200);
         // A known commission, whatever the platform default is.
         await http()

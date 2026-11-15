@@ -254,6 +254,11 @@ describe.runIf(expectDatabase)('Automatic WhatsApp (e2e)', () => {
 
       // --- A driver takes it: one notice with the plate and the price, sent once.
       await http()
+        .put('/api/v1/me/taxi/availability')
+        .set('Authorization', owner.auth)
+        .send({ online: true })
+        .expect(200);
+      await http()
         .post(`/api/v1/me/taxi/rides/${ride!.id}/accept`)
         .set('Authorization', owner.auth)
         .send({ organizationId: organization.id, vehicleId: moto.id })

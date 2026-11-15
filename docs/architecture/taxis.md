@@ -193,6 +193,17 @@ avisan por el mismo chat los viajes de WhatsApp tomados (placa y precio), termin
 vencidos, solo dentro de las 24 horas siguientes al último mensaje de la persona. Configuración en
 [la guía](../guides/whatsapp-automatico.md).
 
+## En línea o desconectado (ADR-040)
+
+- El conductor toca **Conectarme** en la pantalla de taxis de la app (`PUT /me/taxi/availability`).
+  Mientras está **en línea** ve las solicitudes de sus terminales y tramos, puede aceptarlas y
+  recibe sus avisos; **desconectado** no ve ninguna ni puede aceptar (`DRIVER_OFFLINE`).
+- La app consulta el tablero cada pocos segundos y eso lo mantiene en línea; si no la abre en 10
+  minutos (`DRIVER_ONLINE_TIMEOUT_MINUTES`), queda desconectado solo.
+- Solo se conecta quien conduce para una línea de taxis o de mototaxis activa (`DRIVER_NO_LINE`).
+- El tablero de la línea (`GET /organizations/:id/taxi`) dice de cada conductor si está en línea;
+  el despachador puede seguir asignando a cualquier conductor libre.
+
 ## Conductores independientes (ADR-039)
 
 Los taxistas y mototaxistas que no pertenecen a una línea trabajan en una **línea operada por la

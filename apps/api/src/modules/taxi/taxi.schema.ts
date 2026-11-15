@@ -208,3 +208,24 @@ export const rideCancellationFees = pgTable(
 export type TaxiRideRow = typeof taxiRides.$inferSelect;
 export type OnDemandFareRow = typeof onDemandFares.$inferSelect;
 export type RideCancellationFeeRow = typeof rideCancellationFees.$inferSelect;
+
+/**
+ * Whether a taxi or motorcycle driver is taking requests ("en línea"). Online while `online_since`
+ * is set and the app checked in within `DRIVER_ONLINE_TIMEOUT_MINUTES` (each look at the board
+ * counts); otherwise offline. Only online drivers see, accept and hear about requests.
+ */
+export const driverPresence = pgTable(
+  'driver_presence',
+  {
+    userId: uuid()
+      .primaryKey()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    onlineSince: timestamp({ withTimezone: true }),
+    lastSeenAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('driver_presence_online_idx')
+      .on(t.lastSeenAt)
+      .where(sql`${t.onlineSince} is not null`),
+  ],
+);

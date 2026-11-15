@@ -1,6 +1,7 @@
 import { randomBytes, randomInt } from 'node:crypto';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
+  DRIVER_ONLINE_TIMEOUT_MINUTES,
   formatMoney,
   todayInVenezuela,
   MAX_SCHEDULE_AHEAD_DAYS,
@@ -34,7 +35,22 @@ import {
   type TaxiRide,
   type TaxiTerminal,
 } from '@vtp/shared-types';
-import { and, asc, count, desc, eq, gt, inArray, isNull, lt, lte, ne, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNull,
+  lt,
+  lte,
+  ne,
+  or,
+  sql,
+  type AnyColumn,
+} from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import {
   DatabaseService,
@@ -61,6 +77,7 @@ import { organizationPolicies } from '../settlements/settlements.schema.js';
 import { tripPacks } from '../trip-packs/trip-packs.schema.js';
 import { TripPacksService } from '../trip-packs/trip-packs.service.js';
 import {
+  driverPresence,
   onDemandFares,
   rideCancellationFees,
   taxiRides,
@@ -321,6 +338,8 @@ export class TaxiService {
             eq(organizations.status, 'active'),
             inArray(memberships.role, rolesWith('trips.drive')),
             ne(memberships.userId, ride.passengerUserId),
+            // Only drivers taking requests right now (en línea).
+            onlineDriver(memberships.userId),
           ),
         );
       return {
@@ -478,6 +497,8 @@ export class TaxiService {
             eq(organizations.status, 'active'),
             inArray(memberships.role, rolesWith('trips.drive')),
             ne(memberships.userId, ride.passengerUserId),
+            // Only drivers taking requests right now (en línea).
+            onlineDriver(memberships.userId),
           ),
         );
       return {
@@ -986,6 +1007,7 @@ export class TaxiService {
 
   async driverBoard(userId: string): Promise<DriverTaxiBoard> {
     await expireTaxiRequests(this.database.db);
+    const presence = await this.checkIn(userId);
     const lines = await this.driverLines(userId);
     const lineIds = lines.map((l) => l.id);
     const fleet = await Promise.all(lineIds.map((id) => this.vehicles.list(id)));
@@ -1001,8 +1023,12 @@ export class TaxiService {
     const current =
       mine.find((r) => r.status === 'in_progress') ?? mine.find((r) => due(r)) ?? null;
     const upcoming = mine.filter((r) => r !== current);
-    const requests = lineIds.length ? await this.openRequests(lineIds, userId) : [];
+    // Offline drivers see no requests: they are not taking rides.
+    const requests =
+      lineIds.length && presence.online ? await this.openRequests(lineIds, userId) : [];
     return {
+      online: presence.online,
+      onlineSince: presence.onlineSince,
       current: current ? ((await this.toOperatorRides([current]))[0] ?? null) : null,
       upcoming: await this.toOperatorRides(upcoming),
       requests,
@@ -1027,7 +1053,66 @@ export class TaxiService {
   ): Promise<OperatorTaxiRide> {
     const line = (await this.driverLines(auth.user.id)).find((l) => l.id === input.organizationId);
     if (!line) throw notFound();
+    if (!(await this.checkIn(auth.user.id)).online) {
+      throw conflict('Go online to take rides', 'DRIVER_OFFLINE');
+    }
     return this.take(rideId, line, auth.user.id, input, auth, meta);
+  }
+
+  /**
+   * Online ("en línea") or offline. Going online needs an active taxi or motorcycle line to drive
+   * for; going offline is always possible (a ride already taken still has to be finished).
+   */
+  async setAvailability(
+    auth: Authenticated,
+    online: boolean,
+    meta: RequestMeta,
+  ): Promise<DriverTaxiBoard> {
+    const userId = auth.user.id;
+    if (online && !(await this.driverLines(userId)).length) {
+      throw conflict('You drive for no active taxi or motorcycle line', 'DRIVER_NO_LINE');
+    }
+    const now = new Date();
+    await this.database.db
+      .insert(driverPresence)
+      .values({ userId, onlineSince: online ? now : null, lastSeenAt: now })
+      .onConflictDoUpdate({
+        target: driverPresence.userId,
+        set: {
+          // Staying online keeps the original start; going offline clears it.
+          onlineSince: online ? sql`coalesce(${driverPresence.onlineSince}, ${now})` : null,
+          lastSeenAt: now,
+        },
+      });
+    await this.audit.record({
+      action: online ? 'driver.online' : 'driver.offline',
+      actorUserId: userId,
+      targetType: 'user',
+      targetId: userId,
+      ip: meta.ip,
+    });
+    return this.driverBoard(userId);
+  }
+
+  /**
+   * The driver's presence, refreshed: an online driver who opens the app stays online; one silent
+   * for longer than DRIVER_ONLINE_TIMEOUT_MINUTES is set offline.
+   */
+  private async checkIn(userId: string): Promise<{ online: boolean; onlineSince: string | null }> {
+    const [row] = await this.database.db
+      .select()
+      .from(driverPresence)
+      .where(eq(driverPresence.userId, userId));
+    if (!row?.onlineSince) return { online: false, onlineSince: null };
+    const now = new Date();
+    const fresh = +row.lastSeenAt > +now - DRIVER_ONLINE_TIMEOUT_MINUTES * MINUTE_MS;
+    await this.database.db
+      .update(driverPresence)
+      .set(fresh ? { lastSeenAt: now } : { onlineSince: null })
+      .where(eq(driverPresence.userId, userId));
+    return fresh
+      ? { online: true, onlineSince: row.onlineSince.toISOString() }
+      : { online: false, onlineSince: null };
   }
 
   /** `pickup`: accepted → in_progress; `complete`: in_progress → completed; `release`: back to requested. */
@@ -1118,10 +1203,14 @@ export class TaxiService {
       terminals: terminalIds.map((id) => terminals.get(id)!).sort(byName),
       requests,
       rides: await this.toOperatorRides(rides),
-      drivers: drivers.map((d) => ({
-        ...d,
-        busy: active.some((r) => r.driverUserId === d.userId),
-      })),
+      drivers: await (async () => {
+        const online = await this.onlineAmong(drivers.map((d) => d.userId));
+        return drivers.map((d) => ({
+          ...d,
+          busy: active.some((r) => r.driverUserId === d.userId),
+          online: online.has(d.userId),
+        }));
+      })(),
       vehicles: fleet
         .filter((v) => v.active)
         .map((v) => ({
@@ -1454,6 +1543,16 @@ export class TaxiService {
   }
 
   /** Active taxi lines where the user is a member whose role drives. */
+  /** Which of these people are online right now. */
+  private async onlineAmong(userIds: string[]): Promise<Set<string>> {
+    if (!userIds.length) return new Set();
+    const rows = await this.database.db
+      .select({ userId: driverPresence.userId })
+      .from(driverPresence)
+      .where(and(inArray(driverPresence.userId, userIds), onlineDriver(driverPresence.userId)));
+    return new Set(rows.map((r) => r.userId));
+  }
+
   private async driverLines(userId: string): Promise<OrganizationRow[]> {
     const rows = await this.database.db
       .select({ organization: organizations })
@@ -1769,4 +1868,14 @@ function feesDueOn(ride: TaxiRideRow, fees: RideCancellationFeeRow[]) {
           f.createdAt.getTime() <= ride.createdAt.getTime(),
     )
     .map((f) => ({ amount: f.amount, currency: f.currency }));
+}
+
+/**
+ * `userIdColumn` is a driver online right now: went online and checked in within
+ * DRIVER_ONLINE_TIMEOUT_MINUTES (a subquery, so it filters any query with a user id).
+ */
+function onlineDriver(userIdColumn: AnyColumn) {
+  return sql`exists (select 1 from ${driverPresence} p where p.user_id = ${userIdColumn}
+    and p.online_since is not null
+    and p.last_seen_at > now() - make_interval(mins => ${DRIVER_ONLINE_TIMEOUT_MINUTES}))`;
 }

@@ -137,6 +137,12 @@ describe.runIf(expectDatabase)('Taxi by WhatsApp (e2e)', () => {
         .post(`/api/v1/me/invitations/${received!.id}/accept`)
         .set('Authorization', driver.auth)
         .expect(204);
+      // Online ("en línea"): only connected drivers see and take requests.
+      await http()
+        .put('/api/v1/me/taxi/availability')
+        .set('Authorization', driver.auth)
+        .send({ online: true })
+        .expect(200);
       const moto = (
         await http()
           .post(`${url}/vehicles`)

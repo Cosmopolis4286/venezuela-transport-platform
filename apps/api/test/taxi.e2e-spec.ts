@@ -21,7 +21,7 @@ import { notifications } from '../src/modules/notifications/notifications.schema
 import { NotificationsService } from '../src/modules/notifications/notifications.service.js';
 import { users } from '../src/modules/identity/identity.schema.js';
 import type { OtpMessage, OtpSender } from '../src/modules/identity/otp/otp-sender.js';
-import { taxiRides } from '../src/modules/taxi/taxi.schema.js';
+import { driverPresence, taxiRides } from '../src/modules/taxi/taxi.schema.js';
 
 const expectDatabase = process.env.E2E_EXPECT_DATABASE === 'true';
 
@@ -219,6 +219,15 @@ describe.runIf(expectDatabase)('Taxi dispatch (e2e)', () => {
       await requestTaxi(ana.auth, { terminalStopId: oriente.id }).expect(409);
       await requestTaxi(ana.auth, { contactPhone: '12' }).expect(400);
       await requestTaxi(ana.auth, { passengers: 9 }).expect(400);
+      // Drivers take requests (and hear about them) only while online ("en línea").
+      const online = (auth: string, on = true) =>
+        http().put('/api/v1/me/taxi/availability').set('Authorization', auth).send({ online: on });
+      expect(
+        ((await online(ana.auth).expect(409)).body as { error: { reason: string } }).error.reason,
+      ).toBe('DRIVER_NO_LINE');
+      for (const driver of [a1, a2, b1]) {
+        expect(((await online(driver.auth).expect(200)).body as DriverTaxiBoard).online).toBe(true);
+      }
       const ride1 = (await requestTaxi(ana.auth).expect(201)).body as TaxiRide;
       expect(ride1).toMatchObject({ status: 'requested', fare: null, driver: null });
       expect((await requestTaxi(ana.auth).expect(409)).body.error).toMatchObject({
@@ -230,6 +239,14 @@ describe.runIf(expectDatabase)('Taxi dispatch (e2e)', () => {
       const board = async (auth: string) =>
         (await http().get('/api/v1/me/taxi').set('Authorization', auth).expect(200))
           .body as DriverTaxiBoard;
+      // Offline, a driver sees no requests; going online shows them again.
+      await online(a1.auth, false).expect(200);
+      expect(await board(a1.auth)).toMatchObject({
+        online: false,
+        onlineSince: null,
+        requests: [],
+      });
+      await online(a1.auth).expect(200);
       const seen = await board(a1.auth);
       expect(seen.requests.find((r) => r.id === ride1.id)).toMatchObject({
         address: 'Av. Bolívar, edificio Sol, Los Teques',
@@ -404,6 +421,17 @@ describe.runIf(expectDatabase)('Taxi dispatch (e2e)', () => {
         .get(`/api/v1/me/taxi-rides/${ride1.id}`)
         .set('Authorization', luis.auth)
         .expect(404);
+
+      // A driver who stops opening the app goes offline by itself, and the line sees it.
+      await db
+        .update(driverPresence)
+        .set({ lastSeenAt: new Date(Date.now() - 11 * 60_000) })
+        .where(eq(driverPresence.userId, b1.user.id));
+      expect(await board(b1.auth)).toMatchObject({ online: false, requests: [] });
+      const lineBoard = (
+        await http().get(`${lineA.url}/taxi`).set('Authorization', dispatcherA.auth).expect(200)
+      ).body as { drivers: { userId: string; online: boolean }[] };
+      expect(lineBoard.drivers.find((d) => d.userId === a1.user.id)?.online).toBe(true);
     },
   );
 });
