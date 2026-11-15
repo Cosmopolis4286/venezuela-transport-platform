@@ -19,10 +19,10 @@ ver
 
 En la página de la organización:
 
-- **Invitar** por correo o teléfono con un rol. A la persona le llega un correo (o un push, si ya
-  tiene cuenta) y entra con ese contacto para aceptar la invitación.
-- **Solicitantes verificados**: conductores y personal que enviaron sus documentos (KYC) y fueron
-  aprobados por VTP; acéptalos para sumarlos.
+- **Invitar** a tus conductores y personal, por correo (recomendado) o teléfono, con un rol. Es la
+  única forma de sumarlos: tu empresa no aparece en ningún buscador y nadie se postula a ella. A la
+  persona le llega un correo (o un push, si ya tiene cuenta); instala la app **VTP Transportistas**
+  (conductores) o entra al portal con ese correo y acepta la invitación.
 - Cambiar roles o quitar miembros: el dueño a cualquiera; el administrador solo al personal
   operativo (no puede nombrar, cambiar ni quitar administradores ni dueños).
 - Roles para la oficina: **Contador** (saldo, liquidaciones, cobros, reembolsos y reportes de

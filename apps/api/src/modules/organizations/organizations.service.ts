@@ -7,16 +7,14 @@ import {
   type CreateOrganizationRequest,
   type IndependentLine,
   type Organization,
-  type OrganizationDirectoryEntry,
   type OrganizationMember,
   type OrganizationMembershipSummary,
   type OrganizationRole,
   type OrganizationStatus,
-  type OrganizationType,
   type ReviewOrganizationRequest,
   type UpdateOrganizationRequest,
 } from '@vtp/shared-types';
-import { and, asc, count, desc, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, sql } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService, type Transaction } from '../../database/database.service.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -116,6 +114,18 @@ export class OrganizationsService {
     meta: RequestMeta,
   ): Promise<OrganizationMembershipSummary> {
     assertNotGuest(auth);
+    // One line per vehicle type: independent drivers join it without choosing (ADR-039).
+    const [existing] = await this.database.db
+      .select({ id: organizations.id })
+      .from(organizations)
+      .where(and(eq(organizations.operatedByPlatform, true), eq(organizations.type, input.type)))
+      .limit(1);
+    if (existing) {
+      throw ApiException.conflict(
+        'The platform already has a line for independent drivers of this vehicle',
+        'INDEPENDENT_LINE_EXISTS',
+      );
+    }
     const organization = await this.database.db.transaction(async (tx) => {
       const [created] = await tx
         .insert(organizations)
@@ -130,12 +140,13 @@ export class OrganizationsService {
           reviewedBy: auth.user.id,
           reviewedAt: new Date(),
         })
-        .onConflictDoNothing({ target: organizations.rif })
+        .onConflictDoNothing()
         .returning();
       if (!created) {
+        // The RIF is taken, or another admin just created the line (organizations_platform_line_key).
         throw ApiException.conflict(
-          'An organization with this RIF is already registered',
-          'RIF_TAKEN',
+          'The RIF is taken or the platform already has a line for these drivers',
+          'INDEPENDENT_LINE_EXISTS',
         );
       }
       await tx
@@ -332,36 +343,6 @@ export class OrganizationsService {
       .orderBy(desc(organizations.createdAt))
       .limit(200);
     return rows.map((row) => this.toDto(row));
-  }
-
-  /** Active organizations, for applicants choosing where to work. */
-  async directory(filter: {
-    type?: OrganizationType;
-    q?: string;
-  }): Promise<OrganizationDirectoryEntry[]> {
-    const conditions = [eq(organizations.status, 'active')];
-    if (filter.type) conditions.push(eq(organizations.type, filter.type));
-    const q = filter.q?.trim();
-    if (q) {
-      const pattern = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
-      conditions.push(
-        or(ilike(organizations.legalName, pattern), ilike(organizations.tradeName, pattern))!,
-      );
-    }
-    return this.database.db
-      .select({
-        id: organizations.id,
-        type: organizations.type,
-        legalName: organizations.legalName,
-        tradeName: organizations.tradeName,
-        state: organizations.state,
-        city: organizations.city,
-        operatedByPlatform: organizations.operatedByPlatform,
-      })
-      .from(organizations)
-      .where(and(...conditions))
-      .orderBy(asc(organizations.legalName))
-      .limit(50);
   }
 
   /** Platform staff decision. Notes are required when rejecting or suspending. */

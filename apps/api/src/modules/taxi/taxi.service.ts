@@ -2,6 +2,7 @@ import { randomBytes, randomInt } from 'node:crypto';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   formatMoney,
+  todayInVenezuela,
   MAX_SCHEDULE_AHEAD_DAYS,
   packCovers,
   RIDE_ABANDONED_HOURS,
@@ -41,7 +42,7 @@ import {
   type Transaction,
 } from '../../database/database.service.js';
 import { AuditService } from '../audit/audit.service.js';
-import { vehicles } from '../fleet/fleet.schema.js';
+import { vehicleDocuments, vehicles } from '../fleet/fleet.schema.js';
 import { VehiclesService } from '../fleet/vehicles.service.js';
 import { normalizePhone } from '../identity/contact.js';
 import { users } from '../identity/identity.schema.js';
@@ -1216,6 +1217,20 @@ export class TaxiService {
     // On a line the platform runs, each independent driver drives only their own vehicle (ADR-039).
     if (line.operatedByPlatform && vehicle.ownerUserId !== driverUserId) {
       throw conflict('Independent drivers use only their own vehicle', 'VEHICLE_NOT_YOURS');
+    }
+    // No ride without valid liability insurance (RCV), as for buses: a vehicle whose policy
+    // expired stops taking rides until the line updates it.
+    const [insurance] = await this.database.db
+      .select({ expiresOn: vehicleDocuments.expiresOn })
+      .from(vehicleDocuments)
+      .where(
+        and(eq(vehicleDocuments.vehicleId, vehicle.id), eq(vehicleDocuments.kind, 'insurance')),
+      );
+    if (insurance && insurance.expiresOn < todayInVenezuela()) {
+      throw conflict(
+        'The vehicle liability insurance (RCV) has expired',
+        'VEHICLE_INSURANCE_EXPIRED',
+      );
     }
     await expireTaxiRequests(this.database.db);
     const [ride] = await this.database.db.select().from(taxiRides).where(eq(taxiRides.id, rideId));

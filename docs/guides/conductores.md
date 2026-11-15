@@ -3,28 +3,32 @@
 Cómo usar la app **VTP Transportistas** (en español). Sirve para unirte a una empresa, enviar tus
 documentos, ver tus viajes, validar boletos y tomar taxis.
 
-## 1. Entrar y unirte a una empresa
+## 1. Entrar
 
-1. Entra con un código (te llega por correo) o con correo y contraseña. Si olvidaste la
-   contraseña, toca **¿Olvidaste tu contraseña?** y elige una nueva con el código que te llega.
-2. Si una empresa te invitó con ese correo o teléfono, te llega un aviso y verás la invitación en
-   el inicio:
-   **Aceptar** o **Rechazar**.
-3. Si nadie te invitó, envía una **solicitud** (abajo): VTP revisa tus documentos y la empresa que
-   elegiste te acepta.
-4. **¿Eres taxista o mototaxista independiente?** En la solicitud elige una línea de
-   independientes de VTP (salen primero en la búsqueda) y registra tu vehículo con su carnet de
-   circulación y su póliza RCV. Cuando VTP aprueba tus documentos entras de una vez, sin esperar
-   a ninguna empresa, y tomas viajes solo con tu vehículo.
+Entra con un código (te llega por correo) o con correo y contraseña. Si olvidaste la contraseña,
+toca **¿Olvidaste tu contraseña?** y elige una nueva con el código que te llega.
 
-## 2. Tu solicitud (KYC)
+## 2. Si trabajas con una empresa o línea
 
-1. **Mi solicitud → Datos**: el rol que quieres (conductor, inspector…), la empresa, tus datos y,
-   si eres taxista con vehículo propio, el vehículo.
-2. Sube los documentos que pide la app (cédula, licencia, certificado médico, póliza…), en JPG,
-   PNG o PDF de hasta 10 MB, con su fecha de vencimiento si la tienen.
-3. **Enviar a revisión**. Te avisamos (push y correo) cuando VTP la revisa y cuando la empresa
-   decide; si VTP pide cambios o rechaza un documento, lo verás con el motivo.
+Tu empresa te invita con tu correo (o tu teléfono). Te llega un aviso y la invitación aparece en el
+inicio: **Aceptar** o **Rechazar**. No necesitas enviar ninguna solicitud.
+
+## 2A. Si quieres conducir por tu cuenta («Conduce con VTP»)
+
+Para taxistas y mototaxistas independientes, con su propio carro o moto:
+
+1. En el inicio, **Conduce con VTP → Empezar solicitud**.
+2. Elige **Carro (taxi)** o **Moto (mototaxi)**, tus datos tal como aparecen en tu documento y los
+   de tu vehículo (placa, marca, modelo, año y color). Al continuar aceptas las Condiciones para
+   Conductores Independientes: VTP conecta tus viajes con los pasajeros; no es tu empleador.
+3. Sube los documentos (foto o PDF de hasta 10 MB, con su vencimiento si lo tiene): cédula,
+   licencia (del grado para moto si eres mototaxista), certificado médico, carnet de circulación y
+   póliza RCV.
+4. **Enviar a revisión**. Te avisamos (push y correo) cuando VTP la revisa; si pide cambios o
+   rechaza un documento, lo verás con el motivo.
+5. Cuando la aprueban, ya eres conductor de VTP: en el inicio aparece **VTP · Conductor
+   independiente** con **Solicitudes de taxi** (o de moto). Tomas viajes solo con tu vehículo, y
+   si tu póliza RCV vence no podrás tomar viajes hasta renovarla.
 
 ## 3. Mis viajes (conductores de autobús)
 

@@ -1,11 +1,9 @@
 import {
-  APPLICATION_ROLES,
   IDENTITY_DOCUMENT_TYPES,
   LEGAL_PAGES,
-  ORGANIZATION_ROLE_LABELS,
   type ApplicationInput,
-  type ApplicationRole,
   type IdentityDocumentType,
+  type OnDemandMode,
   type ProviderApplication,
 } from '@vtp/shared-types';
 import {
@@ -25,7 +23,6 @@ import {
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator } from 'react-native';
-import { OrganizationPicker } from '@/components/organization-picker';
 import { isIsoDate } from '@/lib/validation';
 
 const DOCUMENT_TYPE_LABELS: Record<IdentityDocumentType, string> = {
@@ -54,11 +51,14 @@ export default function EditApplication() {
   return <ApplicationForm existing={resource.data ?? null} />;
 }
 
+/**
+ * "Drive with VTP" (ADR-039): an independent driver with their own car or motorcycle. No role or
+ * company to pick: staff of a company or line join by its invitation, not here.
+ */
 function ApplicationForm({ existing }: { existing: ProviderApplication | null }) {
   const user = useCurrentUser();
   const { api } = useAuth();
-  const [role, setRole] = useState<ApplicationRole>(existing?.desiredRole ?? 'driver');
-  const [organization, setOrganization] = useState(existing?.organization ?? null);
+  const [mode, setMode] = useState<OnDemandMode>(existing?.mode ?? 'car');
   const [form, setForm] = useState({
     firstName: existing?.firstName ?? user.firstName ?? '',
     lastName: existing?.lastName ?? user.lastName ?? '',
@@ -75,35 +75,28 @@ function ApplicationForm({ existing }: { existing: ProviderApplication | null })
   const [documentType, setDocumentType] = useState<IdentityDocumentType>(
     existing?.documentType ?? 'V',
   );
-  const [providesVehicle, setProvidesVehicle] = useState(existing?.providesVehicle ?? false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const set = (key: keyof typeof form) => (value: string) =>
     setForm((current) => ({ ...current, [key]: value }));
 
-  // A line the platform runs for independent drivers takes only drivers with their own vehicle.
-  const independent =
-    !!organization && 'operatedByPlatform' in organization && !!organization.operatedByPlatform;
-  const withVehicle = role === 'driver' && (providesVehicle || independent);
   const badBirthDate = form.birthDate !== '' && !isIsoDate(form.birthDate);
   const complete =
     form.firstName.trim() &&
     form.lastName.trim() &&
     form.documentNumber.trim() &&
     isIsoDate(form.birthDate) &&
-    (!withVehicle ||
-      (form.plate.trim() &&
-        form.make.trim() &&
-        form.model.trim() &&
-        /^\d{4}$/.test(form.year) &&
-        form.color.trim()));
+    form.plate.trim() &&
+    form.make.trim() &&
+    form.model.trim() &&
+    /^\d{4}$/.test(form.year) &&
+    form.color.trim();
 
   const save = async () => {
     setBusy(true);
     setError(null);
     const input: ApplicationInput = {
-      desiredRole: role,
-      organizationId: organization?.id ?? null,
+      mode,
       firstName: form.firstName.trim(),
       lastName: form.lastName.trim(),
       documentType,
@@ -111,16 +104,13 @@ function ApplicationForm({ existing }: { existing: ProviderApplication | null })
       birthDate: form.birthDate,
       state: form.state.trim() || undefined,
       city: form.city.trim() || undefined,
-      providesVehicle: withVehicle,
-      vehicle: withVehicle
-        ? {
-            plate: form.plate.trim(),
-            make: form.make.trim(),
-            model: form.model.trim(),
-            year: Number(form.year),
-            color: form.color.trim(),
-          }
-        : null,
+      vehicle: {
+        plate: form.plate.trim(),
+        make: form.make.trim(),
+        model: form.model.trim(),
+        year: Number(form.year),
+        color: form.color.trim(),
+      },
     };
     try {
       await api.request<ProviderApplication>('/me/application', {
@@ -137,19 +127,21 @@ function ApplicationForm({ existing }: { existing: ProviderApplication | null })
 
   return (
     <Screen>
+      <Subheading>Conduce con VTP</Subheading>
+      <Body muted>
+        Trabaja por tu cuenta, con tu carro o tu moto, cuando quieras. Revisamos tus documentos y,
+        al aprobarlos, empiezas a recibir viajes. ¿Trabajas con una línea o empresa? Pídele que te
+        invite: no necesitas esta solicitud.
+      </Body>
       <Segmented
-        label="Quiero trabajar como"
-        options={APPLICATION_ROLES.map((value) => ({
-          value,
-          label: ORGANIZATION_ROLE_LABELS[value],
-        }))}
-        value={role}
-        onChange={(next) => {
-          setRole(next);
-          setOrganization(null);
-        }}
+        label="¿Con qué vas a trabajar?"
+        options={[
+          { value: 'car', label: 'Carro (taxi)' },
+          { value: 'motorcycle', label: 'Moto (mototaxi)' },
+        ]}
+        value={mode}
+        onChange={setMode}
       />
-      <OrganizationPicker role={role} selected={organization} onSelect={setOrganization} />
 
       <Subheading>Datos personales</Subheading>
       <Body muted>Tal como aparecen en tu documento de identidad.</Body>
@@ -184,57 +176,37 @@ function ApplicationForm({ existing }: { existing: ProviderApplication | null })
       <Field label="Estado (opcional)" value={form.state} onChangeText={set('state')} />
       <Field label="Ciudad (opcional)" value={form.city} onChangeText={set('city')} />
 
-      {role === 'driver' ? (
-        <>
-          {independent ? (
-            <>
-              <Body muted>
-                Como independiente trabajas con tu propio vehículo: regístralo con su carnet de
-                circulación y su póliza RCV. Solo tú podrás usarlo en la línea. Al enviar tu
-                solicitud aceptas las Condiciones para Conductores Independientes: VTP intermedia
-                los viajes; no es tu empleador.
-              </Body>
-              <Button
-                variant="link"
-                title="Leer las Condiciones para Conductores Independientes"
-                onPress={() => openLegalPage(LEGAL_PAGES.drivers, 'es')}
-              />
-            </>
-          ) : (
-            <Segmented
-              label="¿Trabajas con vehículo propio?"
-              options={[
-                { value: 'no', label: 'No' },
-                { value: 'yes', label: 'Sí (por ejemplo, taxi)' },
-              ]}
-              value={providesVehicle ? 'yes' : 'no'}
-              onChange={(value) => setProvidesVehicle(value === 'yes')}
-            />
-          )}
-          {withVehicle ? (
-            <>
-              <Subheading>Vehículo</Subheading>
-              <Field
-                label="Placa"
-                value={form.plate}
-                onChangeText={set('plate')}
-                autoCapitalize="characters"
-                maxLength={10}
-              />
-              <Field label="Marca" value={form.make} onChangeText={set('make')} />
-              <Field label="Modelo" value={form.model} onChangeText={set('model')} />
-              <Field
-                label="Año"
-                value={form.year}
-                onChangeText={set('year')}
-                keyboardType="number-pad"
-                maxLength={4}
-              />
-              <Field label="Color" value={form.color} onChangeText={set('color')} />
-            </>
-          ) : null}
-        </>
-      ) : null}
+      <Subheading>{mode === 'motorcycle' ? 'Tu moto' : 'Tu carro'}</Subheading>
+      <Body muted>
+        Solo tú podrás usarlo en VTP. Luego subirás su carnet de circulación y su póliza RCV.
+      </Body>
+      <Field
+        label="Placa"
+        value={form.plate}
+        onChangeText={set('plate')}
+        autoCapitalize="characters"
+        maxLength={10}
+      />
+      <Field label="Marca" value={form.make} onChangeText={set('make')} />
+      <Field label="Modelo" value={form.model} onChangeText={set('model')} />
+      <Field
+        label="Año"
+        value={form.year}
+        onChangeText={set('year')}
+        keyboardType="number-pad"
+        maxLength={4}
+      />
+      <Field label="Color" value={form.color} onChangeText={set('color')} />
+
+      <Body muted>
+        Al continuar aceptas las Condiciones para Conductores Independientes: VTP conecta tus viajes
+        con los pasajeros; no es tu empleador.
+      </Body>
+      <Button
+        variant="link"
+        title="Leer las Condiciones para Conductores Independientes"
+        onPress={() => openLegalPage(LEGAL_PAGES.drivers, 'es')}
+      />
 
       {error ? <Banner tone="error">{error}</Banner> : null}
       <Button

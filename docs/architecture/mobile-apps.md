@@ -98,16 +98,20 @@ una con su vehículo y la tarifa. Detalles en [taxis.md](taxis.md).
 
 ## Solicitud KYC (app de transportistas)
 
-1. El usuario elige el rol y, si quiere, la organización: `GET /organizations/directory` lista las
-   organizaciones activas, filtradas en la app a las que tienen el rol elegido.
-2. Datos personales y, para los taxistas con vehículo propio, el vehículo.
+Solo para **conductores independientes** («Conduce con VTP», ADR-039); el personal de una
+empresa entra por invitación.
+
+1. Elige **carro (taxi) o moto (mototaxi)**: la API asigna la línea de VTP de ese vehículo, que la
+   app nunca muestra (los independientes ven «VTP · Conductor independiente»).
+2. Datos personales y el vehículo propio (obligatorio), y el enlace a las Condiciones para
+   Conductores Independientes.
 3. Documentos: `requiredDocuments(role, providesVehicle)` de los contratos decide cuáles. Cada uno
    se elige con `expo-document-picker` (JPG, PNG o PDF) y se sube como multipart a
    `PUT /me/application/documents/:kind`, con su fecha de vencimiento si la tiene. La API verifica
    el tipo real por el contenido y el límite de 10 MB.
 4. **Enviar a revisión** cuando no falta nada. Las notas de la revisión, los documentos rechazados
-   y la decisión final (incluida la respuesta de la organización) se muestran en la pantalla de la
-   solicitud.
+   y la decisión final se muestran en la pantalla de la solicitud; al aprobarse ya puede tomar
+   viajes desde **Solicitudes de taxi / de moto**.
 
 ## Vista previa en el navegador
 

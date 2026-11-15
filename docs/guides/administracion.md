@@ -178,16 +178,16 @@ Ver [fiscal.md](../architecture/fiscal.md).
 
 ## Conductores independientes (`/admin/independents`, solo administradores)
 
-Para los taxistas y mototaxistas que no pertenecen a ninguna línea (ADR-039). **Nueva línea de
-independientes**: tipo (taxis o mototaxis), razón social y un RIF propio; queda activa y tú como
-dueña o dueño. Desde **Administrar en el portal** la manejas como cualquier línea: fija las
-tarifas por tramo, invita a tu equipo (despachadores, supervisores, contador) y sigue viajes,
-calificaciones y liquidación. La página muestra cuántos conductores y vehículos tiene cada línea y
-cuántas solicitudes esperan revisión.
+Los taxistas y mototaxistas que trabajan por su cuenta «conducen con VTP» (ADR-039). Hay **una
+línea de la plataforma por tipo de vehículo** (taxis y motos): créala aquí con su razón social, un
+RIF propio y el nombre comercial que verán pasajeros y conductores (por ejemplo, «VTP»). Queda
+activa y tú como dueña o dueño. Desde **Administrar en el portal** la manejas como cualquier línea:
+tarifas por tramo, terminales, equipo (despachadores, supervisores, contador), viajes,
+calificaciones y liquidación.
 
-Los independientes envían su solicitud KYC eligiendo esa línea, con su propio vehículo. Cuando la
-apruebas en **Revisiones**, entran solos como conductores y su vehículo queda en la flota marcado
-como suyo: solo ellos pueden usarlo.
+Los conductores nunca eligen ni ven la línea: en la app eligen carro o moto y envían su solicitud.
+Cuando la apruebas en **Revisiones**, entran solos a la línea de ese vehículo y su vehículo queda en
+la flota marcado como suyo, con su póliza RCV como seguro (si vence, no toma viajes).
 
 ## Tareas periódicas sugeridas
 

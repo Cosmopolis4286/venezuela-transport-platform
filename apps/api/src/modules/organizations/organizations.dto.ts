@@ -139,20 +139,6 @@ export class OrganizationStatusQueryDto {
   status?: OrganizationStatus;
 }
 
-export class OrganizationDirectoryQueryDto {
-  @ApiPropertyOptional({ enum: ORGANIZATION_TYPES })
-  @IsOptional()
-  @IsIn(ORGANIZATION_TYPES)
-  type?: OrganizationType;
-
-  /** Matches the legal or trade name, case-insensitive. */
-  @ApiPropertyOptional({ example: 'llano' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(80)
-  q?: string;
-}
-
 export class CreateIndependentLineDto implements CreateIndependentLineRequest {
   @ApiProperty({ enum: ['taxi_line', 'moto_line'] })
   @IsIn(['taxi_line', 'moto_line'])

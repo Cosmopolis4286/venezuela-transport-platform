@@ -10,7 +10,7 @@ import type {
   DriverTaxiBoard,
   FleetVehicle,
   IndependentLine,
-  OrganizationDirectoryEntry,
+  Organization,
   OrganizationMembershipSummary,
   PlatformRole,
   ProviderApplication,
@@ -21,6 +21,7 @@ import { eq } from 'drizzle-orm';
 import request from 'supertest';
 import { DatabaseService } from '../src/database/database.service.js';
 import { users } from '../src/modules/identity/identity.schema.js';
+import { memberships } from '../src/modules/organizations/organizations.schema.js';
 
 const expectDatabase = process.env.E2E_EXPECT_DATABASE === 'true';
 const PDF = (label: string) => Buffer.from(`%PDF-1.4\n% ${label}\n`);
@@ -85,11 +86,11 @@ describe.runIf(expectDatabase)('Independent drivers (e2e)', () => {
     async () => {
       const [admin, reviewer] = [await person('admin'), await person('reviewer')];
 
-      // --- Only platform admins create the line; it is active and they own it.
+      // --- Only platform admins create the line, one per vehicle type: active, and they own it.
       const body = {
         type: 'moto_line',
         legalName: `VTP Independientes ${run}`,
-        tradeName: `VTP Motos ${run}`,
+        tradeName: 'VTP',
         rif: uniqueRif(),
       };
       await http()
@@ -97,42 +98,69 @@ describe.runIf(expectDatabase)('Independent drivers (e2e)', () => {
         .set('Authorization', reviewer.auth)
         .send(body)
         .expect(403);
-      const { organization: line, role } = (
-        await http()
-          .post('/api/v1/admin/independent-lines')
-          .set('Authorization', admin.auth)
-          .send(body)
-          .expect(201)
-      ).body as OrganizationMembershipSummary;
+      const first = await http()
+        .post('/api/v1/admin/independent-lines')
+        .set('Authorization', admin.auth)
+        .send(body);
+      let line: Organization;
+      if (first.status === 201) {
+        const created = first.body as OrganizationMembershipSummary;
+        expect(created.role).toBe('owner');
+        line = created.organization;
+      } else {
+        // The sample data or an earlier run made it: this admin joins it as an owner.
+        expect(reason(first)).toBe('INDEPENDENT_LINE_EXISTS');
+        const lines = (
+          await http()
+            .get('/api/v1/admin/independent-lines')
+            .set('Authorization', admin.auth)
+            .expect(200)
+        ).body as IndependentLine[];
+        line = lines.find((l) => l.organization.type === 'moto_line')!.organization;
+        await app
+          .get(DatabaseService)
+          .db.insert(memberships)
+          .values({ organizationId: line.id, userId: admin.user.id, role: 'owner' });
+      }
       expect(line).toMatchObject({ status: 'active', operatedByPlatform: true, type: 'moto_line' });
-      expect(role).toBe('owner');
+      // A second line for motorcycles is refused: drivers join without choosing.
+      expect(
+        reason(
+          await http()
+            .post('/api/v1/admin/independent-lines')
+            .set('Authorization', admin.auth)
+            .send({ ...body, rif: uniqueRif() })
+            .expect(409),
+        ),
+      ).toBe('INDEPENDENT_LINE_EXISTS');
       const url = `/api/v1/organizations/${line.id}`;
-
-      // Applicants find it in the directory, marked as the platform's.
-      const directory = (
+      const before = (
         await http()
-          .get('/api/v1/organizations/directory')
-          .query({ q: run })
-          .set('Authorization', reviewer.auth)
+          .get('/api/v1/admin/independent-lines')
+          .set('Authorization', admin.auth)
           .expect(200)
-      ).body as OrganizationDirectoryEntry[];
-      expect(directory.find((o) => o.id === line.id)).toMatchObject({ operatedByPlatform: true });
+      ).body as IndependentLine[];
+      const counts = before.find((l) => l.organization.id === line.id)!;
 
-      // --- An independent driver applies: only as a driver, with their own vehicle.
+      // Companies and lines are not listed anywhere for applicants.
+      await http()
+        .get('/api/v1/organizations/directory')
+        .set('Authorization', reviewer.auth)
+        .expect(404);
+
+      // --- An independent driver applies with their motorcycle: no role or company to choose.
       const driver = await person();
       const application = (extra: object) =>
         http()
           .post('/api/v1/me/application')
           .set('Authorization', driver.auth)
           .send({
-            desiredRole: 'driver',
-            organizationId: line.id,
+            mode: 'motorcycle',
             firstName: 'Iván',
             lastName: 'Independiente',
             documentType: 'V',
             documentNumber: `V-${randomInt(10_000_000, 30_000_000)}`,
             birthDate: '1990-04-21',
-            providesVehicle: false,
             ...extra,
           });
       expect(reason(await application({}).expect(409))).toBe('INDEPENDENT_NEEDS_VEHICLE');
@@ -140,10 +168,10 @@ describe.runIf(expectDatabase)('Independent drivers (e2e)', () => {
       const plate = `IN${randomInt(100, 999)}DE`;
       const created = (
         await application({
-          providesVehicle: true,
           vehicle: { plate, make: 'Bera', model: 'SBR', year: 2022, color: 'Rojo' },
         }).expect(201)
       ).body as ProviderApplication;
+      expect(created).toMatchObject({ mode: 'motorcycle', organization: { id: line.id } });
       const upload = (kind: string, file: Buffer, name: string, expiresOn?: string) => {
         const req = http()
           .put(`/api/v1/me/application/documents/${kind}`)
@@ -355,9 +383,8 @@ describe.runIf(expectDatabase)('Independent drivers (e2e)', () => {
           .expect(200)
       ).body as IndependentLine[];
       expect(lines.find((l) => l.organization.id === line.id)).toMatchObject({
-        drivers: 1,
-        vehicles: 2,
-        pendingApplications: 0,
+        drivers: counts.drivers + 1,
+        vehicles: counts.vehicles + 2,
       });
       await http()
         .get('/api/v1/admin/independent-lines')

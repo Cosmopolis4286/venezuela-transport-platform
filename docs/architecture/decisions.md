@@ -725,3 +725,13 @@ Independientes](../legal/condiciones-para-conductores-independientes.md) dicen q
 con conductores verificados y no los emplea (pendiente de revisión legal: relación de trabajo y
 permisos del INTT, ver la lista para el abogado). Las líneas privadas compiten con la de la plataforma
 en los mismos tramos; el pedido sigue siendo de la primera que lo toma.
+
+**Enmienda (2026-11-15, del dueño del producto): «Conduce con VTP», como en las apps de viajes.**
+Las empresas y líneas privadas **no aparecen en ningún buscador** (se quitó
+`GET /organizations/directory`) y su personal entra **solo por invitación**: se quitó la solicitud a
+una empresa y su aceptación (`/organizations/:id/applicants`). La solicitud (KYC) queda **solo para
+conductores independientes**: eligen carro o moto (`mode`) y su vehículo, sin rol ni organización;
+la API los asigna a la línea de la plataforma de ese vehículo, de la que hay **una por tipo**
+(`organizations_platform_line_key`). El conductor ve «VTP · Conductor independiente» y el pasajero
+el nombre comercial de la línea («VTP»), nunca una «línea de la plataforma». La póliza RCV revisada
+en el KYC pasa a ser el seguro del vehículo, y ningún vehículo con la póliza vencida toma viajes.

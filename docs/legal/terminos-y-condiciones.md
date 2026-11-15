@@ -237,9 +237,10 @@ y dejar un comentario, una sola vez. La línea y {{nombre_comercial}} ven la cal
 comentario para cuidar la calidad; el comentario debe ser respetuoso y no incluir datos personales
 de terceros.
 
-6.9. **Línea de conductores independientes.** {{nombre_comercial}} administra una línea, identificada
-como «operada por {{nombre_comercial}}», en la que taxistas y mototaxistas que no pertenecen a otra
-línea, verificados por {{nombre_comercial}}, aceptan viajes con su **propio vehículo**. En esa línea:
+6.9. **Conductores independientes.** Además de las líneas y empresas, en la Plataforma aceptan
+viajes taxistas y mototaxistas que trabajan por su cuenta, verificados por {{nombre_comercial}}, con
+su **propio vehículo** (la «línea de conductores independientes», que se muestra con el nombre
+comercial de {{nombre_comercial}}). En esos viajes:
 
 - {{nombre_comercial}} publica las tarifas por tramo, recibe las solicitudes, verifica la identidad
   y los documentos de los conductores y de sus vehículos, y atiende los reclamos;

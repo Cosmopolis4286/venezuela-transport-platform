@@ -104,6 +104,11 @@ puede tener como máximo 5 organizaciones esperando revisión a la vez.
    sesión con código lo verifica — y ve la invitación en `GET /me/invitations`.
 3. `POST /me/invitations/:id/accept` crea la membresía; `/decline` la rechaza.
 
+El personal de una organización entra **solo por invitación** suya: las organizaciones no
+aparecen en ningún buscador público ni reciben solicitudes. Las solicitudes (KYC) son solo para los
+conductores independientes, que entran a la línea de la plataforma ([onboarding.md](onboarding.md),
+ADR-039).
+
 Las invitaciones solo se emparejan con los contactos **verificados** de la persona invitada, así
 que un mensaje reenviado o una dirección sin verificar no le sirven a nadie más. Vencen a los 7
 días; existe como máximo una invitación pendiente por persona en cada organización; los
@@ -149,18 +154,17 @@ con `approve | reject | suspend` (+ `notes`).
 
 ## Endpoints (`/api/v1`)
 
-| Método y ruta                                                                   | Quién                                                                                        |
-| ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `POST /organizations`                                                           | Cualquier usuario con sesión                                                                 |
-| `GET /me/organizations`                                                         | Usuario con sesión: sus membresías con rol y permisos                                        |
-| `GET /organizations/directory?type=&q=`                                         | Usuario con sesión: organizaciones activas a las que postularse (solo nombre, tipo y ciudad) |
-| `GET /organizations/:id`                                                        | Cualquier miembro                                                                            |
-| `PATCH /organizations/:id`                                                      | `organization.manage`                                                                        |
-| `GET /organizations/:id/members`                                                | `members.view`                                                                               |
-| `PATCH/DELETE /organizations/:id/members/:userId`                               | `members.manage`                                                                             |
-| `POST/GET /organizations/:id/invitations`, `DELETE …/invitations/:invitationId` | `members.manage`                                                                             |
-| `GET /me/invitations`, `POST /me/invitations/:id/accept` · `/decline`           | La persona invitada                                                                          |
-| `GET /admin/organizations`, `POST /admin/organizations/:id/review`              | `organizations.view` / `organizations.review` de la plataforma                               |
+| Método y ruta                                                                   | Quién                                                          |
+| ------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `POST /organizations`                                                           | Cualquier usuario con sesión                                   |
+| `GET /me/organizations`                                                         | Usuario con sesión: sus membresías con rol y permisos          |
+| `GET /organizations/:id`                                                        | Cualquier miembro                                              |
+| `PATCH /organizations/:id`                                                      | `organization.manage`                                          |
+| `GET /organizations/:id/members`                                                | `members.view`                                                 |
+| `PATCH/DELETE /organizations/:id/members/:userId`                               | `members.manage`                                               |
+| `POST/GET /organizations/:id/invitations`, `DELETE …/invitations/:invitationId` | `members.manage`                                               |
+| `GET /me/invitations`, `POST /me/invitations/:id/accept` · `/decline`           | La persona invitada                                            |
+| `GET /admin/organizations`, `POST /admin/organizations/:id/review`              | `organizations.view` / `organizations.review` de la plataforma |
 
 Eventos de auditoría: `organization.created`, `.updated`, `.approved`, `.rejected`, `.suspended`,
 `.member_role_changed`, `.member_removed`, `.invitation_created`, `.invitation_revoked`,

@@ -6,14 +6,15 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import type {
   AuthResponse,
-  OrganizationApplicant,
+  IndependentLine,
   OrganizationMembershipSummary,
   OtpChallengeResponse,
   ProviderApplication,
 } from '@vtp/shared-types';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import request from 'supertest';
 import { DatabaseService } from '../src/database/database.service.js';
+import { vehicleDocuments, vehicles } from '../src/modules/fleet/fleet.schema.js';
 import { users } from '../src/modules/identity/identity.schema.js';
 import { notifications } from '../src/modules/notifications/notifications.schema.js';
 import { NotificationsService } from '../src/modules/notifications/notifications.service.js';
@@ -39,9 +40,12 @@ const PNG = Buffer.concat([
 const uniqueRif = () => `J-${randomInt(10_000_000, 99_999_999)}-${randomInt(0, 9)}`;
 const nextYear = `${new Date().getFullYear() + 1}-12-31`;
 
-const driverApplication = (organizationId?: string) => ({
-  desiredRole: 'driver',
-  organizationId,
+/** Plates are unique within a line, and every test shares the platform's line. */
+const plate = `AB${randomInt(100, 999)}CD`;
+
+/** An independent driver's application (ADR-039): no role or company, only their vehicle. */
+const driverApplication = (mode: 'car' | 'motorcycle' = 'car') => ({
+  mode,
   firstName: 'José',
   lastName: 'Rodríguez',
   documentType: 'V',
@@ -49,8 +53,13 @@ const driverApplication = (organizationId?: string) => ({
   birthDate: '1990-04-21',
   state: 'Lara',
   city: 'Barquisimeto',
-  providesVehicle: true,
-  vehicle: { plate: 'ab 123 cd', make: 'Toyota', model: 'Corolla', year: 2015, color: 'Blanco' },
+  vehicle: {
+    plate: `${plate.slice(0, 2).toLowerCase()} ${plate.slice(2, 5)} ${plate.slice(5)}`,
+    make: 'Toyota',
+    model: 'Corolla',
+    year: 2015,
+    color: 'Blanco',
+  },
 });
 
 describe.runIf(expectDatabase)('Driver applications / KYC (e2e)', () => {
@@ -110,22 +119,30 @@ describe.runIf(expectDatabase)('Driver applications / KYC (e2e)', () => {
     return staff;
   };
 
-  /** A taxi line approved by the platform, with its owner. */
-  const activeTaxiLine = async (staffAuth: string) => {
-    const owner = await newUser();
-    const { organization } = (
+  /**
+   * The platform's taxi line for independents (one per vehicle type): created by a platform admin,
+   * or the one that already exists (another test or the sample data made it).
+   */
+  const independentTaxiLine = async () => {
+    const admin = await newUser();
+    await app
+      .get(DatabaseService)
+      .db.update(users)
+      .set({ platformRole: 'admin' })
+      .where(eq(users.id, admin.user.id));
+    await http().post('/api/v1/admin/independent-lines').set('Authorization', admin.auth).send({
+      type: 'taxi_line',
+      legalName: 'VTP Taxis (pruebas)',
+      tradeName: 'VTP',
+      rif: uniqueRif(),
+    });
+    const lines = (
       await http()
-        .post('/api/v1/organizations')
-        .set('Authorization', owner.auth)
-        .send({ type: 'taxi_line', legalName: 'Taxis Unidos C.A.', rif: uniqueRif() })
-        .expect(201)
-    ).body as OrganizationMembershipSummary;
-    await http()
-      .post(`/api/v1/admin/organizations/${organization.id}/review`)
-      .set('Authorization', staffAuth)
-      .send({ decision: 'approve' })
-      .expect(200);
-    return { owner, organization };
+        .get('/api/v1/admin/independent-lines')
+        .set('Authorization', admin.auth)
+        .expect(200)
+    ).body as IndependentLine[];
+    return lines.find((l) => l.organization.type === 'taxi_line')!.organization;
   };
 
   const upload = (
@@ -142,21 +159,25 @@ describe.runIf(expectDatabase)('Driver applications / KYC (e2e)', () => {
     return expiresOn ? req.field('expiresOn', expiresOn) : req;
   };
 
-  it('runs the whole flow: apply, upload, changes requested, approval, organization acceptance', async () => {
+  it('runs the whole flow: apply, upload, changes requested, approval, joining the platform', async () => {
     const staff = await reviewer();
-    const { owner, organization } = await activeTaxiLine(staff.auth);
+    const organization = await independentTaxiLine();
     const driver = await newUser();
 
     const created = (
       await http()
         .post('/api/v1/me/application')
         .set('Authorization', driver.auth)
-        .send(driverApplication(organization.id))
+        .send(driverApplication())
         .expect(201)
     ).body as ProviderApplication;
+    // The driver never chose a company: the platform's taxi line was picked from the vehicle.
     expect(created).toMatchObject({
       status: 'draft',
-      vehicle: { plate: 'AB123CD' },
+      mode: 'car',
+      desiredRole: 'driver',
+      providesVehicle: true,
+      vehicle: { plate },
       organization: { id: organization.id },
     });
     expect(created.missingDocuments).toEqual([
@@ -275,49 +296,37 @@ describe.runIf(expectDatabase)('Driver applications / KYC (e2e)', () => {
         documents: resubmitted.documents.map((d) => ({ documentId: d.id, status: 'accepted' })),
       }).expect(200)
     ).body as ProviderApplication;
-    expect(approved).toMatchObject({ status: 'approved', organizationDecision: 'pending' });
+    expect(approved).toMatchObject({ status: 'approved', organizationDecision: 'accepted' });
     const me = await http().get('/api/v1/me').set('Authorization', driver.auth).expect(200);
     expect(me.body.identityVerified).toBe(true);
 
-    // The taxi line decides; it sees the applicant but no documents or ID numbers.
-    const applicants = (
-      await http()
-        .get(`/api/v1/organizations/${organization.id}/applicants`)
-        .set('Authorization', owner.auth)
-        .expect(200)
-    ).body as OrganizationApplicant[];
-    expect(applicants).toEqual([
-      expect.objectContaining({
-        applicationId: created.id,
-        decision: 'pending',
-        desiredRole: 'driver',
-      }),
-    ]);
-    expect(JSON.stringify(applicants)).not.toContain('documentNumber');
-    await http()
-      .get(`/api/v1/organizations/${organization.id}/applicants`)
-      .set('Authorization', driver.auth)
-      .expect(404);
-
-    await http()
-      .post(`/api/v1/organizations/${organization.id}/applicants/${created.id}/accept`)
-      .set('Authorization', owner.auth)
-      .expect(204);
-    await http()
-      .post(`/api/v1/organizations/${organization.id}/applicants/${created.id}/accept`)
-      .set('Authorization', owner.auth)
-      .expect(404);
+    // Approved means driving: they are in the platform's line with their own car, its RCV policy
+    // copied as the vehicle's insurance.
     const memberships = (
       await http().get('/api/v1/me/organizations').set('Authorization', driver.auth).expect(200)
     ).body as OrganizationMembershipSummary[];
     expect(memberships).toEqual([
       expect.objectContaining({
         role: 'driver',
-        organization: expect.objectContaining({ id: organization.id }),
+        organization: expect.objectContaining({ id: organization.id, operatedByPlatform: true }),
       }),
     ]);
+    const [vehicle] = await app
+      .get(DatabaseService)
+      .db.select()
+      .from(vehicles)
+      .where(
+        and(eq(vehicles.organizationId, organization.id), eq(vehicles.ownerUserId, driver.user.id)),
+      );
+    expect(vehicle).toMatchObject({ plate, mode: 'car', active: true });
+    const [insurance] = await app
+      .get(DatabaseService)
+      .db.select()
+      .from(vehicleDocuments)
+      .where(eq(vehicleDocuments.vehicleId, vehicle!.id));
+    expect(insurance).toMatchObject({ kind: 'insurance', expiresOn: nextYear });
 
-    // The applicant heard about each review and about the line's decision.
+    // The applicant heard about each review.
     await app.get(NotificationsService).settled();
     const notices = await app
       .get(DatabaseService)
@@ -327,12 +336,11 @@ describe.runIf(expectDatabase)('Driver applications / KYC (e2e)', () => {
     expect(notices).toEqual([
       { kind: 'application_reviewed', reference: created.id },
       { kind: 'application_reviewed', reference: created.id },
-      { kind: 'application_decided', reference: organization.id },
     ]);
   });
 
-  it('validates applicant data', async () => {
-    const staff = await reviewer();
+  it('validates applicant data and takes only independent drivers', async () => {
+    await independentTaxiLine();
     const driver = await newUser();
     const post = (body: object) =>
       http().post('/api/v1/me/application').set('Authorization', driver.auth).send(body);
@@ -343,30 +351,21 @@ describe.runIf(expectDatabase)('Driver applications / KYC (e2e)', () => {
     }).expect(400);
     await post({ ...driverApplication(), documentNumber: '12' }).expect(400);
     await post({ ...driverApplication(), vehicle: null }).expect(400);
-
-    // Pending organizations cannot receive applications; taxi lines have no ticket agents.
-    const owner = await newUser();
-    const pending = (
-      await http()
-        .post('/api/v1/organizations')
-        .set('Authorization', owner.auth)
-        .send({ type: 'bus_company', legalName: 'Pendiente C.A.', rif: uniqueRif() })
-        .expect(201)
-    ).body as OrganizationMembershipSummary;
-    await post(driverApplication(pending.organization.id)).expect(400);
-    const { organization } = await activeTaxiLine(staff.auth);
-    await post({ ...driverApplication(organization.id), desiredRole: 'ticket_agent' }).expect(400);
+    await post({ ...driverApplication(), mode: 'bus' }).expect(400);
+    // Staff of a company never apply: no role or company can be asked for.
+    await post({ ...driverApplication(), desiredRole: 'ticket_agent' }).expect(400);
+    await post({ ...driverApplication(), organizationId: randomUUID() }).expect(400);
   });
 
   it('rejects unrequired documents, disguised files and oversized uploads', async () => {
+    await independentTaxiLine();
     const driver = await newUser();
     await http()
       .post('/api/v1/me/application')
       .set('Authorization', driver.auth)
-      .send({ ...driverApplication(), providesVehicle: false, vehicle: null })
+      .send(driverApplication())
       .expect(201);
 
-    await upload(driver.auth, 'liability_insurance', PDF('rcv')).expect(400); // no own vehicle → not required
     const disguised = await upload(
       driver.auth,
       'identity_document',
@@ -395,6 +394,7 @@ describe.runIf(expectDatabase)('Driver applications / KYC (e2e)', () => {
   });
 
   it('keeps documents private and staff-only areas restricted', async () => {
+    await independentTaxiLine();
     const driver = await newUser();
     const stranger = await newUser();
     await http()
@@ -423,19 +423,24 @@ describe.runIf(expectDatabase)('Driver applications / KYC (e2e)', () => {
 
   it('lets a rejected applicant start over', async () => {
     const staff = await reviewer();
+    await independentTaxiLine();
     const person = await newUser();
     await http()
       .post('/api/v1/me/application')
       .set('Authorization', person.auth)
-      .send({
-        ...driverApplication(),
-        desiredRole: 'inspector',
-        providesVehicle: false,
-        vehicle: null,
-      })
+      .send(driverApplication())
       .expect(201);
-    const withDoc = (await upload(person.auth, 'identity_document', PNG, 'cedula.png').expect(200))
-      .body as ProviderApplication;
+    await upload(person.auth, 'identity_document', PNG, 'cedula.png').expect(200);
+    await upload(person.auth, 'driver_license', PDF('licencia'), 'licencia.pdf', nextYear).expect(
+      200,
+    );
+    await upload(person.auth, 'medical_certificate', PDF('medico')).expect(200);
+    await upload(person.auth, 'vehicle_registration', PDF('carnet')).expect(200);
+    const withDoc = (
+      await upload(person.auth, 'liability_insurance', PDF('rcv'), 'poliza.pdf', nextYear).expect(
+        200,
+      )
+    ).body as ProviderApplication;
     await http()
       .post('/api/v1/me/application/submit')
       .set('Authorization', person.auth)
@@ -452,12 +457,7 @@ describe.runIf(expectDatabase)('Driver applications / KYC (e2e)', () => {
     await http()
       .post('/api/v1/me/application')
       .set('Authorization', person.auth)
-      .send({
-        ...driverApplication(),
-        desiredRole: 'inspector',
-        providesVehicle: false,
-        vehicle: null,
-      })
+      .send(driverApplication('car'))
       .expect(201);
   });
 });

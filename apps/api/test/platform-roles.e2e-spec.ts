@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { randomInt, randomUUID } from 'node:crypto';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import type { AuthResponse, PlatformRole, ProviderApplication } from '@vtp/shared-types';
@@ -103,19 +103,35 @@ describe.runIf(expectDatabase)('Platform roles (e2e)', () => {
   });
 
   it('shows support the KYC queue without ID numbers, and keeps the details for reviewers', async () => {
+    // Independent drivers apply to the platform's taxi line (ADR-039); make sure it exists.
+    const admin = await staff('admin');
+    await http()
+      .post('/api/v1/admin/independent-lines')
+      .set('Authorization', admin)
+      .send({
+        type: 'taxi_line',
+        legalName: 'VTP Taxis (pruebas de roles)',
+        rif: `J-${randomInt(10_000_000, 99_999_999)}-${randomInt(0, 9)}`,
+      });
     const applicant = await staff(null);
     const created = (
       await http()
         .post('/api/v1/me/application')
         .set('Authorization', applicant)
         .send({
-          desiredRole: 'driver',
+          mode: 'car',
           firstName: 'Luis',
           lastName: 'Aspirante',
           documentType: 'V',
           documentNumber: 'V-18765432',
           birthDate: '1991-02-03',
-          providesVehicle: false,
+          vehicle: {
+            plate: `LU${randomInt(100, 999)}IS`,
+            make: 'Fiat',
+            model: 'Uno',
+            year: 2010,
+            color: 'Gris',
+          },
         })
         .expect(201)
     ).body as ProviderApplication;

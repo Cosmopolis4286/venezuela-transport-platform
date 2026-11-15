@@ -159,15 +159,27 @@ export default function Home() {
       ) : organizations.data?.length ? (
         organizations.data.map(({ organization, role, permissions }) => (
           <Card key={organization.id}>
-            <Body>{organization.tradeName ?? organization.legalName}</Body>
-            <Body muted>{ORGANIZATION_TYPE_LABELS[organization.type]}</Body>
-            <Row>
-              <Badge label={ORGANIZATION_ROLE_LABELS[role]} />
-              <Badge
-                label={ORGANIZATION_STATUS_LABELS[organization.status]}
-                tone={statusTone(organization.status)}
-              />
-            </Row>
+            {organization.operatedByPlatform ? (
+              // Independent drivers drive "with VTP": the line behind it is never shown (ADR-039).
+              <>
+                <Body>VTP</Body>
+                <Body muted>
+                  Conductor independiente · {organization.type === 'moto_line' ? 'Moto' : 'Carro'}
+                </Body>
+              </>
+            ) : (
+              <>
+                <Body>{organization.tradeName ?? organization.legalName}</Body>
+                <Body muted>{ORGANIZATION_TYPE_LABELS[organization.type]}</Body>
+                <Row>
+                  <Badge label={ORGANIZATION_ROLE_LABELS[role]} />
+                  <Badge
+                    label={ORGANIZATION_STATUS_LABELS[organization.status]}
+                    tone={statusTone(organization.status)}
+                  />
+                </Row>
+              </>
+            )}
             {/* Taxi and motorcycle lines ride on demand (ADR-028): their drivers take requests. */}
             {organization.status === 'active' &&
             (organization.type === 'taxi_line' || organization.type === 'moto_line') &&
@@ -180,6 +192,7 @@ export default function Home() {
               />
             ) : null}
             {organization.status === 'active' &&
+            !organization.operatedByPlatform &&
             runsRoutes(organization.type) &&
             permissions.includes('trips.drive') ? (
               <Button
@@ -214,23 +227,21 @@ export default function Home() {
         ))
       ) : organizations.data ? (
         <Body muted>
-          Aún no perteneces a ninguna. Acepta la invitación de tu empresa o envía una solicitud.
+          Aún no trabajas con nadie. Si tu línea o empresa te invitó, la invitación aparece arriba;
+          si quieres conducir por tu cuenta, envía tu solicitud.
         </Body>
       ) : null}
 
-      <Subheading>Solicitud para trabajar</Subheading>
+      <Subheading>Conduce con VTP</Subheading>
       {application.data ? (
         <Card>
           <Row>
-            <Body>{ORGANIZATION_ROLE_LABELS[application.data.desiredRole]}</Body>
+            <Body>Mi solicitud</Body>
             <Badge
               label={APPLICATION_STATUS_LABELS[application.data.status]}
               tone={statusTone(application.data.status)}
             />
           </Row>
-          {application.data.organization ? (
-            <Body muted>{application.data.organization.legalName}</Body>
-          ) : null}
           <Button
             variant="secondary"
             title="Ver mi solicitud"
@@ -240,8 +251,8 @@ export default function Home() {
       ) : noApplication ? (
         <Card>
           <Body>
-            ¿Quieres trabajar como conductor, despachador, taquillero o inspector? Envía tus datos y
-            documentos; el equipo de la plataforma los verifica.
+            ¿Quieres conducir por tu cuenta con VTP, con tu carro o tu moto? Envía tus datos y
+            documentos: los revisamos y, al aprobarlos, empiezas a recibir viajes.
           </Body>
           <Button title="Empezar solicitud" onPress={() => router.push('/application/edit')} />
         </Card>

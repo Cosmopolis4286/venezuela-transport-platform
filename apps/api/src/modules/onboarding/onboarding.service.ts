@@ -4,15 +4,14 @@ import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { assertNotGuest } from '../identity/guest.service.js';
 import {
   requiredDocuments,
-  roleAllowedFor,
   type ApplicationDocument,
   type ApplicationInput,
   type DocumentKind,
-  type OrganizationApplicant,
+  type OnDemandMode,
   type ProviderApplication,
   type ReviewApplicationRequest,
 } from '@vtp/shared-types';
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { AppConfigService } from '../../config/app-config.service.js';
 import { DatabaseService, type Transaction } from '../../database/database.service.js';
@@ -22,9 +21,12 @@ import { AuditService } from '../audit/audit.service.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import { UsersService } from '../identity/users.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
-import type { OrganizationAccess } from '../organizations/organization-access.js';
-import { vehicles } from '../fleet/fleet.schema.js';
-import { memberships, type OrganizationRow } from '../organizations/organizations.schema.js';
+import { vehicleDocuments, vehicles } from '../fleet/fleet.schema.js';
+import {
+  memberships,
+  organizations,
+  type OrganizationRow,
+} from '../organizations/organizations.schema.js';
 import { OrganizationsService } from '../organizations/organizations.service.js';
 import {
   applicationDocuments,
@@ -113,7 +115,10 @@ export class OnboardingService {
     meta: RequestMeta,
   ): Promise<ProviderApplication> {
     const current = await this.requireEditable(auth.user.id);
-    const values = await this.validated({ ...this.toInput(current), ...input });
+    const values = await this.validated({
+      ...(await this.toInput(current)),
+      ...input,
+    } as ApplicationInput);
     const [row] = await this.database.db
       .update(applications)
       .set(values)
@@ -442,107 +447,46 @@ export class OnboardingService {
         'VEHICLE_PLATE_TAKEN',
       );
     }
+    let vehicleId = existing?.id;
     if (existing) {
       await tx.update(vehicles).set({ active: true }).where(eq(vehicles.id, existing.id));
-      return;
+    } else {
+      const [created] = await tx
+        .insert(vehicles)
+        .values({
+          organizationId: line.id,
+          plate,
+          label: `${make} ${model} ${year} · ${color}`,
+          mode: line.type === 'moto_line' ? 'motorcycle' : 'car',
+          ownerUserId: application.userId,
+        })
+        .returning({ id: vehicles.id });
+      vehicleId = created!.id;
     }
-    await tx.insert(vehicles).values({
-      organizationId: line.id,
-      plate,
-      label: `${make} ${model} ${year} · ${color}`,
-      mode: line.type === 'moto_line' ? 'motorcycle' : 'car',
-      ownerUserId: application.userId,
-    });
-  }
-
-  // ── Target organization ─────────────────────────────────────────────────
-
-  async applicantsFor(organizationId: string): Promise<OrganizationApplicant[]> {
-    const rows = await this.database.db
-      .select()
-      .from(applications)
+    // The reviewed RCV policy becomes the vehicle's insurance: rides stop when it expires.
+    const [policy] = await tx
+      .select({ expiresOn: applicationDocuments.expiresOn })
+      .from(applicationDocuments)
       .where(
-        and(eq(applications.organizationId, organizationId), eq(applications.status, 'approved')),
-      )
-      .orderBy(desc(applications.reviewedAt))
-      .limit(200);
-    return rows.map((row) => ({
-      applicationId: row.id,
-      userId: row.userId,
-      firstName: row.firstName,
-      lastName: row.lastName,
-      desiredRole: row.desiredRole,
-      state: row.state,
-      city: row.city,
-      providesVehicle: row.providesVehicle,
-      vehicle: row.vehicle,
-      decision: row.organizationDecision ?? 'pending',
-      approvedAt: (row.reviewedAt ?? row.updatedAt).toISOString(),
-    }));
-  }
-
-  /** The organization accepts (adding the person with the requested role) or declines an approved applicant. */
-  async decide(
-    access: OrganizationAccess,
-    applicationId: string,
-    decision: 'accept' | 'decline',
-    actor: Authenticated,
-    meta: RequestMeta,
-  ): Promise<void> {
-    const { organization } = access;
-    const applicantId = await this.database.db.transaction(async (tx) => {
-      const [application] = await tx
-        .select()
-        .from(applications)
-        .where(
-          and(
-            eq(applications.id, applicationId),
-            eq(applications.organizationId, organization.id),
-            eq(applications.status, 'approved'),
-            eq(applications.organizationDecision, 'pending'),
-          ),
-        )
-        .for('update')
-        .limit(1);
-      if (!application) throw notFound('Applicant not found');
-      if (decision === 'accept') {
-        this.organizations.assertRoleAllowed(organization, application.desiredRole);
-        await this.organizations.addMember(
-          tx,
-          organization.id,
-          application.userId,
-          application.desiredRole,
-        );
-      }
-      await tx
-        .update(applications)
-        .set({ organizationDecision: decision === 'accept' ? 'accepted' : 'declined' })
-        .where(eq(applications.id, applicationId));
-      return application.userId;
-    });
-    await this.audit.record({
-      action:
-        decision === 'accept'
-          ? 'application.organization_accepted'
-          : 'application.organization_declined',
-      actorUserId: actor.user.id,
-      targetType: 'application',
-      targetId: applicationId,
-      ip: meta.ip,
-      metadata: { organizationId: organization.id },
-    });
-    this.notifications.send({
-      kind: 'application_decided',
-      userIds: [applicantId],
-      app: 'transport',
-      email: true,
-      text: (m) =>
-        m.applicationDecided(
-          organization.tradeName ?? organization.legalName,
-          decision === 'accept',
+        and(
+          eq(applicationDocuments.applicationId, application.id),
+          eq(applicationDocuments.kind, 'liability_insurance'),
         ),
-      reference: { key: 'organizationId', id: organization.id },
-    });
+      );
+    if (policy?.expiresOn) {
+      await tx
+        .insert(vehicleDocuments)
+        .values({
+          vehicleId: vehicleId!,
+          kind: 'insurance',
+          number: 'RCV verificada en el KYC',
+          expiresOn: policy.expiresOn,
+        })
+        .onConflictDoUpdate({
+          target: [vehicleDocuments.vehicleId, vehicleDocuments.kind],
+          set: { expiresOn: policy.expiresOn, number: 'RCV verificada en el KYC' },
+        });
+    }
   }
 
   // ── Internals ───────────────────────────────────────────────────────────
@@ -554,47 +498,27 @@ export class OnboardingService {
     if (Number.isNaN(age) || age < 18 || age > 100)
       throw badRequest('Applicants must be at least 18 years old');
 
-    let organization: OrganizationRow | undefined;
-    if (input.organizationId) {
-      organization = await this.organizations.findById(input.organizationId);
-      if (!organization || organization.status !== 'active')
-        throw badRequest('Choose an active organization');
-      if (!roleAllowedFor(organization.type, input.desiredRole)) {
-        throw badRequest(`A ${organization.type} does not have the role ${input.desiredRole}`);
-      }
-      // A line the platform runs (ADR-039) takes only drivers who bring their own vehicle; its
-      // staff are invited, not applicants.
-      if (organization.operatedByPlatform) {
-        if (input.desiredRole !== 'driver') {
-          throw badRequest('The independent drivers line only takes drivers');
-        }
-        if (!input.providesVehicle || !input.vehicle) {
-          throw ApiException.conflict(
-            'Independent drivers must register their own vehicle',
-            'INDEPENDENT_NEEDS_VEHICLE',
-          );
-        }
-      }
+    // Only independent drivers apply (ADR-039): staff of a company or line join by its invitation.
+    const line = await this.independentLine(input.mode);
+    if (!input.vehicle) {
+      throw ApiException.conflict(
+        'Independent drivers must register their own vehicle',
+        'INDEPENDENT_NEEDS_VEHICLE',
+      );
     }
-
-    const needsVehicle = input.providesVehicle && input.desiredRole === 'driver';
-    let vehicle = null;
-    if (needsVehicle) {
-      if (!input.vehicle) throw badRequest('Describe your vehicle');
-      const plate = normalizePlate(input.vehicle.plate);
-      if (!plate) throw badRequest('Enter a valid plate');
-      vehicle = {
-        ...input.vehicle,
-        plate,
-        make: input.vehicle.make.trim(),
-        model: input.vehicle.model.trim(),
-        color: input.vehicle.color.trim(),
-      };
-    }
+    const plate = normalizePlate(input.vehicle.plate);
+    if (!plate) throw badRequest('Enter a valid plate');
+    const vehicle = {
+      plate,
+      make: input.vehicle.make.trim(),
+      model: input.vehicle.model.trim(),
+      year: input.vehicle.year,
+      color: input.vehicle.color.trim(),
+    };
 
     return {
-      desiredRole: input.desiredRole,
-      organizationId: organization?.id ?? null,
+      desiredRole: 'driver' as const,
+      organizationId: line.id,
       firstName: input.firstName.trim(),
       lastName: input.lastName.trim(),
       documentType: input.documentType,
@@ -602,15 +526,43 @@ export class OnboardingService {
       birthDate: input.birthDate,
       state: input.state?.trim() || null,
       city: input.city?.trim() || null,
-      providesVehicle: needsVehicle,
+      providesVehicle: true,
       vehicle,
     };
   }
 
-  private toInput(row: ApplicationRow): ApplicationInput {
+  /**
+   * The platform's active line for independent drivers of this vehicle (ADR-039), the oldest if
+   * there are several. The driver never chooses it nor sees it: they "drive with VTP".
+   */
+  private async independentLine(mode: OnDemandMode): Promise<OrganizationRow> {
+    const [line] = await this.database.db
+      .select()
+      .from(organizations)
+      .where(
+        and(
+          eq(organizations.operatedByPlatform, true),
+          eq(organizations.status, 'active'),
+          eq(organizations.type, mode === 'motorcycle' ? 'moto_line' : 'taxi_line'),
+        ),
+      )
+      .orderBy(asc(organizations.createdAt))
+      .limit(1);
+    if (!line) {
+      throw ApiException.conflict(
+        'The platform is not taking independent drivers with this vehicle yet',
+        'INDEPENDENTS_NOT_AVAILABLE',
+      );
+    }
+    return line;
+  }
+
+  /** The stored application as input, to merge a partial update into. */
+  private async toInput(row: ApplicationRow): Promise<Partial<ApplicationInput>> {
+    const line = row.organizationId ? await this.organizations.findById(row.organizationId) : null;
+    const mode = line ? modeOf(line.type) : null;
     return {
-      desiredRole: row.desiredRole,
-      organizationId: row.organizationId,
+      ...(mode ? { mode } : {}),
       firstName: row.firstName,
       lastName: row.lastName,
       documentType: row.documentType,
@@ -618,8 +570,7 @@ export class OnboardingService {
       birthDate: row.birthDate,
       state: row.state ?? undefined,
       city: row.city ?? undefined,
-      providesVehicle: row.providesVehicle,
-      vehicle: row.vehicle,
+      ...(row.vehicle ? { vehicle: row.vehicle } : {}),
     };
   }
 
@@ -686,6 +637,7 @@ export class OnboardingService {
       organization: organization
         ? { id: organization.id, type: organization.type, legalName: organization.legalName }
         : null,
+      mode: organization ? modeOf(organization.type) : null,
       organizationDecision: row.organizationDecision,
       firstName: row.firstName,
       lastName: row.lastName,
@@ -716,4 +668,9 @@ export class OnboardingService {
       createdAt: row.createdAt.toISOString(),
     };
   }
+}
+
+/** The vehicle of a platform line for independents: motorcycles or cars (taxis). */
+function modeOf(type: OrganizationRow['type']): OnDemandMode | null {
+  return type === 'moto_line' ? 'motorcycle' : type === 'taxi_line' ? 'car' : null;
 }

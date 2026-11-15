@@ -8,9 +8,8 @@ import { OrganizationsModule } from '../organizations/organizations.module.js';
 import { AdminApplicationsController } from './admin-applications.controller.js';
 import { ApplicantController } from './applicant.controller.js';
 import { OnboardingService } from './onboarding.service.js';
-import { OrganizationApplicantsController } from './organization-applicants.controller.js';
 
-/** Driver and staff applications (KYC): documents, platform review and organization acceptance. */
+/** Independent drivers' applications (KYC, ADR-039): documents and platform review. */
 @Module({
   imports: [
     IdentityModule,
@@ -25,7 +24,7 @@ import { OrganizationApplicantsController } from './organization-applicants.cont
       }),
     }),
   ],
-  controllers: [ApplicantController, AdminApplicationsController, OrganizationApplicantsController],
+  controllers: [ApplicantController, AdminApplicationsController],
   providers: [OnboardingService],
 })
 export class OnboardingModule {}

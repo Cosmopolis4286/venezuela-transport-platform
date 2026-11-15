@@ -53,10 +53,10 @@ inspector, contador, supervisor), cada uno con los permisos que muestra el porta
 responsable de lo que hacen con sus accesos. Solo los **dueños** pueden nombrar, cambiar o retirar
 administradores y dueños. La Empresa debe retirar el acceso a quien deje de trabajar con ella.
 
-3.2. Los conductores y el personal que se postulan pasan una verificación de identidad y
-documentos (KYC) hecha por {{nombre_comercial}}; la Empresa decide si los incorpora. La
-verificación de {{nombre_comercial}} no sustituye la responsabilidad de la Empresa sobre la
-idoneidad de su personal.
+3.2. El personal de la Empresa entra **solo por invitación** de la Empresa, que verifica su
+identidad, sus licencias y sus documentos y responde por su idoneidad. La Empresa no aparece en
+ningún buscador público de la Plataforma ni recibe solicitudes de trabajo a través de ella; las
+solicitudes que revisa {{nombre_comercial}} son solo las de los conductores independientes.
 
 ## 4. Ventas, cargo por servicio y liquidación
 

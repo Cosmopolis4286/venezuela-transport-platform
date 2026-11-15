@@ -1,4 +1,5 @@
 import type { OrganizationType } from './organizations.js';
+import type { OnDemandMode } from './taxi.js';
 
 /** Documents a provider may be asked for during KYC. */
 export const DOCUMENT_KINDS = [
@@ -98,8 +99,10 @@ export interface ProviderApplication {
   userId: string;
   status: ApplicationStatus;
   desiredRole: ApplicationRole;
-  /** Organization the applicant wants to join, if any. */
+  /** The platform's line the driver joins when approved (ADR-039); never shown to them. */
   organization: { id: string; type: OrganizationType; legalName: string } | null;
+  /** Car (taxi) or motorcycle (mototaxi); null for applications made before ADR-039. */
+  mode: OnDemandMode | null;
   organizationDecision: OrganizationDecision | null;
   firstName: string;
   lastName: string;
@@ -120,10 +123,14 @@ export interface ProviderApplication {
   createdAt: string;
 }
 
-/** `POST /api/v1/me/application` and `PATCH` (all fields optional on PATCH). */
+/**
+ * `POST /api/v1/me/application` and `PATCH`: an **independent driver** asks to drive with the
+ * platform (ADR-039), with their own car (taxi) or motorcycle (mototaxi). Staff of a company or
+ * line never apply: the company invites them.
+ */
 export interface ApplicationInput {
-  desiredRole: ApplicationRole;
-  organizationId?: string | null;
+  /** What they drive: picks the platform's line for that vehicle, unseen by the driver. */
+  mode: OnDemandMode;
   firstName: string;
   lastName: string;
   documentType: IdentityDocumentType;
@@ -131,8 +138,7 @@ export interface ApplicationInput {
   birthDate: string;
   state?: string;
   city?: string;
-  providesVehicle: boolean;
-  vehicle?: Vehicle | null;
+  vehicle: Vehicle;
 }
 
 /** `POST /api/v1/admin/applications/:applicationId/review` */
@@ -142,19 +148,4 @@ export interface ReviewApplicationRequest {
   notes?: string;
   /** Per-document verdicts; documents not listed keep their status. */
   documents?: { documentId: string; status: 'accepted' | 'rejected'; reason?: string }[];
-}
-
-/** What a target organization sees about an approved applicant (no documents or ID numbers). */
-export interface OrganizationApplicant {
-  applicationId: string;
-  userId: string;
-  firstName: string;
-  lastName: string;
-  desiredRole: ApplicationRole;
-  state: string | null;
-  city: string | null;
-  providesVehicle: boolean;
-  vehicle: Vehicle | null;
-  decision: OrganizationDecision;
-  approvedAt: string;
 }
