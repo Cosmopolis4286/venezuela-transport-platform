@@ -1,0 +1,277 @@
+import { mkdtemp } from 'node:fs/promises';
+import { randomInt, randomUUID } from 'node:crypto';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import { Test } from '@nestjs/testing';
+import type {
+  AuthResponse,
+  DriverTaxiBoard,
+  FleetVehicle,
+  IndependentLine,
+  OrganizationDirectoryEntry,
+  OrganizationMembershipSummary,
+  PlatformRole,
+  ProviderApplication,
+  Stop,
+  TaxiRide,
+} from '@vtp/shared-types';
+import { eq } from 'drizzle-orm';
+import request from 'supertest';
+import { DatabaseService } from '../src/database/database.service.js';
+import { users } from '../src/modules/identity/identity.schema.js';
+
+const expectDatabase = process.env.E2E_EXPECT_DATABASE === 'true';
+const PDF = (label: string) => Buffer.from(`%PDF-1.4\n% ${label}\n`);
+const PNG = Buffer.concat([
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  Buffer.from('png'),
+]);
+const nextYear = `${new Date().getFullYear() + 1}-12-31`;
+const uniqueRif = () => `J-${randomInt(10_000_000, 99_999_999)}-${randomInt(0, 9)}`;
+
+/** Independent drivers in a line the platform runs (ADR-039). */
+describe.runIf(expectDatabase)('Independent drivers (e2e)', () => {
+  let app: NestExpressApplication;
+  const http = () => request(app.getHttpServer());
+  const run = randomUUID().slice(0, 8);
+
+  beforeAll(async () => {
+    process.env.AUTH_RATE_LIMIT_MAX = '1000';
+    process.env.RATE_LIMIT_MAX = '10000';
+    process.env.FILE_STORAGE_LOCAL_DIR = await mkdtemp(join(tmpdir(), 'vtp-independents-'));
+    const { AppModule } = await import('../src/app.module.js');
+    const { configureApp } = await import('../src/app.setup.js');
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    app = moduleRef.createNestApplication<NestExpressApplication>();
+    configureApp(app);
+    await app.init();
+  });
+
+  afterAll(async () => {
+    await app?.close();
+  });
+
+  const person = async (platformRole?: PlatformRole) => {
+    const res = (
+      await http()
+        .post('/api/v1/auth/register')
+        .send({
+          email: `independent-${randomUUID()}@example.com`,
+          password: 'una frase larga de prueba',
+          firstName: 'Persona',
+          lastName: 'Prueba',
+          client: 'transport',
+          acceptTerms: true,
+        })
+        .expect(201)
+    ).body as AuthResponse;
+    if (platformRole) {
+      await app
+        .get(DatabaseService)
+        .db.update(users)
+        .set({ platformRole })
+        .where(eq(users.id, res.user.id));
+    }
+    return { auth: `Bearer ${res.tokens.accessToken}`, user: res.user };
+  };
+  const reason = (res: request.Response) =>
+    (res.body as { error: { reason?: string } }).error.reason;
+
+  it(
+    'lets platform admins run a line where approved independents drive only their own vehicle',
+    { timeout: 30_000 },
+    async () => {
+      const [admin, reviewer] = [await person('admin'), await person('reviewer')];
+
+      // --- Only platform admins create the line; it is active and they own it.
+      const body = {
+        type: 'moto_line',
+        legalName: `VTP Independientes ${run}`,
+        tradeName: `VTP Motos ${run}`,
+        rif: uniqueRif(),
+      };
+      await http()
+        .post('/api/v1/admin/independent-lines')
+        .set('Authorization', reviewer.auth)
+        .send(body)
+        .expect(403);
+      const { organization: line, role } = (
+        await http()
+          .post('/api/v1/admin/independent-lines')
+          .set('Authorization', admin.auth)
+          .send(body)
+          .expect(201)
+      ).body as OrganizationMembershipSummary;
+      expect(line).toMatchObject({ status: 'active', operatedByPlatform: true, type: 'moto_line' });
+      expect(role).toBe('owner');
+      const url = `/api/v1/organizations/${line.id}`;
+
+      // Applicants find it in the directory, marked as the platform's.
+      const directory = (
+        await http()
+          .get('/api/v1/organizations/directory')
+          .query({ q: run })
+          .set('Authorization', reviewer.auth)
+          .expect(200)
+      ).body as OrganizationDirectoryEntry[];
+      expect(directory.find((o) => o.id === line.id)).toMatchObject({ operatedByPlatform: true });
+
+      // --- An independent driver applies: only as a driver, with their own vehicle.
+      const driver = await person();
+      const application = (extra: object) =>
+        http()
+          .post('/api/v1/me/application')
+          .set('Authorization', driver.auth)
+          .send({
+            desiredRole: 'driver',
+            organizationId: line.id,
+            firstName: 'Iván',
+            lastName: 'Independiente',
+            documentType: 'V',
+            documentNumber: `V-${randomInt(10_000_000, 30_000_000)}`,
+            birthDate: '1990-04-21',
+            providesVehicle: false,
+            ...extra,
+          });
+      expect(reason(await application({}).expect(409))).toBe('INDEPENDENT_NEEDS_VEHICLE');
+      await application({ desiredRole: 'dispatcher' }).expect(400);
+      const plate = `IN${randomInt(100, 999)}DE`;
+      const created = (
+        await application({
+          providesVehicle: true,
+          vehicle: { plate, make: 'Bera', model: 'SBR', year: 2022, color: 'Rojo' },
+        }).expect(201)
+      ).body as ProviderApplication;
+      const upload = (kind: string, file: Buffer, name: string, expiresOn?: string) => {
+        const req = http()
+          .put(`/api/v1/me/application/documents/${kind}`)
+          .set('Authorization', driver.auth)
+          .attach('file', file, name);
+        return (expiresOn ? req.field('expiresOn', expiresOn) : req).expect(200);
+      };
+      await upload('identity_document', PNG, 'cedula.png');
+      await upload('driver_license', PDF('licencia'), 'licencia.pdf', nextYear);
+      await upload('medical_certificate', PDF('medico'), 'medico.pdf');
+      await upload('vehicle_registration', PDF('carnet'), 'carnet.pdf');
+      const ready = (await upload('liability_insurance', PDF('rcv'), 'rcv.pdf', nextYear))
+        .body as ProviderApplication;
+      await http()
+        .post('/api/v1/me/application/submit')
+        .set('Authorization', driver.auth)
+        .expect(200);
+
+      // --- The reviewer approves: the driver joins at once, with the vehicle marked as theirs.
+      const approved = (
+        await http()
+          .post(`/api/v1/admin/applications/${created.id}/review`)
+          .set('Authorization', reviewer.auth)
+          .send({
+            decision: 'approve',
+            documents: ready.documents.map((d) => ({ documentId: d.id, status: 'accepted' })),
+          })
+          .expect(200)
+      ).body as ProviderApplication;
+      expect(approved).toMatchObject({ status: 'approved', organizationDecision: 'accepted' });
+      const membership = (await http().get(url).set('Authorization', driver.auth).expect(200))
+        .body as OrganizationMembershipSummary;
+      expect(membership.role).toBe('driver');
+      const fleet = (
+        await http().get(`${url}/vehicles`).set('Authorization', admin.auth).expect(200)
+      ).body as FleetVehicle[];
+      const own = fleet.find((v) => v.plate === plate)!;
+      expect(own).toMatchObject({ mode: 'motorcycle', owner: { userId: driver.user.id } });
+
+      // The line also has a vehicle of its own: the independent never sees nor uses it.
+      const linesVehicle = (
+        await http()
+          .post(`${url}/vehicles`)
+          .set('Authorization', admin.auth)
+          .send({ plate: `VT${randomInt(100, 999)}PL` })
+          .expect(201)
+      ).body as FleetVehicle;
+      const board = (
+        await http().get('/api/v1/me/taxi').set('Authorization', driver.auth).expect(200)
+      ).body as DriverTaxiBoard;
+      expect(
+        board.lines.find((l) => l.organization.id === line.id)?.vehicles.map((v) => v.id),
+      ).toEqual([own.id]);
+
+      // --- A stretch ride: the platform sets the fare; the driver takes it with their vehicle.
+      const stop = async (name: string) =>
+        (
+          await http()
+            .post('/api/v1/admin/stops')
+            .set('Authorization', admin.auth)
+            .send({
+              kind: 'stop',
+              name: `${name} ${run}`,
+              city: `${name} ${run}`,
+              state: 'Bolívar',
+            })
+            .expect(201)
+        ).body as Stop;
+      const [a, b] = [await stop('Indep A'), await stop('Indep B')];
+      const zone = (
+        await http()
+          .post('/api/v1/admin/zones')
+          .set('Authorization', admin.auth)
+          .send({ name: `Indep ${run}`, slug: `indep-${run}`, status: 'active' })
+          .expect(201)
+      ).body as { id: string };
+      for (const s of [a, b]) {
+        await http()
+          .patch(`/api/v1/admin/stops/${s.id}`)
+          .set('Authorization', admin.auth)
+          .send({ zoneId: zone.id })
+          .expect(200);
+      }
+      await http()
+        .put(`${url}/taxi/stretch-fares`)
+        .set('Authorization', admin.auth)
+        .send({
+          fares: [{ stopIds: [a.id, b.id], mode: 'motorcycle', amount: '2.00', currency: 'USD' }],
+        })
+        .expect(200);
+      const passenger = await person();
+      const ride = (
+        await http()
+          .post('/api/v1/me/taxi-rides')
+          .set('Authorization', passenger.auth)
+          .send({
+            kind: 'stretch',
+            fromStopId: a.id,
+            toStopId: b.id,
+            mode: 'motorcycle',
+            address: 'Calle 1, casa verde',
+            passengers: 1,
+          })
+          .expect(201)
+      ).body as TaxiRide;
+      const accept = (vehicleId: string) =>
+        http()
+          .post(`/api/v1/me/taxi/rides/${ride.id}/accept`)
+          .set('Authorization', driver.auth)
+          .send({ organizationId: line.id, vehicleId });
+      expect(reason(await accept(linesVehicle.id).expect(409))).toBe('VEHICLE_NOT_YOURS');
+      await accept(own.id).expect(200);
+
+      // --- Platform admins follow the line from Administración.
+      const lines = (
+        await http()
+          .get('/api/v1/admin/independent-lines')
+          .set('Authorization', admin.auth)
+          .expect(200)
+      ).body as IndependentLine[];
+      expect(lines.find((l) => l.organization.id === line.id)).toMatchObject({
+        drivers: 1,
+        vehicles: 2,
+        pendingApplications: 0,
+      });
+      await http()
+        .get('/api/v1/admin/independent-lines')
+        .set('Authorization', reviewer.auth)
+        .expect(403);
+    },
+  );
+});

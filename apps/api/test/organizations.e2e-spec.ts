@@ -698,6 +698,7 @@ describe.runIf(expectDatabase)('Organizations (e2e)', () => {
         legalName: name,
         tradeName: null,
         state: null,
+        operatedByPlatform: false,
         city: 'Maracay',
       });
       expect(found.map((o) => o.id)).not.toContain(pending.organization.id);

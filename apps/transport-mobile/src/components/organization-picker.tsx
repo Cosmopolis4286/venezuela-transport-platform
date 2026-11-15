@@ -27,9 +27,14 @@ export function OrganizationPicker({
   const results = useApi<OrganizationDirectoryEntry[]>(
     selected ? null : `/organizations/directory?q=${encodeURIComponent(debounced)}`,
   );
-  const matching = (results.data ?? []).filter((organization) =>
-    ROLES_BY_ORGANIZATION_TYPE[organization.type].includes(role),
-  );
+  // The platform's lines for independent drivers (ADR-039) go first: they take drivers only.
+  const matching = (results.data ?? [])
+    .filter(
+      (organization) =>
+        ROLES_BY_ORGANIZATION_TYPE[organization.type].includes(role) &&
+        (!organization.operatedByPlatform || role === 'driver'),
+    )
+    .sort((a, b) => Number(b.operatedByPlatform) - Number(a.operatedByPlatform));
 
   if (selected) {
     return (
@@ -48,7 +53,11 @@ export function OrganizationPicker({
         value={query}
         onChangeText={setQuery}
         autoCorrect={false}
-        hint="Si la eliges, podrá incorporarte cuando tu identidad sea verificada."
+        hint={
+          role === 'driver'
+            ? '¿No perteneces a una línea? Elige una línea de independientes de VTP: entras al aprobarse tu solicitud, con tu propio vehículo.'
+            : 'Si la eliges, podrá incorporarte cuando tu identidad sea verificada.'
+        }
       />
       {results.error ? <Banner tone="error">{results.error.userMessage}</Banner> : null}
       {matching.slice(0, 8).map((organization) => (
@@ -56,9 +65,11 @@ export function OrganizationPicker({
           <Body>{organization.tradeName ?? organization.legalName}</Body>
           <Row>
             <Body muted>
-              {[ORGANIZATION_TYPE_LABELS[organization.type], organization.city]
-                .filter(Boolean)
-                .join(' · ')}
+              {organization.operatedByPlatform
+                ? `Independientes · ${ORGANIZATION_TYPE_LABELS[organization.type]} de VTP · con tu vehículo`
+                : [ORGANIZATION_TYPE_LABELS[organization.type], organization.city]
+                    .filter(Boolean)
+                    .join(' · ')}
             </Body>
           </Row>
           <Button variant="secondary" title="Elegir" onPress={() => onSelect(organization)} />

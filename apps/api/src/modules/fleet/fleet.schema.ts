@@ -57,9 +57,17 @@ export const vehicles = pgTable(
     /** Set null if the layout is deleted (only possible while no schedule uses it). */
     seatLayoutId: uuid().references(() => seatLayouts.id, { onDelete: 'set null' }),
     active: boolean().notNull().default(true),
+    /**
+     * The driver who owns it, for vehicles brought by independent drivers to a line the platform
+     * runs (ADR-039): only they drive it. Null for the organization's own vehicles.
+     */
+    ownerUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
     ...timestamps,
   },
-  (t) => [uniqueIndex('vehicles_organization_plate_key').on(t.organizationId, t.plate)],
+  (t) => [
+    uniqueIndex('vehicles_organization_plate_key').on(t.organizationId, t.plate),
+    index('vehicles_owner_idx').on(t.ownerUserId),
+  ],
 );
 
 export type VehicleRow = typeof vehicles.$inferSelect;

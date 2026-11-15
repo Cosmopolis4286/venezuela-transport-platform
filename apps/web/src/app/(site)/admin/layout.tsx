@@ -38,6 +38,7 @@ const SECTIONS: [href: string, label: string, permission: PlatformPermission][] 
   ['/admin/refunds', 'Reembolsos', 'finance.manage'],
   ['/admin/fiscal', 'Facturación', 'finance.manage'],
   ['/admin/trip-packs', 'Paquetes', 'products.manage'],
+  ['/admin/independents', 'Independientes', 'independents.manage'],
   ['/admin/metrics', 'Métricas', 'metrics.view'],
 ];
 

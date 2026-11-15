@@ -1,7 +1,10 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module.js';
 import { IdentityModule } from '../identity/identity.module.js';
-import { AdminOrganizationsController } from './admin-organizations.controller.js';
+import {
+  AdminIndependentLinesController,
+  AdminOrganizationsController,
+} from './admin-organizations.controller.js';
 import { InvitationsService } from './invitations.service.js';
 import { MeOrganizationsController } from './me-organizations.controller.js';
 import { OrganizationAccessGuard } from './organization-access.js';
@@ -14,7 +17,12 @@ import { OrganizationsService } from './organizations.service.js';
  */
 @Module({
   imports: [IdentityModule, AuditModule],
-  controllers: [OrganizationsController, MeOrganizationsController, AdminOrganizationsController],
+  controllers: [
+    OrganizationsController,
+    MeOrganizationsController,
+    AdminOrganizationsController,
+    AdminIndependentLinesController,
+  ],
   providers: [OrganizationsService, InvitationsService, OrganizationAccessGuard],
   exports: [OrganizationsService, OrganizationAccessGuard],
 })

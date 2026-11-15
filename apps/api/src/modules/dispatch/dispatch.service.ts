@@ -197,6 +197,15 @@ export class DispatchService {
     ) {
       throw invalid('The driver must be a member whose role drives');
     }
+    // A line the platform runs: an independent driver's vehicle goes only with its owner (ADR-039).
+    if (
+      access.organization.operatedByPlatform &&
+      vehicle?.ownerUserId &&
+      input.driverUserId &&
+      vehicle.ownerUserId !== input.driverUserId
+    ) {
+      throw conflict('Independent drivers use only their own vehicle', 'VEHICLE_NOT_YOURS');
+    }
     const trip = await this.trips.ensure(organizationId, input.scheduleId, input.serviceDate);
     if (trip.status !== 'scheduled') throw conflict('This trip is cancelled', 'TRIP_CANCELLED');
     const [schedule] = await this.database.db

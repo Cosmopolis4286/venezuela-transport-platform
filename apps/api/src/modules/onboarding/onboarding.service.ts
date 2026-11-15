@@ -15,7 +15,7 @@ import {
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { AppConfigService } from '../../config/app-config.service.js';
-import { DatabaseService } from '../../database/database.service.js';
+import { DatabaseService, type Transaction } from '../../database/database.service.js';
 import { EXTENSION_FOR, detectDocumentType } from '../../storage/file-type.js';
 import { FILE_STORAGE, type FileStorage } from '../../storage/file-storage.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -23,7 +23,8 @@ import type { Authenticated, RequestMeta } from '../identity/sessions.service.js
 import { UsersService } from '../identity/users.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import type { OrganizationAccess } from '../organizations/organization-access.js';
-import type { OrganizationRow } from '../organizations/organizations.schema.js';
+import { vehicles } from '../fleet/fleet.schema.js';
+import { memberships, type OrganizationRow } from '../organizations/organizations.schema.js';
 import { OrganizationsService } from '../organizations/organizations.service.js';
 import {
   applicationDocuments,
@@ -349,6 +350,16 @@ export class OnboardingService {
           : input.decision === 'reject'
             ? 'rejected'
             : 'changes_requested';
+      // An independent driver approved for a line the platform runs joins it at once, with their
+      // vehicle in its fleet marked as theirs (ADR-039): the platform already reviewed them.
+      const independentLine =
+        status === 'approved' && application.organizationId
+          ? await this.organizations.findById(application.organizationId)
+          : undefined;
+      const joinsNow = !!independentLine?.operatedByPlatform && independentLine.status === 'active';
+      if (joinsNow) {
+        await this.joinIndependentLine(tx, independentLine!, application);
+      }
       const [updated] = await tx
         .update(applications)
         .set({
@@ -357,7 +368,11 @@ export class OnboardingService {
           reviewedBy: reviewer.user.id,
           reviewedAt: new Date(),
           organizationDecision:
-            status === 'approved' && application.organizationId ? 'pending' : null,
+            status === 'approved' && application.organizationId
+              ? joinsNow
+                ? 'accepted'
+                : 'pending'
+              : null,
         })
         .where(eq(applications.id, applicationId))
         .returning();
@@ -387,6 +402,57 @@ export class OnboardingService {
       reference: { key: 'applicationId', id: applicationId },
     });
     return this.toDto(row);
+  }
+
+  /**
+   * Adds an approved independent driver to a line the platform runs, with their own vehicle
+   * (ADR-039). A vehicle with that plate already in the line must be theirs (a second approval
+   * after leaving the line); someone else's is a conflict for the reviewer to sort out.
+   */
+  private async joinIndependentLine(
+    tx: Transaction,
+    line: OrganizationRow,
+    application: ApplicationRow,
+  ): Promise<void> {
+    if (application.desiredRole !== 'driver' || !application.vehicle) {
+      throw ApiException.conflict(
+        'Independent drivers must register their own vehicle',
+        'INDEPENDENT_NEEDS_VEHICLE',
+      );
+    }
+    const [member] = await tx
+      .select({ userId: memberships.userId })
+      .from(memberships)
+      .where(
+        and(eq(memberships.organizationId, line.id), eq(memberships.userId, application.userId)),
+      )
+      .limit(1);
+    if (!member) {
+      await this.organizations.addMember(tx, line.id, application.userId, 'driver');
+    }
+    const { plate, make, model, year, color } = application.vehicle;
+    const [existing] = await tx
+      .select()
+      .from(vehicles)
+      .where(and(eq(vehicles.organizationId, line.id), eq(vehicles.plate, plate)))
+      .limit(1);
+    if (existing && existing.ownerUserId !== application.userId) {
+      throw ApiException.conflict(
+        'Another vehicle with this plate is already in the line',
+        'VEHICLE_PLATE_TAKEN',
+      );
+    }
+    if (existing) {
+      await tx.update(vehicles).set({ active: true }).where(eq(vehicles.id, existing.id));
+      return;
+    }
+    await tx.insert(vehicles).values({
+      organizationId: line.id,
+      plate,
+      label: `${make} ${model} ${year} · ${color}`,
+      mode: line.type === 'moto_line' ? 'motorcycle' : 'car',
+      ownerUserId: application.userId,
+    });
   }
 
   // ── Target organization ─────────────────────────────────────────────────
@@ -495,6 +561,19 @@ export class OnboardingService {
         throw badRequest('Choose an active organization');
       if (!roleAllowedFor(organization.type, input.desiredRole)) {
         throw badRequest(`A ${organization.type} does not have the role ${input.desiredRole}`);
+      }
+      // A line the platform runs (ADR-039) takes only drivers who bring their own vehicle; its
+      // staff are invited, not applicants.
+      if (organization.operatedByPlatform) {
+        if (input.desiredRole !== 'driver') {
+          throw badRequest('The independent drivers line only takes drivers');
+        }
+        if (!input.providesVehicle || !input.vehicle) {
+          throw ApiException.conflict(
+            'Independent drivers must register their own vehicle',
+            'INDEPENDENT_NEEDS_VEHICLE',
+          );
+        }
       }
     }
 

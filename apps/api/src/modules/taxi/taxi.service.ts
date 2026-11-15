@@ -998,7 +998,9 @@ export class TaxiService {
       requests,
       lines: lines.map((line, i) => ({
         organization: { id: line.id, legalName: line.legalName, tradeName: line.tradeName },
-        vehicles: fleet[i]!.filter((v) => v.active).map((v) => ({
+        vehicles: fleet[i]!.filter(
+          (v) => v.active && (!line.operatedByPlatform || v.owner?.userId === userId),
+        ).map((v) => ({
           id: v.id,
           plate: v.plate,
           label: v.label,
@@ -1202,6 +1204,10 @@ export class TaxiService {
       throw conflict('The taxi line is not active', 'TAXI_LINE_INACTIVE');
     const vehicle = await this.vehicles.require(line.id, input.vehicleId);
     if (!vehicle.active) throw conflict('This vehicle is inactive', 'VEHICLE_INACTIVE');
+    // On a line the platform runs, each independent driver drives only their own vehicle (ADR-039).
+    if (line.operatedByPlatform && vehicle.ownerUserId !== driverUserId) {
+      throw conflict('Independent drivers use only their own vehicle', 'VEHICLE_NOT_YOURS');
+    }
     await expireTaxiRequests(this.database.db);
     const [ride] = await this.database.db.select().from(taxiRides).where(eq(taxiRides.id, rideId));
     if (!ride) throw notFound();

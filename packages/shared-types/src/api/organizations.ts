@@ -158,6 +158,8 @@ export const PLATFORM_PERMISSIONS = [
   'products.manage',
   /** Platform metrics. */
   'metrics.view',
+  /** Create the lines the platform runs for independent drivers (ADR-039). */
+  'independents.manage',
 ] as const;
 export type PlatformPermission = (typeof PLATFORM_PERMISSIONS)[number];
 
@@ -208,6 +210,8 @@ export interface Organization {
   email: string | null;
   state: string | null;
   city: string | null;
+  /** A line the platform runs for independent drivers (ADR-039). */
+  operatedByPlatform: boolean;
   createdAt: string;
 }
 
@@ -256,8 +260,29 @@ export interface ReceivedInvitation {
  */
 export type OrganizationDirectoryEntry = Pick<
   Organization,
-  'id' | 'type' | 'legalName' | 'tradeName' | 'state' | 'city'
+  'id' | 'type' | 'legalName' | 'tradeName' | 'state' | 'city' | 'operatedByPlatform'
 >;
+
+/**
+ * `POST /api/v1/admin/independent-lines` (ADR-039): a taxi or motorcycle line the platform runs
+ * for independent drivers. Active at once; the admin who creates it becomes its owner.
+ */
+export interface CreateIndependentLineRequest {
+  type: 'taxi_line' | 'moto_line';
+  legalName: string;
+  tradeName?: string;
+  /** The platform's RIF for this line (each organization needs its own). */
+  rif: string;
+}
+
+/** `GET /api/v1/admin/independent-lines`: each line with its drivers and vehicles. */
+export interface IndependentLine {
+  organization: Organization;
+  drivers: number;
+  vehicles: number;
+  /** Approved independent drivers' applications still in review. */
+  pendingApplications: number;
+}
 
 /** `POST /api/v1/organizations` — the creator becomes owner; status starts as `pending_review`. */
 export interface CreateOrganizationRequest {

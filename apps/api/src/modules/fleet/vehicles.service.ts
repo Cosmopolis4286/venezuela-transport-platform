@@ -17,6 +17,7 @@ import { and, asc, eq, inArray } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService } from '../../database/database.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import { users } from '../identity/identity.schema.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import type { OrganizationAccess } from '../organizations/organization-access.js';
 import {
@@ -47,9 +48,10 @@ export class VehiclesService {
 
   async list(organizationId: string): Promise<FleetVehicle[]> {
     const rows = await this.database.db
-      .select({ vehicle: vehicles, layout: layoutColumns })
+      .select({ vehicle: vehicles, layout: layoutColumns, owner: ownerColumns })
       .from(vehicles)
       .leftJoin(seatLayouts, eq(seatLayouts.id, vehicles.seatLayoutId))
+      .leftJoin(users, eq(users.id, vehicles.ownerUserId))
       .where(eq(vehicles.organizationId, organizationId))
       .orderBy(asc(vehicles.plate));
     const docs = rows.length
@@ -64,10 +66,11 @@ export class VehiclesService {
           )
       : [];
     const today = todayInVenezuela();
-    return rows.map(({ vehicle, layout }) =>
+    return rows.map(({ vehicle, layout, owner }) =>
       toVehicle(
         vehicle,
         layout,
+        owner?.userId ? owner : null,
         docs.filter((d) => d.vehicleId === vehicle.id),
         today,
       ),
@@ -247,9 +250,17 @@ const layoutColumns = {
   capacity: seatLayouts.capacity,
 };
 
+/** The independent driver who owns the vehicle (ADR-039), when there is one. */
+const ownerColumns = {
+  userId: users.id,
+  firstName: users.firstName,
+  lastName: users.lastName,
+};
+
 function toVehicle(
   row: VehicleRow,
   layout: FleetVehicle['seatLayout'],
+  owner: FleetVehicle['owner'],
   docs: VehicleDocumentRow[],
   today: string,
 ): FleetVehicle {
@@ -271,6 +282,7 @@ function toVehicle(
     mode: row.mode,
     seatLayout: layout,
     active: row.active,
+    owner,
     documents,
     documentAlert: worstDocumentStatus(documents.map((d) => d.status)),
     createdAt: row.createdAt.toISOString(),

@@ -79,7 +79,10 @@ function ApplicationForm({ existing }: { existing: ProviderApplication | null })
   const set = (key: keyof typeof form) => (value: string) =>
     setForm((current) => ({ ...current, [key]: value }));
 
-  const withVehicle = role === 'driver' && providesVehicle;
+  // A line the platform runs for independent drivers takes only drivers with their own vehicle.
+  const independent =
+    !!organization && 'operatedByPlatform' in organization && !!organization.operatedByPlatform;
+  const withVehicle = role === 'driver' && (providesVehicle || independent);
   const badBirthDate = form.birthDate !== '' && !isIsoDate(form.birthDate);
   const complete =
     form.firstName.trim() &&
@@ -181,16 +184,23 @@ function ApplicationForm({ existing }: { existing: ProviderApplication | null })
 
       {role === 'driver' ? (
         <>
-          <Segmented
-            label="¿Trabajas con vehículo propio?"
-            options={[
-              { value: 'no', label: 'No' },
-              { value: 'yes', label: 'Sí (por ejemplo, taxi)' },
-            ]}
-            value={providesVehicle ? 'yes' : 'no'}
-            onChange={(value) => setProvidesVehicle(value === 'yes')}
-          />
-          {providesVehicle ? (
+          {independent ? (
+            <Body muted>
+              Como independiente trabajas con tu propio vehículo: regístralo con su carnet de
+              circulación y su póliza RCV. Solo tú podrás usarlo en la línea.
+            </Body>
+          ) : (
+            <Segmented
+              label="¿Trabajas con vehículo propio?"
+              options={[
+                { value: 'no', label: 'No' },
+                { value: 'yes', label: 'Sí (por ejemplo, taxi)' },
+              ]}
+              value={providesVehicle ? 'yes' : 'no'}
+              onChange={(value) => setProvidesVehicle(value === 'yes')}
+            />
+          )}
+          {withVehicle ? (
             <>
               <Subheading>Vehículo</Subheading>
               <Field

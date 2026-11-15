@@ -109,6 +109,13 @@ async function Vehicles({ params }: { params: Promise<{ organizationId: string }
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium tabular-nums">{vehicle.plate}</span>
                   <Badge variant="outline">{TRANSPORT_MODE_LABELS[vehicle.mode]}</Badge>
+                  {vehicle.owner ? (
+                    <span className="text-sm text-muted-foreground">
+                      De{' '}
+                      {[vehicle.owner.firstName, vehicle.owner.lastName].filter(Boolean).join(' ')}{' '}
+                      (independiente: solo lo usa su dueño)
+                    </span>
+                  ) : null}
                   {vehicle.label ? (
                     <span className="text-sm text-muted-foreground">{vehicle.label}</span>
                   ) : null}

@@ -260,6 +260,13 @@
       "when": 1794697322867,
       "tag": "0036_finance_support_accountant_supervisor_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1794715690487,
+      "tag": "0037_independent_drivers",
+      "breakpoints": true
     }
   ]
 }
