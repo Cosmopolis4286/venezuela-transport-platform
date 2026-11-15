@@ -735,3 +735,22 @@ la API los asigna a la línea de la plataforma de ese vehículo, de la que hay *
 (`organizations_platform_line_key`). El conductor ve «VTP · Conductor independiente» y el pasajero
 el nombre comercial de la línea («VTP»), nunca una «línea de la plataforma». La póliza RCV revisada
 en el KYC pasa a ser el seguro del vehículo, y ningún vehículo con la póliza vencida toma viajes.
+
+## ADR-040: Conductores «en línea» o «desconectados»
+
+**Decisión** (del dueño del producto, primera etapa del plan «al estilo de las apps de viajes»).
+Cada conductor de taxi o moto elige en la app si está **en línea** (`PUT /me/taxi/availability`).
+Solo los conductores en línea ven las solicitudes, las aceptan (`DRIVER_OFFLINE` si no) y reciben
+sus avisos push. Cada vez que la app consulta el tablero (lo hace sola cada pocos segundos) el
+conductor sigue en línea; si pasan `DRIVER_ONLINE_TIMEOUT_MINUTES` (10) sin que la abra, queda
+desconectado solo. Para conectarse hay que ser conductor de una línea de taxis o de mototaxis
+activa (`DRIVER_NO_LINE`). El despachador de la línea ve quién está en línea y puede seguir
+asignando a cualquier conductor libre.
+
+**Por qué.** Mandar pedidos y avisos a quien no está trabajando hace que los pasajeros esperen en
+vano y molesta a los conductores. Es además la base de la siguiente etapa: ofrecer cada pedido
+primero a los conductores en línea más cercanos.
+
+**Compromisos.** Se guarda solo si está en línea y cuándo abrió la app (no la ubicación), un
+registro por conductor. Un conductor que se queda sin señal más de 10 minutos debe volver a
+conectarse.

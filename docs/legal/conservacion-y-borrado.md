@@ -18,6 +18,7 @@ revisión legal (ver [README](README.md#lista-para-el-abogado)).
 | Registro de avisos                            | 12 meses                          | Soporte                                                                                 | Se borra a los 12 meses                                                                  |
 | Mensajes de WhatsApp                          | 90 días                           | Soporte                                                                                 | Se borran a los 90 días                                                                  |
 | Chats de WhatsApp (número, nombre)            | 1 año sin mensajes                | Contrato; soporte                                                                       | Se borran al año sin mensajes                                                            |
+| Disponibilidad de conductores                 | Mientras exista la cuenta         | Contrato                                                                                | Un registro por conductor que se reemplaza; se borra al borrar la cuenta                 |
 | Auditoría                                     | 2 años                            | Seguridad; prueba                                                                       | Se borra a los 2 años                                                                    |
 
 **Purga automática:** la API ejecuta una vez al día `RetentionService`

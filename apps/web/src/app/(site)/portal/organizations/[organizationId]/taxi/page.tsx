@@ -221,6 +221,8 @@ async function Taxi({ params }: { params: Promise<{ organizationId: string }> })
               <CardTitle>Solicitudes ({board.requests.length})</CardTitle>
               <CardDescription>
                 Se actualiza sola. Asigna un conductor libre y un vehículo, con la tarifa acordada.
+                Conductores en línea ahora: {board.drivers.filter((d) => d.online).length} de{' '}
+                {board.drivers.length} (solo ellos ven las solicitudes en su app).
               </CardDescription>
             </div>
             {board.requests.length === 0 ? (
@@ -260,7 +262,11 @@ async function Taxi({ params }: { params: Promise<{ organizationId: string }> })
                                 disabled={driver.busy}
                               >
                                 {person(driver)}
-                                {driver.busy ? ' (en un viaje)' : ''}
+                                {driver.busy
+                                  ? ' (en un viaje)'
+                                  : driver.online
+                                    ? ' (en línea)'
+                                    : ' (desconectado)'}
                               </option>
                             ))}
                           </Select>

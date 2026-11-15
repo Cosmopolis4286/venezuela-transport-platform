@@ -91,6 +91,35 @@ export default function TaxiScreen() {
     >
       {board.error ? <Banner tone="error">{board.error.userMessage}</Banner> : null}
       {message ? <Banner tone={message.tone}>{message.text}</Banner> : null}
+      {data && data.lines.length > 0 ? (
+        // "En línea" / "Desconectado": only online drivers see, take and hear about requests.
+        <Card>
+          <Badge
+            label={data.online ? 'En línea' : 'Desconectado'}
+            tone={data.online ? 'success' : 'neutral'}
+          />
+          <Body muted>
+            {data.online
+              ? 'Recibes solicitudes y avisos. Si cierras la app un rato, te desconectamos solos.'
+              : 'No recibes solicitudes ni avisos. Conéctate cuando estés listo para trabajar.'}
+          </Body>
+          <Button
+            title={data.online ? 'Desconectarme' : 'Conectarme'}
+            variant={data.online ? 'secondary' : 'primary'}
+            loading={busy}
+            onPress={() =>
+              void run(
+                () =>
+                  api.request('/me/taxi/availability', {
+                    method: 'PUT',
+                    body: { online: !data.online },
+                  }),
+                data.online ? 'Te desconectaste.' : 'Estás en línea: te llegarán las solicitudes.',
+              )
+            }
+          />
+        </Card>
+      ) : null}
       {current ? (
         <>
           <Heading>Tu viaje</Heading>
@@ -209,6 +238,8 @@ export default function TaxiScreen() {
             <Body muted>
               Solo los conductores de una línea de taxis o de mototaxis activa ven las solicitudes.
             </Body>
+          ) : !data.online ? (
+            <Body muted>Estás desconectado: conéctate para ver y tomar solicitudes.</Body>
           ) : data.requests.length === 0 ? (
             <Body muted>
               No hay solicitudes en tus terminales ni en tus tramos. Esta lista se actualiza sola.

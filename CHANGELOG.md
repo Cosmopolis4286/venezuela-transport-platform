@@ -47,6 +47,10 @@ pull request.
 
 ### Agregado
 
+- **Conductores en línea o desconectados** (ADR-040): los conductores de taxi y moto tocan
+  **Conectarme** en la app; solo los conectados ven, toman y reciben avisos de las solicitudes, y se
+  desconectan solos tras 10 minutos sin abrir la app. El despachador de la línea ve quién está en
+  línea. Primera etapa del plan «al estilo de las apps de viajes».
 - **Conductores independientes** (ADR-039): los taxistas y mototaxistas sin línea trabajan en
   una línea operada por la plataforma (Administración → Independientes). Envían su KYC con su
   propio vehículo, entran solos al aprobarse y solo usan su vehículo; la plataforma maneja la

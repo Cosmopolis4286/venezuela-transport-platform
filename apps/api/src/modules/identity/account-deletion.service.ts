@@ -8,7 +8,7 @@ import { vehicles } from '../fleet/fleet.schema.js';
 import { pushDevices } from '../notifications/notifications.schema.js';
 import { memberships } from '../organizations/organizations.schema.js';
 import { payments } from '../payments/payments.schema.js';
-import { taxiRides } from '../taxi/taxi.schema.js';
+import { driverPresence, taxiRides } from '../taxi/taxi.schema.js';
 import { tripPacks } from '../trip-packs/trip-packs.schema.js';
 import { otpChallenges, sessions, users } from './identity.schema.js';
 import type { Authenticated, RequestMeta } from './sessions.service.js';
@@ -148,6 +148,7 @@ export class AccountDeletionService {
         .set({ revokedAt: new Date(), revokedReason: 'account_deleted' })
         .where(eq(sessions.userId, userId));
       await tx.delete(pushDevices).where(eq(pushDevices.userId, userId));
+      await tx.delete(driverPresence).where(eq(driverPresence.userId, userId));
       // Fiscal documents (`invoices`) keep the buyer's name and ID: the tax code requires keeping
       // issued invoices, and a paid booking's draft is issued all the same (ADR-031).
       await tx

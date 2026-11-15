@@ -27,8 +27,15 @@ Para taxistas y mototaxistas independientes, con su propio carro o moto:
 4. **Enviar a revisión**. Te avisamos (push y correo) cuando VTP la revisa; si pide cambios o
    rechaza un documento, lo verás con el motivo.
 5. Cuando la aprueban, ya eres conductor de VTP: en el inicio aparece **VTP · Conductor
-   independiente** con **Solicitudes de taxi** (o de moto). Tomas viajes solo con tu vehículo, y
+   independiente** con **Solicitudes de taxi** (o de moto). Ahí toca **Conectarme** cuando vayas a
+   trabajar: solo en línea ves y tomas solicitudes y te llegan los avisos. Tomas viajes solo con tu vehículo, y
    si tu póliza RCV vence no podrás tomar viajes hasta renovarla.
+
+## Taxis y motos: en línea o desconectado
+
+En **Solicitudes de taxi** (o de moto) toca **Conectarme** cuando empieces a trabajar y
+**Desconectarme** al terminar. Solo en línea ves las solicitudes, las tomas y te llegan los avisos.
+Si cierras la app más de 10 minutos, te desconectamos solos.
 
 ## 3. Mis viajes (conductores de autobús)
 
