@@ -11,6 +11,10 @@ export const LEGAL_DOCUMENTS = [
   { slug: 'privacidad', file: 'politica-de-privacidad.md' },
   { slug: 'cancelacion-y-reembolsos', file: 'politica-de-cancelacion-y-reembolsos.md' },
   { slug: 'condiciones-para-empresas', file: 'condiciones-para-empresas.md' },
+  {
+    slug: 'conductores-independientes',
+    file: 'condiciones-para-conductores-independientes.md',
+  },
   { slug: 'cookies', file: 'politica-de-cookies.md' },
 ] as const;
 

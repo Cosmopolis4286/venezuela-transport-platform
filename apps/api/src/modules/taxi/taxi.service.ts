@@ -152,14 +152,23 @@ async function settleCompletedRide(
   feesCollected = true,
 ) {
   if (ride.tripPackId) {
-    await recordRideEarning(tx, {
-      id: ride.id,
-      organizationId: ride.organizationId!,
-      passengers: ride.passengers,
-      fareAmount: ride.fareAmount!,
-      fareCurrency: ride.fareCurrency!,
-      tripPackId: ride.tripPackId,
-    });
+    // On a line the platform runs, the fare of a pack ride is the independent driver's (ADR-039).
+    const [line] = await tx
+      .select({ operatedByPlatform: organizations.operatedByPlatform })
+      .from(organizations)
+      .where(eq(organizations.id, ride.organizationId!));
+    await recordRideEarning(
+      tx,
+      {
+        id: ride.id,
+        organizationId: ride.organizationId!,
+        passengers: ride.passengers,
+        fareAmount: ride.fareAmount!,
+        fareCurrency: ride.fareCurrency!,
+        tripPackId: ride.tripPackId,
+      },
+      line?.operatedByPlatform ? 'driver' : 'organization',
+    );
   }
   // The driver says the passenger did not pay them: they stay owed for the next ride.
   if (!feesCollected) return;

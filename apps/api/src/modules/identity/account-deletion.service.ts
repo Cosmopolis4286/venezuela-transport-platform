@@ -4,6 +4,7 @@ import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService } from '../../database/database.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { bookingPassengers, bookings } from '../bookings/bookings.schema.js';
+import { vehicles } from '../fleet/fleet.schema.js';
 import { pushDevices } from '../notifications/notifications.schema.js';
 import { memberships } from '../organizations/organizations.schema.js';
 import { payments } from '../payments/payments.schema.js';
@@ -159,6 +160,11 @@ export class AccountDeletionService {
         })
         .where(eq(bookings.userId, userId));
       await tx.delete(memberships).where(eq(memberships.userId, userId));
+      // An independent driver's vehicles (ADR-039) stop running and are no longer tied to them.
+      await tx
+        .update(vehicles)
+        .set({ ownerUserId: null, active: false })
+        .where(eq(vehicles.ownerUserId, userId));
       await tx
         .update(users)
         .set({

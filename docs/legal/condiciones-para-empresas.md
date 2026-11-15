@@ -18,6 +18,11 @@ existencia, su representación, su inscripción ante el SENIAT y sus permisos de
 falsa o incompleta, cuando la Empresa incumpla estas Condiciones o la ley, o por orden de una
 autoridad competente, notificando el motivo.
 
+1.3. Mientras la Empresa esté **en revisión**, puede preparar su cuenta (equipo, flota, rutas en
+borrador), pero no vender, despachar, validar boletos ni prestar viajes por la Plataforma. Si está
+**suspendida o rechazada**, conserva el acceso para consultar su información, pero no puede operar;
+los viajes ya vendidos se rigen por la sección 10.
+
 ## 2. Obligaciones de la Empresa
 
 La Empresa declara y garantiza, y se obliga a mantener mientras use la Plataforma, que:
@@ -44,8 +49,9 @@ La Empresa declara y garantiza, y se obliga a mantener mientras use la Plataform
 ## 3. Equipo y accesos
 
 3.1. La Empresa invita a su personal con un rol (administrador, despachador, taquilla, conductor,
-inspector) y es responsable de lo que hacen con sus accesos. Debe retirar el acceso a quien deje
-de trabajar con ella.
+inspector, contador, supervisor), cada uno con los permisos que muestra el portal, y es
+responsable de lo que hacen con sus accesos. Solo los **dueños** pueden nombrar, cambiar o retirar
+administradores y dueños. La Empresa debe retirar el acceso a quien deje de trabajar con ella.
 
 3.2. Los conductores y el personal que se postulan pasan una verificación de identidad y
 documentos (KYC) hecha por {{nombre_comercial}}; la Empresa decide si los incorpora. La
@@ -110,6 +116,13 @@ Cancelación y Reembolsos, completa. El conductor del siguiente viaje del pasaje
 la tasa en efectivo junto con su tarifa; si ese conductor es de otra línea, {{nombre_comercial}}
 le descuenta la tasa a esa línea en su estado de cuenta y se la acredita a la línea que salió.
 Las líneas se obligan a cobrar las tasas que la Plataforma les indique.
+
+4.8. **Línea de conductores independientes.** {{nombre_comercial}} administra una línea para
+taxistas y mototaxistas que no pertenecen a ninguna línea, que puede atender los mismos tramos y
+terminales que la Empresa. {{nombre_comercial}} se obliga a no darle preferencia a esa línea: cada
+solicitud se ofrece por igual a las líneas y conductores que atienden el tramo o terminal y es del
+primero que la acepta, y {{nombre_comercial}} no usa la información comercial de la Empresa
+(tarifas que aún no publica, saldos, clientes) para favorecer a su línea.
 
 ## 5. Cancelaciones y reembolsos
 

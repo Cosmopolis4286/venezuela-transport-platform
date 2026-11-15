@@ -213,6 +213,32 @@ export class SettlementsService {
       .innerJoin(trips, eq(trips.id, bookings.tripId))
       .where(and(eq(settlementEntries.payee, 'driver'), scope))
       .groupBy(settlementEntries.organizationId, driver, settlementEntries.currency);
+    // Taxi and motorcycle rides paid to their driver: pack rides of independent drivers (ADR-039).
+    const rideDriver = sql<string | null>`${taxiRides.driverUserId}`;
+    earned.push(
+      ...(await db
+        .select({
+          organizationId: settlementEntries.organizationId,
+          driverId: rideDriver,
+          currency: settlementEntries.currency,
+          earned: total(settlementEntries.earned),
+        })
+        .from(settlementEntries)
+        .innerJoin(taxiRides, eq(taxiRides.id, settlementEntries.taxiRideId))
+        .where(
+          and(
+            eq(settlementEntries.payee, 'driver'),
+            driverUserId
+              ? eq(taxiRides.driverUserId, driverUserId)
+              : inArray(settlementEntries.organizationId, organizationIds),
+          ),
+        )
+        .groupBy(
+          settlementEntries.organizationId,
+          taxiRides.driverUserId,
+          settlementEntries.currency,
+        )),
+    );
     const paid = await db
       .select({
         organizationId: payouts.organizationId,
