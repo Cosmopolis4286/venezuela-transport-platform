@@ -3,7 +3,9 @@ import { assertNotGuest } from '../identity/guest.service.js';
 import {
   ROLE_PERMISSIONS,
   roleAllowedFor,
+  type CreateIndependentLineRequest,
   type CreateOrganizationRequest,
+  type IndependentLine,
   type Organization,
   type OrganizationDirectoryEntry,
   type OrganizationMember,
@@ -14,7 +16,7 @@ import {
   type ReviewOrganizationRequest,
   type UpdateOrganizationRequest,
 } from '@vtp/shared-types';
-import { and, asc, count, desc, eq, ilike, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { DatabaseService, type Transaction } from '../../database/database.service.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -101,6 +103,81 @@ export class OrganizationsService {
       metadata: { type: organization.type },
     });
     return this.summary(organization, 'owner');
+  }
+
+  /**
+   * A line the platform runs for independent drivers (ADR-039). Platform admins only (the
+   * controller checks it): active at once, and the admin who creates it becomes its owner, so the
+   * platform's staff manage it from the portal like any other line.
+   */
+  async createIndependentLine(
+    auth: Authenticated,
+    input: CreateIndependentLineRequest,
+    meta: RequestMeta,
+  ): Promise<OrganizationMembershipSummary> {
+    assertNotGuest(auth);
+    const organization = await this.database.db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(organizations)
+        .values({
+          type: input.type,
+          legalName: input.legalName.trim(),
+          tradeName: input.tradeName?.trim() || null,
+          rif: this.requireRif(input.rif),
+          status: 'active',
+          operatedByPlatform: true,
+          createdBy: auth.user.id,
+          reviewedBy: auth.user.id,
+          reviewedAt: new Date(),
+        })
+        .onConflictDoNothing({ target: organizations.rif })
+        .returning();
+      if (!created) {
+        throw ApiException.conflict(
+          'An organization with this RIF is already registered',
+          'RIF_TAKEN',
+        );
+      }
+      await tx
+        .insert(memberships)
+        .values({ organizationId: created.id, userId: auth.user.id, role: 'owner' });
+      return created;
+    });
+    await this.audit.record({
+      action: 'organization.independent_line_created',
+      actorUserId: auth.user.id,
+      targetType: 'organization',
+      targetId: organization.id,
+      ip: meta.ip,
+      metadata: { type: organization.type },
+    });
+    return this.summary(organization, 'owner');
+  }
+
+  /** The platform's lines for independent drivers, with how many drivers, vehicles and pending KYC. */
+  async independentLines(): Promise<IndependentLine[]> {
+    const rows = await this.database.db
+      // The subqueries name `organizations.id` in full: in a one-table select Drizzle prints a bare
+      // `"id"`, which inside them would mean the subquery's own table.
+      .select({
+        organization: organizations,
+        drivers: sql<number>`(select count(*)::int from organization_memberships m
+          where m.organization_id = organizations.id and m.role = 'driver')`,
+        vehicles: sql<number>`(select count(*)::int from vehicles v
+          where v.organization_id = organizations.id and v.active)`,
+        pendingApplications: sql<number>`(select count(*)::int from provider_applications a
+          where a.organization_id = organizations.id
+            and a.status in ('submitted', 'changes_requested'))`,
+      })
+      .from(organizations)
+      .where(eq(organizations.operatedByPlatform, true))
+      .orderBy(asc(organizations.legalName));
+    return rows.map((r) => ({
+      organization: this.toDto(r.organization),
+      drivers: r.drivers,
+      vehicles: r.vehicles,
+      pendingApplications: r.pendingApplications,
+    }));
   }
 
   async findById(id: string): Promise<OrganizationRow | undefined> {
@@ -279,6 +356,7 @@ export class OrganizationsService {
         tradeName: organizations.tradeName,
         state: organizations.state,
         city: organizations.city,
+        operatedByPlatform: organizations.operatedByPlatform,
       })
       .from(organizations)
       .where(and(...conditions))
@@ -372,6 +450,7 @@ export class OrganizationsService {
       email: row.email,
       state: row.state,
       city: row.city,
+      operatedByPlatform: row.operatedByPlatform,
       createdAt: row.createdAt.toISOString(),
     };
   }

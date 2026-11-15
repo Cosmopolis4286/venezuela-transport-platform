@@ -133,6 +133,7 @@ secciones (`requirePlatformPermission` en `apps/web/src/lib/server/session.ts`).
 | `finance.manage` (pagos, cuentas, tasas, liquidaciones, pagos a empresas, reembolsos, facturación) |  ✅   |          |   ✅    |         |
 | `products.manage` (paquetes de viajes)                                                             |  ✅   |          |         |         |
 | `metrics.view` (métricas de la plataforma)                                                         |  ✅   |          |   ✅    |         |
+| `independents.manage` (líneas de independientes, ADR-039)                                          |  ✅   |          |         |         |
 
 No hay un endpoint HTTP para otorgar un rol de plataforma; alguien con acceso a la base de datos
 ejecuta:

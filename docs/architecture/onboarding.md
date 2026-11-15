@@ -21,6 +21,10 @@ revisor:                     reject (definitivo) ◀────┤
 organización (si se indicó una): accept → membresía con el rol pedido | decline
 ```
 
+- **Línea de independientes de la plataforma** (ADR-039): solo acepta conductores con vehículo
+  propio (carnet de circulación y RCV). Al aprobar la solicitud, la persona entra directo como
+  conductor, sin paso de aceptación de la organización (`organizationDecision = accepted`), y su
+  vehículo pasa a la flota de la línea como suyo.
 - Una sola solicitud **abierta** por persona (`draft`, `submitted`, `changes_requested`). Después
   de un rechazo la persona puede empezar otra.
 - El solicitante solo puede editar en `draft` o `changes_requested`.

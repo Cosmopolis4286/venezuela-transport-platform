@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  boolean,
   index,
   pgEnum,
   pgTable,
@@ -42,6 +43,11 @@ export const organizations = pgTable(
     reviewedBy: uuid().references(() => users.id, { onDelete: 'set null' }),
     reviewedAt: timestamp({ withTimezone: true }),
     reviewNotes: text(),
+    /**
+     * A taxi or motorcycle line the platform runs for independent drivers (ADR-039): only platform
+     * admins create it, its drivers use only their own vehicles and join when their KYC passes.
+     */
+    operatedByPlatform: boolean().notNull().default(false),
     ...timestamps,
   },
   (t) => [

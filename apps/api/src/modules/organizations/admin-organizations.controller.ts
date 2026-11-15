@@ -10,11 +10,19 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import type { Organization } from '@vtp/shared-types';
+import type {
+  IndependentLine,
+  Organization,
+  OrganizationMembershipSummary,
+} from '@vtp/shared-types';
 import { CurrentAuth, ReqMeta } from '../identity/auth.decorators.js';
 import { RequirePlatformPermission } from '../identity/platform-role.guard.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
-import { OrganizationStatusQueryDto, ReviewOrganizationDto } from './organizations.dto.js';
+import {
+  CreateIndependentLineDto,
+  OrganizationStatusQueryDto,
+  ReviewOrganizationDto,
+} from './organizations.dto.js';
 import { OrganizationsService } from './organizations.service.js';
 
 /** Platform staff: review queue for newly registered organizations. */
@@ -40,5 +48,28 @@ export class AdminOrganizationsController {
     @ReqMeta() meta: RequestMeta,
   ): Promise<Organization> {
     return this.organizations.review(organizationId, body, auth, meta);
+  }
+}
+
+/** Platform admins: the lines the platform runs for independent drivers (ADR-039). */
+@ApiTags('admin')
+@ApiBearerAuth()
+@RequirePlatformPermission('independents.manage')
+@Controller({ path: 'admin/independent-lines', version: '1' })
+export class AdminIndependentLinesController {
+  constructor(private readonly organizations: OrganizationsService) {}
+
+  @Get()
+  list(): Promise<IndependentLine[]> {
+    return this.organizations.independentLines();
+  }
+
+  @Post()
+  create(
+    @Body() body: CreateIndependentLineDto,
+    @CurrentAuth() auth: Authenticated,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<OrganizationMembershipSummary> {
+    return this.organizations.createIndependentLine(auth, body, meta);
   }
 }

@@ -3,6 +3,7 @@ import {
   ORGANIZATION_ROLES,
   ORGANIZATION_STATUSES,
   ORGANIZATION_TYPES,
+  type CreateIndependentLineRequest,
   type CreateInvitationRequest,
   type CreateOrganizationRequest,
   type OrganizationRole,
@@ -150,4 +151,26 @@ export class OrganizationDirectoryQueryDto {
   @IsString()
   @MaxLength(80)
   q?: string;
+}
+
+export class CreateIndependentLineDto implements CreateIndependentLineRequest {
+  @ApiProperty({ enum: ['taxi_line', 'moto_line'] })
+  @IsIn(['taxi_line', 'moto_line'])
+  type!: 'taxi_line' | 'moto_line';
+
+  @ApiProperty({ example: 'VTP Conductores Independientes – Mototaxis' })
+  @IsString()
+  @Length(2, 160)
+  legalName!: string;
+
+  @ApiPropertyOptional({ example: 'VTP Mototaxis' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  tradeName?: string;
+
+  @ApiProperty({ example: 'J-12345678-9' })
+  @IsString()
+  @MaxLength(20)
+  rif!: string;
 }

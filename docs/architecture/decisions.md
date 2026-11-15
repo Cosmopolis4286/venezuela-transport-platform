@@ -689,3 +689,37 @@ imitan WhatsApp Web) evita que Meta bloquee el número.
 ofrezca la coexistencia en Venezuela, un número dedicado. Si Meta empieza a cobrar las respuestas
 dentro de la ventana, se apaga con una variable. Los chats y mensajes son datos personales que
 también trata Meta: los mensajes se borran a los 90 días y los chats al año sin actividad.
+
+## ADR-039: Conductores independientes en una línea operada por la plataforma (híbrida, migrable)
+
+**Decisión** (del dueño del producto). Los taxistas y mototaxistas que no pertenecen a ninguna
+línea trabajan en una **línea operada por la plataforma**: una organización `taxi_line` o
+`moto_line` normal, marcada con `organizations.operated_by_platform`, que solo la administración
+de la plataforma puede crear (`POST /admin/independent-lines`, permiso `independents.manage`).
+
+- **Quién la administra.** El personal de la plataforma es miembro de esa línea con los roles de
+  siempre (dueño, administrador, despachador, supervisor, contador) y la maneja desde el mismo
+  portal: tarifas por tramo, terminales, despacho, calificaciones y liquidación.
+- **Cómo entra un independiente.** Envía su KYC eligiendo esa línea, como conductor y **con
+  vehículo propio** (licencia, certificado médico, carnet de circulación y RCV). Cuando un revisor
+  lo aprueba, entra solo a la línea como conductor y su vehículo pasa a la flota de la línea
+  marcado como suyo (`vehicles.owner_user_id`). No hay un segundo paso de aceptación: la
+  plataforma ya lo revisó.
+- **Cada uno con su vehículo.** En una línea de la plataforma, un conductor solo puede tomar
+  viajes con un vehículo suyo (`VEHICLE_NOT_YOURS`) y su app solo le muestra los suyos.
+- **Cobro.** Como en el resto de las líneas: el pasajero le paga al conductor (o con un paquete).
+
+**Por qué.** Reutiliza KYC, despacho, tarifas, calificaciones, tasas de cancelación y
+liquidaciones sin cambiar el modelo de viajes, con precios uniformes y un solo lugar para
+administrar a los independientes. Es reversible.
+
+**Camino a un perfil de conductor independiente propio (opción B).** La marca de la línea, el
+dueño de cada vehículo y el conductor de cada viaje (`taxi_rides.driver_user_id`) bastan para
+separar a los independientes más adelante: sus viajes, vehículos, calificaciones y tasas ya
+tienen persona. Migrar será permitir viajes sin organización, mover las tarifas de la línea a
+tarifas de la plataforma y sacar a los conductores de la línea, sin perder historial.
+
+**Compromisos.** Ante pasajeros y autoridades la plataforma aparece como operadora de esa línea:
+los términos y la política de privacidad deben decir que VTP **intermedia** con conductores
+verificados (pendiente de revisión legal). Las líneas privadas compiten con la de la plataforma
+en los mismos tramos; el pedido sigue siendo de la primera que lo toma.

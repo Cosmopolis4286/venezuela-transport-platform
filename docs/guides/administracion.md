@@ -176,6 +176,19 @@ Ver [fiscal.md](../architecture/fiscal.md).
 4. **Libros** (`/admin/fiscal/books`): libro de ventas y de compras del mes, con descarga en CSV
    para el contador. Las facturas de compra (hosting, servicios, etc.) se registran a mano.
 
+## Conductores independientes (`/admin/independents`, solo administradores)
+
+Para los taxistas y mototaxistas que no pertenecen a ninguna línea (ADR-039). **Nueva línea de
+independientes**: tipo (taxis o mototaxis), razón social y un RIF propio; queda activa y tú como
+dueña o dueño. Desde **Administrar en el portal** la manejas como cualquier línea: fija las
+tarifas por tramo, invita a tu equipo (despachadores, supervisores, contador) y sigue viajes,
+calificaciones y liquidación. La página muestra cuántos conductores y vehículos tiene cada línea y
+cuántas solicitudes esperan revisión.
+
+Los independientes envían su solicitud KYC eligiendo esa línea, con su propio vehículo. Cuando la
+apruebas en **Revisiones**, entran solos como conductores y su vehículo queda en la flota marcado
+como suyo: solo ellos pueden usarlo.
+
 ## Tareas periódicas sugeridas
 
 | Cada…  | Tarea                                                                         |

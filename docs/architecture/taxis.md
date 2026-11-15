@@ -193,6 +193,23 @@ avisan por el mismo chat los viajes de WhatsApp tomados (placa y precio), termin
 vencidos, solo dentro de las 24 horas siguientes al último mensaje de la persona. Configuración en
 [la guía](../guides/whatsapp-automatico.md).
 
+## Conductores independientes (ADR-039)
+
+Los taxistas y mototaxistas que no pertenecen a una línea trabajan en una **línea operada por la
+plataforma** (`organizations.operated_by_platform`), que solo crea la administración de la
+plataforma (`POST /admin/independent-lines`, permiso `independents.manage`) y que su personal
+maneja desde el portal como cualquier línea (tarifas por tramo, terminales, despacho,
+calificaciones, liquidación).
+
+- Se entra enviando el KYC a esa línea, como conductor y **con vehículo propio**
+  (`INDEPENDENT_NEEDS_VEHICLE` si falta). Al aprobarlo, el conductor entra solo a la línea y su
+  vehículo pasa a la flota con `vehicles.owner_user_id`.
+- En esas líneas cada conductor toma viajes **solo con su vehículo** (`VEHICLE_NOT_YOURS`, también
+  al asignar desde el despacho) y su tablero solo le muestra los suyos.
+- El cobro no cambia: el pasajero le paga al conductor (o con un paquete).
+- Camino a un perfil de conductor independiente propio: la marca de la línea, el dueño de cada
+  vehículo y el conductor de cada viaje permiten separarlos más adelante sin perder historial.
+
 ## Todavía no
 
 Cobro del taxi dentro de la plataforma, tarifas fijas por zona para los taxis de terminal,

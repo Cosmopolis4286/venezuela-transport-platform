@@ -73,6 +73,9 @@ async function Organization({
           <Badge variant={statusVariant(organization.status)}>
             {ORGANIZATION_STATUS_LABELS[organization.status]}
           </Badge>
+          {organization.operatedByPlatform ? (
+            <Badge variant="outline">Línea de independientes · operada por VTP</Badge>
+          ) : null}
         </div>
         <p className="text-sm text-muted-foreground">
           {ORGANIZATION_TYPE_LABELS[organization.type]} · {organization.legalName} · RIF{' '}

@@ -183,6 +183,8 @@ export interface FleetVehicle {
   seatLayout: { id: string; name: string; capacity: number } | null;
   /** Inactive vehicles keep their past trips but cannot be assigned again. */
   active: boolean;
+  /** The independent driver who brought it to a line the platform runs (ADR-039); only they drive it. */
+  owner: { userId: string; firstName: string | null; lastName: string | null } | null;
   /** Registration, insurance and transport permit, each with its expiry. */
   documents: VehicleDocument[];
   /** The worst state among its documents (`expired` beats `expiring`); null when all are valid. */
