@@ -3,7 +3,7 @@
  * when it changes, the apps and the portal ask them to accept the new one. Keep it equal to
  * `version` in docs/legal/empresa.json (a test checks it).
  */
-export const LEGAL_VERSION = '2026-11-14';
+export const LEGAL_VERSION = '2026-11-15';
 
 /** Public pages of the legal documents: `/{lang}/legal/{slug}` on the website. */
 export const LEGAL_PAGES = {
@@ -11,6 +11,8 @@ export const LEGAL_PAGES = {
   privacy: 'privacidad',
   refunds: 'cancelacion-y-reembolsos',
   operators: 'condiciones-para-empresas',
+  /** Taxi and motorcycle drivers in the platform's line for independents (ADR-039). */
+  drivers: 'conductores-independientes',
   cookies: 'cookies',
 } as const;
 export type LegalPage = (typeof LEGAL_PAGES)[keyof typeof LEGAL_PAGES];

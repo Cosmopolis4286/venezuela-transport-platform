@@ -13,6 +13,19 @@ pull request.
 
 ### Cambiado
 
+- **Documentos legales, versión 2026-11-15** (los usuarios aceptan de nuevo):
+  - nuevas **Condiciones para Conductores Independientes**: VTP intermedia y no los emplea; vehículo
+    propio, permisos y póliza a cargo del conductor; tarifas, comisión futura, suspensión y paso a
+    un perfil propio;
+  - los Términos cubren la línea de independientes, los pedidos por WhatsApp con su enlace de
+    seguimiento, las calificaciones y el pago en efectivo a bordo;
+  - la Política de Privacidad dice qué ven los pasajeros del conductor y qué ve cada equipo de VTP;
+  - las Condiciones para Empresas, que una empresa en revisión o suspendida no opera, los roles
+    nuevos y la neutralidad de VTP frente a las líneas;
+  - el registro de tratamientos y la conservación de datos, al día (con filas que estaban rotas).
+- **Conductores independientes:** los viajes de su línea pagados con un paquete se acreditan al
+  conductor (su saldo en Mis cobros), no a la línea; al borrar la cuenta, su vehículo se desactiva y
+  deja de estar a su nombre.
 - **Pago a la línea o al conductor** (ADR-030): cada ruta es interurbana o urbana/suburbana y
   elige quién cobra (por defecto, la línea en las interurbanas y el conductor en las urbanas y
   suburbanas). Los conductores ven su saldo y registran dónde cobrar en **Mis cobros** (app de

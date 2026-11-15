@@ -18,6 +18,7 @@ export function LegalFooter({
     [LEGAL_PAGES.privacy, t.privacy],
     [LEGAL_PAGES.refunds, t.refunds],
     [LEGAL_PAGES.operators, t.operators],
+    [LEGAL_PAGES.drivers, t.drivers],
     [LEGAL_PAGES.cookies, t.cookies],
   ] as const;
   return (

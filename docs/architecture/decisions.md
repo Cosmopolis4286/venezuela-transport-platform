@@ -720,6 +720,8 @@ tienen persona. Migrar será permitir viajes sin organización, mover las tarifa
 tarifas de la plataforma y sacar a los conductores de la línea, sin perder historial.
 
 **Compromisos.** Ante pasajeros y autoridades la plataforma aparece como operadora de esa línea:
-los términos y la política de privacidad deben decir que VTP **intermedia** con conductores
-verificados (pendiente de revisión legal). Las líneas privadas compiten con la de la plataforma
+los Términos (6.9), la Política de Privacidad y las [Condiciones para Conductores
+Independientes](../legal/condiciones-para-conductores-independientes.md) dicen que VTP **intermedia**
+con conductores verificados y no los emplea (pendiente de revisión legal: relación de trabajo y
+permisos del INTT, ver la lista para el abogado). Las líneas privadas compiten con la de la plataforma
 en los mismos tramos; el pedido sigue siendo de la primera que lo toma.

@@ -24,7 +24,9 @@ personales escriba a **{{correo_privacidad}}**. El responsable de protección de
 
 Cuando usted viaja con una empresa de transporte o una línea de taxis o de mototaxis («Empresa»), esa Empresa
 recibe de la Plataforma los datos necesarios para prestar el servicio y es responsable de su
-propio uso de ellos (sección 5).
+propio uso de ellos (sección 5). En la **línea de conductores independientes**, que administra
+{{nombre_comercial}}, somos responsables de los datos que gestionamos como su administrador, y cada
+conductor independiente lo es de su propio uso de los datos del viaje que acepta.
 
 ## 2. Principios
 
@@ -47,10 +49,13 @@ actualización y cancelación. No vendemos datos personales.
 | Pedidos por WhatsApp         | El nombre y el teléfono que nos da por WhatsApp para pedirle un taxi o una moto, y un enlace privado para seguir el viaje (deja de funcionar a los 7 días)                                                                                                                          | Al pedirnos un taxi o una moto por WhatsApp. Se conservan como los demás taxis                  |
 | Conversaciones de WhatsApp   | Su número, el nombre de su perfil de WhatsApp, los mensajes que nos escribe (incluida la ubicación si la comparte) y los que le respondemos, y en qué paso del menú va                                                                                                              | Al escribirnos por WhatsApp. Los mensajes se borran a los 90 días; el chat, al año sin mensajes |
 | Paquetes de viajes           | Tramo, tipo de vehículo, viajes comprados y usados, vencimiento, pago y reservas o viajes pagados con el paquete                                                                                                                                                                    | Al comprar y usar un paquete                                                                    |
-| Conductores y personal (KYC) | Nombre, documento de identidad, fecha de nacimiento, estado y ciudad, rol solicitado, datos del vehículo, y copias de: documento de identidad, licencia de conducir, **certificado médico**, carnet de circulación y póliza de responsabilidad civil, con sus fechas de vencimiento | Al solicitar trabajar con una Empresa                                                           |
+| Conductores y personal (KYC) | Nombre, documento de identidad, fecha de nacimiento, estado y ciudad, rol solicitado, datos del vehículo, y copias de: documento de identidad, licencia de conducir, **certificado médico**, carnet de circulación y póliza de responsabilidad civil, con sus fechas de vencimiento | Al solicitar trabajar con una Empresa o como conductor independiente                            |
 | Empresas                     | Razón social, nombre comercial, RIF, teléfono, correo, dirección, miembros y sus roles, cuentas de cobro                                                                                                                                                                            | Al registrar una Empresa                                                                        |
 | Dispositivo y uso            | Identificador de notificaciones push del teléfono, plataforma (Android, iOS, web), dirección IP y navegador o aplicación de cada sesión, registro de acciones de seguridad (auditoría)                                                                                              | Al usar la Plataforma                                                                           |
 | Comunicaciones               | Avisos enviados (tipo, canal, fecha y si se entregó), reclamos y mensajes a soporte                                                                                                                                                                                                 | Al avisarle o al escribirnos                                                                    |
+
+Si trabaja como **conductor independiente**, además registramos su vehículo a su nombre (placa,
+marca, modelo, año y color), los viajes que acepta, sus calificaciones y lo que gana y se le paga.
 
 El **certificado médico** es un dato de salud y por tanto **sensible**: lo tratamos solo para
 verificar la aptitud para conducir que exige la normativa de transporte, con su consentimiento
@@ -87,10 +92,17 @@ momento.
   (dirección, teléfono, número de pasajeros). La Empresa debe usarlos solo para prestar el
   servicio y cumplir la ley, conforme a las Condiciones para Empresas.
 - **Los conductores** asignados ven quién viaja en cada puesto, su tramo y si abordó, **sin** el
-  número de documento.
+  número de documento; en los taxis y motos, el nombre de pila del pasajero y los datos para
+  recogerle.
+- **Los pasajeros** de un taxi o una moto ven, cuando el viaje es aceptado, el nombre de pila del
+  conductor, la placa y la descripción del vehículo, y la línea; nunca el documento del conductor.
 - **La Empresa que usted eligió** al solicitar trabajar con ella (KYC) ve su nombre, rol, ciudad
   y datos del vehículo, y la decisión de la revisión; no ve las copias de sus documentos ni su
   número de identidad.
+- **Nuestro personal** accede solo a lo que necesita según su función: el equipo de revisión, a
+  las solicitudes KYC y sus documentos; el de finanzas, a pagos, liquidaciones y reembolsos; el de
+  soporte, a las reservas que busca por su código y a las colas de revisión, **sin** números de
+  identidad ni copias de documentos.
 - **Proveedores que nos prestan servicios** por nuestra cuenta, con obligación de
   confidencialidad y solo para esa finalidad: alojamiento de servidores ({{hospedaje}}), envío de
   correo electrónico, servicio de notificaciones push de Expo (que entrega los avisos a los
@@ -155,7 +167,7 @@ podemos verificar su identidad. Respondemos en un plazo máximo de **15 días h�
 Aplicamos medidas técnicas y organizativas proporcionales al riesgo, entre ellas: conexiones
 cifradas (HTTPS), contraseñas guardadas con una función de resumen resistente (scrypt), códigos
 de un solo uso con vencimiento y límite de intentos, sesiones con tokens que caducan y se
-revocan, acceso por roles y mínimos privilegios, archivos KYC validados por su contenido y
+revocan, acceso por roles y permisos con mínimos privilegios (también para nuestro personal), archivos KYC validados por su contenido y
 servidos solo a personal autorizado, registros de auditoría de las acciones sensibles, copias de
 seguridad y un procedimiento de respuesta a incidentes. Si ocurre un incidente que pueda afectar
 sus derechos, le avisaremos sin demora indebida, junto con las medidas tomadas, y lo

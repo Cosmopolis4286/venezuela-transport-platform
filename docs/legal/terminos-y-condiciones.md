@@ -11,7 +11,9 @@ Al crear una cuenta, entrar con un código o usar la Plataforma, usted («el Usu
 leyó, entendió y acepta estos Términos, la [Política de Privacidad](privacidad) y la [Política de
 Cancelación y Reembolsos](cancelacion-y-reembolsos). Si no está de acuerdo, no use la Plataforma.
 Las empresas de transporte, líneas de taxis y de mototaxis y terminales además aceptan las
-[Condiciones para Empresas](condiciones-para-empresas).
+[Condiciones para Empresas](condiciones-para-empresas), y los taxistas y mototaxistas que trabajan
+por su cuenta en la línea de conductores independientes, las [Condiciones para Conductores
+Independientes](conductores-independientes).
 
 ## 1. Qué es la Plataforma
 
@@ -19,16 +21,20 @@ Las empresas de transporte, líneas de taxis y de mototaxis y terminales además
 pasajeros buscar salidas de transporte terrestre de pasajeros entre ciudades («interurbano») y
 dentro de una ciudad o entre ciudades cercanas («urbano o suburbano»), en autobús, taxi o moto; apartar
 puestos, pagarlos y recibir boletos electrónicos; comprar **paquetes de viajes**; y pedir taxis
-desde y hacia los terminales, o taxis y mototaxis entre dos paradas de una misma zona. A las empresas
-de transporte, líneas de taxis y de mototaxis y terminales («Empresas») les permite publicar su
-oferta y gestionar sus viajes.
+desde y hacia los terminales, o taxis y mototaxis entre dos paradas de una misma zona, también por
+WhatsApp. A las empresas de transporte, líneas de taxis y de mototaxis y terminales («Empresas») les
+permite publicar su oferta y gestionar sus viajes, y a los taxistas y mototaxistas que no
+pertenecen a una línea, ofrecer sus viajes en la **línea de conductores independientes** (sección
+6.9).
 
 1.2. **{{nombre_comercial}} no presta el servicio de transporte.** El transporte lo presta la
 Empresa que aparece en cada salida o viaje, bajo su propia responsabilidad, con sus vehículos,
 conductores, permisos y seguros, conforme a la Ley de Transporte Terrestre y demás normas del
 Instituto Nacional de Transporte Terrestre (INTT). El contrato de transporte se celebra entre el
 pasajero y la Empresa; {{nombre_comercial}} actúa como intermediario tecnológico y, cuando así se
-indica al pagar, como receptor del pago por cuenta de la Empresa.
+indica al pagar, como receptor del pago por cuenta de la Empresa. En la línea de conductores
+independientes el servicio lo presta el conductor independiente que acepta el viaje, por su cuenta
+y con su propio vehículo, y {{nombre_comercial}} intermedia (sección 6.9).
 
 1.3. Los horarios, tarifas, tipos de servicio, mapas de puestos y demás datos de cada salida los
 publica la Empresa. {{nombre_comercial}} no garantiza que la Empresa cumpla el horario, pero sí
@@ -56,7 +62,7 @@ que no compraron nada se eliminan al mes.
 
 2.2. Para crear una cuenta hay que ser **mayor de 18 años** y tener capacidad legal para
 contratar. Los niños, niñas y adolescentes pueden viajar como pasajeros en una reserva hecha por
-un adulto responsable, de acuerdo con la sección 4.6.
+un adulto responsable, de acuerdo con la sección 4.7.
 
 2.3. El Usuario se obliga a dar datos verdaderos, completos y actualizados, y es responsable de
 mantener la confidencialidad de su contraseña y de los códigos que recibe. {{nombre_comercial}}
@@ -132,7 +138,12 @@ origen lícito, asume los riesgos propios de la red que usa (comisiones, demoras
 dirección o de red) y reconoce que una transferencia a una dirección o red equivocada puede ser
 irrecuperable.
 
-4.6. **Niños, niñas y adolescentes.** Quien reserva para un niño, niña o adolescente declara ser
+4.6. **Pago a bordo.** En algunas rutas urbanas y suburbanas se puede pagar el pasaje en efectivo
+al conductor al subir, sin reservar por la Plataforma. Ese pago lo recibe el conductor por cuenta de
+su Empresa; el conductor lo registra en la Plataforma, pero no genera boleto electrónico ni da
+derecho a los reembolsos de la sección 5, que aplican a las reservas pagadas por la Plataforma.
+
+4.7. **Niños, niñas y adolescentes.** Quien reserva para un niño, niña o adolescente declara ser
 su representante o contar con su autorización, y se obliga a que viaje con la compañía o la
 autorización que exija la Ley Orgánica para la Protección de Niños, Niñas y Adolescentes. La
 Empresa puede negar el abordaje si no se cumplen esos requisitos.
@@ -156,7 +167,8 @@ Reembolsos](cancelacion-y-reembolsos), que forma parte de estos Términos.
 ## 6. Taxis, mototaxis y paquetes de viajes
 
 6.1. **Taxis de terminal.** La Plataforma permite pedir un taxi desde o hacia un terminal. La
-solicitud la ven las líneas de taxis afiliadas que operan en ese terminal; la primera que la
+solicitud la ven las líneas de taxis afiliadas que operan en ese terminal (incluida, si atiende ese
+terminal, la línea de conductores independientes); la primera que la
 acepta presta el servicio y fija la tarifa, que el pasajero ve antes de que salga el taxi.
 
 6.2. **Taxis y mototaxis por tramo.** En el servicio suburbano, el pasajero puede pedir un taxi o
@@ -212,6 +224,33 @@ aceptan paquetes, en el tramo y tipo de vehículo del paquete:
   viaje vuelve al paquete (si no venció); con menos, se pierde. Un viaje de taxi o moto vuelve al
   paquete si nadie lo acepta o si el pasajero lo cancela (sección 6.4).
 
+6.7. **Pedidos por WhatsApp.** También se puede pedir un taxi o una moto escribiendo al WhatsApp de
+{{nombre_comercial}}, sin cuenta. Para ello el Usuario da un nombre y su número, y recibe un
+**enlace privado** para seguir el viaje, cancelarlo y calificarlo, que deja de funcionar a los 7
+días. Quien tenga el enlace ve el estado del viaje (sin teléfonos ni documentos): el Usuario no
+debe compartirlo. Al mismo número se le asocia una cuenta de invitado con sus viajes y, si las
+hubiera, sus tasas de cancelación pendientes. Las respuestas automáticas solo se envían dentro de
+las 24 horas siguientes al último mensaje del Usuario.
+
+6.8. **Calificaciones.** Al terminar un viaje de taxi o moto el pasajero puede calificarlo de 1 a 5
+y dejar un comentario, una sola vez. La línea y {{nombre_comercial}} ven la calificación y el
+comentario para cuidar la calidad; el comentario debe ser respetuoso y no incluir datos personales
+de terceros.
+
+6.9. **Línea de conductores independientes.** {{nombre_comercial}} administra una línea, identificada
+como «operada por {{nombre_comercial}}», en la que taxistas y mototaxistas que no pertenecen a otra
+línea, verificados por {{nombre_comercial}}, aceptan viajes con su **propio vehículo**. En esa línea:
+
+- {{nombre_comercial}} publica las tarifas por tramo, recibe las solicitudes, verifica la identidad
+  y los documentos de los conductores y de sus vehículos, y atiende los reclamos;
+- el transporte lo presta el conductor que acepta el viaje, por su cuenta: es él quien responde
+  por el servicio, con su licencia, permisos y póliza de responsabilidad civil, conforme a las
+  [Condiciones para Conductores Independientes](conductores-independientes);
+- el pasajero ve antes de que lo recojan el nombre de pila del conductor y la placa y descripción
+  del vehículo, y le paga la tarifa directamente (o con un paquete);
+- {{nombre_comercial}} no da a su línea preferencia frente a las demás: la solicitud es de la
+  primera línea o el primer conductor que la acepta.
+
 ## 7. Avisos
 
 El Usuario acepta recibir avisos sobre sus reservas, paquetes, pagos, reembolsos, viajes y su cuenta por
@@ -233,7 +272,9 @@ Está prohibido:
   que pueden constituir delitos según la Ley Especial contra los Delitos Informáticos;
 - usar la Plataforma para legitimar capitales, financiar actividades ilícitas o cualquier fin
   contrario a la ley;
-- acosar, amenazar o tratar de forma discriminatoria a otros usuarios, conductores o personal.
+- acosar, amenazar o tratar de forma discriminatoria a otros usuarios, conductores o personal;
+- publicar calificaciones o comentarios falsos, ofensivos o con datos personales de terceros, o
+  compartir el enlace de seguimiento de un viaje ajeno.
 
 ## 9. Propiedad intelectual
 
@@ -247,7 +288,8 @@ publican las Empresas (nombres, logotipos, rutas, tarifas) son de cada Empresa.
 10.1. {{nombre_comercial}} responde por el funcionamiento de la Plataforma, por el manejo de los
 pagos que recibe y por la protección de los datos personales que trata, conforme a la ley.
 
-10.2. La Empresa responde por la prestación del transporte: puntualidad, seguridad, estado de los
+10.2. La Empresa —o, en la línea de conductores independientes, el conductor que acepta el viaje—
+responde por la prestación del transporte: puntualidad, seguridad, estado de los
 vehículos, conductores, equipaje, seguros (incluida la póliza de responsabilidad civil de
 vehículos) y por los daños que ocurran durante el viaje, conforme a la ley.
 

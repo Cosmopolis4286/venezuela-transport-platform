@@ -294,6 +294,8 @@ export async function recordRideEarning(
     fareCurrency: Currency;
     tripPackId: string | null;
   },
+  /** `driver` on a line the platform runs: the independent driver earns the fare (ADR-039). */
+  payee: 'organization' | 'driver' = 'organization',
 ): Promise<void> {
   // The platform earns from the pack's price, not from the line (ADR-029): the line gets its fare.
   const gross = await packCapped(
@@ -309,6 +311,7 @@ export async function recordRideEarning(
       organizationId: ride.organizationId,
       taxiRideId: ride.id,
       collectedBy: 'platform',
+      payee,
       seats: ride.passengers,
       currency: ride.fareCurrency,
       gross,

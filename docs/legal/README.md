@@ -9,16 +9,17 @@
 
 ## Qué hay
 
-| Documento                                                                       | Para quién                                          | Publicado en                                |
-| ------------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------- |
-| [Términos y Condiciones de Uso](terminos-y-condiciones.md)                      | Todos los usuarios                                  | `/{idioma}/legal/terminos`                  |
-| [Política de Privacidad](politica-de-privacidad.md)                             | Todos (incluye la sección LGPD para Brasil)         | `/{idioma}/legal/privacidad`                |
-| [Política de Cancelación y Reembolsos](politica-de-cancelacion-y-reembolsos.md) | Pasajeros                                           | `/{idioma}/legal/cancelacion-y-reembolsos`  |
-| [Condiciones para Empresas](condiciones-para-empresas.md)                       | Empresas de transporte, líneas de taxis, terminales | `/{idioma}/legal/condiciones-para-empresas` |
-| [Política de Cookies](politica-de-cookies.md)                                   | Visitantes del sitio                                | `/{idioma}/legal/cookies`                   |
-| [Registro de tratamientos](registro-de-tratamientos.md)                         | Interno                                             | —                                           |
-| [Conservación y borrado de datos](conservacion-y-borrado.md)                    | Interno                                             | —                                           |
-| [Derechos de los titulares e incidentes de seguridad](derechos-e-incidentes.md) | Interno (procedimientos)                            | —                                           |
+| Documento                                                                                     | Para quién                                                      | Publicado en                                 |
+| --------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | -------------------------------------------- |
+| [Términos y Condiciones de Uso](terminos-y-condiciones.md)                                    | Todos los usuarios                                              | `/{idioma}/legal/terminos`                   |
+| [Política de Privacidad](politica-de-privacidad.md)                                           | Todos (incluye la sección LGPD para Brasil)                     | `/{idioma}/legal/privacidad`                 |
+| [Política de Cancelación y Reembolsos](politica-de-cancelacion-y-reembolsos.md)               | Pasajeros                                                       | `/{idioma}/legal/cancelacion-y-reembolsos`   |
+| [Condiciones para Empresas](condiciones-para-empresas.md)                                     | Empresas de transporte, líneas de taxis, terminales             | `/{idioma}/legal/condiciones-para-empresas`  |
+| [Condiciones para Conductores Independientes](condiciones-para-conductores-independientes.md) | Taxistas y mototaxistas de la línea de independientes (ADR-039) | `/{idioma}/legal/conductores-independientes` |
+| [Política de Cookies](politica-de-cookies.md)                                                 | Visitantes del sitio                                            | `/{idioma}/legal/cookies`                    |
+| [Registro de tratamientos](registro-de-tratamientos.md)                                       | Interno                                                         | —                                            |
+| [Conservación y borrado de datos](conservacion-y-borrado.md)                                  | Interno                                                         | —                                            |
+| [Derechos de los titulares e incidentes de seguridad](derechos-e-incidentes.md)               | Interno (procedimientos)                                        | —                                            |
 
 Las páginas se generan desde estos archivos: después de editar uno, ejecuta
 `pnpm --filter @vtp/web legal:build` y confirma el resultado (`src/content/legal.generated.ts`).
@@ -96,3 +97,16 @@ Puntos que la revisión debe resolver o confirmar (marcados también en el [road
 11. **Contratos con proveedores** (alojamiento, correo, Expo/Google/Apple, bancos): acuerdos de
     confidencialidad y tratamiento de datos.
 12. Registro de la marca «{{nombre_comercial}}» ante el SAPI.
+13. **Conductores independientes** (ADR-039,
+    [Condiciones](condiciones-para-conductores-independientes.md)):
+    - que la línea de independientes no configure una **relación de trabajo** (Ley Orgánica del
+      Trabajo, los Trabajadores y las Trabajadoras): libertad de horario, sin exclusividad,
+      vehículo propio, sin subordinación; revisar los indicios de laboralidad;
+    - si {{nombre_comercial}}, al administrar esa línea, necesita **permisos del INTT** o
+      municipales como operadora de taxis o mototaxis, o si bastan los de cada conductor;
+    - la **comisión** futura por esos viajes y su tratamiento tributario (IVA, retenciones), y
+      quién factura el viaje;
+    - la cláusula de **neutralidad** frente a las líneas privadas (Condiciones para Empresas, 4.8)
+      y la normativa de competencia.
+14. **Calificaciones y comentarios** de los pasajeros: alcance de su uso para suspender
+    conductores y moderación de comentarios con datos personales.

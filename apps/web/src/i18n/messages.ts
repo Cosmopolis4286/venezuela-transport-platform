@@ -37,6 +37,7 @@ const es = {
     privacy: 'Privacidad',
     refunds: 'Cancelaciones y reembolsos',
     operators: 'Condiciones para empresas',
+    drivers: 'Condiciones para conductores independientes',
     cookies: 'Cookies',
     preliminary:
       'Versión preliminar: este documento está pendiente de revisión legal y puede cambiar antes de la entrada en servicio.',
@@ -138,6 +139,7 @@ const en: Messages = {
     privacy: 'Privacy',
     refunds: 'Cancellations and refunds',
     operators: 'Terms for companies',
+    drivers: 'Terms for independent drivers',
     cookies: 'Cookies',
     preliminary:
       'Preliminary version: this document is pending legal review and may change before the service starts.',
@@ -239,6 +241,7 @@ const ptBR: Messages = {
     privacy: 'Privacidade',
     refunds: 'Cancelamentos e reembolsos',
     operators: 'Condições para empresas',
+    drivers: 'Condições para motoristas independentes',
     cookies: 'Cookies',
     preliminary:
       'Versão preliminar: este documento está em revisão jurídica e pode mudar antes do início do serviço.',

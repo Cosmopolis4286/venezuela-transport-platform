@@ -6,6 +6,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import type {
   AuthResponse,
+  DriverEarnings,
   DriverTaxiBoard,
   FleetVehicle,
   IndependentLine,
@@ -255,6 +256,96 @@ describe.runIf(expectDatabase)('Independent drivers (e2e)', () => {
           .send({ organizationId: line.id, vehicleId });
       expect(reason(await accept(linesVehicle.id).expect(409))).toBe('VEHICLE_NOT_YOURS');
       await accept(own.id).expect(200);
+      const ride$ = (rideId: string) =>
+        http().get(`/api/v1/me/taxi-rides/${rideId}`).set('Authorization', passenger.auth);
+      const finish = async (rideId: string) => {
+        const { pickupCode } = (await ride$(rideId).expect(200)).body as TaxiRide;
+        await http()
+          .post(`/api/v1/me/taxi/rides/${rideId}/pickup`)
+          .set('Authorization', driver.auth)
+          .send(pickupCode ? { pickupCode } : {})
+          .expect(200);
+        await http()
+          .post(`/api/v1/me/taxi/rides/${rideId}/complete`)
+          .set('Authorization', driver.auth)
+          .send({})
+          .expect(200);
+      };
+      await finish(ride.id);
+
+      // --- A ride paid with a trip pack: the fare is the independent driver's, not the line's.
+      await http()
+        .put(`/api/v1/admin/organizations/${line.id}/policy`)
+        .set('Authorization', admin.auth)
+        .send({ commissionRate: null, refundTiers: null, acceptsTripPacks: true })
+        .expect(200);
+      const product = (
+        await http()
+          .post('/api/v1/admin/trip-pack-products')
+          .set('Authorization', admin.auth)
+          .send({
+            zoneId: zone.id,
+            stopIds: [a.id, b.id],
+            mode: 'motorcycle',
+            trips: 5,
+            price: '8',
+            currency: 'USD',
+            maxFare: '1.50',
+          })
+          .expect(201)
+      ).body as { id: string };
+      const pack = (
+        await http()
+          .post('/api/v1/me/trip-packs')
+          .set('Authorization', passenger.auth)
+          .send({ productId: product.id })
+          .expect(201)
+      ).body as { id: string };
+      const payment = (
+        await http()
+          .post(`/api/v1/me/trip-packs/${pack.id}/payments`)
+          .set('Authorization', passenger.auth)
+          .send({ method: 'usdt' })
+          .expect(201)
+      ).body as { id: string };
+      await http()
+        .post(`/api/v1/me/payments/${payment.id}/simulate`)
+        .set('Authorization', passenger.auth)
+        .send({})
+        .expect(200);
+      const packRide = (
+        await http()
+          .post('/api/v1/me/taxi-rides')
+          .set('Authorization', passenger.auth)
+          .send({
+            kind: 'stretch',
+            fromStopId: a.id,
+            toStopId: b.id,
+            mode: 'motorcycle',
+            address: 'Calle 1, casa verde',
+            passengers: 1,
+            tripPackId: pack.id,
+          })
+          .expect(201)
+      ).body as TaxiRide;
+      await http()
+        .post(`/api/v1/me/taxi/rides/${packRide.id}/accept`)
+        .set('Authorization', driver.auth)
+        .send({ organizationId: line.id, vehicleId: own.id })
+        .expect(200);
+      await finish(packRide.id);
+      const earnings = (
+        await http().get('/api/v1/me/earnings').set('Authorization', driver.auth).expect(200)
+      ).body as DriverEarnings;
+      // The pack pays at most 1.50 per trip (its cap), below the line's 2.00 fare.
+      expect(earnings.balances).toEqual([
+        expect.objectContaining({
+          organization: expect.objectContaining({ id: line.id }),
+          currency: 'USD',
+          earned: '1.50',
+          balance: '1.50',
+        }),
+      ]);
 
       // --- Platform admins follow the line from Administración.
       const lines = (
@@ -272,6 +363,14 @@ describe.runIf(expectDatabase)('Independent drivers (e2e)', () => {
         .get('/api/v1/admin/independent-lines')
         .set('Authorization', reviewer.auth)
         .expect(403);
+
+      // --- The independent deletes their account: their vehicle stops running and is no longer theirs.
+      await http().delete('/api/v1/me').set('Authorization', driver.auth).expect(204);
+      const after = (
+        (await http().get(`${url}/vehicles`).set('Authorization', admin.auth).expect(200))
+          .body as FleetVehicle[]
+      ).find((v) => v.id === own.id);
+      expect(after).toMatchObject({ active: false, owner: null });
     },
   );
 });

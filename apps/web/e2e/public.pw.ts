@@ -26,6 +26,7 @@ test('every legal page renders', async ({ page }) => {
     'privacidad',
     'cancelacion-y-reembolsos',
     'condiciones-para-empresas',
+    'conductores-independientes',
     'cookies',
   ]) {
     const response = await page.goto(`/es/legal/${slug}`);

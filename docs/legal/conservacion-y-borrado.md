@@ -11,12 +11,13 @@ revisión legal (ver [README](README.md#lista-para-el-abogado)).
 | Reservas, boletos, listas de pasajeros        | 10 años                           | Comprobantes mercantiles y tributarios; normativa de transporte                         | Los nombres y documentos de los pasajeros se borran al vencer                            |
 | Pagos, reembolsos, liquidaciones              | 10 años                           | Código de Comercio, Código Orgánico Tributario, prevención de legitimación de capitales | Se conservan                                                                             |
 | Expedientes KYC y sus archivos                | Mientras trabaje + 5 años         | Seguridad de los pasajeros; prevención de legitimación de capitales                     | Rechazados o de cuentas borradas: archivos y datos se borran a los 5 años de la revisión |
+| Vehículos de conductores independientes       | Mientras trabaje en la línea      | Contrato; seguridad de los pasajeros                                                    | Al borrar la cuenta se desactivan y dejan de estar a su nombre                           |
 | Sesiones                                      | Hasta vencer o revocarse          | Seguridad                                                                               | Se revocan al cerrar sesión, cambiar la contraseña o borrar la cuenta                    |
 | Códigos de un solo uso                        | Minutos (registro 12 meses)       | Seguridad                                                                               | Vencen solos; se borran a los 12 meses                                                   |
 | Identificadores push                          | Hasta desinstalar o cerrar sesión | Contrato                                                                                | Se eliminan al cerrar sesión, al fallar la entrega o al borrar la cuenta                 |
 | Registro de avisos                            | 12 meses                          | Soporte                                                                                 | Se borra a los 12 meses                                                                  |
-| Mensajes de WhatsApp                          | 90 días                           | Soporte                                                                                 |
-| Chats de WhatsApp (número, nombre)            | 1 año sin mensajes                | Contrato; soporte                                                                       |
+| Mensajes de WhatsApp                          | 90 días                           | Soporte                                                                                 | Se borran a los 90 días                                                                  |
+| Chats de WhatsApp (número, nombre)            | 1 año sin mensajes                | Contrato; soporte                                                                       | Se borran al año sin mensajes                                                            |
 | Auditoría                                     | 2 años                            | Seguridad; prueba                                                                       | Se borra a los 2 años                                                                    |
 
 **Purga automática:** la API ejecuta una vez al día `RetentionService`
@@ -43,7 +44,8 @@ Al borrar, en una transacción:
 1. se vacían correo, teléfono, nombre, apellido y contraseña de `users`, el estado pasa a
    `deleted` y se registra `deleted_at`;
 2. se revocan todas las sesiones y se eliminan los identificadores push;
-3. se eliminan sus membresías e invitaciones pendientes;
+3. se eliminan sus membresías e invitaciones pendientes, y los vehículos que tenía como conductor
+   independiente se desactivan y dejan de estar a su nombre;
 4. se registra `user.deleted` en la auditoría (sin datos personales).
 
 Lo que la ley obliga a conservar (reservas, pagos, listas de pasajeros, expedientes KYC) queda

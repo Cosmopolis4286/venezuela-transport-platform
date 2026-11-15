@@ -1,6 +1,7 @@
 import {
   APPLICATION_ROLES,
   IDENTITY_DOCUMENT_TYPES,
+  LEGAL_PAGES,
   ORGANIZATION_ROLE_LABELS,
   type ApplicationInput,
   type ApplicationRole,
@@ -12,6 +13,7 @@ import {
   Body,
   Button,
   Field,
+  openLegalPage,
   Screen,
   Segmented,
   Subheading,
@@ -185,10 +187,19 @@ function ApplicationForm({ existing }: { existing: ProviderApplication | null })
       {role === 'driver' ? (
         <>
           {independent ? (
-            <Body muted>
-              Como independiente trabajas con tu propio vehículo: regístralo con su carnet de
-              circulación y su póliza RCV. Solo tú podrás usarlo en la línea.
-            </Body>
+            <>
+              <Body muted>
+                Como independiente trabajas con tu propio vehículo: regístralo con su carnet de
+                circulación y su póliza RCV. Solo tú podrás usarlo en la línea. Al enviar tu
+                solicitud aceptas las Condiciones para Conductores Independientes: VTP intermedia
+                los viajes; no es tu empleador.
+              </Body>
+              <Button
+                variant="link"
+                title="Leer las Condiciones para Conductores Independientes"
+                onPress={() => openLegalPage(LEGAL_PAGES.drivers, 'es')}
+              />
+            </>
           ) : (
             <Segmented
               label="¿Trabajas con vehículo propio?"
