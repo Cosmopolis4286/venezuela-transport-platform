@@ -26,6 +26,12 @@ pull request.
 
 ### Agregado
 
+- **Conductores independientes** (ADR-039): los taxistas y mototaxistas sin línea trabajan en
+  una línea operada por la plataforma (Administración → Independientes). Envían su KYC con su
+  propio vehículo, entran solos al aprobarse y solo usan su vehículo; la plataforma maneja la
+  línea desde el portal (tarifas, despacho, liquidación). Pensado para migrar más adelante a un
+  perfil de conductor independiente propio. El demo trae la línea VTP Mototaxis y un mototaxista
+  independiente (`independiente@vtp.test`).
 - **Roles nuevos.** En la plataforma: **Finanzas** (pagos, liquidaciones, reembolsos,
   facturación y métricas, sin aprobar nada) y **Soporte** (buscar reservas, taxis por WhatsApp y
   ver las colas, sin cédulas, documentos ni dinero). Cada rol de plataforma tiene ahora una lista de

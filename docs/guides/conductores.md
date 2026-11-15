@@ -12,6 +12,10 @@ documentos, ver tus viajes, validar boletos y tomar taxis.
    **Aceptar** o **Rechazar**.
 3. Si nadie te invitó, envía una **solicitud** (abajo): VTP revisa tus documentos y la empresa que
    elegiste te acepta.
+4. **¿Eres taxista o mototaxista independiente?** En la solicitud elige una línea de
+   independientes de VTP (salen primero en la búsqueda) y registra tu vehículo con su carnet de
+   circulación y su póliza RCV. Cuando VTP aprueba tus documentos entras de una vez, sin esperar
+   a ninguna empresa, y tomas viajes solo con tu vehículo.
 
 ## 2. Tu solicitud (KYC)
 

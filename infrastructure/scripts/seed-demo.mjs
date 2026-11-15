@@ -24,6 +24,8 @@ const ZONE_SLUG = 'eje-casacoima-san-felix-puerto-ordaz';
 const INTERURBAN_MARK = 'Expresos Los Llanos (ejemplo)';
 /** Added with the accounts of every role: its presence means that part is loaded. */
 const ROLES_MARK = 'Terminal La Bandera (ejemplo)';
+/** The platform's line for independent drivers (ADR-039). */
+const INDEPENDENTS_MARK = 'VTP Mototaxis Independientes (ejemplo)';
 
 /**
  * Every account of the sample data, one per level of access: the platform's staff, each role of
@@ -38,7 +40,7 @@ const ACCOUNTS = {
     firstName: 'Ana',
     lastName: 'Administradora',
     role: 'Administradora de la plataforma',
-    can: 'Todo: aprobar empresas y KYC, zonas, paradas, pagos, liquidaciones, reembolsos, facturación, paquetes, métricas',
+    can: 'Todo: aprobar empresas y KYC, zonas, paradas, pagos, liquidaciones, reembolsos, facturación, paquetes, métricas y la línea de independientes',
   },
   revisor: {
     group: 'Plataforma',
@@ -202,6 +204,14 @@ const ACCOUNTS = {
     lastName: 'Aspirante',
     role: 'Aspirante a conductor (KYC enviado a Taxis Unidos)',
     can: 'Ver su solicitud; Administración → Solicitudes la revisa',
+  },
+  independiente: {
+    group: 'Conductores de taxi y moto',
+    email: 'independiente@vtp.test',
+    firstName: 'Iván',
+    lastName: 'Independiente',
+    role: 'Mototaxista independiente · VTP Mototaxis (app de transportistas)',
+    can: 'Tomar viajes en moto de la línea de VTP, solo con su propia moto',
   },
   // --- Passengers.
   passenger: {
@@ -1250,33 +1260,121 @@ async function everyRole(admin) {
           providesVehicle: false,
         },
       });
-      const nextYear = `${new Date().getFullYear() + 1}-12-31`;
-      // Tiny sample files: a PNG and PDFs (the API checks the type by content).
-      const png = new Uint8Array([
-        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x70, 0x6e, 0x67,
-      ]);
-      const pdf = (label) => new TextEncoder().encode(`%PDF-1.4\n% ${label} (ejemplo)\n`);
-      for (const [kind, bytes, name, type, expiresOn] of [
-        ['identity_document', png, 'cedula.png', 'image/png'],
-        ['driver_license', pdf('licencia'), 'licencia.pdf', 'application/pdf', nextYear],
-        ['medical_certificate', pdf('certificado médico'), 'medico.pdf', 'application/pdf'],
-      ]) {
-        const form = new FormData();
-        form.append('file', new Blob([bytes], { type }), name);
-        if (expiresOn) form.append('expiresOn', expiresOn);
-        const res = await fetch(`${API}/me/application/documents/${kind}`, {
-          method: 'PUT',
-          headers: { authorization: auth },
-          body: form,
-        });
-        if (!res.ok) throw new Error(`documento ${kind}: HTTP ${res.status} ${await res.text()}`);
-      }
+      await uploadKyc(auth, ['identity_document', 'driver_license', 'medical_certificate']);
       await call('POST', '/me/application/submit', { auth, body: {} });
       return true;
     });
     if (sent) done.push('aspirante con KYC enviado');
   }
   console.log(`  ✔ Todos los niveles: ${done.join(', ')}`);
+}
+
+/** Uploads small sample KYC documents (a PNG and PDFs; the API checks the type by content). */
+async function uploadKyc(auth, kinds) {
+  const nextYear = `${new Date().getFullYear() + 1}-12-31`;
+  const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x70, 0x6e, 0x67]);
+  const pdf = (label) => new TextEncoder().encode(`%PDF-1.4\n% ${label} (ejemplo)\n`);
+  const files = {
+    identity_document: [png, 'cedula.png', 'image/png'],
+    driver_license: [pdf('licencia'), 'licencia.pdf', 'application/pdf', nextYear],
+    medical_certificate: [pdf('certificado médico'), 'medico.pdf', 'application/pdf'],
+    vehicle_registration: [pdf('carnet de circulación'), 'carnet.pdf', 'application/pdf'],
+    liability_insurance: [pdf('póliza RCV'), 'rcv.pdf', 'application/pdf', nextYear],
+  };
+  for (const kind of kinds) {
+    const [bytes, name, type, expiresOn] = files[kind];
+    const form = new FormData();
+    form.append('file', new Blob([bytes], { type }), name);
+    if (expiresOn) form.append('expiresOn', expiresOn);
+    const res = await fetch(`${API}/me/application/documents/${kind}`, {
+      method: 'PUT',
+      headers: { authorization: auth },
+      body: form,
+    });
+    if (!res.ok) throw new Error(`documento ${kind}: HTTP ${res.status} ${await res.text()}`);
+  }
+}
+
+/**
+ * Independent drivers (ADR-039): the platform's motorcycle line, with the fixed fare of the
+ * sample stretch, and an independent driver whose KYC (with their own motorcycle) is approved, so
+ * they are already in the line with their vehicle.
+ */
+async function independents() {
+  const admin = await account('admin');
+  const { organization: line } = await call('POST', '/admin/independent-lines', {
+    auth: admin,
+    body: {
+      type: 'moto_line',
+      legalName: INDEPENDENTS_MARK,
+      tradeName: 'VTP Mototaxis',
+      rif: 'J-40000008-8',
+    },
+    what: 'crear la línea de independientes',
+  });
+  const url = `/organizations/${line.id}`;
+  const done = ['línea de mototaxis de VTP'];
+  const stops = await call('GET', '/stops');
+  const sanFelix = stops.find((x) => x.name === 'Terminal de San Félix');
+  const puertoOrdaz = stops.find((x) => x.name === 'Terminal de Puerto Ordaz');
+  if (sanFelix && puertoOrdaz) {
+    const fares = await attempt('tarifa de la línea de independientes', () =>
+      call('PUT', `${url}/taxi/stretch-fares`, {
+        auth: admin,
+        body: {
+          fares: [
+            {
+              stopIds: [sanFelix.id, puertoOrdaz.id],
+              mode: 'motorcycle',
+              amount: '1.80',
+              currency: 'USD',
+            },
+          ],
+        },
+      }),
+    );
+    if (fares) done.push('tarifa San Félix ↔ Puerto Ordaz');
+  }
+  const joined = await attempt('mototaxista independiente', async () => {
+    const auth = await account('independiente');
+    const application = await call('POST', '/me/application', {
+      auth,
+      body: {
+        desiredRole: 'driver',
+        organizationId: line.id,
+        firstName: ACCOUNTS.independiente.firstName,
+        lastName: ACCOUNTS.independiente.lastName,
+        documentType: 'V',
+        documentNumber: 'V-20123456',
+        birthDate: '1993-08-12',
+        state: 'Bolívar',
+        city: 'San Félix',
+        providesVehicle: true,
+        vehicle: { plate: 'MOT777V', make: 'Bera', model: 'SBR', year: 2022, color: 'Rojo' },
+      },
+    });
+    await uploadKyc(auth, [
+      'identity_document',
+      'driver_license',
+      'medical_certificate',
+      'vehicle_registration',
+      'liability_insurance',
+    ]);
+    await call('POST', '/me/application/submit', { auth, body: {} });
+    const reviewer = await account('revisor');
+    const full = await call('GET', `/admin/applications/${application.id}`, { auth: reviewer });
+    await call('POST', `/admin/applications/${application.id}/review`, {
+      auth: reviewer,
+      body: {
+        decision: 'approve',
+        documents: full.documents.map((d) => ({ documentId: d.id, status: 'accepted' })),
+      },
+      what: 'aprobar al independiente',
+    });
+    return true;
+  });
+  if (joined) done.push('un mototaxista independiente aprobado con su moto');
+  console.log(`  ✔ Independientes: ${done.join(', ')}`);
 }
 
 /**
@@ -1370,7 +1468,15 @@ async function main() {
       "select count(*) from organization_memberships m join users u on u.id = m.user_id where u.email in ('contador@vtp.test', 'supervisor@vtp.test')",
       'buscar los roles nuevos',
     ) === '2';
-  if (hasCore && hasRoles && hasLatest) {
+  if (
+    hasCore &&
+    hasRoles &&
+    hasLatest &&
+    sqlValue(
+      `select count(*) from organizations where legal_name = '${INDEPENDENTS_MARK}'`,
+      'buscar la línea de independientes',
+    ) !== '0'
+  ) {
     console.log('  · Los datos de ejemplo ya estaban cargados: no se cambia nada.');
   }
   if (!hasCore) {
@@ -1397,6 +1503,12 @@ async function main() {
     }
   }
   if (!hasLatest) await latestRoles();
+  const hasIndependents =
+    sqlValue(
+      `select count(*) from organizations where legal_name = '${INDEPENDENTS_MARK}'`,
+      'buscar la línea de independientes',
+    ) !== '0';
+  if (!hasIndependents) await attempt('independientes', () => independents());
   verifyEmails();
   printAccounts();
   if (warnings) {
