@@ -36,6 +36,7 @@ import {
   AcceptTaxiRideDto,
   AssistedTaxiDto,
   DriverAvailabilityDto,
+  DriverLocationDto,
   RateTaxiRideDto,
   CompleteTaxiRideDto,
   PickUpTaxiRideDto,
@@ -185,6 +186,13 @@ export class TaxiDriverController {
   @Get()
   board(@CurrentAuth() auth: Authenticated): Promise<DriverTaxiBoard> {
     return this.taxi.driverBoard(auth.user.id);
+  }
+
+  /** An online driver's position, every few seconds: nearby requests first (ADR-041). */
+  @Put('location')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  location(@CurrentAuth() auth: Authenticated, @Body() body: DriverLocationDto): Promise<void> {
+    return this.taxi.setLocation(auth, body);
   }
 
   /** "En línea" / "Desconectado": only online drivers see, accept and hear about requests. */

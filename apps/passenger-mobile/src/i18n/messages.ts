@@ -340,6 +340,11 @@ const es = {
     rateSend: 'Enviar calificación',
     rated: (n: number) => `Calificaste este viaje con ${n} de 5.`,
     stars: (n: number) => plural(n, 'estrella', 'estrellas'),
+    approaching: (km: string, minutes: number) =>
+      `Tu conductor está a ${km} km: llega en unos ${minutes} min.`,
+    onTheWay: 'Tu conductor va contigo; puedes seguirlo en el mapa.',
+    approachUpdated: (clock: string) => `Ubicación de las ${clock}.`,
+    viewOnMap: 'Ver en el mapa',
   },
 };
 
@@ -675,6 +680,10 @@ const en: Messages = {
     rateSend: 'Send rating',
     rated: (n) => `You rated this ride ${n} out of 5.`,
     stars: (n) => plural(n, 'star', 'stars'),
+    approaching: (km, minutes) => `Your driver is ${km} km away: arriving in about ${minutes} min.`,
+    onTheWay: 'Your driver is with you; you can follow them on the map.',
+    approachUpdated: (clock) => `Location as of ${clock}.`,
+    viewOnMap: 'View on the map',
   },
 };
 
@@ -1013,6 +1022,11 @@ const ptBR: Messages = {
     rateSend: 'Enviar avaliação',
     rated: (n) => `Você avaliou esta corrida com ${n} de 5.`,
     stars: (n) => plural(n, 'estrela', 'estrelas'),
+    approaching: (km, minutes) =>
+      `Seu motorista está a ${km} km: chega em cerca de ${minutes} min.`,
+    onTheWay: 'Seu motorista está com você; você pode acompanhá-lo no mapa.',
+    approachUpdated: (clock) => `Localização das ${clock}.`,
+    viewOnMap: 'Ver no mapa',
   },
 };
 

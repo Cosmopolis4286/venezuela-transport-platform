@@ -133,12 +133,14 @@ hora que pediste), puedes cancelar sin costo.
 2. Las líneas de taxis de ese terminal ven tu solicitud; la primera que la toma te asigna un taxi
    y una tarifa. Te llega un aviso con la placa y la tarifa.
 3. Sigue el estado en la app. Puedes cancelar mientras no hayas subido. **Al taxi se le paga
-   directamente al conductor.**
+   directamente al conductor.** Mientras viene a buscarte (también en los viajes por tramo) ves a
+   cuántos km está, en cuántos minutos llega más o menos y **Ver en el mapa** para ubicarlo.
 4. Al terminar cualquier viaje de taxi o moto, califícalo de 1 a 5 estrellas: la línea ve tu
    calificación.
 
 ¿No tienes la app? Escribe al WhatsApp de soporte y elige la opción 2: te pedimos el taxi o la
-moto y te mandamos un enlace para seguirlo, cancelarlo y calificarlo desde el navegador.
+moto y te mandamos un enlace para seguirlo (con la hora estimada de llegada), cancelarlo y
+calificarlo desde el navegador.
 
 ## Ayuda
 

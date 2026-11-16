@@ -89,6 +89,9 @@ async function TrackedRide({ params }: { params: Promise<{ lang: string; token: 
               <Item label={t.track.driver}>{ride.driverFirstName}</Item>
             ) : null}
             {ride.line ? <Item label={t.track.line}>{ride.line}</Item> : null}
+            {ride.etaMinutes !== null ? (
+              <Item label={t.track.eta}>{t.track.minutes(ride.etaMinutes)}</Item>
+            ) : null}
             {ride.fare ? (
               <Item label={t.track.fare}>
                 {formatMoney(ride.fare.amount, ride.fare.currency, locale)}

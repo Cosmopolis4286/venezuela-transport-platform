@@ -25,6 +25,7 @@ import {
 import { useEffect, useState } from 'react';
 import { RefreshControl } from 'react-native';
 import { parseFare, requestSummary, rideRoute, feesNotice } from '@/lib/taxi-board';
+import { useDriverLocation } from '@/lib/use-driver-location';
 import { useRefreshOnFocus } from '@/lib/use-refresh-on-focus';
 
 /** New requests and the current ride's status are reloaded this often. */
@@ -84,6 +85,8 @@ export default function TaxiScreen() {
 
   const data = board.data;
   const current = data?.current;
+  // While online, the phone shares its location: nearby requests come first (ADR-041).
+  const location = useDriverLocation(!!data?.online);
 
   return (
     <Screen
@@ -103,6 +106,12 @@ export default function TaxiScreen() {
               ? 'Recibes solicitudes y avisos. Si cierras la app un rato, te desconectamos solos.'
               : 'No recibes solicitudes ni avisos. Conéctate cuando estés listo para trabajar.'}
           </Body>
+          {data.online && (location === 'denied' || location === 'unavailable') ? (
+            <Banner tone="warning">
+              Activa la ubicación para recibir primero los viajes cercanos. Sin ella, solo ves las
+              solicitudes que nadie cerca tomó.
+            </Banner>
+          ) : null}
           <Button
             title={data.online ? 'Desconectarme' : 'Conectarme'}
             variant={data.online ? 'secondary' : 'primary'}
@@ -305,7 +314,12 @@ function RequestCard({
   return (
     <Card>
       <Body>{rideRoute(request)}</Body>
-      <Body muted>{requestSummary(request)}</Body>
+      <Body muted>
+        {requestSummary(request)}
+        {request.distanceKm !== null
+          ? ` · a ${request.distanceKm.toLocaleString('es-VE')} km de ti`
+          : ''}
+      </Body>
       {request.paidWithPack ? <Badge label="Pagado con paquete" tone="success" /> : null}
       {feesNotice(request.feesDue) ? <Body muted>{feesNotice(request.feesDue)}</Body> : null}
       {request.passengerFirstName || request.notes ? (

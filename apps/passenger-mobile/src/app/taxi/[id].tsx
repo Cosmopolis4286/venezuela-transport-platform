@@ -25,7 +25,7 @@ import {
 } from '@vtp/shared-types';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { RefreshControl } from 'react-native';
+import { Linking, RefreshControl } from 'react-native';
 import { useFeeTotal } from '@/components/pending-fees';
 import { useT } from '@/i18n/use-t';
 import { driverLine, isOpenRide, ridePlace } from '@/lib/taxi';
@@ -153,6 +153,32 @@ export default function TaxiRideScreen() {
                 <Body>
                   {t.taxi.fare(formatMoney(data.fare.amount, data.fare.currency, locale))}
                 </Body>
+              ) : null}
+              {/* Where the driver is while they come for you (ADR-041). */}
+              {data.driverApproach ? (
+                <>
+                  <Body>
+                    {data.driverApproach.distanceKm !== null &&
+                    data.driverApproach.etaMinutes !== null
+                      ? t.taxi.approaching(
+                          data.driverApproach.distanceKm.toLocaleString(locale),
+                          data.driverApproach.etaMinutes,
+                        )
+                      : t.taxi.onTheWay}
+                  </Body>
+                  <Body muted>
+                    {t.taxi.approachUpdated(networkClock(data.driverApproach.updatedAt))}
+                  </Body>
+                  <Button
+                    variant="link"
+                    title={t.taxi.viewOnMap}
+                    onPress={() =>
+                      void Linking.openURL(
+                        `https://www.google.com/maps/search/?api=1&query=${data.driverApproach!.latitude},${data.driverApproach!.longitude}`,
+                      )
+                    }
+                  />
+                </>
               ) : null}
             </Card>
           ) : null}
