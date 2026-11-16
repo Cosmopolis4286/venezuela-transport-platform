@@ -147,6 +147,8 @@ export interface TaxiRide {
   channel: TaxiChannel;
   /** 1–5 once the passenger rated the finished ride. */
   rating: number | null;
+  /** While accepted or on board: where the driver is (if their app shares it) and when they arrive. */
+  driverApproach: DriverApproach | null;
 }
 
 /** An open request as drivers and dispatchers see it before taking it: no contact details. */
@@ -169,6 +171,8 @@ export interface TaxiRequest {
   passengerFirstName: string | null;
   requestedAt: string;
   expiresAt: string;
+  /** For a driver with a known location: km to the pickup point (nearest first); else null. */
+  distanceKm: number | null;
 }
 
 /** A ride a line has taken, for its driver and dispatchers. */
@@ -207,6 +211,60 @@ export interface AssignTaxiRideRequest extends Omit<AcceptTaxiRideRequest, 'orga
  * only to drivers who are really there.
  */
 export const DRIVER_ONLINE_TIMEOUT_MINUTES = 10;
+
+/**
+ * Nearby first (ADR-041): a request for now is offered during its first `TAXI_NEARBY_SECONDS`
+ * only to online drivers whose location is within `TAXI_NEARBY_KM` of the pickup point; after
+ * that (or right away when nobody is near, the pickup point has no location or the ride is for
+ * later), to every online driver of the lines that serve it.
+ */
+export const TAXI_NEARBY_KM = 5;
+export const TAXI_NEARBY_SECONDS = 45;
+/** A driver's location older than this is not used (they may have moved or lost signal). */
+export const DRIVER_LOCATION_MAX_AGE_MINUTES = 3;
+/** Average city speed used for the arrival estimate, with a factor for streets not being straight. */
+const ETA_KM_PER_HOUR = 25;
+const ETA_ROUTE_FACTOR = 1.3;
+
+/** Great-circle distance in km between two points (WGS 84). */
+export function distanceKm(
+  a: { latitude: number; longitude: number },
+  b: { latitude: number; longitude: number },
+): number {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(b.latitude - a.latitude);
+  const dLon = rad(b.longitude - a.longitude);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(rad(a.latitude)) * Math.cos(rad(b.latitude)) * Math.sin(dLon / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(h));
+}
+
+/** Rough minutes to drive `km` in the city (at least 1). An estimate, not a promise. */
+export function etaMinutes(km: number): number {
+  return Math.max(1, Math.round(((km * ETA_ROUTE_FACTOR) / ETA_KM_PER_HOUR) * 60));
+}
+
+/**
+ * `PUT /me/taxi/location`: an online driver's position, sent by the app every few seconds while
+ * online. Only the last one is kept, and it is erased when the driver goes offline.
+ */
+export interface DriverLocationRequest {
+  latitude: number;
+  longitude: number;
+  /** Meters, as the phone reports it. */
+  accuracyMeters?: number;
+}
+
+/** Where the driver who took a ride is, for the passenger: distance and estimated arrival. */
+export interface DriverApproach {
+  latitude: number;
+  longitude: number;
+  updatedAt: string;
+  /** From the driver to the pickup point; null once the passenger is on board. */
+  distanceKm: number | null;
+  etaMinutes: number | null;
+}
 
 /** `PUT /me/taxi/availability`: take requests ("en línea") or stop ("desconectado"). */
 export interface DriverAvailabilityRequest {
@@ -376,6 +434,8 @@ export interface PublicTaxiRide {
   canCancel: boolean;
   /** Completed and not rated yet. */
   canRate: boolean;
+  /** While the driver comes to pick them up: estimated minutes, if the driver's app shares where they are. */
+  etaMinutes: number | null;
   rating: number | null;
 }
 

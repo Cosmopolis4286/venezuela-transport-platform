@@ -13,6 +13,10 @@ pull request.
 
 ### Cambiado
 
+- **Documentos legales, versión 2026-11-16** (los usuarios aceptan de nuevo): la Política de
+  Privacidad, los Términos y los registros internos dicen que se usa la última ubicación del
+  conductor de taxi o moto mientras está en línea (se borra al desconectarse) y que el pasajero la
+  ve mientras su conductor viene y durante el viaje (ADR-041).
 - **«Conduce con VTP», como en las apps de viajes** (enmienda del ADR-039):
   - las empresas y líneas ya no aparecen en ningún buscador, y su personal entra solo por
     invitación (se quitaron el directorio de organizaciones y las solicitudes a una empresa);
@@ -47,6 +51,12 @@ pull request.
 
 ### Agregado
 
+- **Primero los conductores cercanos** (ADR-041): en línea, la app de transportistas comparte la
+  ubicación del conductor (solo la última, se borra al desconectarse). Cada pedido para ahora llega
+  primero a los conductores a menos de 5 km de la recogida y, si nadie lo toma en 45 segundos, a
+  todos; el tablero muestra a cuántos km está cada pedido. El pasajero ve a su conductor venir, con
+  la distancia, la llegada estimada y un enlace al mapa (también en el enlace de seguimiento de
+  WhatsApp). Segunda etapa del plan «al estilo de las apps de viajes».
 - **Conductores en línea o desconectados** (ADR-040): los conductores de taxi y moto tocan
   **Conectarme** en la app; solo los conectados ven, toman y reciben avisos de las solicitudes, y se
   desconectan solos tras 10 minutos sin abrir la app. El despachador de la línea ve quién está en

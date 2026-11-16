@@ -32,7 +32,17 @@
         }
       ],
       "expo-localization",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Mientras estás en línea, tu ubicación se usa para ofrecerte primero los viajes cercanos y mostrarle al pasajero que vas en camino.",
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false,
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

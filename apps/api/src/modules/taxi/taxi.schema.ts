@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   check,
+  doublePrecision,
   index,
   numeric,
   pgEnum,
@@ -117,6 +118,11 @@ export const taxiRides = pgTable(
     pickedUpAt: timestamp({ withTimezone: true }),
     completedAt: timestamp({ withTimezone: true }),
     cancelledAt: timestamp({ withTimezone: true }),
+    /**
+     * When the request was offered to every online driver of its lines (ADR-041); null while it
+     * is still offered only to the nearby ones.
+     */
+    widenedAt: timestamp({ withTimezone: true }),
     /** WhatsApp rides (ADR-037): asked for by staff, followed with a secret link. */
     channel: taxiChannel().notNull().default('app'),
     trackingToken: text(),
@@ -222,6 +228,13 @@ export const driverPresence = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     onlineSince: timestamp({ withTimezone: true }),
     lastSeenAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    /**
+     * The last position the app sent while online (ADR-041): no history is kept, and it is erased
+     * when the driver goes offline.
+     */
+    latitude: doublePrecision(),
+    longitude: doublePrecision(),
+    locatedAt: timestamp({ withTimezone: true }),
   },
   (t) => [
     index('driver_presence_online_idx')

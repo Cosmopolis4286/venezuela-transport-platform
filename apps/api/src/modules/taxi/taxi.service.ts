@@ -1,7 +1,14 @@
 import { randomBytes, randomInt } from 'node:crypto';
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import {
+  DRIVER_LOCATION_MAX_AGE_MINUTES,
   DRIVER_ONLINE_TIMEOUT_MINUTES,
+  TAXI_NEARBY_KM,
+  TAXI_NEARBY_SECONDS,
+  distanceKm,
+  etaMinutes,
+  type DriverApproach,
+  type DriverLocationRequest,
   formatMoney,
   todayInVenezuela,
   MAX_SCHEDULE_AHEAD_DAYS,
@@ -43,6 +50,7 @@ import {
   eq,
   gt,
   inArray,
+  isNotNull,
   isNull,
   lt,
   lte,
@@ -52,6 +60,7 @@ import {
   type AnyColumn,
 } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
+import { AppConfigService } from '../../config/app-config.service.js';
 import {
   DatabaseService,
   type Database,
@@ -89,6 +98,8 @@ import {
 const DRIVING_ROLES = rolesWith('trips.drive');
 const ACTIVE = ['accepted', 'in_progress'] as const;
 const MINUTE_MS = 60_000;
+/** How often requests nobody near took are offered to every online driver (ADR-041). */
+const WIDEN_EVERY_MS = 10_000;
 /** Finished rides stay on the dispatcher's board for this long. */
 const RECENT_MS = 24 * 3600_000;
 
@@ -254,7 +265,26 @@ export class TaxiService {
     private readonly vehicles: VehiclesService,
     private readonly notifications: NotificationsService,
     private readonly packs: TripPacksService,
+    private readonly config: AppConfigService,
   ) {}
+
+  private readonly logger = new Logger(TaxiService.name);
+  private widenTimer?: NodeJS.Timeout;
+
+  onApplicationBootstrap(): void {
+    // Tests call widenRequests() themselves.
+    if (this.config.get('NODE_ENV') === 'test') return;
+    this.widenTimer = setInterval(() => {
+      this.widenRequests().catch((error: unknown) =>
+        this.logger.error(`Widening taxi requests failed: ${(error as Error).message}`),
+      );
+    }, WIDEN_EVERY_MS);
+    this.widenTimer.unref();
+  }
+
+  onApplicationShutdown(): void {
+    clearInterval(this.widenTimer);
+  }
 
   // --- Passengers -------------------------------------------------------------------------
 
@@ -324,32 +354,16 @@ export class TaxiService {
     }
     await this.record('taxi_ride.requested', row, auth, meta);
     const ride = row;
-    this.notifications.later(async () => {
-      // Drivers of the active taxi lines that serve this terminal (not the passenger).
-      const drivers = await this.database.db
-        .selectDistinct({ userId: memberships.userId })
-        .from(memberships)
-        .innerJoin(organizations, eq(organizations.id, memberships.organizationId))
-        .innerJoin(taxiServiceAreas, eq(taxiServiceAreas.organizationId, organizations.id))
-        .where(
-          and(
-            eq(taxiServiceAreas.stopId, terminal.id),
-            eq(organizations.type, 'taxi_line'),
-            eq(organizations.status, 'active'),
-            inArray(memberships.role, rolesWith('trips.drive')),
-            ne(memberships.userId, ride.passengerUserId),
-            // Only drivers taking requests right now (en línea).
-            onlineDriver(memberships.userId),
-          ),
-        );
-      return {
-        kind: 'taxi_requested',
-        userIds: drivers.map((d) => d.userId),
-        app: 'transport',
-        reference: { key: 'rideId', id: ride.id },
-        text: (m) => m.taxiRequested(terminal.name, ride.passengers),
-      };
-    });
+    // The nearest online drivers first; everyone when nobody is near (ADR-041). Decided before
+    // answering, so a driver looking right away already sees what applies.
+    const recipients = await this.nearbyFirst(ride, await this.eligibleDrivers(ride));
+    this.notifications.later(async () => ({
+      kind: 'taxi_requested',
+      userIds: recipients,
+      app: 'transport',
+      reference: { key: 'rideId', id: ride.id },
+      text: (m) => m.taxiRequested(terminal.name, ride.passengers),
+    }));
     return (await this.toRides([row]))[0]!;
   }
 
@@ -476,39 +490,14 @@ export class TaxiService {
     await this.record('taxi_ride.requested', row, auth, meta, { kind: 'stretch', mode });
     const ride = row;
     const place = `${stopsOf.get(fromStopId)!.city} → ${stopsOf.get(toStopId)!.city}`;
-    this.notifications.later(async () => {
-      // Drivers of the active lines with a fare for this stretch and vehicle.
-      const [a, b] = ordered(fromStopId, toStopId);
-      const drivers = await this.database.db
-        .selectDistinct({ userId: memberships.userId })
-        .from(memberships)
-        .innerJoin(organizations, eq(organizations.id, memberships.organizationId))
-        .innerJoin(
-          onDemandFares,
-          and(
-            eq(onDemandFares.organizationId, organizations.id),
-            eq(onDemandFares.stopAId, a),
-            eq(onDemandFares.stopBId, b),
-            eq(onDemandFares.mode, mode),
-          ),
-        )
-        .where(
-          and(
-            eq(organizations.status, 'active'),
-            inArray(memberships.role, rolesWith('trips.drive')),
-            ne(memberships.userId, ride.passengerUserId),
-            // Only drivers taking requests right now (en línea).
-            onlineDriver(memberships.userId),
-          ),
-        );
-      return {
-        kind: 'taxi_requested',
-        userIds: drivers.map((d) => d.userId),
-        app: 'transport',
-        reference: { key: 'rideId', id: ride.id },
-        text: (m) => m.taxiRequested(place, ride.passengers),
-      };
-    });
+    const recipients = await this.nearbyFirst(ride, await this.eligibleDrivers(ride));
+    this.notifications.later(async () => ({
+      kind: 'taxi_requested',
+      userIds: recipients,
+      app: 'transport',
+      reference: { key: 'rideId', id: ride.id },
+      text: (m) => m.taxiRequested(place, ride.passengers),
+    }));
     return (await this.toRides([row]))[0]!;
   }
 
@@ -980,6 +969,7 @@ export class TaxiService {
       canCancel: ride.status === 'requested' || ride.status === 'accepted',
       canRate: ride.status === 'completed' && ride.ratedAt === null,
       rating: ride.rating,
+      etaMinutes: (await this.toRides([ride]))[0]?.driverApproach?.etaMinutes ?? null,
     };
   }
 
@@ -1023,9 +1013,12 @@ export class TaxiService {
     const current =
       mine.find((r) => r.status === 'in_progress') ?? mine.find((r) => due(r)) ?? null;
     const upcoming = mine.filter((r) => r !== current);
-    // Offline drivers see no requests: they are not taking rides.
+    // Offline drivers see no requests: they are not taking rides. Online ones see the nearby
+    // requests first, and every request once it is widened (ADR-041).
     const requests =
-      lineIds.length && presence.online ? await this.openRequests(lineIds, userId) : [];
+      lineIds.length && presence.online
+        ? await this.openRequests(lineIds, userId, undefined, false, await this.locationOf(userId))
+        : [];
     return {
       online: presence.online,
       onlineSince: presence.onlineSince,
@@ -1079,9 +1072,10 @@ export class TaxiService {
       .onConflictDoUpdate({
         target: driverPresence.userId,
         set: {
-          // Staying online keeps the original start; going offline clears it.
+          // Staying online keeps the original start; going offline clears it and the location.
           onlineSince: online ? sql`coalesce(${driverPresence.onlineSince}, ${now})` : null,
           lastSeenAt: now,
+          ...(online ? {} : { latitude: null, longitude: null, locatedAt: null }),
         },
       });
     await this.audit.record({
@@ -1108,7 +1102,11 @@ export class TaxiService {
     const fresh = +row.lastSeenAt > +now - DRIVER_ONLINE_TIMEOUT_MINUTES * MINUTE_MS;
     await this.database.db
       .update(driverPresence)
-      .set(fresh ? { lastSeenAt: now } : { onlineSince: null })
+      .set(
+        fresh
+          ? { lastSeenAt: now }
+          : { onlineSince: null, latitude: null, longitude: null, locatedAt: null },
+      )
       .where(eq(driverPresence.userId, userId));
     return fresh
       ? { online: true, onlineSince: row.onlineSince.toISOString() }
@@ -1488,6 +1486,8 @@ export class TaxiService {
     excludePassengerId?: string,
     rideId?: string,
     anyStatus = false,
+    /** A driver's view (undefined: a dispatcher's, who sees everything): their location or null. */
+    near?: { latitude: number; longitude: number } | null,
   ): Promise<TaxiRequest[]> {
     const filters = and(
       anyStatus ? undefined : eq(taxiRides.status, 'requested'),
@@ -1533,16 +1533,235 @@ export class TaxiService {
     ]);
     // Rides for now first by age; rides booked for later by their time.
     const when = (r: TaxiRideRow) => (r.scheduledFor ?? r.createdAt).getTime();
-    const rows = [...atTerminals, ...onStretches].sort((x, y) => when(x.ride) - when(y.ride));
+    let rows = [...atTerminals, ...onStretches].sort((x, y) => when(x.ride) - when(y.ride));
+    const distance = new Map<string, number>();
+    if (near !== undefined) {
+      // Nearby first (ADR-041): a request for now reaches only the drivers within TAXI_NEARBY_KM
+      // until it is widened (nobody near, or TAXI_NEARBY_SECONDS went by).
+      const points = await this.stopPoints(
+        rows.flatMap(({ ride }) => (pickupStopOf(ride) ? [pickupStopOf(ride)!] : [])),
+      );
+      const now = Date.now();
+      rows = rows.filter(({ ride }) => {
+        const point = points.get(pickupStopOf(ride) ?? '');
+        if (near && point) distance.set(ride.id, distanceKm(near, point));
+        const km = distance.get(ride.id);
+        return (
+          ride.widenedAt !== null ||
+          ride.scheduledFor !== null ||
+          !point ||
+          now - ride.createdAt.getTime() >= TAXI_NEARBY_SECONDS * 1000 ||
+          (km !== undefined && km <= TAXI_NEARBY_KM)
+        );
+      });
+      // Rides for now: nearest first; rides for later keep their time order after them.
+      rows.sort((x, y) => {
+        if (!!x.ride.scheduledFor !== !!y.ride.scheduledFor) return x.ride.scheduledFor ? 1 : -1;
+        const dx = distance.get(x.ride.id) ?? Infinity;
+        const dy = distance.get(y.ride.id) ?? Infinity;
+        return dx === dy ? when(x.ride) - when(y.ride) : dx - dy;
+      });
+    }
     const { stop, feesDue } = await this.related(rows.map((r) => r.ride));
     return rows.map(({ ride, firstName }) => ({
       ...requestFields(ride, stop),
       feesDue: feesDue(ride),
       passengerFirstName: firstName,
+      distanceKm: distance.has(ride.id) ? Math.round(distance.get(ride.id)! * 10) / 10 : null,
     }));
   }
 
-  /** Active taxi lines where the user is a member whose role drives. */
+  /**
+   * An online driver's position (the app sends it every few seconds). Only the last one is kept;
+   * it is erased when they go offline (ADR-041).
+   */
+  async setLocation(auth: Authenticated, input: DriverLocationRequest): Promise<void> {
+    if (!(await this.checkIn(auth.user.id)).online) {
+      throw conflict('Go online to share your location', 'DRIVER_OFFLINE');
+    }
+    const now = new Date();
+    await this.database.db
+      .update(driverPresence)
+      .set({
+        latitude: input.latitude,
+        longitude: input.longitude,
+        locatedAt: now,
+        lastSeenAt: now,
+      })
+      .where(eq(driverPresence.userId, auth.user.id));
+  }
+
+  /** Recent positions of these online drivers (older than DRIVER_LOCATION_MAX_AGE_MINUTES: none). */
+  private async locations(
+    userIds: string[],
+  ): Promise<Map<string, { latitude: number; longitude: number; locatedAt: Date }>> {
+    if (!userIds.length) return new Map();
+    const rows = await this.database.db
+      .select()
+      .from(driverPresence)
+      .where(
+        and(
+          inArray(driverPresence.userId, userIds),
+          isNotNull(driverPresence.onlineSince),
+          gt(
+            driverPresence.locatedAt,
+            new Date(Date.now() - DRIVER_LOCATION_MAX_AGE_MINUTES * MINUTE_MS),
+          ),
+        ),
+      );
+    return new Map(
+      rows.flatMap((r) =>
+        r.latitude !== null && r.longitude !== null && r.locatedAt
+          ? [[r.userId, { latitude: r.latitude, longitude: r.longitude, locatedAt: r.locatedAt }]]
+          : [],
+      ),
+    );
+  }
+
+  private async locationOf(
+    userId: string,
+  ): Promise<{ latitude: number; longitude: number } | null> {
+    return (await this.locations([userId])).get(userId) ?? null;
+  }
+
+  /** Coordinates of these stops (those with a location). */
+  private async stopPoints(
+    ids: string[],
+  ): Promise<Map<string, { latitude: number; longitude: number }>> {
+    const unique = [...new Set(ids)];
+    if (!unique.length) return new Map();
+    const rows = await this.database.db
+      .select({
+        id: stops.id,
+        latitude: sql<number | null>`ST_Y(${stops.location})`,
+        longitude: sql<number | null>`ST_X(${stops.location})`,
+      })
+      .from(stops)
+      .where(inArray(stops.id, unique));
+    return new Map(
+      rows.flatMap((r) =>
+        r.latitude !== null && r.longitude !== null
+          ? [[r.id, { latitude: Number(r.latitude), longitude: Number(r.longitude) }]]
+          : [],
+      ),
+    );
+  }
+
+  /**
+   * Who hears about a new request first (ADR-041): the online drivers within TAXI_NEARBY_KM of the
+   * pickup point. When nobody is near, the ride is for later or the pickup point has no location,
+   * everyone at once, and the request is marked widened.
+   */
+  private async nearbyFirst(ride: TaxiRideRow, driverIds: string[]): Promise<string[]> {
+    const widen = () =>
+      this.database.db
+        .update(taxiRides)
+        .set({ widenedAt: new Date() })
+        .where(and(eq(taxiRides.id, ride.id), isNull(taxiRides.widenedAt)));
+    const pickup = pickupStopOf(ride);
+    const point = pickup ? (await this.stopPoints([pickup])).get(pickup) : undefined;
+    if (!driverIds.length || ride.scheduledFor || !point) {
+      await widen();
+      return driverIds;
+    }
+    const where = await this.locations(driverIds);
+    const near = driverIds.filter((id) => {
+      const at = where.get(id);
+      return at !== undefined && distanceKm(at, point) <= TAXI_NEARBY_KM;
+    });
+    if (!near.length) {
+      await widen();
+      return driverIds;
+    }
+    return near;
+  }
+
+  /**
+   * Requests nobody near took within TAXI_NEARBY_SECONDS go to every online driver of their lines
+   * (a push to those who had not heard yet). Runs every few seconds; tests call it directly.
+   */
+  async widenRequests(now = new Date()): Promise<number> {
+    const due = await this.database.db
+      .update(taxiRides)
+      .set({ widenedAt: now })
+      .where(
+        and(
+          eq(taxiRides.status, 'requested'),
+          isNull(taxiRides.widenedAt),
+          lte(taxiRides.createdAt, new Date(+now - TAXI_NEARBY_SECONDS * 1000)),
+        ),
+      )
+      .returning();
+    for (const ride of due) {
+      const everyone = await this.eligibleDrivers(ride);
+      const pickup = pickupStopOf(ride);
+      const point = pickup ? (await this.stopPoints([pickup])).get(pickup) : undefined;
+      const where = await this.locations(everyone);
+      // The nearby ones already heard about it.
+      const rest = everyone.filter((id) => {
+        const at = where.get(id);
+        return !(point && at && distanceKm(at, point) <= TAXI_NEARBY_KM);
+      });
+      if (!rest.length) continue;
+      const names = await this.stops.summaries(
+        [ride.terminalStopId, ride.fromStopId, ride.toStopId].filter((x): x is string => !!x),
+      );
+      const place =
+        ride.kind === 'terminal'
+          ? (names.get(ride.terminalStopId!)?.name ?? '')
+          : `${names.get(ride.fromStopId!)?.city ?? ''} → ${names.get(ride.toStopId!)?.city ?? ''}`;
+      this.notifications.send({
+        kind: 'taxi_requested',
+        userIds: rest,
+        app: 'transport',
+        reference: { key: 'rideId', id: ride.id },
+        text: (m) => m.taxiRequested(place, ride.passengers),
+      });
+    }
+    return due.length;
+  }
+
+  /** Online drivers of the active lines that serve this request (not its passenger). */
+  private async eligibleDrivers(ride: TaxiRideRow): Promise<string[]> {
+    const base = [
+      eq(organizations.status, 'active'),
+      inArray(memberships.role, rolesWith('trips.drive')),
+      ne(memberships.userId, ride.passengerUserId),
+      onlineDriver(memberships.userId),
+    ];
+    if (ride.kind === 'terminal') {
+      const rows = await this.database.db
+        .selectDistinct({ userId: memberships.userId })
+        .from(memberships)
+        .innerJoin(organizations, eq(organizations.id, memberships.organizationId))
+        .innerJoin(taxiServiceAreas, eq(taxiServiceAreas.organizationId, organizations.id))
+        .where(
+          and(
+            ...base,
+            eq(taxiServiceAreas.stopId, ride.terminalStopId!),
+            eq(organizations.type, 'taxi_line'),
+          ),
+        );
+      return rows.map((r) => r.userId);
+    }
+    const [a, b] = ordered(ride.fromStopId!, ride.toStopId!);
+    const rows = await this.database.db
+      .selectDistinct({ userId: memberships.userId })
+      .from(memberships)
+      .innerJoin(organizations, eq(organizations.id, memberships.organizationId))
+      .innerJoin(
+        onDemandFares,
+        and(
+          eq(onDemandFares.organizationId, organizations.id),
+          eq(onDemandFares.stopAId, a),
+          eq(onDemandFares.stopBId, b),
+          eq(onDemandFares.mode, ride.mode as OnDemandMode),
+        ),
+      )
+      .where(and(...base));
+    return rows.map((r) => r.userId);
+  }
+
   /** Which of these people are online right now. */
   private async onlineAmong(userIds: string[]): Promise<Set<string>> {
     if (!userIds.length) return new Set();
@@ -1674,6 +1893,27 @@ export class TaxiService {
           ).map((p) => [p.id, p.code])
         : [],
     );
+    // While the driver comes and while on board: where they are and when they arrive (ADR-041).
+    const moving = rows.filter(
+      (r) => r.driverUserId && (r.status === 'accepted' || r.status === 'in_progress'),
+    );
+    const where = await this.locations(moving.map((r) => r.driverUserId!));
+    const points = await this.stopPoints(
+      moving.flatMap((r) => (pickupStopOf(r) ? [pickupStopOf(r)!] : [])),
+    );
+    const approachOf = (ride: TaxiRideRow): DriverApproach | null => {
+      const at = ride.driverUserId ? where.get(ride.driverUserId) : undefined;
+      if (!at || !(ride.status === 'accepted' || ride.status === 'in_progress')) return null;
+      const point = ride.status === 'accepted' ? points.get(pickupStopOf(ride) ?? '') : undefined;
+      const km = point ? distanceKm(at, point) : null;
+      return {
+        latitude: at.latitude,
+        longitude: at.longitude,
+        updatedAt: at.locatedAt.toISOString(),
+        distanceKm: km === null ? null : Math.round(km * 10) / 10,
+        etaMinutes: km === null ? null : etaMinutes(km),
+      };
+    };
     return rows.map((ride) => {
       const driver = ride.driverUserId ? user.get(ride.driverUserId) : undefined;
       const policy = ride.organizationId ? policies.get(ride.organizationId) : undefined;
@@ -1722,6 +1962,7 @@ export class TaxiService {
         cancelledAt: ride.cancelledAt?.toISOString() ?? null,
         channel: ride.channel,
         rating: ride.rating,
+        driverApproach: approachOf(ride),
       };
     });
   }
@@ -1812,7 +2053,13 @@ function requestFields(ride: TaxiRideRow, stop: Map<string, StopSummary>) {
     passengers: ride.passengers,
     requestedAt: ride.createdAt.toISOString(),
     expiresAt: ride.expiresAt.toISOString(),
+    distanceKm: null as number | null,
   };
+}
+
+/** Where the passenger is picked up: the terminal (terminal rides) or the first stop (stretches). */
+function pickupStopOf(ride: TaxiRideRow): string | null {
+  return ride.kind === 'terminal' ? ride.terminalStopId : ride.fromStopId;
 }
 
 const byName = (a: StopSummary, b: StopSummary) => a.name.localeCompare(b.name, 'es');

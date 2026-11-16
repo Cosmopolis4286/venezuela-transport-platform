@@ -204,6 +204,19 @@ vencidos, solo dentro de las 24 horas siguientes al último mensaje de la person
 - El tablero de la línea (`GET /organizations/:id/taxi`) dice de cada conductor si está en línea;
   el despachador puede seguir asignando a cualquier conductor libre.
 
+## Primero los cercanos (ADR-041)
+
+- En línea, la app manda la ubicación del conductor cada 15 segundos como mucho
+  (`PUT /me/taxi/location`; `DRIVER_OFFLINE` si no está en línea). Se guarda solo la última, vale
+  3 minutos y se borra al desconectarse.
+- Un pedido para ahora se ofrece primero a los conductores en línea a menos de 5 km del punto de
+  recogida (el terminal, o la parada de salida en los viajes por tramo), que reciben el aviso. A los
+  45 segundos (`TaxiService.widenRequests`, cada 10 s) se abre a todos y se avisa al resto. Sin
+  nadie cerca, programado o sin coordenadas en la parada: a todos desde el principio.
+- El tablero del conductor ordena por distancia (`TaxiRequest.distanceKm`).
+- Mientras el conductor viene, el pasajero ve `TaxiRide.driverApproach` (ubicación, distancia y
+  llegada estimada); a bordo, solo la ubicación. El enlace de seguimiento muestra `etaMinutes`.
+
 ## Conductores independientes (ADR-039)
 
 Los taxistas y mototaxistas que no pertenecen a una línea trabajan en una **línea operada por la
@@ -228,6 +241,6 @@ calificaciones, liquidación).
 ## Todavía no
 
 Cobro del taxi dentro de la plataforma, tarifas fijas por zona para los taxis de terminal,
-ubicación en vivo del taxi y del pasajero en un mapa, avisos push de cada cambio de estado (hoy:
+mapa en vivo dentro de la app (hoy se abre la ubicación del conductor en la app de mapas) y la del pasajero, avisos push de cada cambio de estado (hoy:
 solicitud nueva y aceptada), recordatorio al conductor antes de un viaje programado y avisos
 automáticos por WhatsApp (los manda el personal con un toque).

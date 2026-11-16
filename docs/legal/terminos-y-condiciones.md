@@ -175,7 +175,8 @@ acepta presta el servicio y fija la tarifa, que el pasajero ve antes de que salg
 una moto entre dos paradas de una zona, para ese momento o para una hora determinada. Antes de
 pedir ve las tarifas fijas que publican las líneas para ese tramo; la primera línea que acepta
 presta el servicio con su tarifa. El pasajero indica dónde recogerlo cerca de la parada de origen;
-la Plataforma no usa la ubicación GPS. Una moto lleva a un solo pasajero, que debe usar casco y
+la Plataforma no usa la ubicación del pasajero. Mientras el conductor va a buscarlo, el pasajero ve
+dónde está y una hora estimada de llegada, que es solo orientativa. Una moto lleva a un solo pasajero, que debe usar casco y
 seguir las normas de tránsito.
 
 6.3. **Pago.** El taxi o la moto se paga **directamente al conductor**, salvo que el viaje se

@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import {
   type AssistedTaxiRequest,
   type DriverAvailabilityRequest,
+  type DriverLocationRequest,
   type RateTaxiRideRequest,
   CURRENCIES,
   MAX_TAXI_PASSENGERS,
@@ -28,6 +29,9 @@ import {
   IsISO8601,
   IsIn,
   IsInt,
+  IsLatitude,
+  IsLongitude,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
@@ -233,4 +237,21 @@ export class DriverAvailabilityDto implements DriverAvailabilityRequest {
   @ApiProperty({ description: 'true: online, taking requests; false: offline' })
   @IsBoolean()
   online!: boolean;
+}
+
+export class DriverLocationDto implements DriverLocationRequest {
+  @ApiProperty({ example: 8.3725, minimum: -90, maximum: 90 })
+  @IsLatitude()
+  latitude!: number;
+
+  @ApiProperty({ example: -62.642, minimum: -180, maximum: 180 })
+  @IsLongitude()
+  longitude!: number;
+
+  @ApiPropertyOptional({ example: 12, description: 'Meters, as the phone reports it' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100_000)
+  accuracyMeters?: number;
 }

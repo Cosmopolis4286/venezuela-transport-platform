@@ -37,6 +37,12 @@ En **Solicitudes de taxi** (o de moto) toca **Conectarme** cuando empieces a tra
 **Desconectarme** al terminar. Solo en línea ves las solicitudes, las tomas y te llegan los avisos.
 Si cierras la app más de 10 minutos, te desconectamos solos.
 
+Mientras estás en línea, la app usa tu ubicación (te pide permiso la primera vez): ves primero los
+pedidos cercanos, cada uno con **a cuántos km** está, y el pasajero que te toca ve que vas en
+camino. Un pedido llega primero a quienes están a menos de 5 km; si nadie lo toma en 45 segundos,
+lo ven todos. Sin permiso de ubicación sigues trabajando, pero solo ves los pedidos cuando se abren
+a todos. Al desconectarte, tu ubicación se borra.
+
 ## 3. Mis viajes (conductores de autobús)
 
 En el inicio están las salidas que te asignó un despachador (también te llega un aviso al

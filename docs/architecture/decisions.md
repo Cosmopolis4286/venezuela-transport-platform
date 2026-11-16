@@ -751,6 +751,32 @@ asignando a cualquier conductor libre.
 vano y molesta a los conductores. Es además la base de la siguiente etapa: ofrecer cada pedido
 primero a los conductores en línea más cercanos.
 
-**Compromisos.** Se guarda solo si está en línea y cuándo abrió la app (no la ubicación), un
-registro por conductor. Un conductor que se queda sin señal más de 10 minutos debe volver a
-conectarse.
+**Compromisos.** Se guarda solo si está en línea y cuándo abrió la app, un registro por conductor
+(la ubicación llegó con el ADR-041). Un conductor que se queda sin señal más de 10 minutos debe
+volver a conectarse.
+
+## ADR-041: Ubicación del conductor y pedidos primero a los cercanos
+
+**Decisión** (del dueño del producto, segunda etapa del plan «al estilo de las apps de viajes»).
+Mientras está **en línea**, la app de transportistas manda la ubicación del teléfono cada 15
+segundos como mucho (`PUT /me/taxi/location`, solo con la app abierta y permiso de ubicación
+«mientras se usa»). Se guarda **solo la última** en `driver_presence` y se borra al desconectarse;
+vale `DRIVER_LOCATION_MAX_AGE_MINUTES` (3). Con ella:
+
+- un pedido para ahora con punto de recogida (el terminal o la parada de salida) se ofrece primero,
+  y se avisa, solo a los conductores en línea a menos de `TAXI_NEARBY_KM` (5 km) de ese punto;
+- si nadie cercano lo toma en `TAXI_NEARBY_SECONDS` (45 s), un ciclo de la API cada 10 segundos lo
+  abre a todos los conductores en línea de las líneas que lo atienden y avisa a los demás
+  (`taxi_rides.widened_at`). Si no hay nadie cerca, o el pedido es programado o sin punto, se abre
+  a todos de una vez;
+- el tablero del conductor ordena los pedidos por distancia y muestra a cuántos km están;
+- el pasajero (app y enlace de seguimiento) ve dónde está su conductor y cuánto tarda en llegar
+  mientras viene; la estimación es la distancia en línea recta × 1,3 a 25 km/h.
+
+**Por qué.** Que llegue primero quien está más cerca acorta la espera del pasajero y el viaje en
+vacío del conductor, y ver al conductor venir da confianza. Sin GPS (permiso negado), el conductor
+sigue trabajando: solo ve los pedidos cuando se abren a todos.
+
+**Compromisos.** No hay mapa en vivo dentro de la app ni rutas por calles: el pasajero abre la
+ubicación en su app de mapas y la llegada es una estimación. No se guarda el historial de
+posiciones. La ubicación no se usa en segundo plano ni con el conductor desconectado.
