@@ -67,6 +67,9 @@ describe.runIf(expectDatabase)('Platform roles (e2e)', () => {
     ['GET', '/admin/metrics', 200, 403, 200, 403, 403],
     ['GET', '/admin/trip-pack-products', 200, 403, 403, 403, 403],
     ['GET', '/admin/independent-lines', 200, 403, 403, 403, 403],
+    ['GET', '/admin/document-renewals', 200, 200, 403, 403, 403],
+    ['GET', '/admin/safety-incidents', 200, 403, 403, 200, 403],
+    ['GET', '/admin/driver-suspensions', 200, 403, 403, 403, 403],
   ];
 
   it('opens each admin route only to the platform roles whose permissions include it', async () => {

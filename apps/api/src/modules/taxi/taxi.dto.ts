@@ -4,6 +4,7 @@ import {
   type DriverAvailabilityRequest,
   type DriverLocationRequest,
   type RateTaxiRideRequest,
+  type LiftDriverSuspensionRequest,
   type ResolveSafetyIncidentRequest,
   CURRENCIES,
   MAX_TAXI_PASSENGERS,
@@ -264,5 +265,13 @@ export class ResolveSafetyIncidentDto implements ResolveSafetyIncidentRequest {
   @IsString()
   @MinLength(3)
   @MaxLength(1000)
+  notes!: string;
+}
+
+export class LiftDriverSuspensionDto implements LiftDriverSuspensionRequest {
+  @ApiProperty({ description: 'What was reviewed or agreed with the driver; they see it' })
+  @IsString()
+  @MinLength(3)
+  @MaxLength(500)
   notes!: string;
 }

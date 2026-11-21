@@ -279,3 +279,35 @@ export const driverPresence = pgTable(
       .where(sql`${t.onlineSince} is not null`),
   ],
 );
+
+/**
+ * Driver quality (ADR-044): warnings for a low average, alerts to a line's owners, and
+ * suspensions from the platform's independent drivers' line until the team lifts them.
+ */
+export const driverQualityActions = pgTable(
+  'driver_quality_actions',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: uuid()
+      .notNull()
+      .references(() => users.id),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+    kind: text({ enum: ['warning', 'suspension', 'line_alert'] }).notNull(),
+    average: doublePrecision(),
+    ratings: smallint().notNull(),
+    liftedAt: timestamp({ withTimezone: true }),
+    liftedBy: uuid().references(() => users.id, { onDelete: 'set null' }),
+    liftNotes: text(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('driver_quality_active_suspension_key')
+      .on(t.userId, t.organizationId)
+      .where(sql`${t.kind} = 'suspension' and ${t.liftedAt} is null`),
+    index('driver_quality_user_idx').on(t.userId, t.createdAt),
+  ],
+);
+
+export type DriverQualityActionRow = typeof driverQualityActions.$inferSelect;

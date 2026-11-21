@@ -31,6 +31,14 @@ Para taxistas y mototaxistas independientes, con su propio carro o moto:
    trabajar: solo en línea ves y tomas solicitudes y te llegan los avisos. Tomas viajes solo con tu vehículo, y
    si tu póliza RCV vence no podrás tomar viajes hasta renovarla.
 
+### Tu calificación
+
+En **Solicitudes de taxi** (o de moto) ves tu calificación promedio: la de tus últimos 30 viajes
+calificados, a partir de 10. Si baja de 4,3 te avisamos; si conduces con VTP y baja de 4,0, tu
+cuenta queda suspendida y no puedes conectarte hasta que VTP revise tu caso y converse contigo.
+Al levantarse la suspensión, el promedio empieza de nuevo. Si trabajas con una línea, sus dueños
+reciben el aviso y deciden.
+
 ### Tus documentos al día
 
 Treinta días antes de que venzan tu licencia, tu certificado médico o tu póliza RCV te avisamos

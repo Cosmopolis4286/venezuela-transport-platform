@@ -1,14 +1,22 @@
-import type { IndependentLine } from '@vtp/shared-types';
+import {
+  DRIVER_RATING_MIN_COUNT,
+  DRIVER_RATING_SUSPEND_BELOW,
+  DRIVER_RATING_WINDOW,
+  localPhone,
+  type DriverSuspension,
+  type IndependentLine,
+} from '@vtp/shared-types';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ActionForm, SubmitButton } from '@/components/portal/action-form';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
-import { Input, Select } from '@/components/ui/input';
+import { Input, Select, Textarea } from '@/components/ui/input';
 import { Field } from '@/components/ui/label';
 import { apiFetch } from '@/lib/server/api';
 import { requirePlatformPermission } from '@/lib/server/session';
-import { createIndependentLine } from './actions';
+import { formatDate } from '@/lib/labels';
+import { createIndependentLine, liftDriverSuspension } from './actions';
 
 export const metadata: Metadata = { title: 'Conductores independientes' };
 
@@ -18,7 +26,11 @@ export const metadata: Metadata = { title: 'Conductores independientes' };
  */
 export default async function IndependentsPage() {
   await requirePlatformPermission('independents.manage');
-  const lines = await apiFetch<IndependentLine[]>('/admin/independent-lines');
+  const [lines, suspensions] = await Promise.all([
+    apiFetch<IndependentLine[]>('/admin/independent-lines'),
+    apiFetch<DriverSuspension[]>('/admin/driver-suspensions'),
+  ]);
+  const active = suspensions.filter((s) => !s.liftedAt);
   return (
     <>
       <div className="flex flex-col gap-2">
@@ -64,6 +76,68 @@ export default async function IndependentsPage() {
           ))}
         </div>
       )}
+
+      <Card>
+        <CardTitle>Suspendidos por calificación · {active.length}</CardTitle>
+        <CardDescription>
+          Con al menos {DRIVER_RATING_MIN_COUNT} calificaciones, si el promedio de las últimas{' '}
+          {DRIVER_RATING_WINDOW} baja de {DRIVER_RATING_SUSPEND_BELOW.toFixed(1)}, el conductor
+          queda suspendido y desconectado (ADR-044). Revisa los comentarios, habla con la persona y,
+          si corresponde, levanta la suspensión escribiendo qué acordaron: lo ve el conductor, y su
+          promedio vuelve a contar desde cero.
+        </CardDescription>
+        {suspensions.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Ningún conductor ha sido suspendido.</p>
+        ) : (
+          <ul className="flex flex-col divide-y">
+            {suspensions.map((suspension) => (
+              <li key={suspension.id} className="flex flex-col gap-2 py-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-medium">{suspension.driver.name}</p>
+                  <Badge variant={suspension.liftedAt ? 'secondary' : 'destructive'}>
+                    {suspension.liftedAt ? 'Levantada' : 'Suspendido'}
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">
+                    {suspension.line.name} · promedio{' '}
+                    {suspension.average?.toLocaleString('es-VE') ?? '—'} en {suspension.ratings}{' '}
+                    viajes · desde {formatDate(suspension.createdAt)}
+                    {suspension.driver.phone ? ` · ${localPhone(suspension.driver.phone)}` : ''}
+                  </span>
+                </div>
+                {suspension.comments.length ? (
+                  <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                    {suspension.comments.map((c) => (
+                      <li key={c.ratedAt}>
+                        {'★'.repeat(c.rating)} «{c.comment}» · {formatDate(c.ratedAt)}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                {suspension.liftedAt ? (
+                  <p className="text-sm">
+                    Levantada {formatDate(suspension.liftedAt)}: {suspension.liftNotes}
+                  </p>
+                ) : (
+                  <ActionForm
+                    action={liftDriverSuspension}
+                    hidden={{ suspensionId: suspension.id }}
+                  >
+                    <Textarea
+                      name="notes"
+                      required
+                      minLength={3}
+                      placeholder="Qué revisaste o acordaste con el conductor (lo verá)"
+                    />
+                    <div>
+                      <SubmitButton size="sm">Levantar la suspensión</SubmitButton>
+                    </div>
+                  </ActionForm>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
 
       <Card>
         <CardTitle>Nueva línea de independientes</CardTitle>

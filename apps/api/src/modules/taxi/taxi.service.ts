@@ -69,6 +69,7 @@ import {
 import { ApiException } from '../../common/errors/api.exception.js';
 import { AppConfigService } from '../../config/app-config.service.js';
 import { drivingDocumentsExpired } from '../onboarding/driving-documents.js';
+import { DriverQualityService } from './driver-quality.service.js';
 import {
   DatabaseService,
   type Database,
@@ -283,6 +284,7 @@ export class TaxiService {
     private readonly notifications: NotificationsService,
     private readonly packs: TripPacksService,
     private readonly config: AppConfigService,
+    private readonly quality: DriverQualityService,
   ) {}
 
   private readonly logger = new Logger(TaxiService.name);
@@ -922,6 +924,14 @@ export class TaxiService {
       )
       .returning();
     if (!row) throw conflict('Only a finished ride can be rated, once', 'TAXI_RIDE_WRONG_STEP');
+    // Driver quality (ADR-044): a failure here never loses the passenger's rating.
+    if (row.driverUserId && row.organizationId) {
+      await this.quality
+        .evaluate(row.driverUserId, row.organizationId)
+        .catch((error: unknown) =>
+          this.logger.error(`Driver quality check failed: ${(error as Error).message}`),
+        );
+    }
     return row;
   }
 
@@ -1226,6 +1236,7 @@ export class TaxiService {
 
   async driverBoard(userId: string): Promise<DriverTaxiBoard> {
     await expireTaxiRequests(this.database.db);
+    const suspension = await this.quality.activeSuspension(userId);
     const presence = await this.checkIn(userId);
     const lines = await this.driverLines(userId);
     const lineIds = lines.map((l) => l.id);
@@ -1264,6 +1275,10 @@ export class TaxiService {
           label: v.label,
         })),
       })),
+      rating: await this.quality.rating(userId),
+      suspension: suspension
+        ? { since: suspension.createdAt.toISOString(), average: suspension.average }
+        : null,
     };
   }
 
@@ -1304,6 +1319,9 @@ export class TaxiService {
   ): Promise<DriverTaxiBoard> {
     const userId = auth.user.id;
     if (online && !(await this.driverLines(userId)).length) {
+      if (await this.quality.activeSuspension(userId)) {
+        throw conflict('You are suspended for low ratings', 'DRIVER_SUSPENDED');
+      }
       throw conflict('You drive for no active taxi or motorcycle line', 'DRIVER_NO_LINE');
     }
     if (online) await this.requireDrivingDocuments(userId);
@@ -2027,7 +2045,9 @@ export class TaxiService {
         ),
       )
       .where(and(eq(memberships.userId, userId), inArray(memberships.role, DRIVING_ROLES)));
-    return rows.map((r) => r.organization);
+    // Not the lines they are suspended from for low ratings (ADR-044).
+    const suspended = await this.quality.suspendedLines(userId);
+    return rows.map((r) => r.organization).filter((line) => !suspended.has(line.id));
   }
 
   private drivers(organizationId: string) {

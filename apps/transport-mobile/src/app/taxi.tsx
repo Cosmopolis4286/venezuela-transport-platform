@@ -13,6 +13,8 @@ import {
   userMessage,
 } from '@vtp/mobile-core';
 import {
+  DRIVER_RATING_MIN_COUNT,
+  DRIVER_RATING_WARN_BELOW,
   EMERGENCY_PHONE,
   TAXI_RIDE_STATUS_LABELS,
   formatMoney,
@@ -95,6 +97,26 @@ export default function TaxiScreen() {
     >
       {board.error ? <Banner tone="error">{board.error.userMessage}</Banner> : null}
       {message ? <Banner tone={message.tone}>{message.text}</Banner> : null}
+      {data?.suspension ? (
+        // Suspended for low ratings (ADR-044): no lines to drive for until the team reviews it.
+        <Banner tone="error">
+          Tu cuenta de conductor está suspendida porque tu calificación promedio bajó
+          {data.suspension.average !== null
+            ? ` a ${data.suspension.average.toLocaleString('es-VE')}`
+            : ''}
+          . VTP revisa tu caso y te escribirá; mientras tanto no puedes conectarte.
+        </Banner>
+      ) : null}
+      {data && data.rating.count > 0 ? (
+        <Body muted>
+          Tu calificación: {data.rating.average?.toLocaleString('es-VE')} ★ (últimos{' '}
+          {data.rating.count} viajes calificados)
+          {data.rating.count >= DRIVER_RATING_MIN_COUNT &&
+          (data.rating.average ?? 5) < DRIVER_RATING_WARN_BELOW
+            ? '. Está bajando: cuida la puntualidad, el trato y la conducción.'
+            : ''}
+        </Body>
+      ) : null}
       {data && data.lines.length > 0 ? (
         // "En línea" / "Desconectado": only online drivers see, take and hear about requests.
         <Card>

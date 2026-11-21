@@ -168,6 +168,8 @@ const es: SharedMessages = {
     VEHICLE_MODE_MISMATCH: 'Ese vehículo es de otro tipo (bus, taxi o moto) que esta ruta.',
     VEHICLE_BUSY: 'Ese vehículo ya está en otro viaje a esa hora.',
     DRIVER_OFFLINE: 'Conéctate (En línea) para tomar viajes.',
+    DRIVER_SUSPENDED:
+      'Tu cuenta de conductor está suspendida por calificaciones bajas mientras VTP la revisa. Te escribiremos.',
     DRIVER_DOCUMENTS_EXPIRED:
       'Tu licencia o tu certificado médico vencieron: renuévalos en Conduce con VTP para volver a conectarte.',
     DRIVER_NO_LINE:
@@ -353,6 +355,8 @@ const en: SharedMessages = {
       'That vehicle is of a different kind (bus, taxi or motorcycle) than this route.',
     VEHICLE_BUSY: 'That vehicle is already on another trip at that time.',
     DRIVER_OFFLINE: 'Go online to take rides.',
+    DRIVER_SUSPENDED:
+      'Your driver account is suspended for low ratings while VTP reviews it. We will contact you.',
     DRIVER_DOCUMENTS_EXPIRED:
       'Your licence or medical certificate expired: renew them in Drive with VTP to go online again.',
     DRIVER_NO_LINE: 'To go online you must drive for a taxi or motorcycle line, or drive with VTP.',
@@ -535,6 +539,8 @@ const ptBR: SharedMessages = {
     VEHICLE_MODE_MISMATCH: 'Esse veículo é de outro tipo (ônibus, táxi ou moto) que esta rota.',
     VEHICLE_BUSY: 'Esse veículo já está em outra viagem nesse horário.',
     DRIVER_OFFLINE: 'Fique online para aceitar viagens.',
+    DRIVER_SUSPENDED:
+      'Sua conta de motorista está suspensa por avaliações baixas enquanto a VTP a revisa. Entraremos em contato.',
     DRIVER_DOCUMENTS_EXPIRED:
       'Sua carteira de motorista ou seu atestado médico venceram: renove-os em Dirija com a VTP para voltar a ficar online.',
     DRIVER_NO_LINE:

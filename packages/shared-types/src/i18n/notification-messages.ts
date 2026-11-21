@@ -80,6 +80,12 @@ export interface NotificationMessages {
   ) => NotificationText;
   /** To the platform team: someone pressed the emergency button in a ride (ADR-043). */
   safetyAlert: (reporter: 'passenger' | 'driver', plate: string, route: string) => NotificationText;
+  /** Driver quality (ADR-044): to the driver, their average is low, or they were suspended. */
+  driverRatingLow: (average: string, suspended: boolean) => NotificationText;
+  /** To the driver: the platform lifted their suspension. */
+  driverSuspensionLifted: (notes: string) => NotificationText;
+  /** To a line's owners: one of their drivers has a low average. */
+  lineDriverRatingLow: (driver: string, average: string) => NotificationText;
   /** Appended to every e-mail. */
   footer: string;
 }
@@ -247,6 +253,24 @@ const es: NotificationMessages = {
     title: '🚨 Emergencia en un viaje',
     body: `${reporter === 'driver' ? 'El conductor' : 'El pasajero'} del viaje ${plate} (${route}) tocó Emergencia. Atiéndelo ya en el portal, en Emergencias.`,
   }),
+  driverRatingLow: (average, suspended) =>
+    suspended
+      ? {
+          title: 'Tu cuenta de conductor está suspendida',
+          body: `Tu calificación promedio bajó a ${average}. Mientras VTP revisa tu caso no puedes conectarte; te escribiremos para conversarlo.`,
+        }
+      : {
+          title: 'Tu calificación está bajando',
+          body: `Tu calificación promedio es ${average}. Cuida la puntualidad, el trato y la conducción: por debajo de 4,0 la cuenta se suspende para revisarla.`,
+        },
+  driverSuspensionLifted: (notes) => ({
+    title: 'Ya puedes volver a conectarte',
+    body: `VTP levantó la suspensión de tu cuenta: ${notes} Tu promedio vuelve a contar desde ahora.`,
+  }),
+  lineDriverRatingLow: (driver, average) => ({
+    title: 'Un conductor tiene calificaciones bajas',
+    body: `La calificación promedio de ${driver} es ${average}. Revisa sus viajes y comentarios en el portal.`,
+  }),
   footer: 'VTP · Transporte terrestre en Venezuela. Este es un mensaje automático.',
 };
 
@@ -380,6 +404,24 @@ const en: NotificationMessages = {
   safetyAlert: (reporter, plate, route) => ({
     title: '🚨 Emergency on a ride',
     body: `The ${reporter === 'driver' ? 'driver' : 'passenger'} of ride ${plate} (${route}) pressed Emergency. Attend to it now in the portal, under Emergencies.`,
+  }),
+  driverRatingLow: (average, suspended) =>
+    suspended
+      ? {
+          title: 'Your driver account is suspended',
+          body: `Your average rating dropped to ${average}. While VTP reviews your case you cannot go online; we will contact you to talk it over.`,
+        }
+      : {
+          title: 'Your rating is going down',
+          body: `Your average rating is ${average}. Mind punctuality, manners and driving: below 4.0 the account is suspended for review.`,
+        },
+  driverSuspensionLifted: (notes) => ({
+    title: 'You can go online again',
+    body: `VTP lifted your account's suspension: ${notes} Your average counts again from now on.`,
+  }),
+  lineDriverRatingLow: (driver, average) => ({
+    title: 'A driver has low ratings',
+    body: `The average rating of ${driver} is ${average}. Check their rides and comments in the portal.`,
   }),
   footer: 'VTP · Ground transport in Venezuela. This is an automatic message.',
 };
@@ -517,6 +559,24 @@ const ptBR: NotificationMessages = {
   safetyAlert: (reporter, plate, route) => ({
     title: '🚨 Emergência em uma corrida',
     body: `${reporter === 'driver' ? 'O motorista' : 'O passageiro'} da corrida ${plate} (${route}) tocou em Emergência. Atenda agora no portal, em Emergências.`,
+  }),
+  driverRatingLow: (average, suspended) =>
+    suspended
+      ? {
+          title: 'Sua conta de motorista está suspensa',
+          body: `Sua avaliação média caiu para ${average}. Enquanto a VTP revisa seu caso você não pode ficar online; entraremos em contato para conversar.`,
+        }
+      : {
+          title: 'Sua avaliação está caindo',
+          body: `Sua avaliação média é ${average}. Cuide da pontualidade, do atendimento e da direção: abaixo de 4,0 a conta é suspensa para revisão.`,
+        },
+  driverSuspensionLifted: (notes) => ({
+    title: 'Você já pode voltar a ficar online',
+    body: `A VTP retirou a suspensão da sua conta: ${notes} Sua média volta a contar a partir de agora.`,
+  }),
+  lineDriverRatingLow: (driver, average) => ({
+    title: 'Um motorista tem avaliações baixas',
+    body: `A avaliação média de ${driver} é ${average}. Veja as corridas e os comentários no portal.`,
   }),
   footer: 'VTP · Transporte rodoviário na Venezuela. Esta é uma mensagem automática.',
 };

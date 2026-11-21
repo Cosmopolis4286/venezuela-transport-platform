@@ -6,6 +6,7 @@ import { NetworkModule } from '../network/network.module.js';
 import { OrganizationsModule } from '../organizations/organizations.module.js';
 import { TripPacksModule } from '../trip-packs/trip-packs.module.js';
 import {
+  AdminDriverQualityController,
   AdminSafetyController,
   AdminTaxiController,
   TaxiController,
@@ -14,6 +15,7 @@ import {
   TaxiSharedController,
   TaxiTrackingController,
 } from './taxi.controller.js';
+import { DriverQualityService } from './driver-quality.service.js';
 import { TaxiService } from './taxi.service.js';
 
 /** Taxis to and from the terminals: requests, taking them, and the ride's lifecycle. */
@@ -34,8 +36,9 @@ import { TaxiService } from './taxi.service.js';
     TaxiTrackingController,
     TaxiSharedController,
     AdminSafetyController,
+    AdminDriverQualityController,
   ],
-  providers: [TaxiService],
+  providers: [TaxiService, DriverQualityService],
   exports: [TaxiService],
 })
 export class TaxiModule {}

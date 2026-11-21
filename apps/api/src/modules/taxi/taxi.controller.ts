@@ -18,6 +18,7 @@ import type {
   StretchOption,
   DriverTaxiBoard,
   OperatorTaxiRide,
+  DriverSuspension,
   PendingRideFee,
   SafetyIncident,
   ShareTaxiRideResponse,
@@ -46,9 +47,11 @@ import {
   ReplaceTaxiTerminalsDto,
   RequestTaxiDto,
   ReplaceOnDemandFaresDto,
+  LiftDriverSuspensionDto,
   ResolveSafetyIncidentDto,
   StretchOptionsQueryDto,
 } from './taxi.dto.js';
+import { DriverQualityService } from './driver-quality.service.js';
 import { TaxiService } from './taxi.service.js';
 
 /** Passengers ask for a taxi at a terminal and follow it. */
@@ -397,5 +400,30 @@ export class TaxiLineController {
     @ReqMeta() meta: RequestMeta,
   ): Promise<void> {
     return this.taxi.release(access, rideId, auth, meta);
+  }
+}
+
+/** Platform staff: drivers suspended from the independent drivers' line for low ratings (ADR-044). */
+@ApiTags('admin')
+@ApiBearerAuth()
+@RequirePlatformPermission('independents.manage')
+@Controller({ path: 'admin/driver-suspensions', version: '1' })
+export class AdminDriverQualityController {
+  constructor(private readonly quality: DriverQualityService) {}
+
+  @Get()
+  list(): Promise<DriverSuspension[]> {
+    return this.quality.suspensions();
+  }
+
+  @Post(':suspensionId/lift')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  lift(
+    @CurrentAuth() auth: Authenticated,
+    @Param('suspensionId', ParseUUIDPipe) suspensionId: string,
+    @Body() body: LiftDriverSuspensionDto,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<void> {
+    return this.quality.lift(auth, suspensionId, body, meta);
   }
 }

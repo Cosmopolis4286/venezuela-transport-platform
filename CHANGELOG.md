@@ -13,7 +13,8 @@ pull request.
 
 ### Cambiado
 
-- **Documentos legales, versión 2026-11-21** (los usuarios aceptan de nuevo): Términos 6.10
+- **Documentos legales, versión 2026-11-21** (los usuarios aceptan de nuevo): Condiciones para
+  Conductores Independientes, sección 5 (promedio, aviso y suspensión por calificación); Términos 6.10
   (compartir el viaje y Emergencia; VTP no es un servicio de emergencias) y Política de Privacidad
   (quién ve un viaje compartido y qué se guarda de una emergencia), con el registro y la
   conservación al día.
@@ -55,6 +56,11 @@ pull request.
 
 ### Agregado
 
+- **Calidad de los conductores** (ADR-044): el conductor ve su calificación promedio (últimos 30
+  viajes calificados, a partir de 10). Por debajo de 4,3 recibe un aviso; por debajo de 4,0 un
+  independiente queda suspendido y desconectado hasta que VTP revisa su caso (**Independientes →
+  Suspendidos por calificación**), y en las demás líneas se avisa a sus dueños. Tercera parte de la
+  tercera etapa.
 - **Compartir el viaje y Emergencia** (ADR-043): en la app de pasajeros, **Compartir mi viaje**
   manda un enlace de solo lectura con la placa, el conductor, el recorrido y dónde va; durante el
   viaje, pasajeros y conductores tienen **Emergencia**, que llama al 911 y avisa al equipo de VTP
