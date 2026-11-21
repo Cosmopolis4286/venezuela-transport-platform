@@ -133,6 +133,21 @@ Abre la empresa en la lista para:
 
 La empresa ve cada pago en su portal.
 
+### Conductores independientes: comisión y pagos semanales (ADR-045)
+
+Arriba en **Liquidaciones**:
+
+- **Comisión (%)** de la línea de independientes. Si la subes, rige a los 30 días y los conductores
+  reciben el aviso (Condiciones para Conductores, 4.2); si la bajas, desde ahora.
+- **Pagos semanales por transferir**: cada lunes (desde las 9:00) se crea un pago por cada
+  conductor al que se le debe al menos US$ 5 o Bs. 200 y registró su cuenta. Transfiere a la cuenta
+  que se muestra, escribe la referencia y **Marcar como enviado**: el conductor recibe el aviso. Ya
+  cuentan en su saldo mientras están pendientes. **Generar los pagos de esta semana** los crea antes
+  (no duplica los ya creados).
+- **Deudas**: en la liquidación de la línea, un conductor con saldo negativo debe comisiones; con
+  más de US$ 20 o Bs. 800 no puede conectarse. Cuando pague, registra el monto en su fila
+  (**Registrar lo que pagó el conductor**): nunca más de lo que debe.
+
 ## Paquetes de viajes (`/admin/trip-packs`, solo administradores)
 
 - **Catálogo**: cada paquete es un tramo de una zona activa (dos paradas; sirve en los dos sentidos), un

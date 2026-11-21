@@ -198,3 +198,25 @@ Eventos de auditoría: `settlement.platform_policy_set`, `settlement.organizatio
 
 Comisión sobre los taxis (hoy se pagan directo al conductor), exportar el libro a una hoja de cálculo, y pagar a
 las empresas a través de un proveedor en vez de a mano.
+
+## Conductores independientes: comisión y pagos semanales (ADR-045)
+
+Solo en las líneas que opera la plataforma (`organizations.operated_by_platform`):
+
+- **Comisión** (`platform_settings.independent_commission_rate`, 0 % al empezar). Al terminar un
+  viaje: si lo pagó el pasajero en efectivo, una fila `ride_commission` (`collected_by = operator`,
+  `payee = driver`, `earned` negativo: lo que el conductor debe); si fue con paquete, la fila del
+  viaje acredita la tarifa menos la comisión. `PUT /admin/independent-commission`: un aumento se
+  guarda como próximo (`…_next_rate`, `…_next_from` = ahora + 30 días) y se avisa a los conductores;
+  una baja rige desde ya. `independentCommissionAt(db, momento)` da la que rige.
+- **Saldo del conductor** = acreditado − pagado (incluidos los pagos pendientes) + cobrado
+  (`payouts` `from_operator` con `driver_user_id`). No entra en el saldo de la línea.
+- **Deuda**: con un saldo por debajo de `−DRIVER_DEBT_LIMIT` (US$ 20 / Bs. 800) no se conecta ni
+  acepta viajes (`DRIVER_DEBT_LIMIT`). Finanzas registra lo que paga (`COLLECTION_EXCEEDS_DEBT` si
+  es más de lo que debe).
+- **Pagos semanales** (`IndependentPayoutsService`): cada lunes desde las 9:00 (hora de Venezuela)
+  un pago `pending` por conductor, línea y moneda con saldo ≥ `DRIVER_PAYOUT_MINIMUM` (US$ 5 /
+  Bs. 200) y cuenta registrada; `run_week` (índice único) evita duplicados. Con
+  `PAYOUT_PROVIDER=manual` esperan a que finanzas los marque enviados con la referencia
+  (`POST /admin/payouts/:id/sent`); con `simulated` (desarrollo) salen al instante. El conductor
+  recibe `payout_sent`.

@@ -124,3 +124,10 @@ los pasajeros de tus viajes es tuyo. En **Mis cobros** ves cuánto te deben por 
 registras dónde cobrar: pago móvil, transferencia o USDT, con banco o red, teléfono, cuenta o
 billetera, cédula y nombre del titular. La plataforma te transfiere lo que te corresponde y lo
 registra; tu saldo baja al mismo tiempo. Si tu empresa cobra con sus propias cuentas, te paga ella.
+
+**Si conduces con VTP** (ADR-045), Mis cobros te muestra además la comisión de VTP por viaje (y,
+si va a cambiar, desde cuándo; un aumento siempre te lo avisamos con 30 días). En los viajes que te
+pagan en efectivo la comisión queda como deuda; en los pagados con paquete te acreditamos la tarifa
+sin ella. Cada lunes te transferimos lo que te debemos, si llega al mínimo (US$ 5 o Bs. 200) y
+registraste tu cuenta: te avisamos con la referencia. Si debes más de US$ 20 o Bs. 800, no puedes
+conectarte hasta pagarla: escríbenos para pagarla y la registramos.

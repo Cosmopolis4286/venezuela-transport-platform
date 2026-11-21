@@ -33,7 +33,9 @@ export const settlementEntryKind = pgEnum('settlement_entry_kind', [
   'booking',
   'cancellation',
   'ride_cancellation_fee',
+  'ride_commission',
 ]);
+export const payoutStatus = pgEnum('payout_status', ['pending', 'sent']);
 export const paymentCollection = pgEnum('payment_collection', PAYMENT_COLLECTIONS);
 export const payoutDirection = pgEnum('payout_direction', PAYOUT_DIRECTIONS);
 
@@ -54,6 +56,10 @@ export const platformSettings = pgTable(
     rideFreeCancelMinutes: smallint().notNull().default(DEFAULT_RIDE_CANCELLATION.freeMinutes),
     /** Later, this percentage of the line's fare, paid on the next ride. */
     rideCancelFeePercent: smallint().notNull().default(DEFAULT_RIDE_CANCELLATION.feePercent),
+    /** Commission on independent drivers' rides (ADR-045), and an announced change. */
+    independentCommissionRate: numeric({ precision: 5, scale: 2 }).notNull().default('0.00'),
+    independentCommissionNextRate: numeric({ precision: 5, scale: 2 }),
+    independentCommissionNextFrom: timestamp({ withTimezone: true }),
     updatedByUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
     ...timestamps,
   },
@@ -145,13 +151,24 @@ export const payouts = pgTable(
     method: payoutMethod().notNull(),
     reference: text().notNull(),
     note: text(),
+    /** Weekly automatic payouts to drivers (ADR-045) start `pending` until transferred. */
+    status: payoutStatus().notNull().default('sent'),
+    /** The week of the automatic run that created it (`2026-W47`); null for manual ones. */
+    runWeek: text(),
+    sentAt: timestamp({ withTimezone: true }),
     createdByUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
     voidedAt: timestamp({ withTimezone: true }),
     voidReason: text(),
     voidedByUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('payouts_organization_idx').on(t.organizationId, t.createdAt)],
+  (t) => [
+    index('payouts_organization_idx').on(t.organizationId, t.createdAt),
+    // One automatic payout per driver, line, currency and week, even with several API instances.
+    uniqueIndex('payouts_run_week_key')
+      .on(t.runWeek, t.organizationId, t.driverUserId, t.currency)
+      .where(sql`${t.runWeek} is not null`),
+  ],
 );
 
 /** Where each driver wants to be paid (ADR-030); entered by the driver in the transport app. */

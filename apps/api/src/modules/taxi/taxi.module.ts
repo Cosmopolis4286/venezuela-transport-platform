@@ -4,6 +4,7 @@ import { FleetModule } from '../fleet/fleet.module.js';
 import { IdentityModule } from '../identity/identity.module.js';
 import { NetworkModule } from '../network/network.module.js';
 import { OrganizationsModule } from '../organizations/organizations.module.js';
+import { SettlementsModule } from '../settlements/settlements.module.js';
 import { TripPacksModule } from '../trip-packs/trip-packs.module.js';
 import {
   AdminDriverQualityController,
@@ -27,6 +28,7 @@ import { TaxiService } from './taxi.service.js';
     NetworkModule,
     FleetModule,
     TripPacksModule,
+    SettlementsModule,
   ],
   controllers: [
     TaxiController,

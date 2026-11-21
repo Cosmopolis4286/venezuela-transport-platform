@@ -232,6 +232,8 @@ describe.runIf(expectDatabase)('Who is paid: the line or the driver (e2e)', () =
           currency: 'USD',
           earned: '0.75',
           paidOut: '0.00',
+          collected: '0.00',
+          pending: '0.00',
           balance: '0.75',
           payoutAccount: null,
         },
@@ -259,10 +261,13 @@ describe.runIf(expectDatabase)('Who is paid: the line or the driver (e2e)', () =
             currency: 'USD',
             earned: '0.75',
             paidOut: '0.00',
+            collected: '0.00',
+            pending: '0.00',
             balance: '0.75',
           },
         ],
         payoutAccount: null,
+        commission: null,
       });
 
       // He says where to pay him; the platform sees it next to his balance.

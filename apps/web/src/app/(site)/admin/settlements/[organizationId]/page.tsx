@@ -87,13 +87,14 @@ async function OrganizationSettlementView({
         <DriverBalances
           drivers={settlement.drivers}
           pay={(row) => (
+            // A negative balance is what the driver owes in commissions (ADR-045): record what they pay.
             <ActionForm
               action={createPayout}
               hidden={{
                 ...hidden,
                 driverUserId: row.driver!.id,
                 currency: row.currency,
-                direction: 'to_operator',
+                direction: row.balance.startsWith('-') ? 'from_operator' : 'to_operator',
               }}
               resetOnSuccess
             >
@@ -102,7 +103,7 @@ async function OrganizationSettlementView({
                   name="amount"
                   inputMode="decimal"
                   required
-                  defaultValue={row.balance}
+                  defaultValue={row.balance.replace(/^-/, '')}
                   aria-label={`Monto para ${row.driver!.name}`}
                 />
                 <Select
@@ -117,7 +118,11 @@ async function OrganizationSettlementView({
                   ))}
                 </Select>
                 <Input name="reference" required maxLength={120} placeholder="Referencia" />
-                <SubmitButton size="sm">Registrar pago al conductor</SubmitButton>
+                <SubmitButton size="sm">
+                  {row.balance.startsWith('-')
+                    ? 'Registrar lo que pagó el conductor'
+                    : 'Registrar pago al conductor'}
+                </SubmitButton>
               </div>
             </ActionForm>
           )}
