@@ -781,14 +781,14 @@ async function interurban(admin, sub) {
     return { ...created, stops: stops.map(([s]) => s), schedules };
   };
 
-  // Each company converts its fares to bolívares with its own rate (Pago Móvil shows the amount).
-  for (const org of [llanos, oriente]) {
-    await call('PUT', `${org.url}/exchange-rates`, {
-      auth: org.auth,
-      body: { rates: [{ currency: 'VES', unitsPerUsd: '40' }] },
-      what: 'tasa de cambio de la empresa',
-    });
-  }
+  // Bolívar prices use the BCV's official rate (ADR-046). The API fetches it every few hours;
+  // offline, the demo types one so Pago Móvil shows amounts.
+  await attempt('tasa oficial del BCV', () =>
+    call('PUT', '/admin/fiscal/bcv-rates', {
+      auth: admin,
+      body: { date: dayInVenezuela(0), unitsPerUsd: '40' },
+    }),
+  );
 
   const { coach, sleeper } = llanosFleet;
   const ccsVal = await route(
@@ -916,12 +916,6 @@ async function activity(admin, sub, net) {
   const inTwoDays = dayInVenezuela(2);
 
   // The platform's accounts for manual payments (Pago Móvil) and the exchange rate.
-  await attempt('tasa de cambio', () =>
-    call('PUT', '/admin/exchange-rates', {
-      auth: admin,
-      body: { rates: [{ currency: 'VES', unitsPerUsd: '40' }] },
-    }),
-  );
   await attempt('cuenta de Pago Móvil de la plataforma', () =>
     call('PUT', '/admin/payment-accounts/pago_movil', {
       auth: admin,

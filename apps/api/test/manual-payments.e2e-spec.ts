@@ -21,6 +21,7 @@ import {
 import { and, eq } from 'drizzle-orm';
 import request from 'supertest';
 import { DatabaseService } from '../src/database/database.service.js';
+import { setOfficialRate } from './support/official-rate.js';
 import { bookings } from '../src/modules/bookings/bookings.schema.js';
 import { users } from '../src/modules/identity/identity.schema.js';
 import type { OtpMessage, OtpSender } from '../src/modules/identity/otp/otp-sender.js';
@@ -257,11 +258,8 @@ describe.runIf(expectDatabase)('Manual payments (e2e)', () => {
         ['usdt', false],
       ]);
 
-      await http()
-        .put(`${org}/exchange-rates`)
-        .set('Authorization', owner.auth)
-        .send({ rates: [{ currency: 'VES', unitsPerUsd: '36.5' }] })
-        .expect(200);
+      // Bolívares at the BCV's official rate (ADR-046), the same in every e2e file.
+      await setOfficialRate(app);
 
       // --- Only active accounts are offered; the instructions are the account and the concept.
       const ana = await signIn();

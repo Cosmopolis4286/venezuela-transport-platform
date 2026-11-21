@@ -1,12 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   PAYMENT_METHODS,
-  RATE_CURRENCIES,
+  MANUAL_RATE_CURRENCIES,
   type ConfirmPaymentRequest,
   type CreatePaymentRequest,
   type PaymentAccountInput,
   type PaymentMethod,
-  type RateCurrency,
+  type ManualRateCurrency,
   type RejectPaymentRequest,
   type ReplaceExchangeRatesRequest,
   type ReportPaymentRequest,
@@ -29,9 +29,12 @@ const RATE = /^\d{1,13}(\.\d{1,4})?$/;
 const AMOUNT = /^\d{1,12}(\.\d{1,2})?$/;
 
 export class ExchangeRateDto {
-  @ApiProperty({ enum: RATE_CURRENCIES })
-  @IsIn(RATE_CURRENCIES)
-  currency!: RateCurrency;
+  /** Bolívares are not set by hand: they always use the BCV's official rate (ADR-046). */
+  @ApiProperty({ enum: MANUAL_RATE_CURRENCIES })
+  @IsIn(MANUAL_RATE_CURRENCIES, {
+    message: 'currency must be BRL: bolívares always use the BCV official rate',
+  })
+  currency!: ManualRateCurrency;
 
   @ApiProperty({ example: '36.5000', description: 'Units of the currency per US dollar' })
   @Matches(RATE, { message: 'unitsPerUsd must be a decimal with up to 4 places' })
@@ -41,7 +44,7 @@ export class ExchangeRateDto {
 export class ReplaceExchangeRatesDto implements ReplaceExchangeRatesRequest {
   @ApiProperty({ type: [ExchangeRateDto] })
   @IsArray()
-  @ArrayMaxSize(RATE_CURRENCIES.length)
+  @ArrayMaxSize(MANUAL_RATE_CURRENCIES.length)
   @ValidateNested({ each: true })
   @Type(() => ExchangeRateDto)
   rates!: ExchangeRateDto[];

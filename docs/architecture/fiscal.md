@@ -9,12 +9,12 @@ Decisión: [ADR-031](decisions.md#adr-031-la-plataforma-factura-su-tarifa-por-se
 
 ## Piezas
 
-| Tabla             | Qué guarda                                                                 |
-| ----------------- | -------------------------------------------------------------------------- |
-| `fiscal_settings` | Una fila: razón social, RIF, domicilio fiscal, tipo de contribuyente, IVA. |
-| `bcv_rates`       | Tasa oficial BCV por día (Bs por USD), cargada por el personal.            |
-| `invoices`        | Facturas y notas de crédito: borrador → emitida (o anulada).               |
-| `purchases`       | Facturas de compra recibidas, para el libro de compras.                    |
+| Tabla             | Qué guarda                                                                               |
+| ----------------- | ---------------------------------------------------------------------------------------- |
+| `fiscal_settings` | Una fila: razón social, RIF, domicilio fiscal, tipo de contribuyente, IVA.               |
+| `bcv_rates`       | Tasa oficial BCV por día (Bs por USD), buscada sola cada 6 h o escrita a mano (ADR-046). |
+| `invoices`        | Facturas y notas de crédito: borrador → emitida (o anulada).                             |
+| `purchases`       | Facturas de compra recibidas, para el libro de compras.                                  |
 
 Código: `apps/api/src/modules/fiscal/`. Contratos: `packages/shared-types/src/api/fiscal.ts`.
 
@@ -45,7 +45,7 @@ reservas; las facturas se conservan.
 
 `POST /api/v1/admin/fiscal/invoices/:id/issue`. Con `INVOICE_ISSUER=draft` (por defecto):
 
-1. Completar los datos fiscales (`PUT /admin/fiscal/settings`) y la tasa BCV del día.
+1. Completar los datos fiscales (`PUT /admin/fiscal/settings`) y revisar que haya tasa BCV del día.
 2. Crear la factura en el portal del SENIAT con los datos del borrador.
 3. Anotar el número de factura, el número de control y la fecha de emisión.
 

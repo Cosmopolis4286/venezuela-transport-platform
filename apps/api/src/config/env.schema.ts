@@ -129,6 +129,12 @@ export const envSchema = z
      */
     INVOICE_ISSUER: z.enum(['draft', 'digital_printer']).default('draft'),
     /**
+     * Every how many hours the BCV's official rate is fetched (ADR-046): from bcv.org.ve, or
+     * ve.dolarapi.com when it fails. Bolívar prices always use it. 0 turns the job off (then an
+     * admin types the rate in Administración → Facturación).
+     */
+    BCV_RATE_SYNC_HOURS: z.coerce.number().int().min(0).max(24).default(6),
+    /**
      * Optional. Support WhatsApp number (international, e.g. +58 412 123 4567), shown as a
      * "Write to us on WhatsApp" button in the web and the apps. Public: it is not a secret.
      */

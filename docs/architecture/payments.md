@@ -24,11 +24,20 @@ reembolsos están en [settlements.md](settlements.md).
 
 ## Tasas de cambio
 
-Cada empresa fija sus propias tasas en el portal (`PUT /organizations/:id/exchange-rates`,
-`routes.manage`): bolívares y reales por dólar estadounidense, con hasta cuatro decimales. USDT va
-1:1 con el dólar. La conversión pasa por el dólar y redondea hacia arriba en la mitad, a
-céntimos, con aritmética entera (`money.ts`). Un método que necesita una tasa que falta no se
-ofrece. Con una tarifa en bolívares, el pago móvil y la transferencia no necesitan tasa.
+- **Bolívares: siempre la tasa oficial del BCV** (ADR-046). El módulo `bcv-rates` la busca cada
+  `BCV_RATE_SYNC_HOURS` (6 por defecto) en bcv.org.ve y, si la página falla, en
+  ve.dolarapi.com, y la guarda en `bcv_rates` por su "fecha valor". Se usa la más reciente cuya
+  fecha ya llegó; si tiene más de `BCV_RATE_MAX_AGE_DAYS` (5) días, no se ofrece pagar en
+  bolívares. Pública en `GET /exchange-rates/official`; el personal la actualiza en el momento con
+  `POST /admin/fiscal/bcv-rates/sync` o la escribe a mano (`PUT /admin/fiscal/bcv-rates`), y una
+  tasa escrita a mano no se reemplaza.
+- **Reales (PIX): la fija cada empresa** en el portal (`PUT /organizations/:id/exchange-rates`,
+  `routes.manage`, solo `BRL`) y la plataforma para sus paquetes (vence a las 24 horas).
+- USDT va 1:1 con el dólar.
+
+La conversión pasa por el dólar, con tasas de hasta seis decimales, y redondea hacia arriba en la
+mitad, a céntimos, con aritmética entera (`money.ts`). Un método que necesita una tasa que falta
+no se ofrece. Con una tarifa en bolívares, el pago móvil y la transferencia no necesitan tasa.
 
 | Método        | Recibe | Tasa necesaria para una tarifa en USD | Para una tarifa en VES |
 | ------------- | ------ | ------------------------------------- | ---------------------- |

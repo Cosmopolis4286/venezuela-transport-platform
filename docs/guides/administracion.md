@@ -111,8 +111,9 @@ Las horas aceptan cuartos: 0,5 son 30 minutos. Un cambio
 se aplica desde ese momento: las reservas ya pagadas conservan su comisión, y los tramos se leen
 al cancelar.
 
-**Tasas de cambio de los paquetes** (Paquetes de viajes): una tasa con más de 24 horas no se usa
-y el pago en bolívares deja de ofrecerse. Guárdalas al menos una vez al día, aunque no cambien.
+**Tasas de cambio de los paquetes** (Paquetes de viajes): los bolívares usan la tasa oficial del
+BCV. La de reales (PIX) se escribe a mano y, con más de 24 horas, PIX deja de ofrecerse:
+guárdala al menos una vez al día, aunque no cambie.
 
 ### Una empresa
 
@@ -142,9 +143,8 @@ La empresa ve cada pago en su portal.
 - **Tope por viaje** (opcional): lo máximo que la plataforma le paga a una empresa por cada viaje
   usado. Sin tope, se paga la tarifa de la empresa aunque la suba después de vendido el paquete;
   ponlo igual o algo mayor que las tarifas actuales del tramo para no perder dinero.
-- **Tasas de cambio de la plataforma**: convierten el precio de los paquetes al cobrar (las
-  empresas tienen las suyas para sus boletos). Sin tasa de bolívares no se ofrece pago móvil ni
-  transferencia para paquetes en dólares.
+- **Tasas de cambio de la plataforma**: los bolívares usan siempre la tasa oficial del BCV; aquí
+  solo se escribe la de reales (PIX).
 - **Empresas adheridas**: en **Liquidaciones → la empresa**, marca **Acepta paquetes de viajes**
   después de acordarlo con ella. Solo sus rutas suburbanas aceptan paquetes; por cada viaje usado
   gana su tarifa normal del tramo (sin cargo ni comisión), hasta el tope por viaje.
@@ -180,7 +180,10 @@ Ver [fiscal.md](../architecture/fiscal.md).
 
 1. **Datos fiscales**: razón social, RIF, domicilio, tipo de contribuyente (ordinario o formal) e
    IVA. Sin ellos no se puede emitir.
-2. **Tasa BCV**: carga la tasa oficial de cada día hábil (bolívares por dólar).
+2. **Tasa BCV**: se actualiza sola cada 6 horas desde bcv.org.ve (o DolarApi si la página del
+   BCV falla); con ella se cobra en bolívares y se factura. **Actualizar ahora desde el BCV** la
+   busca en el momento. Si ninguna fuente responde, escríbela a mano: una tasa escrita a mano no
+   se reemplaza. Sin una tasa de los últimos 5 días no se ofrece pagar en bolívares.
 3. **Facturas** (`/admin/fiscal/invoices`): cada pago deja un borrador. Créalo en el portal del
    SENIAT con esos datos y anota el número de factura, el número de control y la fecha: el sistema
    calcula base, IVA y total en bolívares. Si el comprador pide la factura a otro nombre, cámbialo
@@ -214,7 +217,7 @@ desde cero. En las demás líneas no se suspende a nadie: sus dueños reciben un
 | ------ | ----------------------------------------------------------------------------- |
 | Día    | Verificar los pagos informados (varias veces al día)                          |
 | Día    | Atender la cola de reembolsos y las revisiones pendientes                     |
-| Día    | Cargar la tasa BCV y emitir las facturas en borrador                          |
+| Día    | Revisar que la tasa BCV esté al día y emitir las facturas en borrador         |
 | Semana | Pagar los saldos de las empresas (la frecuencia es una decisión de operación) |
 | Mes    | Revisar las reservas pagadas de cada empresa y la política general            |
 | Mes    | Descargar los libros de ventas y compras para la declaración de IVA           |

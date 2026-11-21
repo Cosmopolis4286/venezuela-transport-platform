@@ -1,5 +1,6 @@
 'use server';
 
+import type { BcvSyncResult } from '@vtp/shared-types';
 import { refresh } from 'next/cache';
 import type { FormState } from '@/lib/form-state';
 import { apiRequest } from '@/lib/server/api';
@@ -43,6 +44,26 @@ export async function saveBcvRate(_: FormState, form: FormData): Promise<FormSta
   }
   refresh();
   return { success: 'Tasa BCV guardada.' };
+}
+
+/** Fetches the BCV's official rate now instead of waiting for the job (ADR-046). */
+export async function syncBcvRate(): Promise<FormState> {
+  try {
+    const result = await apiRequest<BcvSyncResult>('/admin/fiscal/bcv-rates/sync', {
+      method: 'POST',
+    });
+    refresh();
+    return result.ok
+      ? {
+          success: `Tasa del BCV actualizada: ${result.rate!.unitsPerUsd} Bs. por dólar, vigente desde el ${result.rate!.date}.`,
+        }
+      : {
+          error:
+            'Ni la página del BCV ni DolarApi respondieron. Intenta más tarde o escribe la tasa a mano.',
+        };
+  } catch (error) {
+    return failure(error);
+  }
 }
 
 export async function issueInvoice(_: FormState, form: FormData): Promise<FormState> {

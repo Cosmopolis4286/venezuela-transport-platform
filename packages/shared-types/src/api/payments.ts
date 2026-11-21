@@ -57,9 +57,22 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> =
 
 // --- Exchange rates ----------------------------------------------------------------------------
 
-/** Currencies an operator sets a rate for, in units per US dollar. */
+/** Currencies a payment can be converted to, in units per US dollar. */
 export const RATE_CURRENCIES = ['VES', 'BRL'] as const;
 export type RateCurrency = (typeof RATE_CURRENCIES)[number];
+
+/**
+ * Currencies operators and the platform still set by hand. Bolívares always use the BCV's
+ * official rate, fetched automatically (ADR-046).
+ */
+export const MANUAL_RATE_CURRENCIES = ['BRL'] as const satisfies readonly RateCurrency[];
+export type ManualRateCurrency = (typeof MANUAL_RATE_CURRENCIES)[number];
+
+/**
+ * The BCV rate is published once per business day; with weekends and holidays the newest one can
+ * be a few days old. Older than this, bolívar payments are not offered until it is updated.
+ */
+export const BCV_RATE_MAX_AGE_DAYS = 5;
 
 export interface ExchangeRate {
   currency: RateCurrency;
@@ -68,9 +81,12 @@ export interface ExchangeRate {
   updatedAt: string;
 }
 
-/** `PUT /organizations/:id/exchange-rates` replaces every rate; omitted currencies are removed. */
+/**
+ * `PUT /organizations/:id/exchange-rates` replaces every rate set by hand (only
+ * `MANUAL_RATE_CURRENCIES`); omitted currencies are removed.
+ */
 export interface ReplaceExchangeRatesRequest {
-  rates: { currency: RateCurrency; unitsPerUsd: string }[];
+  rates: { currency: ManualRateCurrency; unitsPerUsd: string }[];
 }
 
 // --- Payments ----------------------------------------------------------------------------------

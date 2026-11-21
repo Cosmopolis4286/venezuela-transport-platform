@@ -243,7 +243,8 @@ describe.runIf(expectDatabase)('Fiscal: service-fee invoices and books (e2e)', (
         .send({ number, controlNumber: `00-${run}`, issuedOn: '2000-01-03' })
         .expect(409)
         .expect((res) => expect(res.body.error.reason).toBe('BCV_RATE_MISSING'));
-      await asAdmin('put', '/bcv-rates').send({ date: today, unitsPerUsd: '250' }).expect(200);
+      // The same official rate every e2e file uses (one for the whole platform, ADR-046).
+      await asAdmin('put', '/bcv-rates').send({ date: today, unitsPerUsd: '36.5' }).expect(200);
 
       // The buyer can still change on a draft.
       await asAdmin('patch', `/invoices/${draft!.id}/buyer`)
@@ -254,21 +255,21 @@ describe.runIf(expectDatabase)('Fiscal: service-fee invoices and books (e2e)', (
           .send({ number, controlNumber: `00-${run}` })
           .expect(200)
       ).body as Invoice;
-      // 1.50 × 250 = 375.00 Bs, VAT included: base 375 / 1.16 = 323.28, VAT 51.72.
+      // 1.50 × 36.5 = 54.75 Bs, VAT included: base 54.75 / 1.16 = 47.20, VAT 7.55.
       expect(issued).toMatchObject({
         status: 'issued',
         number,
         controlNumber: `00-${run}`,
         issuedOn: today,
         taxpayerType: 'ordinary',
-        exchangeRate: '250.000000',
+        exchangeRate: '36.500000',
         buyer: { address: 'Carora, Lara' },
         amountsVes: {
-          base: '323.28',
+          base: '47.20',
           notTaxed: '0.00',
           vatRate: '16.00',
-          vat: '51.72',
-          total: '375.00',
+          vat: '7.55',
+          total: '54.75',
         },
       });
       await asAdmin('post', `/invoices/${draft!.id}/issue`)
@@ -364,10 +365,10 @@ describe.runIf(expectDatabase)('Fiscal: service-fee invoices and books (e2e)', (
       ).body as Invoice;
       expect(formal.amountsVes).toEqual({
         base: '0.00',
-        notTaxed: '375.00',
+        notTaxed: '54.75',
         vatRate: '0.00',
         vat: '0.00',
-        total: '375.00',
+        total: '54.75',
       });
       await asAdmin('put', '/settings')
         .send({ ...settings, taxpayerType: 'ordinary' })
@@ -389,17 +390,17 @@ describe.runIf(expectDatabase)('Fiscal: service-fee invoices and books (e2e)', (
           documentType: 'FAC',
           number,
           buyerId: 'V-20123456',
-          total: '375.00',
-          base: '323.28',
-          vat: '51.72',
+          total: '54.75',
+          base: '47.20',
+          vat: '7.55',
         }),
         expect.objectContaining({
           documentType: 'NC',
           number: `NC${run}`,
           affectedInvoice: number,
-          total: '-375.00',
-          base: '-323.28',
-          vat: '-51.72',
+          total: '-54.75',
+          base: '-47.20',
+          vat: '-7.55',
         }),
       ]);
       await asAdmin('get', '/books/sales?month=2026-13').expect(400);

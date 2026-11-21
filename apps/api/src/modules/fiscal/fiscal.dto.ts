@@ -3,7 +3,7 @@ import {
   BUYER_ID_TYPES,
   INVOICE_STATUSES,
   TAXPAYER_TYPES,
-  type BcvRate,
+  type BcvRateInput,
   type BuyerIdType,
   type FiscalSettingsInput,
   type InvoiceStatus,
@@ -49,7 +49,7 @@ export class FiscalSettingsDto implements FiscalSettingsInput {
   vatRate!: string;
 }
 
-export class BcvRateDto implements BcvRate {
+export class BcvRateDto implements BcvRateInput {
   @ApiProperty({ example: '2026-11-08' })
   @Matches(DATE, dateMessage)
   date!: string;

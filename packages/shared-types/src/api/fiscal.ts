@@ -42,11 +42,43 @@ export interface FiscalSettings {
 
 export type FiscalSettingsInput = Omit<FiscalSettings, 'issuer' | 'complete'>;
 
-/** BCV official rate for one day (`/admin/fiscal/bcv-rates`). */
-export interface BcvRate {
+/**
+ * Where a BCV rate came from (ADR-046): the BCV's website, DolarApi (which republishes it) when
+ * the website fails, or typed by an admin.
+ */
+export const BCV_RATE_SOURCES = ['bcv', 'dolarapi', 'manual'] as const;
+export type BcvRateSource = (typeof BCV_RATE_SOURCES)[number];
+
+export const BCV_RATE_SOURCE_LABELS: Record<BcvRateSource, string> = {
+  bcv: 'BCV (bcv.org.ve)',
+  dolarapi: 'DolarApi (respaldo)',
+  manual: 'Escrita por un administrador',
+};
+
+/** `PUT /admin/fiscal/bcv-rates`: an admin types the rate of one day. */
+export interface BcvRateInput {
+  /** The BCV's "fecha valor": the day the rate applies from. */
   date: string;
   /** Bolívares per US dollar. */
   unitsPerUsd: string;
+}
+
+/**
+ * The BCV's official rate for one day (`GET /admin/fiscal/bcv-rates`), and the one in force
+ * (`GET /exchange-rates/official`, public).
+ */
+export interface BcvRate extends BcvRateInput {
+  source: BcvRateSource;
+  updatedAt: string;
+}
+
+/** `POST /admin/fiscal/bcv-rates/sync`: fetch it now. */
+export interface BcvSyncResult {
+  ok: boolean;
+  /** The rate saved, when one was found. */
+  rate: BcvRate | null;
+  /** What failed, per source, in English (for staff). */
+  errors: string[];
 }
 
 export const INVOICE_KINDS = ['invoice', 'credit_note'] as const;

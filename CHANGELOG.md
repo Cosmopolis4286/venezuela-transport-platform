@@ -13,6 +13,11 @@ pull request.
 
 ### Cambiado
 
+- **Los bolívares se cobran siempre con la tasa oficial del BCV** (ADR-046): un job la busca cada
+  6 horas en bcv.org.ve (o en DolarApi si la página falla) y la guarda con su "fecha valor" y su
+  fuente. Las empresas y la plataforma solo escriben la tasa de reales (PIX). Sin tasa de los
+  últimos 5 días no se ofrece pagar en bolívares. En Facturación: botón para actualizarla en el
+  momento y la fuente de cada tasa. Corrige que la tasa de bolívares de las empresas no vencía.
 - **Documentos legales, versión 2026-11-21** (los usuarios aceptan de nuevo): Condiciones para
   Conductores Independientes, sección 5 (promedio, aviso y suspensión por calificación); Términos 6.10
   (compartir el viaje y Emergencia; VTP no es un servicio de emergencias) y Política de Privacidad

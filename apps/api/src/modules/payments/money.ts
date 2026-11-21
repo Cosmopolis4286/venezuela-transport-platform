@@ -1,7 +1,11 @@
 import type { Currency, PaymentCurrency, RateCurrency } from '@vtp/shared-types';
 
-/** Rates are stored with four decimals; amounts with two. Everything is computed in integers. */
-const RATE_SCALE = 10_000n;
+/**
+ * Rates have up to six decimals (the BCV's official rate, ADR-046; rates typed by hand have four);
+ * amounts two. Everything is computed in integers.
+ */
+const RATE_PLACES = 6;
+const RATE_SCALE = 10n ** BigInt(RATE_PLACES);
 const RATE_OUTPUT_PLACES = 6;
 
 /** `"36.5"` → 365000n with `places` = 4; `"-1.5"` → -15000n. Throws on anything else. */
@@ -43,7 +47,7 @@ export function convert(
   const perUsd = (currency: Currency | PaymentCurrency): bigint | null => {
     if (currency === 'USD' || currency === 'USDT') return RATE_SCALE;
     const rate = rates.get(currency);
-    return rate ? toScaled(rate, 4) : null;
+    return rate ? toScaled(rate, RATE_PLACES) : null;
   };
   const source = perUsd(from);
   const target = perUsd(to);
