@@ -13,6 +13,8 @@ import {
   userMessage,
 } from '@vtp/mobile-core';
 import {
+  DRIVER_DEBT_LIMIT,
+  DRIVER_PAYOUT_MINIMUM,
   formatPaymentAmount,
   PAYOUT_METHOD_LABELS,
   PAYOUT_METHODS,
@@ -75,6 +77,8 @@ export default function EarningsScreen() {
   };
 
   const balances = earnings.data?.balances ?? [];
+  const commission = earnings.data?.commission ?? null;
+  const pct = (rate: string) => `${Number(rate).toLocaleString('es-VE')} %`;
   return (
     <Screen refreshControl={<RefreshControl refreshing={earnings.loading} onRefresh={reload} />}>
       <Heading>Mis cobros</Heading>
@@ -84,17 +88,53 @@ export default function EarningsScreen() {
         que indiques abajo.
       </Body>
       {earnings.error ? <Banner tone="error">{userMessage(earnings.error)}</Banner> : null}
+      {commission ? (
+        // Independent drivers (ADR-045): commission, weekly payouts and the debt limit.
+        <Card>
+          <Subheading>Conduces con VTP</Subheading>
+          <Body>
+            Comisión de VTP: {pct(commission.rate)} de cada viaje
+            {commission.next
+              ? `. Desde el ${new Date(commission.next.from).toLocaleDateString('es-VE')}: ${pct(commission.next.rate)}`
+              : ''}
+            .
+          </Body>
+          <Body muted>
+            Los viajes que te pagan en efectivo te dejan la comisión como deuda; los pagados con
+            paquete te los acreditamos sin ella. Cada lunes te transferimos lo que te debemos (desde{' '}
+            {formatPaymentAmount(DRIVER_PAYOUT_MINIMUM.USD, 'USD')} o{' '}
+            {formatPaymentAmount(DRIVER_PAYOUT_MINIMUM.VES, 'VES')}). Si debes más de{' '}
+            {formatPaymentAmount(DRIVER_DEBT_LIMIT.USD, 'USD')} o{' '}
+            {formatPaymentAmount(DRIVER_DEBT_LIMIT.VES, 'VES')}, no puedes conectarte hasta pagarla:
+            escríbenos para pagarla.
+          </Body>
+        </Card>
+      ) : null}
       {balances.length === 0 && !earnings.loading ? (
         <Body muted>Todavía no tienes ventas en rutas que paguen al conductor.</Body>
       ) : null}
       {balances.map((b) => (
         <Card key={`${b.organization.id}:${b.currency}`}>
           <Subheading>{b.organization.name}</Subheading>
-          <Body>Por cobrar: {formatPaymentAmount(b.balance, b.currency)}</Body>
+          {b.balance.startsWith('-') ? (
+            <Banner tone="warning">
+              Debes {formatPaymentAmount(b.balance.slice(1), b.currency)} de comisiones.
+            </Banner>
+          ) : (
+            <Body>Por cobrar: {formatPaymentAmount(b.balance, b.currency)}</Body>
+          )}
           <Body muted>
             Ganado {formatPaymentAmount(b.earned, b.currency)} · ya pagado{' '}
             {formatPaymentAmount(b.paidOut, b.currency)}
+            {b.collected !== '0.00'
+              ? ` · pagaste de comisiones ${formatPaymentAmount(b.collected, b.currency)}`
+              : ''}
           </Body>
+          {b.pending !== '0.00' ? (
+            <Body muted>
+              En camino a tu cuenta: {formatPaymentAmount(b.pending, b.currency)} (pago semanal).
+            </Body>
+          ) : null}
         </Card>
       ))}
 

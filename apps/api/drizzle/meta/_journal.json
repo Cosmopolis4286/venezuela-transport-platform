@@ -309,6 +309,13 @@
       "when": 1795235635117,
       "tag": "0043_driver_quality",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1795274369902,
+      "tag": "0044_independent_commission_payouts",
+      "breakpoints": true
     }
   ]
 }

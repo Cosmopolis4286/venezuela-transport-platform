@@ -72,38 +72,46 @@ describe.runIf(expectDatabase)('Platform roles (e2e)', () => {
     ['GET', '/admin/driver-suspensions', 200, 403, 403, 403, 403],
   ];
 
-  it('opens each admin route only to the platform roles whose permissions include it', async () => {
-    const roles: (PlatformRole | null)[] = ['admin', 'reviewer', 'finance', 'support', null];
-    const auth = await Promise.all(roles.map(staff));
-    const mismatches: string[] = [];
-    for (const [method, path, ...expected] of routes) {
-      for (const [i, role] of roles.entries()) {
-        const res = await http()
-          [method.toLowerCase() as 'get'](`/api/v1${path}`)
-          .set('Authorization', auth[i]!);
-        if (res.status !== expected[i]) {
-          mismatches.push(`${role ?? 'none'} ${method} ${path}: ${res.status} ≠ ${expected[i]}`);
+  it(
+    'opens each admin route only to the platform roles whose permissions include it',
+    { timeout: 20_000 },
+    async () => {
+      const roles: (PlatformRole | null)[] = ['admin', 'reviewer', 'finance', 'support', null];
+      const auth = await Promise.all(roles.map(staff));
+      const mismatches: string[] = [];
+      for (const [method, path, ...expected] of routes) {
+        for (const [i, role] of roles.entries()) {
+          const res = await http()
+            [method.toLowerCase() as 'get'](`/api/v1${path}`)
+            .set('Authorization', auth[i]!);
+          if (res.status !== expected[i]) {
+            mismatches.push(`${role ?? 'none'} ${method} ${path}: ${res.status} ≠ ${expected[i]}`);
+          }
         }
       }
-    }
-    expect(mismatches).toEqual([]);
+      expect(mismatches).toEqual([]);
 
-    // Writes are narrower than reads: support and finance see stops but cannot add them.
-    const [, reviewer, finance, support] = auth;
-    const stop = { kind: 'stop', name: `Parada ${randomUUID()}`, city: 'Caracas', state: 'DC' };
-    for (const who of [finance, support]) {
-      await http().post('/api/v1/admin/stops').set('Authorization', who!).send(stop).expect(403);
-    }
-    await http().post('/api/v1/admin/stops').set('Authorization', reviewer!).send(stop).expect(201);
-    // Only reviewers (and admins) decide on organizations.
-    for (const who of [finance, support]) {
+      // Writes are narrower than reads: support and finance see stops but cannot add them.
+      const [, reviewer, finance, support] = auth;
+      const stop = { kind: 'stop', name: `Parada ${randomUUID()}`, city: 'Caracas', state: 'DC' };
+      for (const who of [finance, support]) {
+        await http().post('/api/v1/admin/stops').set('Authorization', who!).send(stop).expect(403);
+      }
       await http()
-        .post(`/api/v1/admin/organizations/${randomUUID()}/review`)
-        .set('Authorization', who!)
-        .send({ decision: 'approve' })
-        .expect(403);
-    }
-  });
+        .post('/api/v1/admin/stops')
+        .set('Authorization', reviewer!)
+        .send(stop)
+        .expect(201);
+      // Only reviewers (and admins) decide on organizations.
+      for (const who of [finance, support]) {
+        await http()
+          .post(`/api/v1/admin/organizations/${randomUUID()}/review`)
+          .set('Authorization', who!)
+          .send({ decision: 'approve' })
+          .expect(403);
+      }
+    },
+  );
 
   it('shows support the KYC queue without ID numbers, and keeps the details for reviewers', async () => {
     // Independent drivers apply to the platform's taxi line (ADR-039); make sure it exists.

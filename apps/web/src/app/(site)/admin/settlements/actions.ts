@@ -129,3 +129,52 @@ export async function markRefunded(_: FormState, form: FormData): Promise<FormSt
   refresh();
   return { success: 'Reembolso registrado.' };
 }
+
+/** The independent drivers' commission (ADR-045): a raise starts 30 days later. */
+export async function setIndependentCommission(_: FormState, form: FormData): Promise<FormState> {
+  try {
+    await apiRequest('/admin/independent-commission', {
+      method: 'PUT',
+      body: { rate: decimal(form, 'rate') },
+    });
+  } catch (error) {
+    return failure(error, {
+      VALIDATION_FAILED: 'Escribe un porcentaje entre 0 y 100, con hasta dos decimales.',
+    });
+  }
+  refresh();
+  return {
+    success:
+      'Comisión guardada. Si sube, rige en 30 días y ya avisamos a los conductores; si baja, desde ahora.',
+  };
+}
+
+/** Creates this week's automatic payouts now (they also run on Monday mornings). */
+export async function runDriverPayouts(_: FormState): Promise<FormState> {
+  try {
+    const result = await apiRequest<{ week: string; created: number; sent: number }>(
+      '/admin/driver-payouts/run',
+      { method: 'POST' },
+    );
+    refresh();
+    return {
+      success: `Semana ${result.week}: ${result.created} pagos nuevos${result.sent ? `, ${result.sent} enviados` : ''}.`,
+    };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+/** Finance transferred an automatic payout: its reference marks it as sent. */
+export async function markPayoutSent(_: FormState, form: FormData): Promise<FormState> {
+  try {
+    await apiRequest(`/admin/payouts/${encodeURIComponent(text(form, 'payoutId'))}/sent`, {
+      method: 'POST',
+      body: { reference: text(form, 'reference') },
+    });
+  } catch (error) {
+    return failure(error, { VALIDATION_FAILED: 'Escribe la referencia de la transferencia.' });
+  }
+  refresh();
+  return { success: 'Pago marcado como enviado; avisamos al conductor.' };
+}

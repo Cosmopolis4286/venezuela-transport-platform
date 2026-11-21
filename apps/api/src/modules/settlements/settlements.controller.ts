@@ -15,8 +15,11 @@ import type {
   AdminSettlementSummary,
   DriverEarnings,
   DriverPayoutAccount,
+  DriverPayoutRun,
+  IndependentCommission,
   OrganizationSettlement,
   Payout,
+  PendingDriverPayout,
   RefundDuePayment,
   SettlementEntry,
   SettlementPolicy,
@@ -32,12 +35,15 @@ import {
 import {
   CreatePayoutDto,
   DriverPayoutAccountDto,
+  MarkPayoutSentDto,
   MarkRefundedDto,
+  SetIndependentCommissionDto,
   SetOrganizationPolicyDto,
   SettlementEntriesQueryDto,
   SettlementPolicyDto,
   VoidPayoutDto,
 } from './settlements.dto.js';
+import { IndependentPayoutsService } from './independent-payouts.service.js';
 import { SettlementsService } from './settlements.service.js';
 
 /** An operator's balance with the platform, its paid bookings and the payouts it received. */
@@ -214,5 +220,51 @@ export class DriverEarningsController {
     @ReqMeta() meta: RequestMeta,
   ): Promise<DriverPayoutAccount> {
     return this.settlements.setPayoutAccount(auth.user.id, body, meta);
+  }
+}
+
+/** Independent drivers' commission and weekly payouts (ADR-045). */
+@ApiTags('admin')
+@ApiBearerAuth()
+@RequirePlatformPermission('finance.manage')
+@Controller({ path: 'admin', version: '1' })
+export class AdminIndependentPayoutsController {
+  constructor(private readonly payouts: IndependentPayoutsService) {}
+
+  @Get('independent-commission')
+  commission(): Promise<IndependentCommission> {
+    return this.payouts.commission();
+  }
+
+  @Put('independent-commission')
+  setCommission(
+    @CurrentAuth() auth: Authenticated,
+    @Body() body: SetIndependentCommissionDto,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<IndependentCommission> {
+    return this.payouts.setCommission(auth, body.rate, meta);
+  }
+
+  @Get('driver-payouts/pending')
+  pending(): Promise<PendingDriverPayout[]> {
+    return this.payouts.pending();
+  }
+
+  /** Runs this week's payouts now (they also run by themselves on Monday mornings). */
+  @Post('driver-payouts/run')
+  @HttpCode(HttpStatus.OK)
+  run(): Promise<DriverPayoutRun> {
+    return this.payouts.run();
+  }
+
+  @Post('payouts/:payoutId/sent')
+  @HttpCode(HttpStatus.OK)
+  sent(
+    @CurrentAuth() auth: Authenticated,
+    @Param('payoutId', ParseUUIDPipe) payoutId: string,
+    @Body() body: MarkPayoutSentDto,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<Payout> {
+    return this.payouts.markSent(auth, payoutId, body.reference, meta);
   }
 }

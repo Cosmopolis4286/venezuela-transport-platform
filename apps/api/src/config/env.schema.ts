@@ -123,6 +123,12 @@ export const envSchema = z
      */
     PAYMENT_PROVIDER: optionalChoice(['simulated', 'manual', 'disabled'] as const),
     /**
+     * How the weekly automatic payouts to independent drivers go out (ADR-045). `manual` (default
+     * in production): they wait as pending until finance transfers each one and types its
+     * reference. `simulated` (development): marked as sent at once, without money.
+     */
+    PAYOUT_PROVIDER: optionalChoice(['simulated', 'manual'] as const),
+    /**
      * Who numbers the platform's service-fee invoices (ADR-031). `draft`: staff issue each one in
      * the SENIAT portal and type its numbers. `digital_printer`: an authorized digital printer's
      * API (not contracted yet: issuing answers 503 until its adapter exists).
@@ -250,6 +256,13 @@ export const envSchema = z
         message: 'The simulated provider confirms payments without money; use manual or disabled',
       });
     }
+    if (env.PAYOUT_PROVIDER === 'simulated') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['PAYOUT_PROVIDER'],
+        message: 'The simulated provider marks payouts as sent without money; use manual',
+      });
+    }
     if (env.DATABASE_PASSWORD.length < 16 || /change-me/i.test(env.DATABASE_PASSWORD)) {
       ctx.addIssue({
         code: 'custom',
@@ -264,6 +277,8 @@ export const envSchema = z
     SWAGGER_ENABLED: env.SWAGGER_ENABLED ?? env.NODE_ENV !== 'production',
     PAYMENT_PROVIDER:
       env.PAYMENT_PROVIDER ?? (env.NODE_ENV === 'production' ? 'manual' : 'simulated'),
+    PAYOUT_PROVIDER:
+      env.PAYOUT_PROVIDER ?? (env.NODE_ENV === 'production' ? 'manual' : 'simulated'),
     MAIL_DELIVERY: env.MAIL_DELIVERY ?? (env.NODE_ENV === 'production' ? 'disabled' : 'console'),
     PUSH_DELIVERY: env.PUSH_DELIVERY ?? (env.NODE_ENV === 'production' ? 'disabled' : 'console'),
     WHATSAPP_DELIVERY: env.WHATSAPP_DELIVERY ?? 'disabled',

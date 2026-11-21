@@ -9,12 +9,14 @@ import {
   type CreatePayoutRequest,
   type DriverPayoutAccount,
   type Currency,
+  type MarkPayoutSentRequest,
   type MarkRefundedRequest,
   type PaymentCollection,
   type PayoutDirection,
   type PayoutMethod,
   type RefundTier,
   type RideCancellationPolicy,
+  type SetIndependentCommissionRequest,
   type SetOrganizationPolicyRequest,
   type UpdateSettlementPolicyRequest,
   type SettlementEntriesQuery,
@@ -37,6 +39,7 @@ import {
   Max,
   MaxLength,
   Min,
+  MinLength,
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
@@ -227,4 +230,19 @@ export class DriverPayoutAccountDto implements DriverPayoutAccount {
   @IsString()
   @Length(2, 120)
   holderName!: string;
+}
+
+export class SetIndependentCommissionDto implements SetIndependentCommissionRequest {
+  @ApiProperty({ example: '10.00', description: 'Percentage; a raise starts 30 days later' })
+  @IsString()
+  @Matches(COMMISSION_PATTERN, { message: 'rate must be a percentage from 0 to 100' })
+  rate!: string;
+}
+
+export class MarkPayoutSentDto implements MarkPayoutSentRequest {
+  @ApiProperty({ example: '00012345' })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  reference!: string;
 }

@@ -36,11 +36,11 @@ import { users } from '../identity/identity.schema.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import { routes, stops } from '../network/network.schema.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
-import { organizations } from '../organizations/organizations.schema.js';
+import { memberships, organizations } from '../organizations/organizations.schema.js';
 import { fromScaled, toScaled } from '../payments/money.js';
 import { payments } from '../payments/payments.schema.js';
 import { collectedBy } from '../payments/payments.service.js';
-import { normalizeRate } from './ledger.js';
+import { independentCommission, normalizeRate } from './ledger.js';
 import {
   organizationPolicies,
   driverPayoutAccounts,
@@ -58,9 +58,10 @@ const invalid = (message: string) =>
 const total = (column: AnyColumn) => sql<string>`coalesce(sum(${column}), 0)::numeric(14, 2)::text`;
 
 /** Fares the operator received itself (net of its refunds). */
-const collectedTotal = sql<string>`coalesce(sum(${settlementEntries.gross}) filter (where ${settlementEntries.collectedBy} = 'operator'), 0)::numeric(14, 2)::text`;
+// An independent driver's cash ride (`ride_commission`, ADR-045) is the driver's, not the line's.
+const collectedTotal = sql<string>`coalesce(sum(${settlementEntries.gross}) filter (where ${settlementEntries.collectedBy} = 'operator' and ${settlementEntries.payee} = 'organization'), 0)::numeric(14, 2)::text`;
 const paidOutTotal = sql<string>`coalesce(sum(${payouts.amount}) filter (where ${payouts.direction} = 'to_operator' and ${payouts.driverUserId} is null), 0)::numeric(14, 2)::text`;
-const receivedTotal = sql<string>`coalesce(sum(${payouts.amount}) filter (where ${payouts.direction} = 'from_operator'), 0)::numeric(14, 2)::text`;
+const receivedTotal = sql<string>`coalesce(sum(${payouts.amount}) filter (where ${payouts.direction} = 'from_operator' and ${payouts.driverUserId} is null), 0)::numeric(14, 2)::text`;
 /** What the organization itself earned; fares of routes paid to drivers are theirs (ADR-030). */
 const earnedTotal = sql<string>`coalesce(sum(${settlementEntries.earned}) filter (where ${settlementEntries.payee} = 'organization'), 0)::numeric(14, 2)::text`;
 const forDriversTotal = sql<string>`coalesce(sum(${settlementEntries.earned}) filter (where ${settlementEntries.payee} = 'driver'), 0)::numeric(14, 2)::text`;
@@ -244,7 +245,10 @@ export class SettlementsService {
         organizationId: payouts.organizationId,
         driverId: payouts.driverUserId,
         currency: payouts.currency,
-        paidOut: total(payouts.amount),
+        paidOut: sql<string>`coalesce(sum(${payouts.amount}) filter (where ${payouts.direction} = 'to_operator'), 0)::numeric(14, 2)::text`,
+        // What the driver paid the platform for the commissions they owed (ADR-045).
+        collected: sql<string>`coalesce(sum(${payouts.amount}) filter (where ${payouts.direction} = 'from_operator'), 0)::numeric(14, 2)::text`,
+        pending: sql<string>`coalesce(sum(${payouts.amount}) filter (where ${payouts.direction} = 'to_operator' and ${payouts.status} = 'pending'), 0)::numeric(14, 2)::text`,
       })
       .from(payouts)
       .where(
@@ -279,12 +283,24 @@ export class SettlementsService {
         currency: Currency;
         earned: string;
         paidOut: string;
+        collected: string;
+        pending: string;
       }
     >();
-    for (const r of earned) rows.set(keyOf(r), { ...r, paidOut: '0.00' });
+    for (const r of earned) {
+      // A pack ride and a cash ride of the same driver both land on one row.
+      const current = rows.get(keyOf(r));
+      rows.set(keyOf(r), {
+        ...r,
+        earned: fromScaled(toScaled(current?.earned ?? '0.00', 2) + toScaled(r.earned, 2), 2),
+        paidOut: '0.00',
+        collected: '0.00',
+        pending: '0.00',
+      });
+    }
     for (const r of paid) {
       const current = rows.get(keyOf(r));
-      rows.set(keyOf(r), { ...r, earned: current?.earned ?? '0.00', paidOut: r.paidOut });
+      rows.set(keyOf(r), { ...r, earned: current?.earned ?? '0.00' });
     }
     for (const r of rows.values()) {
       const person = people.find((p) => p.id === r.driverId);
@@ -293,7 +309,12 @@ export class SettlementsService {
         currency: r.currency,
         earned: r.earned,
         paidOut: r.paidOut,
-        balance: fromScaled(toScaled(r.earned, 2) - toScaled(r.paidOut, 2), 2),
+        collected: r.collected,
+        pending: r.pending,
+        balance: fromScaled(
+          toScaled(r.earned, 2) - toScaled(r.paidOut, 2) + toScaled(r.collected, 2),
+          2,
+        ),
         payoutAccount: person?.account ? toPayoutAccount(person.account) : null,
       };
       result.set(r.organizationId, [...(result.get(r.organizationId) ?? []), balance]);
@@ -332,6 +353,17 @@ export class SettlementsService {
         })),
       ),
       payoutAccount: account ? toPayoutAccount(account) : null,
+      // Independent drivers (ADR-045): the commission on their rides.
+      commission: (
+        await this.database.db
+          .select({ id: memberships.organizationId })
+          .from(memberships)
+          .innerJoin(organizations, eq(organizations.id, memberships.organizationId))
+          .where(and(eq(memberships.userId, userId), eq(organizations.operatedByPlatform, true)))
+          .limit(1)
+      ).length
+        ? await independentCommission(this.database.db)
+        : null,
     };
   }
 
@@ -547,13 +579,20 @@ export class SettlementsService {
       if (!organization) throw notFound('Organization not found');
       const direction = input.direction ?? 'to_operator';
       if (input.driverUserId) {
-        if (direction !== 'to_operator') throw invalid('Drivers are only paid, never charged');
         const [owed] = (await this.driverBalances([organizationId], tx))
           .get(organizationId)
           ?.filter((d) => d.driver?.id === input.driverUserId && d.currency === input.currency) ?? [
           undefined,
         ];
-        if (!owed || toScaled(input.amount, 2) > toScaled(owed.balance, 2)) {
+        // `from_operator`: the driver paid the commissions they owed (ADR-045), never more.
+        if (direction === 'from_operator') {
+          if (!owed || toScaled(input.amount, 2) > -toScaled(owed.balance, 2)) {
+            throw ApiException.conflict(
+              'The amount is larger than what this driver owes in this currency',
+              'COLLECTION_EXCEEDS_DEBT',
+            );
+          }
+        } else if (!owed || toScaled(input.amount, 2) > toScaled(owed.balance, 2)) {
           throw ApiException.conflict(
             'The payout is larger than what this driver is owed in this currency',
             'PAYOUT_EXCEEDS_BALANCE',
@@ -913,7 +952,7 @@ function toPayoutAccount(row: typeof driverPayoutAccounts.$inferSelect): DriverP
   };
 }
 
-function toPayout(row: PayoutRow, driverName?: string | null): Payout {
+export function toPayout(row: PayoutRow, driverName?: string | null): Payout {
   return {
     id: row.id,
     organizationId: row.organizationId,
@@ -924,6 +963,8 @@ function toPayout(row: PayoutRow, driverName?: string | null): Payout {
     method: row.method,
     reference: row.reference,
     note: row.note,
+    status: row.status,
+    automatic: row.runWeek !== null,
     createdAt: row.createdAt.toISOString(),
     voidedAt: row.voidedAt?.toISOString() ?? null,
     voidReason: row.voidReason,

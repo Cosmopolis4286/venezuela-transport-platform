@@ -3,11 +3,13 @@ import { AuditModule } from '../audit/audit.module.js';
 import { IdentityModule } from '../identity/identity.module.js';
 import { OrganizationsModule } from '../organizations/organizations.module.js';
 import {
+  AdminIndependentPayoutsController,
   AdminSettlementsController,
   DriverEarningsController,
   OrganizationRefundsController,
   OrganizationSettlementsController,
 } from './settlements.controller.js';
+import { IndependentPayoutsService } from './independent-payouts.service.js';
 import { SettlementsService } from './settlements.service.js';
 
 /**
@@ -20,8 +22,10 @@ import { SettlementsService } from './settlements.service.js';
     OrganizationSettlementsController,
     OrganizationRefundsController,
     AdminSettlementsController,
+    AdminIndependentPayoutsController,
     DriverEarningsController,
   ],
-  providers: [SettlementsService],
+  providers: [SettlementsService, IndependentPayoutsService],
+  exports: [IndependentPayoutsService],
 })
 export class SettlementsModule {}

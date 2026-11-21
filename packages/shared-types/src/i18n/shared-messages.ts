@@ -168,6 +168,9 @@ const es: SharedMessages = {
     VEHICLE_MODE_MISMATCH: 'Ese vehículo es de otro tipo (bus, taxi o moto) que esta ruta.',
     VEHICLE_BUSY: 'Ese vehículo ya está en otro viaje a esa hora.',
     DRIVER_OFFLINE: 'Conéctate (En línea) para tomar viajes.',
+    DRIVER_DEBT_LIMIT:
+      'Debes comisiones por encima del límite: págalas (Mis cobros) para volver a conectarte.',
+    PAYOUT_NOT_PENDING: 'Ese pago ya no está pendiente.',
     DRIVER_SUSPENDED:
       'Tu cuenta de conductor está suspendida por calificaciones bajas mientras VTP la revisa. Te escribiremos.',
     DRIVER_DOCUMENTS_EXPIRED:
@@ -355,6 +358,9 @@ const en: SharedMessages = {
       'That vehicle is of a different kind (bus, taxi or motorcycle) than this route.',
     VEHICLE_BUSY: 'That vehicle is already on another trip at that time.',
     DRIVER_OFFLINE: 'Go online to take rides.',
+    DRIVER_DEBT_LIMIT:
+      'You owe commissions above the limit: pay them (My earnings) to go online again.',
+    PAYOUT_NOT_PENDING: 'That payout is no longer pending.',
     DRIVER_SUSPENDED:
       'Your driver account is suspended for low ratings while VTP reviews it. We will contact you.',
     DRIVER_DOCUMENTS_EXPIRED:
@@ -539,6 +545,9 @@ const ptBR: SharedMessages = {
     VEHICLE_MODE_MISMATCH: 'Esse veículo é de outro tipo (ônibus, táxi ou moto) que esta rota.',
     VEHICLE_BUSY: 'Esse veículo já está em outra viagem nesse horário.',
     DRIVER_OFFLINE: 'Fique online para aceitar viagens.',
+    DRIVER_DEBT_LIMIT:
+      'Você deve comissões acima do limite: pague-as (Meus ganhos) para voltar a ficar online.',
+    PAYOUT_NOT_PENDING: 'Esse pagamento não está mais pendente.',
     DRIVER_SUSPENDED:
       'Sua conta de motorista está suspensa por avaliações baixas enquanto a VTP a revisa. Entraremos em contato.',
     DRIVER_DOCUMENTS_EXPIRED:
