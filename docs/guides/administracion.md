@@ -202,6 +202,12 @@ Los conductores nunca eligen ni ven la línea: en la app eligen carro o moto y e
 Cuando la apruebas en **Revisiones**, entran solos a la línea de ese vehículo y su vehículo queda en
 la flota marcado como suyo, con su póliza RCV como seguro (si vence, no toma viajes).
 
+**Suspendidos por calificación** (ADR-044): si el promedio de las últimas 30 calificaciones de un
+independiente (con al menos 10) baja de 4,0, queda suspendido y desconectado, y aparece aquí con
+sus comentarios bajos y su teléfono. Habla con la persona y, si corresponde, **Levantar la
+suspensión** escribiendo qué revisaste o acordaste (lo ve en su aviso). Su promedio vuelve a contar
+desde cero. En las demás líneas no se suspende a nadie: sus dueños reciben un aviso y deciden.
+
 ## Tareas periódicas sugeridas
 
 | Cada…  | Tarea                                                                         |

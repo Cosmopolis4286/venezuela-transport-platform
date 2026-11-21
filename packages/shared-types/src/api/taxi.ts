@@ -290,6 +290,48 @@ export interface DriverTaxiBoard {
     organization: Pick<Organization, 'id' | 'legalName' | 'tradeName'>;
     vehicles: TripVehicle[];
   }[];
+  /** Their passengers' ratings (ADR-044). */
+  rating: DriverRating;
+  /** Suspended from the independent drivers' line for low ratings, until the team reviews it. */
+  suspension: { since: string; average: number | null } | null;
+}
+
+/**
+ * Driver quality (ADR-044): the average of a driver's last `DRIVER_RATING_WINDOW` ratings counts
+ * once there are `DRIVER_RATING_MIN_COUNT`. Below `DRIVER_RATING_WARN_BELOW` the driver is warned;
+ * below `DRIVER_RATING_SUSPEND_BELOW`, an independent driver is suspended until the platform
+ * reviews it, and the owners of any other line are told. After a suspension is lifted, only
+ * newer ratings count.
+ */
+export const DRIVER_RATING_WINDOW = 30;
+export const DRIVER_RATING_MIN_COUNT = 10;
+export const DRIVER_RATING_WARN_BELOW = 4.3;
+export const DRIVER_RATING_SUSPEND_BELOW = 4;
+
+export interface DriverRating {
+  /** Rounded to 2 decimals; null with no ratings yet. */
+  average: number | null;
+  /** Ratings counted (at most `DRIVER_RATING_WINDOW`). */
+  count: number;
+}
+
+/** `GET /admin/driver-suspensions`: a driver suspended for low ratings, and its review. */
+export interface DriverSuspension {
+  id: string;
+  driver: { userId: string; name: string; phone: string | null };
+  line: { id: string; name: string };
+  average: number | null;
+  ratings: number;
+  createdAt: string;
+  liftedAt: string | null;
+  liftNotes: string | null;
+  /** The comments of their recent low ratings (1 or 2 stars), newest first. */
+  comments: { rating: number; comment: string; ratedAt: string }[];
+}
+
+/** `POST /admin/driver-suspensions/:id/lift`: what was reviewed or agreed with the driver. */
+export interface LiftDriverSuspensionRequest {
+  notes: string;
 }
 
 /** `GET /organizations/:id/taxi` — dispatcher's view of a taxi line. */

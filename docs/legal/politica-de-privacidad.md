@@ -57,7 +57,7 @@ actualización y cancelación. No vendemos datos personales.
 | Comunicaciones                            | Avisos enviados (tipo, canal, fecha y si se entregó), reclamos y mensajes a soporte                                                                                                                                                                                                 | Al avisarle o al escribirnos                                                                                                                  |
 
 Si trabaja como **conductor independiente**, además registramos su vehículo a su nombre (placa,
-marca, modelo, año y color), los viajes que acepta, sus calificaciones y lo que gana y se le paga.
+marca, modelo, año y color), los viajes que acepta, sus calificaciones (con su promedio y los avisos o suspensiones por calificación, que revisa una persona) y lo que gana y se le paga.
 
 El **certificado médico** es un dato de salud y por tanto **sensible**: lo tratamos solo para
 verificar la aptitud para conducir que exige la normativa de transporte, con su consentimiento

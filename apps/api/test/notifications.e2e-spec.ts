@@ -214,14 +214,27 @@ describe.runIf(expectDatabase)('Notifications (e2e)', () => {
         http().post('/api/v1/me/push-devices').set('Authorization', auth);
       const token = (name: string) => `ExponentPushToken[${name}${run}]`;
       const pushesTo = (t: string) => push.sent.filter((m) => m.to === t);
-      const logged = async (userId: string) =>
-        (
-          await db
-            .select()
-            .from(notifications)
-            .where(eq(notifications.userId, userId))
-            .orderBy(notifications.createdAt)
-        ).map((n) => `${n.kind}:${n.channel}:${n.status}`);
+      // In order of the notices; the push and the e-mail of one notice go out in parallel, so
+      // within a run of the same kind push comes first.
+      const logged = async (userId: string) => {
+        const rows = await db
+          .select()
+          .from(notifications)
+          .where(eq(notifications.userId, userId))
+          .orderBy(notifications.createdAt);
+        const runs: (typeof rows)[] = [];
+        for (const row of rows) {
+          const last = runs.at(-1);
+          if (last && last[0]!.kind === row.kind && !last.some((n) => n.channel === row.channel)) {
+            last.push(row);
+          } else runs.push([row]);
+        }
+        return runs
+          .flatMap((run) =>
+            run.sort((x, y) => (x.channel === 'push' ? -1 : y.channel === 'push' ? 1 : 0)),
+          )
+          .map((n) => `${n.kind}:${n.channel}:${n.status}`);
+      };
 
       // --- Devices: validated, and a token moves to whoever signs in on that phone.
       await devices(passenger.auth)

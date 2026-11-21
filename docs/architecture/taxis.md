@@ -252,6 +252,16 @@ calificaciones, liquidación).
   con la alerta abierta devuelve la misma, sin avisar dos veces.
 - El equipo las ve y las cierra con una nota en `/admin/safety-incidents` (portal: Emergencias).
 
+## Calidad por calificación (ADR-044)
+
+- Al calificar un viaje se evalúa al conductor: promedio de sus últimas 30 calificaciones (a
+  partir de 10, y solo las posteriores a su última suspensión levantada).
+- Menos de 4,3: aviso al conductor (uno al mes). Menos de 4,0: en una línea de la plataforma,
+  suspensión (`driver_quality_actions`, `DRIVER_SUSPENDED`): desconectado y fuera de esa línea;
+  en las demás, aviso a sus dueños y administradores.
+- `GET /me/taxi` trae `rating` y `suspension`; la plataforma las revisa y levanta en
+  `/admin/driver-suspensions` (permiso `independents.manage`; portal: Independientes).
+
 ## Todavía no
 
 Cobro del taxi dentro de la plataforma, tarifas fijas por zona para los taxis de terminal,

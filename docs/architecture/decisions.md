@@ -828,3 +828,28 @@ viajes, y bajan el riesgo de los viajes en moto y de noche.
 equipo no garantiza un tiempo de respuesta (Términos 6.10). La ubicación es la del teléfono del
 conductor (ADR-041); la del pasajero no se usa. El enlace compartido lo ve cualquiera que lo tenga,
 por eso no permite cancelar ni calificar y caduca. Documentos legales en la versión 2026-11-21.
+
+## ADR-044: Calidad de los conductores por calificación
+
+**Decisión** (del dueño del producto, tercera parte de la tercera etapa). Cada vez que un pasajero
+califica un viaje, `DriverQualityService` calcula el promedio de las últimas `DRIVER_RATING_WINDOW`
+(30) calificaciones del conductor, que cuenta a partir de `DRIVER_RATING_MIN_COUNT` (10):
+
+- por debajo de `DRIVER_RATING_WARN_BELOW` (4,3), un aviso al conductor (como mucho uno al mes);
+- por debajo de `DRIVER_RATING_SUSPEND_BELOW` (4,0), en una línea que opera la plataforma, el
+  conductor queda **suspendido** de ella (`driver_quality_actions`), desconectado y sin poder
+  conectarse (`DRIVER_SUSPENDED`), hasta que alguien con `independents.manage` la levanta con una
+  nota (`/admin/driver-suspensions`). Desde entonces solo cuentan las calificaciones nuevas;
+- en las demás líneas no se suspende: sus dueños y administradores reciben un aviso (como mucho uno
+  al mes) y deciden.
+
+El tablero del conductor (`GET /me/taxi`) muestra su promedio y la suspensión.
+
+**Por qué.** Las calificaciones solo cuidan la calidad si tienen consecuencias; un mínimo de
+viajes y una ventana de los últimos 30 evitan que una mala noche o un pasajero injusto decidan. En
+las líneas de terceros quien responde por sus conductores es la línea (ADR-039), por eso solo se le
+avisa.
+
+**Compromisos.** Los umbrales son iguales en todo el país y se ajustarán con datos reales. La
+suspensión no es definitiva: la revisa una persona (Condiciones para Conductores Independientes,
+sección 5). Un conductor nuevo no tiene promedio hasta sus primeras 10 calificaciones.

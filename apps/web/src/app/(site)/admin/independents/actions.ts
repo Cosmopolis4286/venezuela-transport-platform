@@ -28,3 +28,20 @@ export async function createIndependentLine(_: FormState, form: FormData): Promi
       'Línea creada y activa. Eres su dueña o dueño: invita a tu equipo desde su página en el portal.',
   };
 }
+
+/** The team reviewed a driver suspended for low ratings and lets them drive again (ADR-044). */
+export async function liftDriverSuspension(_: FormState, form: FormData): Promise<FormState> {
+  try {
+    await apiRequest(
+      `/admin/driver-suspensions/${encodeURIComponent(text(form, 'suspensionId'))}/lift`,
+      { method: 'POST', body: { notes: text(form, 'notes') } },
+    );
+  } catch (error) {
+    return failure(error, {
+      VALIDATION_FAILED: 'Escribe qué revisaste o qué acordaste con el conductor.',
+      NOT_FOUND: 'Esa suspensión ya fue levantada.',
+    });
+  }
+  refresh();
+  return { success: 'Suspensión levantada: el conductor ya puede conectarse.' };
+}

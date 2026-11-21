@@ -86,9 +86,20 @@ documentos fiscales que la ley le exija por sus servicios.
 
 ## 5. Calificaciones y calidad
 
-Los pasajeros pueden calificar cada viaje (de 1 a 5) y dejar un comentario. {{nombre_comercial}}
-usa las calificaciones y los reclamos para cuidar la calidad y la seguridad del servicio, y puede
-pedir explicaciones al Conductor antes de tomar una medida.
+5.1. Los pasajeros pueden calificar cada viaje (de 1 a 5) y dejar un comentario. El Conductor ve
+en la aplicación su **calificación promedio**: la de sus últimos 30 viajes calificados, que cuenta
+a partir de 10 calificaciones.
+
+5.2. Si el promedio baja de **4,3**, {{nombre_comercial}} se lo avisa para que pueda mejorar. Si
+baja de **4,0**, su cuenta queda **suspendida** de la línea y no puede conectarse mientras
+{{nombre_comercial}} revisa el caso: una persona lee los comentarios, conversa con el Conductor y,
+si corresponde, levanta la suspensión, indicándole lo que se revisó o acordó. Al levantarla, el
+promedio vuelve a contar desde cero.
+
+5.3. {{nombre_comercial}} usa además las calificaciones y los reclamos para cuidar la calidad y la
+seguridad del servicio, y puede pedir explicaciones al Conductor antes de tomar otra medida
+conforme a la sección 6. La suspensión por calificación no es una sanción definitiva ni impide al
+Conductor presentar su versión de los hechos.
 
 ## 6. Suspensión y salida
 

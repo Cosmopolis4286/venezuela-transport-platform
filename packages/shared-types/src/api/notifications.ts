@@ -48,5 +48,6 @@ export const NOTIFICATION_KINDS = [
   'document_expiring',
   'document_renewal_reviewed',
   'safety_alert',
+  'driver_quality',
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
