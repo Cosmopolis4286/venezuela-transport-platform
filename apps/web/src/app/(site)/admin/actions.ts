@@ -59,6 +59,24 @@ export async function reviewApplication(_: FormState, form: FormData): Promise<F
   redirect('/admin?reviewed=1');
 }
 
+/** A renewed licence, medical certificate or RCV policy of an approved driver (ADR-042). */
+export async function reviewRenewal(_: FormState, form: FormData): Promise<FormState> {
+  const decision = text(form, 'decision');
+  try {
+    await apiRequest(
+      `/admin/document-renewals/${encodeURIComponent(text(form, 'renewalId'))}/review`,
+      {
+        method: 'POST',
+        body: { decision, reason: text(form, 'reason') || undefined },
+      },
+    );
+  } catch (error) {
+    return failure(error);
+  }
+  refresh();
+  return { success: decision === 'accept' ? 'Documento aprobado.' : 'Documento rechazado.' };
+}
+
 const coordinate = (form: FormData, name: string) => {
   const value = text(form, name).replace(',', '.');
   return value ? Number(value) : undefined;

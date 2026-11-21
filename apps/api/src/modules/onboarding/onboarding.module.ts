@@ -5,8 +5,12 @@ import { AppConfigService } from '../../config/app-config.service.js';
 import { AuditModule } from '../audit/audit.module.js';
 import { IdentityModule } from '../identity/identity.module.js';
 import { OrganizationsModule } from '../organizations/organizations.module.js';
-import { AdminApplicationsController } from './admin-applications.controller.js';
+import {
+  AdminApplicationsController,
+  AdminDocumentRenewalsController,
+} from './admin-applications.controller.js';
 import { ApplicantController } from './applicant.controller.js';
+import { DocumentExpiryService } from './document-expiry.service.js';
 import { OnboardingService } from './onboarding.service.js';
 
 /** Independent drivers' applications (KYC, ADR-039): documents and platform review. */
@@ -24,7 +28,7 @@ import { OnboardingService } from './onboarding.service.js';
       }),
     }),
   ],
-  controllers: [ApplicantController, AdminApplicationsController],
-  providers: [OnboardingService],
+  controllers: [ApplicantController, AdminApplicationsController, AdminDocumentRenewalsController],
+  providers: [OnboardingService, DocumentExpiryService],
 })
 export class OnboardingModule {}

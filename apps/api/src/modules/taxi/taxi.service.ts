@@ -61,6 +61,7 @@ import {
 } from 'drizzle-orm';
 import { ApiException } from '../../common/errors/api.exception.js';
 import { AppConfigService } from '../../config/app-config.service.js';
+import { drivingDocumentsExpired } from '../onboarding/driving-documents.js';
 import {
   DatabaseService,
   type Database,
@@ -1049,6 +1050,7 @@ export class TaxiService {
     if (!(await this.checkIn(auth.user.id)).online) {
       throw conflict('Go online to take rides', 'DRIVER_OFFLINE');
     }
+    await this.requireDrivingDocuments(auth.user.id);
     return this.take(rideId, line, auth.user.id, input, auth, meta);
   }
 
@@ -1056,6 +1058,17 @@ export class TaxiService {
    * Online ("en línea") or offline. Going online needs an active taxi or motorcycle line to drive
    * for; going offline is always possible (a ride already taken still has to be finished).
    */
+  /** An expired licence or medical certificate keeps the driver offline (ADR-042). */
+  private async requireDrivingDocuments(userId: string): Promise<void> {
+    if (await drivingDocumentsExpired(this.database.db, userId)) {
+      await this.database.db.delete(driverPresence).where(eq(driverPresence.userId, userId));
+      throw conflict(
+        'Your driving licence or medical certificate expired',
+        'DRIVER_DOCUMENTS_EXPIRED',
+      );
+    }
+  }
+
   async setAvailability(
     auth: Authenticated,
     online: boolean,
@@ -1065,6 +1078,7 @@ export class TaxiService {
     if (online && !(await this.driverLines(userId)).length) {
       throw conflict('You drive for no active taxi or motorcycle line', 'DRIVER_NO_LINE');
     }
+    if (online) await this.requireDrivingDocuments(userId);
     const now = new Date();
     await this.database.db
       .insert(driverPresence)

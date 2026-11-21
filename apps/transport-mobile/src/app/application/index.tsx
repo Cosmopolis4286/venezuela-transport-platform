@@ -1,5 +1,6 @@
 import {
   APPLICATION_STATUS_LABELS,
+  isRenewableDocument,
   requiredDocuments,
   type ProviderApplication,
 } from '@vtp/shared-types';
@@ -94,6 +95,16 @@ export default function ApplicationScreen() {
         />
       </Row>
       <StatusExplanation application={application} />
+      {application.expiring.some((e) => e.expired) ? (
+        <Banner tone="error">
+          Tienes documentos vencidos. Renuévalos abajo: hasta que aprobemos las copias nuevas no
+          puedes recibir viajes.
+        </Banner>
+      ) : application.expiring.length ? (
+        <Banner tone="warning">
+          Tienes documentos por vencer. Renuévalos abajo con tiempo para no dejar de recibir viajes.
+        </Banner>
+      ) : null}
 
       <Card>
         <Subheading>Tus datos</Subheading>
@@ -132,6 +143,10 @@ export default function ApplicationScreen() {
           kind={kind}
           document={application.documents.find((d) => d.kind === kind)}
           editable={editable}
+          // Approved drivers keep their papers current (ADR-042).
+          renewable={application.status === 'approved' && isRenewableDocument(kind)}
+          expiry={application.expiring.find((e) => e.kind === kind)}
+          renewal={application.renewals.find((r) => r.kind === kind)}
           onUploaded={resource.mutate}
         />
       ))}

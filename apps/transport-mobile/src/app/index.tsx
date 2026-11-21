@@ -242,6 +242,13 @@ export default function Home() {
               tone={statusTone(application.data.status)}
             />
           </Row>
+          {application.data.expiring.length ? (
+            <Banner tone={application.data.expiring.some((e) => e.expired) ? 'error' : 'warning'}>
+              {application.data.expiring.some((e) => e.expired)
+                ? 'Tienes documentos vencidos: renuévalos para volver a recibir viajes.'
+                : 'Tienes documentos por vencer: renuévalos con tiempo.'}
+            </Banner>
+          ) : null}
           <Button
             variant="secondary"
             title="Ver mi solicitud"

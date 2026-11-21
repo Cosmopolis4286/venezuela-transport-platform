@@ -53,7 +53,8 @@ En la página de la organización:
 - **Vehículos**: registra placas y el mapa de puestos de cada unidad, y en **Documentos** el
   certificado de circulación, la póliza RCV y el permiso de transporte con su vencimiento. Se
   marcan **por vencer** (30 días o menos) y **vencidos**, y el despacho los avisa al elegir el
-  vehículo.
+  vehículo. Quienes manejan la flota reciben además un aviso (push y correo) 30 días antes de que
+  venza cada documento y otra vez el día que vence.
 - **Despacho**: para cada salida del día, elige vehículo y conductor. El sistema no deja poner un
   vehículo o un conductor en dos viajes a la vez, ni un vehículo con la **póliza RCV vencida** ese
   día. El conductor recibe un aviso en su app.

@@ -1,9 +1,11 @@
 import {
+  DOCUMENT_KIND_LABELS,
   ORGANIZATION_ROLE_LABELS,
   ORGANIZATION_TYPE_LABELS,
   PLATFORM_ROLE_LABELS,
   platformRoleHasPermission,
   type PlatformPermission,
+  type DocumentRenewalForReview,
   type Organization,
   type ProviderApplication,
 } from '@vtp/shared-types';
@@ -16,19 +18,22 @@ import { Input } from '@/components/ui/input';
 import { formatDate } from '@/lib/labels';
 import { apiFetch } from '@/lib/server/api';
 import { requirePlatformStaff } from '@/lib/server/session';
-import { reviewOrganization } from './actions';
+import { reviewOrganization, reviewRenewal } from './actions';
 
 export default async function AdminPage({ searchParams }: PageProps<'/admin'>) {
   const user = await requirePlatformStaff();
   const can = (permission: PlatformPermission) =>
     platformRoleHasPermission(user.platformRole, permission);
   const denied = (await searchParams).denied === '1';
-  const [organizations, applications] = await Promise.all([
+  const [organizations, applications, renewals] = await Promise.all([
     can('organizations.view')
       ? apiFetch<Organization[]>('/admin/organizations?status=pending_review')
       : null,
     can('applications.view')
       ? apiFetch<ProviderApplication[]>('/admin/applications?status=submitted')
+      : null,
+    can('applications.review')
+      ? apiFetch<DocumentRenewalForReview[]>('/admin/document-renewals')
       : null,
   ]);
   return (
@@ -84,6 +89,65 @@ export default async function AdminPage({ searchParams }: PageProps<'/admin'>) {
                       </Link>
                     </Button>
                   ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      ) : null}
+
+      {renewals ? (
+        <Card>
+          <div className="flex flex-col gap-1">
+            <CardTitle>Documentos renovados · {renewals.length}</CardTitle>
+            <CardDescription>
+              Conductores aprobados que subieron una copia nueva de su licencia, certificado médico
+              o póliza RCV. Al aprobarla reemplaza la anterior; con la licencia o el certificado
+              vencidos no pueden conectarse.
+            </CardDescription>
+          </div>
+          {renewals.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No hay documentos por revisar.</p>
+          ) : (
+            <ul className="flex flex-col divide-y">
+              {renewals.map((renewal) => (
+                <li key={renewal.id} className="flex flex-col gap-3 py-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium">
+                      {renewal.firstName} {renewal.lastName}
+                    </p>
+                    <Badge variant="outline">{DOCUMENT_KIND_LABELS[renewal.kind]}</Badge>
+                    <span className="text-sm text-muted-foreground">
+                      vence el {formatDate(`${renewal.expiresOn}T12:00:00Z`)}
+                      {renewal.currentExpiresOn
+                        ? ` (la actual: ${formatDate(`${renewal.currentExpiresOn}T12:00:00Z`)})`
+                        : ''}{' '}
+                      · subida {formatDate(renewal.uploadedAt)}
+                    </span>
+                    <a
+                      href={`/admin/renewals/${renewal.id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sm underline"
+                    >
+                      Ver archivo
+                    </a>
+                  </div>
+                  <ActionForm action={reviewRenewal} hidden={{ renewalId: renewal.id }}>
+                    <div className="flex flex-wrap gap-2">
+                      <Input
+                        name="reason"
+                        placeholder="Motivo (obligatorio para rechazar)"
+                        className="max-w-sm"
+                      />
+                      <SubmitButton name="decision" value="accept" size="sm">
+                        Aprobar
+                      </SubmitButton>
+                      <SubmitButton name="decision" value="reject" size="sm" variant="outline">
+                        Rechazar
+                      </SubmitButton>
+                    </div>
+                  </ActionForm>
                 </li>
               ))}
             </ul>

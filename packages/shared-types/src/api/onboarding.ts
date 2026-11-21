@@ -68,6 +68,27 @@ export function requiredDocuments(role: ApplicationRole, providesVehicle: boolea
   return kinds;
 }
 
+/**
+ * Documents an approved driver renews when they expire (ADR-042). The licence and the medical
+ * certificate are needed to drive: with either expired, the driver cannot go online.
+ */
+export const RENEWABLE_DOCUMENT_KINDS = [
+  'driver_license',
+  'medical_certificate',
+  'liability_insurance',
+] as const satisfies readonly DocumentKind[];
+export type RenewableDocumentKind = (typeof RENEWABLE_DOCUMENT_KINDS)[number];
+export const DRIVING_DOCUMENT_KINDS = [
+  'driver_license',
+  'medical_certificate',
+] as const satisfies readonly DocumentKind[];
+/** Days before a document expires when its holder is reminded to renew it (and again on expiry). */
+export const DOCUMENT_EXPIRY_NOTICE_DAYS = 30;
+
+export function isRenewableDocument(kind: DocumentKind): kind is RenewableDocumentKind {
+  return (RENEWABLE_DOCUMENT_KINDS as readonly DocumentKind[]).includes(kind);
+}
+
 /** Accepted upload formats (checked by content, not by file name). */
 export const DOCUMENT_CONTENT_TYPES = ['image/jpeg', 'image/png', 'application/pdf'] as const;
 export type DocumentContentType = (typeof DOCUMENT_CONTENT_TYPES)[number];
@@ -94,6 +115,40 @@ export interface ApplicationDocument {
   uploadedAt: string;
 }
 
+/**
+ * A new copy of an approved driver's document (ADR-042), uploaded before or after it expires. It
+ * replaces the current one only when platform staff accept it.
+ */
+export interface DocumentRenewal {
+  id: string;
+  kind: RenewableDocumentKind;
+  fileName: string;
+  contentType: DocumentContentType;
+  sizeBytes: number;
+  /** ISO date (YYYY-MM-DD) of the new copy. */
+  expiresOn: string;
+  status: DocumentReviewStatus;
+  rejectionReason: string | null;
+  uploadedAt: string;
+  reviewedAt: string | null;
+}
+
+/** `GET /api/v1/admin/document-renewals`: a pending renewal, with whose and until when. */
+export interface DocumentRenewalForReview extends DocumentRenewal {
+  applicationId: string;
+  firstName: string;
+  lastName: string;
+  /** Expiry of the copy it replaces. */
+  currentExpiresOn: string | null;
+}
+
+/** `POST /api/v1/admin/document-renewals/:renewalId/review` */
+export interface ReviewDocumentRenewalRequest {
+  decision: 'accept' | 'reject';
+  /** Required to reject; shown to the driver. */
+  reason?: string;
+}
+
 export interface ProviderApplication {
   id: string;
   userId: string;
@@ -117,6 +172,13 @@ export interface ProviderApplication {
   documents: ApplicationDocument[];
   /** Kinds still missing before the application can be submitted. */
   missingDocuments: DocumentKind[];
+  /**
+   * Approved applications: documents that expire within `DOCUMENT_EXPIRY_NOTICE_DAYS` or already
+   * expired, to renew (ADR-042).
+   */
+  expiring: { kind: RenewableDocumentKind; expiresOn: string; expired: boolean }[];
+  /** The latest renewal of each kind: pending, or the last rejected one. */
+  renewals: DocumentRenewal[];
   reviewNotes: string | null;
   submittedAt: string | null;
   reviewedAt: string | null;
