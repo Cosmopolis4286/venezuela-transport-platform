@@ -24,6 +24,7 @@ Por dónde empezar según lo que necesites.
 - [Progreso y hoja de ruta](roadmap.md): qué funciona, qué sigue, decisiones pendientes.
 - [Decisiones de arquitectura (ADR)](architecture/decisions.md).
 - [Registro de cambios](../CHANGELOG.md).
+- [Casacoima: transporte y auditoría](analisis/casacoima-2026-11.md): el contexto de El Triunfo y Sierra Imataca y lo que le falta a la plataforma para el piloto.
 
 ## Arquitectura
 
