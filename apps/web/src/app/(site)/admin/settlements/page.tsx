@@ -1,7 +1,13 @@
 import {
+  DRIVER_DEBT_LIMIT,
+  DRIVER_PAYOUT_MINIMUM,
   formatPaymentAmount,
+  INDEPENDENT_COMMISSION_NOTICE_DAYS,
   ORGANIZATION_TYPE_LABELS,
+  PAYOUT_METHOD_LABELS,
   type AdminSettlementSummary,
+  type IndependentCommission,
+  type PendingDriverPayout,
   type SettlementPolicy,
 } from '@vtp/shared-types';
 import Link from 'next/link';
@@ -14,14 +20,23 @@ import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { apiFetch } from '@/lib/server/api';
 import { requirePlatformPermission } from '@/lib/server/session';
-import { setPlatformPolicy } from './actions';
+import { formatDate } from '@/lib/labels';
+import {
+  markPayoutSent,
+  runDriverPayouts,
+  setIndependentCommission,
+  setPlatformPolicy,
+} from './actions';
 
 export default async function AdminSettlementsPage() {
   await requirePlatformPermission('finance.manage');
-  const [summaries, policy] = await Promise.all([
+  const [summaries, policy, commission, pending] = await Promise.all([
     apiFetch<AdminSettlementSummary[]>('/admin/settlements'),
     apiFetch<SettlementPolicy>('/admin/settlement-policy'),
+    apiFetch<IndependentCommission>('/admin/independent-commission'),
+    apiFetch<PendingDriverPayout[]>('/admin/driver-payouts/pending'),
   ]);
+  const pct = (rate: string) => `${rate.replace('.', ',')} %`;
   return (
     <>
       <div className="flex flex-col gap-2">
@@ -32,6 +47,84 @@ export default async function AdminSettlementsPage() {
           fijar su cargo o registrar un pago.
         </p>
       </div>
+      <Card>
+        <div className="flex flex-col gap-1">
+          <CardTitle>Conductores independientes</CardTitle>
+          <CardDescription>
+            Comisión de VTP por cada viaje de la línea de independientes (ADR-045): hoy{' '}
+            {pct(commission.rate)}
+            {commission.next
+              ? `; desde el ${formatDate(commission.next.from)}, ${pct(commission.next.rate)}`
+              : ''}
+            . Una subida rige {INDEPENDENT_COMMISSION_NOTICE_DAYS} días después de anunciarla y se
+            les avisa a los conductores; una baja, desde ahora. En los viajes en efectivo la
+            comisión queda como deuda del conductor (con más de{' '}
+            {formatPaymentAmount(DRIVER_DEBT_LIMIT.USD, 'USD')} o{' '}
+            {formatPaymentAmount(DRIVER_DEBT_LIMIT.VES, 'VES')} no puede conectarse); lo que pague
+            se registra en la liquidación de su línea. Cada lunes se crean los pagos a quienes se
+            les debe desde {formatPaymentAmount(DRIVER_PAYOUT_MINIMUM.USD, 'USD')} o{' '}
+            {formatPaymentAmount(DRIVER_PAYOUT_MINIMUM.VES, 'VES')} y registraron su cuenta.
+          </CardDescription>
+        </div>
+        <ActionForm action={setIndependentCommission}>
+          <div className="flex flex-wrap items-end gap-3">
+            <Field label="Comisión (%)" htmlFor="independentRate">
+              <Input
+                id="independentRate"
+                name="rate"
+                inputMode="decimal"
+                className="w-32"
+                required
+                defaultValue={commission.next?.rate ?? commission.rate}
+              />
+            </Field>
+            <SubmitButton>Guardar comisión</SubmitButton>
+          </div>
+        </ActionForm>
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="font-medium">Pagos semanales por transferir · {pending.length}</p>
+            <ActionForm action={runDriverPayouts}>
+              <SubmitButton size="sm" variant="outline">
+                Generar los pagos de esta semana
+              </SubmitButton>
+            </ActionForm>
+          </div>
+          {pending.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No hay pagos pendientes.</p>
+          ) : (
+            <ul className="flex flex-col divide-y">
+              {pending.map((payout) => (
+                <li key={payout.id} className="flex flex-col gap-2 py-3">
+                  <p className="text-sm">
+                    <span className="font-medium tabular-nums">
+                      {formatPaymentAmount(payout.amount, payout.currency)}
+                    </span>{' '}
+                    a {payout.driver?.name ?? '—'} ({payout.line}) ·{' '}
+                    {payout.account
+                      ? `${PAYOUT_METHOD_LABELS[payout.account.method]} ${payout.account.bank} ${payout.account.account} · ${payout.account.holderId} ${payout.account.holderName}`
+                      : 'sin cuenta registrada'}{' '}
+                    · {formatDate(payout.createdAt)}
+                  </p>
+                  <ActionForm action={markPayoutSent} hidden={{ payoutId: payout.id }}>
+                    <div className="flex flex-wrap gap-2">
+                      <Input
+                        name="reference"
+                        required
+                        maxLength={100}
+                        placeholder="Referencia de la transferencia"
+                        className="max-w-xs"
+                      />
+                      <SubmitButton size="sm">Marcar como enviado</SubmitButton>
+                    </div>
+                  </ActionForm>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </Card>
+
       <Card>
         <div className="flex flex-col gap-1">
           <CardTitle>Política general</CardTitle>

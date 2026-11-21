@@ -69,6 +69,7 @@ import {
 import { ApiException } from '../../common/errors/api.exception.js';
 import { AppConfigService } from '../../config/app-config.service.js';
 import { drivingDocumentsExpired } from '../onboarding/driving-documents.js';
+import { IndependentPayoutsService } from '../settlements/independent-payouts.service.js';
 import { DriverQualityService } from './driver-quality.service.js';
 import {
   DatabaseService,
@@ -90,7 +91,14 @@ import {
   organizations,
   type OrganizationRow,
 } from '../organizations/organizations.schema.js';
-import { percentOf, policyFor, recordRideEarning, recordRideFee } from '../settlements/ledger.js';
+import {
+  independentCommissionAt,
+  percentOf,
+  policyFor,
+  recordRideCommission,
+  recordRideEarning,
+  recordRideFee,
+} from '../settlements/ledger.js';
 import { organizationPolicies } from '../settlements/settlements.schema.js';
 import { tripPacks } from '../trip-packs/trip-packs.schema.js';
 import { TripPacksService } from '../trip-packs/trip-packs.service.js';
@@ -198,12 +206,28 @@ async function settleCompletedRide(
   now: Date,
   feesCollected = true,
 ) {
+  // On a line the platform runs, the fare is the independent driver's (ADR-039), minus the
+  // platform's commission (ADR-045).
+  const [line] = await tx
+    .select({ operatedByPlatform: organizations.operatedByPlatform })
+    .from(organizations)
+    .where(eq(organizations.id, ride.organizationId!));
+  const commission = line?.operatedByPlatform ? await independentCommissionAt(tx, now) : '0.00';
+  if (!ride.tripPackId && line?.operatedByPlatform) {
+    // Paid in cash to the driver: the commission is what they owe.
+    await recordRideCommission(
+      tx,
+      {
+        id: ride.id,
+        organizationId: ride.organizationId!,
+        passengers: ride.passengers,
+        fareAmount: ride.fareAmount!,
+        fareCurrency: ride.fareCurrency!,
+      },
+      commission,
+    );
+  }
   if (ride.tripPackId) {
-    // On a line the platform runs, the fare of a pack ride is the independent driver's (ADR-039).
-    const [line] = await tx
-      .select({ operatedByPlatform: organizations.operatedByPlatform })
-      .from(organizations)
-      .where(eq(organizations.id, ride.organizationId!));
     await recordRideEarning(
       tx,
       {
@@ -215,6 +239,7 @@ async function settleCompletedRide(
         tripPackId: ride.tripPackId,
       },
       line?.operatedByPlatform ? 'driver' : 'organization',
+      commission,
     );
   }
   // The driver says the passenger did not pay them: they stay owed for the next ride.
@@ -285,6 +310,7 @@ export class TaxiService {
     private readonly packs: TripPacksService,
     private readonly config: AppConfigService,
     private readonly quality: DriverQualityService,
+    private readonly payouts: IndependentPayoutsService,
   ) {}
 
   private readonly logger = new Logger(TaxiService.name);
@@ -1294,6 +1320,9 @@ export class TaxiService {
       throw conflict('Go online to take rides', 'DRIVER_OFFLINE');
     }
     await this.requireDrivingDocuments(auth.user.id);
+    if (line.operatedByPlatform && (await this.payouts.debtExceeded(auth.user.id))) {
+      throw conflict('You owe commissions above the limit', 'DRIVER_DEBT_LIMIT');
+    }
     return this.take(rideId, line, auth.user.id, input, auth, meta);
   }
 
@@ -1324,7 +1353,13 @@ export class TaxiService {
       }
       throw conflict('You drive for no active taxi or motorcycle line', 'DRIVER_NO_LINE');
     }
-    if (online) await this.requireDrivingDocuments(userId);
+    if (online) {
+      await this.requireDrivingDocuments(userId);
+      // Independent drivers who owe too much in commissions pay first (ADR-045).
+      if (await this.payouts.debtExceeded(userId)) {
+        throw conflict('You owe commissions above the limit', 'DRIVER_DEBT_LIMIT');
+      }
+    }
     const now = new Date();
     await this.database.db
       .insert(driverPresence)

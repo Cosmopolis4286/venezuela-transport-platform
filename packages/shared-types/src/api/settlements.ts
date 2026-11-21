@@ -169,8 +169,15 @@ export interface OrganizationSettlement {
 export interface DriverBalance {
   driver: { id: string; name: string } | null;
   currency: Currency;
+  /** Fares credited minus commissions (ADR-045); negative when commissions on cash rides exceed them. */
   earned: string;
+  /** Paid to the driver, including automatic payouts still `pending`. */
   paidOut: string;
+  /** What the driver paid the platform for commissions they owed. */
+  collected: string;
+  /** Automatic payouts created but not sent yet (part of `paidOut`). */
+  pending: string;
+  /** `earned − paidOut + collected`; negative is what the driver owes the platform. */
   balance: string;
   /** Where the driver wants to be paid; null if the driver has not set it. */
   payoutAccount: DriverPayoutAccount | null;
@@ -194,6 +201,54 @@ export interface DriverEarnings {
     organization: { id: string; name: string };
   })[];
   payoutAccount: DriverPayoutAccount | null;
+  /** For independent drivers: the commission on their rides, and a change already announced. */
+  commission: IndependentCommission | null;
+}
+
+/**
+ * Commission and payouts of independent drivers (ADR-045). The platform's lines charge
+ * `rate` percent of each completed ride's fare; a higher rate applies `INDEPENDENT_COMMISSION_NOTICE_DAYS`
+ * after it is announced (Conditions for Independent Drivers, 4.2), a lower one at once.
+ */
+export const INDEPENDENT_COMMISSION_NOTICE_DAYS = 30;
+
+/** Positive balances of at least this much are paid automatically every week. */
+export const DRIVER_PAYOUT_MINIMUM: Record<Currency, string> = { USD: '5.00', VES: '200.00' };
+
+/** Owing more than this in commissions keeps an independent driver offline until they pay it. */
+export const DRIVER_DEBT_LIMIT: Record<Currency, string> = { USD: '20.00', VES: '800.00' };
+
+/** `GET /admin/independent-commission` (also in `DriverEarnings`). */
+export interface IndependentCommission {
+  /** Percentage in force, e.g. `"10.00"`. */
+  rate: string;
+  /** An announced change and when it starts. */
+  next: { rate: string; from: string } | null;
+}
+
+/** `PUT /admin/independent-commission` */
+export interface SetIndependentCommissionRequest {
+  rate: string;
+}
+
+/** `POST /admin/payouts/:id/sent`: an automatic payout was transferred. */
+export interface MarkPayoutSentRequest {
+  reference: string;
+}
+
+/** `GET /admin/driver-payouts/pending`: an automatic payout waiting to be transferred. */
+export interface PendingDriverPayout extends Payout {
+  line: string;
+  /** Where to send it, as the driver registered it. */
+  account: DriverPayoutAccount | null;
+}
+
+/** `POST /admin/driver-payouts/run`: what a weekly run created. */
+export interface DriverPayoutRun {
+  week: string;
+  created: number;
+  /** Paid at once by the simulated provider (`PAYOUT_PROVIDER=simulated`). */
+  sent: number;
 }
 
 /**
@@ -210,8 +265,10 @@ export interface SettlementEntry {
    * `cancellation` entries are negative: the refund taken back when a passenger cancelled.
    * `ride_cancellation_fee`: a late-cancelled ride's fee, earned by the line that went out, or
    * collected in cash by the line of the passenger's next ride (it owes it to the platform).
+   * `ride_commission`: the platform's commission on an independent driver's cash ride (ADR-045),
+   * a negative `earned` the driver owes.
    */
-  kind: 'booking' | 'cancellation' | 'ride_cancellation_fee';
+  kind: 'booking' | 'cancellation' | 'ride_cancellation_fee' | 'ride_commission';
   /** Who received the passenger's money. */
   collectedBy: PaymentCollection;
   bookingCode: string;
@@ -239,9 +296,16 @@ export interface Payout {
   currency: Currency;
   amount: string;
   method: PayoutMethod;
-  /** Bank or wallet reference of the transfer. */
+  /** Bank or wallet reference of the transfer; empty while `pending`. */
   reference: string;
   note: string | null;
+  /**
+   * `pending`: an automatic payout to a driver waiting to be transferred (ADR-045); it already
+   * counts against the balance. `sent`: transferred.
+   */
+  status: 'pending' | 'sent';
+  /** True for the weekly automatic payouts. */
+  automatic: boolean;
   createdAt: string;
   /** Voided payouts do not count against the balance. */
   voidedAt: string | null;

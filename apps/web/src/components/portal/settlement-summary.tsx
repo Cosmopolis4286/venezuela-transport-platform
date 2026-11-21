@@ -238,11 +238,20 @@ export function PayoutLine({ payout, children }: { payout: Payout; children?: Re
           {formatPaymentAmount(payout.amount, payout.currency)}
         </span>
         <span className="text-sm text-muted-foreground">
-          {payout.direction === 'from_operator' ? 'De la empresa a la plataforma · ' : ''}
-          {payout.driver ? `Al conductor ${payout.driver.name} · ` : ''}
-          {PAYOUT_METHOD_LABELS[payout.method]} · ref. {payout.reference} ·{' '}
-          {formatDate(payout.createdAt)}
+          {payout.direction === 'from_operator'
+            ? payout.driver
+              ? `Del conductor ${payout.driver.name} a la plataforma (comisiones) · `
+              : 'De la empresa a la plataforma · '
+            : payout.driver
+              ? `Al conductor ${payout.driver.name} · `
+              : ''}
+          {PAYOUT_METHOD_LABELS[payout.method]}
+          {payout.reference ? ` · ref. ${payout.reference}` : ''} · {formatDate(payout.createdAt)}
         </span>
+        {payout.automatic ? <Badge variant="outline">Pago semanal</Badge> : null}
+        {payout.status === 'pending' && !payout.voidedAt ? (
+          <Badge variant="warning">Pendiente de transferir</Badge>
+        ) : null}
         {payout.voidedAt ? <Badge variant="secondary">Anulado</Badge> : null}
       </div>
       {payout.note ? <p className="text-sm">{payout.note}</p> : null}

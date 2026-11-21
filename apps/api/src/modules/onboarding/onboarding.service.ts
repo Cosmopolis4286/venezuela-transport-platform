@@ -532,7 +532,8 @@ export class OnboardingService {
       .select()
       .from(applications)
       .where(eq(applications.status, status))
-      .orderBy(applications.submittedAt)
+      // Submitted ones, the oldest first; drafts (never submitted), the newest first.
+      .orderBy(applications.submittedAt, desc(applications.createdAt))
       .limit(100);
     return Promise.all(rows.map((row) => this.toDto(row)));
   }

@@ -1,6 +1,7 @@
 import {
   defaultPayee,
   type Currency,
+  type IndependentCommission,
   type PaymentCollection,
   type RefundTier,
   type SettlementPolicy,
@@ -296,6 +297,8 @@ export async function recordRideEarning(
   },
   /** `driver` on a line the platform runs: the independent driver earns the fare (ADR-039). */
   payee: 'organization' | 'driver' = 'organization',
+  /** The independent drivers' commission (ADR-045), taken from the fare credited to the driver. */
+  commissionRate = '0.00',
 ): Promise<void> {
   // The platform earns from the pack's price, not from the line (ADR-029): the line gets its fare.
   const gross = await packCapped(
@@ -315,9 +318,8 @@ export async function recordRideEarning(
       seats: ride.passengers,
       currency: ride.fareCurrency,
       gross,
-      commissionRate: '0.00',
-      commission: '0.00',
-      earned: gross,
+      commissionRate,
+      ...splitFare(gross, commissionRate),
     })
     .onConflictDoNothing({
       target: [
@@ -385,4 +387,90 @@ export async function recordRideFee(
         settlementEntries.organizationId,
       ],
     });
+}
+
+/**
+ * The independent drivers' commission in force at `at` (ADR-045): an announced change applies
+ * from its date.
+ */
+export async function independentCommissionAt(
+  db: Database | Transaction,
+  at = new Date(),
+): Promise<string> {
+  const [platform] = await db
+    .select({
+      rate: platformSettings.independentCommissionRate,
+      next: platformSettings.independentCommissionNextRate,
+      from: platformSettings.independentCommissionNextFrom,
+    })
+    .from(platformSettings)
+    .where(eq(platformSettings.id, 1));
+  if (!platform) return '0.00';
+  return platform.next !== null && platform.from !== null && platform.from <= at
+    ? platform.next
+    : platform.rate;
+}
+
+/**
+ * The commission on an independent driver's ride paid in cash (ADR-045): the driver collected the
+ * fare, so the entry is what they owe the platform (`earned` negative). Once per ride; nothing
+ * at a 0 % rate.
+ */
+export async function recordRideCommission(
+  tx: Transaction,
+  ride: {
+    id: string;
+    organizationId: string;
+    passengers: number;
+    fareAmount: string;
+    fareCurrency: Currency;
+  },
+  commissionRate: string,
+): Promise<void> {
+  const { commission } = splitFare(ride.fareAmount, commissionRate);
+  if (toScaled(commission, 2) === 0n) return;
+  await tx
+    .insert(settlementEntries)
+    .values({
+      organizationId: ride.organizationId,
+      taxiRideId: ride.id,
+      kind: 'ride_commission',
+      collectedBy: 'operator',
+      payee: 'driver',
+      seats: ride.passengers,
+      currency: ride.fareCurrency,
+      gross: ride.fareAmount,
+      commissionRate,
+      commission,
+      earned: fromScaled(-toScaled(commission, 2), 2),
+    })
+    .onConflictDoNothing({
+      target: [
+        settlementEntries.taxiRideId,
+        settlementEntries.kind,
+        settlementEntries.organizationId,
+      ],
+    });
+}
+
+/** The commission in force and an announced change still to come (ADR-045). */
+export async function independentCommission(
+  db: Database | Transaction,
+  now = new Date(),
+): Promise<IndependentCommission> {
+  const [row] = await db.select().from(platformSettings).where(eq(platformSettings.id, 1));
+  if (!row) throw new Error('platform_settings has no row: run the migrations');
+  const upcoming =
+    row.independentCommissionNextRate !== null &&
+    row.independentCommissionNextFrom !== null &&
+    row.independentCommissionNextFrom > now;
+  return {
+    rate: await independentCommissionAt(db, now),
+    next: upcoming
+      ? {
+          rate: row.independentCommissionNextRate!,
+          from: row.independentCommissionNextFrom!.toISOString(),
+        }
+      : null,
+  };
 }

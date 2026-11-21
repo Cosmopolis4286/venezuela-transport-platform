@@ -854,6 +854,30 @@ avisa.
 suspensión no es definitiva: la revisa una persona (Condiciones para Conductores Independientes,
 sección 5). Un conductor nuevo no tiene promedio hasta sus primeras 10 calificaciones.
 
+## ADR-045: Comisión y pagos semanales de los conductores independientes
+
+**Decisión** (del dueño del producto, cuarta parte de la tercera etapa). En la línea que opera la
+plataforma:
+
+- **comisión** por viaje terminado, un porcentaje de la tarifa (0 % al empezar) que fija finanzas.
+  Un aumento rige 30 días después de anunciarlo, con aviso a los conductores; una baja, al momento
+  (Condiciones para Conductores Independientes, 4.2). En los viajes en efectivo queda como deuda
+  del conductor; en los pagados con paquete, se descuenta de lo acreditado;
+- **pagos semanales automáticos** los lunes a la cuenta que registró cada conductor, desde un
+  mínimo; esperan como pendientes hasta que finanzas los transfiere (`PAYOUT_PROVIDER=manual`),
+  porque todavía no hay un proveedor con dispersión de pagos;
+- un **límite de deuda**: por encima, el conductor no se conecta ni acepta viajes hasta pagarla, y
+  finanzas registra lo que paga.
+
+**Por qué.** Es como trabajan las apps de viajes y lo que prometían las Condiciones: la plataforma
+necesita ingresos por los viajes que intermedia, y los conductores, cobrar con regularidad sin
+pedirlo. El límite evita que la deuda en efectivo crezca sin control.
+
+**Compromisos.** Las transferencias siguen siendo manuales (pendientes que se marcan enviadas); un
+proveedor de dispersión podrá enviarlas solo cambiando `PAYOUT_PROVIDER`. Los montos mínimos y el
+límite son iguales para todos y están en `shared-types`. El pago de la deuda lo registra finanzas:
+el conductor todavía no lo reporta desde la app.
+
 ## ADR-046: Los bolívares se cobran siempre con la tasa oficial del BCV, actualizada sola
 
 **Decisión** (del dueño del producto). Toda conversión a bolívares (boletos de las empresas y

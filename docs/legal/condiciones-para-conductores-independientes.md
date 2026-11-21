@@ -56,7 +56,7 @@ si las acepta. El primero que acepta presta el servicio.
 
 3.2. **Tarifa.** En los viajes por tramo cobra la **tarifa fija que publica la línea**, que el
 pasajero ve antes de pedir. No cobra montos adicionales salvo la tasa de cancelación que la
-Plataforma le indique (sección 4.3).
+Plataforma le indique (sección 4.5).
 
 3.3. **Recogida.** Recoge al pasajero en el punto indicado y, cuando la Plataforma lo muestre,
 confirma el código de recogida que le dice el pasajero. Una moto lleva a un solo pasajero, con
@@ -72,16 +72,28 @@ no deja que otra persona use su cuenta o su vehículo en la Plataforma.
 un paquete de viajes: en ese caso el Conductor no cobra al pasajero y {{nombre_comercial}} le
 reconoce la tarifa del tramo en su estado de cuenta.
 
-4.2. **Comisión.** {{nombre_comercial}} puede cobrar una comisión por los viajes que intermedia en
-la línea. Mientras no se informe una en la Plataforma con al menos **30 días** de anticipación, no
-se cobra. Lo que el Conductor gana, debe y recibe se muestra en la Plataforma.
+4.2. **Comisión.** {{nombre_comercial}} cobra por cada viaje que intermedia en la línea la
+comisión que muestra la Plataforma (un porcentaje de la tarifa; puede ser cero). Un aumento solo
+rige **30 días** después de informarlo en la Plataforma y por correo; una rebaja, desde que se
+informa. En los viajes que el pasajero le paga en efectivo, la comisión queda como **deuda** del
+Conductor con {{nombre_comercial}}; en los pagados con paquete, se descuenta de la tarifa que se
+le reconoce. Lo que el Conductor gana, debe, paga y recibe se muestra en la Plataforma («Mis
+cobros»).
 
-4.3. **Tasas de cancelación.** Cuando la Plataforma le indica que un pasajero debe una tasa de
+4.3. **Pagos al Conductor.** Cada semana, {{nombre_comercial}} le transfiere lo que le debe, a la
+cuenta que el Conductor registró en la Plataforma, cuando el saldo alcanza el mínimo que indica la
+Plataforma. Es responsabilidad del Conductor mantener esos datos correctos.
+
+4.4. **Deuda.** El Conductor paga su deuda de comisiones por los medios que le indique
+{{nombre_comercial}}. Si supera el límite que muestra la Plataforma, no puede conectarse ni
+aceptar viajes hasta pagarla; las deudas y los créditos en la misma moneda se compensan.
+
+4.5. **Tasas de cancelación.** Cuando la Plataforma le indica que un pasajero debe una tasa de
 cancelación, el Conductor la cobra en efectivo junto con la tarifa y la registra al terminar el
 viaje; la Plataforma la acredita a quien corresponda conforme a la Política de Cancelación y
 Reembolsos.
 
-4.4. **Impuestos.** El Conductor es responsable de sus obligaciones tributarias y de emitir los
+4.6. **Impuestos.** El Conductor es responsable de sus obligaciones tributarias y de emitir los
 documentos fiscales que la ley le exija por sus servicios.
 
 ## 5. Calificaciones y calidad

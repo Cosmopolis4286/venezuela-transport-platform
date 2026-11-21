@@ -86,6 +86,10 @@ export interface NotificationMessages {
   driverSuspensionLifted: (notes: string) => NotificationText;
   /** To a line's owners: one of their drivers has a low average. */
   lineDriverRatingLow: (driver: string, average: string) => NotificationText;
+  /** To independent drivers (ADR-045): the commission changes to `rate` from `from`. */
+  commissionChanged: (rate: string, from: string) => NotificationText;
+  /** To a driver: the platform transferred `amount` to their account. */
+  payoutSent: (amount: string, reference: string) => NotificationText;
   /** Appended to every e-mail. */
   footer: string;
 }
@@ -271,6 +275,14 @@ const es: NotificationMessages = {
     title: 'Un conductor tiene calificaciones bajas',
     body: `La calificación promedio de ${driver} es ${average}. Revisa sus viajes y comentarios en el portal.`,
   }),
+  commissionChanged: (rate, from) => ({
+    title: 'Cambia la comisión de VTP',
+    body: `Desde el ${from}, la comisión por cada viaje que hagas con VTP será del ${rate} %. Lo ves en Mis cobros.`,
+  }),
+  payoutSent: (amount, reference) => ({
+    title: 'Te pagamos',
+    body: `Te transferimos ${amount} a tu cuenta de Mis cobros. Referencia: ${reference}.`,
+  }),
   footer: 'VTP · Transporte terrestre en Venezuela. Este es un mensaje automático.',
 };
 
@@ -422,6 +434,14 @@ const en: NotificationMessages = {
   lineDriverRatingLow: (driver, average) => ({
     title: 'A driver has low ratings',
     body: `The average rating of ${driver} is ${average}. Check their rides and comments in the portal.`,
+  }),
+  commissionChanged: (rate, from) => ({
+    title: "VTP's commission is changing",
+    body: `From ${from}, the commission on each ride you do with VTP will be ${rate}%. See it in My earnings.`,
+  }),
+  payoutSent: (amount, reference) => ({
+    title: 'We paid you',
+    body: `We transferred ${amount} to your account in My earnings. Reference: ${reference}.`,
   }),
   footer: 'VTP · Ground transport in Venezuela. This is an automatic message.',
 };
@@ -577,6 +597,14 @@ const ptBR: NotificationMessages = {
   lineDriverRatingLow: (driver, average) => ({
     title: 'Um motorista tem avaliações baixas',
     body: `A avaliação média de ${driver} é ${average}. Veja as corridas e os comentários no portal.`,
+  }),
+  commissionChanged: (rate, from) => ({
+    title: 'A comissão da VTP vai mudar',
+    body: `A partir de ${from}, a comissão de cada corrida que você fizer com a VTP será de ${rate}%. Veja em Meus ganhos.`,
+  }),
+  payoutSent: (amount, reference) => ({
+    title: 'Pagamos você',
+    body: `Transferimos ${amount} para a sua conta de Meus ganhos. Referência: ${reference}.`,
   }),
   footer: 'VTP · Transporte rodoviário na Venezuela. Esta é uma mensagem automática.',
 };

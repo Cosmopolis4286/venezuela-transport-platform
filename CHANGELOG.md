@@ -19,7 +19,8 @@ pull request.
   últimos 5 días no se ofrece pagar en bolívares. En Facturación: botón para actualizarla en el
   momento y la fuente de cada tasa. Corrige que la tasa de bolívares de las empresas no vencía.
 - **Documentos legales, versión 2026-11-21** (los usuarios aceptan de nuevo): Condiciones para
-  Conductores Independientes, sección 5 (promedio, aviso y suspensión por calificación); Términos 6.10
+  Conductores Independientes, secciones 4 (comisión, pagos semanales y límite de deuda) y 5
+  (promedio, aviso y suspensión por calificación); Términos 6.10
   (compartir el viaje y Emergencia; VTP no es un servicio de emergencias) y Política de Privacidad
   (quién ve un viaje compartido y qué se guarda de una emergencia), con el registro y la
   conservación al día.
@@ -61,6 +62,12 @@ pull request.
 
 ### Agregado
 
+- **Comisión y pagos semanales de independientes** (ADR-045): finanzas fija la comisión de VTP por
+  viaje (una subida rige a los 30 días y se avisa a los conductores); en los viajes en efectivo
+  queda como deuda y en los pagados con paquete se descuenta. Cada lunes se crean los pagos a la
+  cuenta de Mis cobros de cada conductor (desde US$ 5 / Bs. 200), que finanzas marca como enviados
+  con su referencia; con más de US$ 20 / Bs. 800 de deuda el conductor no se conecta hasta pagarla.
+  Nueva variable `PAYOUT_PROVIDER`. Cuarta parte de la tercera etapa.
 - **Calidad de los conductores** (ADR-044): el conductor ve su calificación promedio (últimos 30
   viajes calificados, a partir de 10). Por debajo de 4,3 recibe un aviso; por debajo de 4,0 un
   independiente queda suspendido y desconectado hasta que VTP revisa su caso (**Independientes →
