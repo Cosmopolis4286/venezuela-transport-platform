@@ -138,6 +138,12 @@ hora que pediste), puedes cancelar sin costo.
 4. Al terminar cualquier viaje de taxi o moto, califícalo de 1 a 5 estrellas: la línea ve tu
    calificación.
 
+**Tu seguridad.** En cualquier viaje de taxi o moto abierto, **Compartir mi viaje** manda por
+WhatsApp (u otra app) un enlace para que alguien de confianza vea la placa, el conductor, el
+recorrido y dónde va el conductor; deja de funcionar unas horas después de terminar. Durante el
+viaje, **Emergencia** llama al 911 y avisa al equipo de VTP con los datos del viaje y la ubicación
+del conductor. VTP no reemplaza a los servicios de emergencia: si estás en peligro, llama al 911.
+
 ¿No tienes la app? Escribe al WhatsApp de soporte y elige la opción 2: te pedimos el taxi o la
 moto y te mandamos un enlace para seguirlo (con la hora estimada de llegada), cancelarlo y
 calificarlo desde el navegador.

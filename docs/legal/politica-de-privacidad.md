@@ -53,6 +53,7 @@ actualización y cancelación. No vendemos datos personales.
 | Empresas                                  | Razón social, nombre comercial, RIF, teléfono, correo, dirección, miembros y sus roles, cuentas de cobro                                                                                                                                                                            | Al registrar una Empresa                                                                                                                      |
 | Dispositivo y uso                         | Identificador de notificaciones push del teléfono, plataforma (Android, iOS, web), dirección IP y navegador o aplicación de cada sesión, registro de acciones de seguridad (auditoría)                                                                                              | Al usar la Plataforma                                                                                                                         |
 | Disponibilidad y ubicación de conductores | Si un conductor de taxi o moto está en línea, desde cuándo, cuándo abrió la app por última vez y, mientras está en línea y con la app abierta, la **última ubicación** de su teléfono (no guardamos el recorrido)                                                                   | Al conectarse para recibir viajes. Se reemplaza con cada actualización; la ubicación se borra al desconectarse y el resto al borrar la cuenta |
+| Seguridad en los viajes                   | Si comparte un viaje, el enlace que lo muestra; si usted o su conductor tocan **Emergencia**, quién la tocó, cuándo y la última ubicación del conductor, con lo que hizo nuestro equipo                                                                                             | Al compartir el viaje o pedir ayuda                                                                                                           |
 | Comunicaciones                            | Avisos enviados (tipo, canal, fecha y si se entregó), reclamos y mensajes a soporte                                                                                                                                                                                                 | Al avisarle o al escribirnos                                                                                                                  |
 
 Si trabaja como **conductor independiente**, además registramos su vehículo a su nombre (placa,
@@ -71,18 +72,19 @@ tratamos datos biométricos.
 
 ## 4. Para qué los usamos y con qué base
 
-| Finalidad                                                                                                                  | Base                                                                                                            |
-| -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Crear y proteger su cuenta, permitirle entrar y recuperar su contraseña                                                    | Ejecución del contrato (Términos)                                                                               |
-| Apartar puestos, emitir boletos, armar la lista de pasajeros que exige la normativa de transporte y validar el abordaje    | Ejecución del contrato y obligación legal de la Empresa                                                         |
-| Recibir, verificar y conciliar pagos; tramitar reembolsos; liquidar a las Empresas                                         | Ejecución del contrato y obligaciones contables y tributarias                                                   |
-| Verificar la identidad y la idoneidad de conductores y personal (KYC)                                                      | Consentimiento expreso, obligación legal de la Empresa e interés legítimo en la seguridad de los pasajeros      |
-| Ofrecer los viajes de taxi y moto primero a los conductores cercanos y mostrarle al pasajero que su conductor va en camino | Ejecución del contrato y consentimiento del conductor (el permiso de ubicación del teléfono, que puede retirar) |
-| Enviar avisos sobre reservas, pagos, viajes y su cuenta                                                                    | Ejecución del contrato                                                                                          |
-| Prevenir fraude, suplantación, legitimación de capitales y usos ilícitos; atender requerimientos de autoridades            | Obligación legal e interés legítimo                                                                             |
-| Seguridad de la Plataforma (registros de acceso y auditoría)                                                               | Interés legítimo y obligación legal                                                                             |
-| Atender reclamos y ejercer o defender derechos                                                                             | Interés legítimo y obligación legal                                                                             |
-| Estadísticas agregadas del servicio (sin identificar personas)                                                             | Interés legítimo                                                                                                |
+| Finalidad                                                                                                                  | Base                                                                                                                                     |
+| -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Crear y proteger su cuenta, permitirle entrar y recuperar su contraseña                                                    | Ejecución del contrato (Términos)                                                                                                        |
+| Apartar puestos, emitir boletos, armar la lista de pasajeros que exige la normativa de transporte y validar el abordaje    | Ejecución del contrato y obligación legal de la Empresa                                                                                  |
+| Recibir, verificar y conciliar pagos; tramitar reembolsos; liquidar a las Empresas                                         | Ejecución del contrato y obligaciones contables y tributarias                                                                            |
+| Verificar la identidad y la idoneidad de conductores y personal (KYC)                                                      | Consentimiento expreso, obligación legal de la Empresa e interés legítimo en la seguridad de los pasajeros                               |
+| Ofrecer los viajes de taxi y moto primero a los conductores cercanos y mostrarle al pasajero que su conductor va en camino | Ejecución del contrato y consentimiento del conductor (el permiso de ubicación del teléfono, que puede retirar)                          |
+| Atender las emergencias de los viajes de taxi y moto y dejar constancia de lo que se hizo                                  | Interés vital de las personas involucradas, ejecución del contrato e interés legítimo en la seguridad de los pasajeros y los conductores |
+| Enviar avisos sobre reservas, pagos, viajes y su cuenta                                                                    | Ejecución del contrato                                                                                                                   |
+| Prevenir fraude, suplantación, legitimación de capitales y usos ilícitos; atender requerimientos de autoridades            | Obligación legal e interés legítimo                                                                                                      |
+| Seguridad de la Plataforma (registros de acceso y auditoría)                                                               | Interés legítimo y obligación legal                                                                                                      |
+| Atender reclamos y ejercer o defender derechos                                                                             | Interés legítimo y obligación legal                                                                                                      |
+| Estadísticas agregadas del servicio (sin identificar personas)                                                             | Interés legítimo                                                                                                                         |
 
 No tomamos decisiones que le afecten de forma significativa basadas solo en tratamiento
 automatizado: las solicitudes KYC y los pagos verificados a mano los revisa una persona.
@@ -104,10 +106,18 @@ momento.
   conductor, la placa y la descripción del vehículo, y la línea; nunca el documento del conductor.
   Mientras el conductor va a buscarlos y durante el viaje, ven también su última ubicación y la
   hora estimada de llegada; al terminar el viaje, ya no.
+- **Las personas con quienes usted comparte un viaje** ven, con el enlace que les envía, lo mismo
+  que usted: la placa, el nombre de pila del conductor, la línea, el recorrido y, mientras el viaje
+  está abierto, la ubicación del conductor. El enlace deja de funcionar unas horas después de que
+  el viaje termina; cualquiera que lo tenga puede abrirlo, así que compártalo solo con quien
+  confíe.
+- **En una emergencia**, nuestro equipo de soporte ve los nombres y teléfonos del pasajero y del
+  conductor, el recorrido y la ubicación, para llamarles y, si hace falta, darlos a los servicios
+  de emergencia o a la autoridad competente.
 - **Nuestro personal** accede solo a lo que necesita según su función: el equipo de revisión, a
   las solicitudes KYC y sus documentos; el de finanzas, a pagos, liquidaciones y reembolsos; el de
-  soporte, a las reservas que busca por su código y a las colas de revisión, **sin** números de
-  identidad ni copias de documentos.
+  soporte, a las reservas que busca por su código, a las colas de revisión y a las emergencias de
+  los viajes, **sin** números de identidad ni copias de documentos.
 - **Proveedores que nos prestan servicios** por nuestra cuenta, con obligación de
   confidencialidad y solo para esa finalidad: alojamiento de servidores ({{hospedaje}}), envío de
   correo electrónico, servicio de notificaciones push de Expo (que entrega los avisos a los

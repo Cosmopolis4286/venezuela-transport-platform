@@ -4,6 +4,7 @@ import {
   type DriverAvailabilityRequest,
   type DriverLocationRequest,
   type RateTaxiRideRequest,
+  type ResolveSafetyIncidentRequest,
   CURRENCIES,
   MAX_TAXI_PASSENGERS,
   ON_DEMAND_MODES,
@@ -38,7 +39,9 @@ import {
   Length,
   Matches,
   Max,
+  MaxLength,
   Min,
+  MinLength,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -254,4 +257,12 @@ export class DriverLocationDto implements DriverLocationRequest {
   @Min(0)
   @Max(100_000)
   accuracyMeters?: number;
+}
+
+export class ResolveSafetyIncidentDto implements ResolveSafetyIncidentRequest {
+  @ApiProperty({ description: 'What was done; kept with the alert' })
+  @IsString()
+  @MinLength(3)
+  @MaxLength(1000)
+  notes!: string;
 }

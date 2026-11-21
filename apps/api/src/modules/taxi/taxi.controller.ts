@@ -19,6 +19,8 @@ import type {
   DriverTaxiBoard,
   OperatorTaxiRide,
   PendingRideFee,
+  SafetyIncident,
+  ShareTaxiRideResponse,
   StopSummary,
   TaxiDispatchBoard,
   TaxiRide,
@@ -44,6 +46,7 @@ import {
   ReplaceTaxiTerminalsDto,
   RequestTaxiDto,
   ReplaceOnDemandFaresDto,
+  ResolveSafetyIncidentDto,
   StretchOptionsQueryDto,
 } from './taxi.dto.js';
 import { TaxiService } from './taxi.service.js';
@@ -119,6 +122,67 @@ export class TaxiController {
     @Body() body: RateTaxiRideDto,
   ): Promise<TaxiRide> {
     return this.taxi.rateMine(auth.user.id, rideId, body);
+  }
+
+  /** A read-only link to the open ride, for people the passenger trusts (ADR-043). */
+  @ApiBearerAuth()
+  @Post('me/taxi-rides/:rideId/share')
+  @HttpCode(HttpStatus.OK)
+  share(
+    @CurrentAuth() auth: Authenticated,
+    @Param('rideId', ParseUUIDPipe) rideId: string,
+  ): Promise<ShareTaxiRideResponse> {
+    return this.taxi.share(auth.user.id, rideId);
+  }
+
+  /** The passenger's emergency button during the ride: the platform team is told at once. */
+  @ApiBearerAuth()
+  @Post('me/taxi-rides/:rideId/sos')
+  @HttpCode(HttpStatus.OK)
+  sos(
+    @CurrentAuth() auth: Authenticated,
+    @Param('rideId', ParseUUIDPipe) rideId: string,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<SafetyIncident> {
+    return this.taxi.sos(auth, rideId, 'passenger', meta);
+  }
+}
+
+/** A ride shared by its passenger (ADR-043): read-only, no account, the token is the secret. */
+@ApiTags('taxi')
+@Controller({ path: 'taxi/shared/:token', version: '1' })
+export class TaxiSharedController {
+  constructor(private readonly taxi: TaxiService) {}
+
+  @Public()
+  @Get()
+  view(@Param('token') token: string): Promise<PublicTaxiRide> {
+    return this.taxi.shared(token);
+  }
+}
+
+/** Platform staff: emergency alerts sent from rides (ADR-043). */
+@ApiTags('admin')
+@ApiBearerAuth()
+@RequirePlatformPermission('safety.manage')
+@Controller({ path: 'admin/safety-incidents', version: '1' })
+export class AdminSafetyController {
+  constructor(private readonly taxi: TaxiService) {}
+
+  @Get()
+  list(): Promise<SafetyIncident[]> {
+    return this.taxi.incidents();
+  }
+
+  @Post(':incidentId/resolve')
+  @HttpCode(HttpStatus.OK)
+  resolve(
+    @CurrentAuth() auth: Authenticated,
+    @Param('incidentId', ParseUUIDPipe) incidentId: string,
+    @Body() body: ResolveSafetyIncidentDto,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<SafetyIncident> {
+    return this.taxi.resolveIncident(auth, incidentId, body, meta);
   }
 }
 
@@ -248,6 +312,17 @@ export class TaxiDriverController {
     @ReqMeta() meta: RequestMeta,
   ): Promise<void> {
     await this.taxi.driverStep(auth, rideId, 'release', meta);
+  }
+
+  /** The driver's emergency button during the ride (ADR-043). */
+  @Post('rides/:rideId/sos')
+  @HttpCode(HttpStatus.OK)
+  sos(
+    @CurrentAuth() auth: Authenticated,
+    @Param('rideId', ParseUUIDPipe) rideId: string,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<SafetyIncident> {
+    return this.taxi.sos(auth, rideId, 'driver', meta);
   }
 }
 

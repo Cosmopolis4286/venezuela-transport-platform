@@ -12,8 +12,10 @@ import {
   useApi,
   useAuth,
   userMessage,
+  webUrl,
 } from '@vtp/mobile-core';
 import {
+  EMERGENCY_PHONE,
   formatMoney,
   longDate,
   networkClock,
@@ -21,11 +23,13 @@ import {
   toNetworkIso,
   vehicleName,
   type RateTaxiRideRequest,
+  type SafetyIncident,
+  type ShareTaxiRideResponse,
   type TaxiRide,
 } from '@vtp/shared-types';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Linking, RefreshControl } from 'react-native';
+import { Alert, Linking, RefreshControl, Share } from 'react-native';
 import { useFeeTotal } from '@/components/pending-fees';
 import { useT } from '@/i18n/use-t';
 import { driverLine, isOpenRide, ridePlace } from '@/lib/taxi';
@@ -90,6 +94,35 @@ export default function TaxiRideScreen() {
       setBusy(false);
     }
   };
+
+  // Safety (ADR-043): a link for people the passenger trusts, and the emergency button.
+  const [sosSent, setSosSent] = useState(false);
+  const share = async () => {
+    setError(null);
+    try {
+      const { path } = await api.request<ShareTaxiRideResponse>(`/me/taxi-rides/${id}/share`, {
+        method: 'POST',
+      });
+      await Share.share({ message: t.taxi.shareMessage(webUrl(path, locale)) });
+    } catch (e) {
+      setError(userMessage(e));
+    }
+  };
+  const emergency = () =>
+    Alert.alert(t.taxi.sosTitle, t.taxi.sosBody(EMERGENCY_PHONE), [
+      { text: t.taxi.sosCancel, style: 'cancel' },
+      {
+        text: t.taxi.sosConfirm(EMERGENCY_PHONE),
+        style: 'destructive',
+        onPress: () => {
+          void Linking.openURL(`tel:${EMERGENCY_PHONE}`);
+          void api
+            .request<SafetyIncident>(`/me/taxi-rides/${id}/sos`, { method: 'POST' })
+            .then(() => setSosSent(true))
+            .catch((e: unknown) => setError(userMessage(e)));
+        },
+      },
+    ]);
 
   const rate = async () => {
     setBusy(true);
@@ -249,7 +282,14 @@ export default function TaxiRideScreen() {
             </Card>
           ) : null}
 
+          {sosSent ? <Banner tone="warning">{t.taxi.sosSent}</Banner> : null}
           {error ? <Banner tone="error">{error}</Banner> : null}
+          {data.status === 'accepted' || data.status === 'in_progress' ? (
+            <Button variant="danger" title={t.taxi.sos} onPress={emergency} />
+          ) : null}
+          {open ? (
+            <Button variant="secondary" title={t.taxi.share} onPress={() => void share()} />
+          ) : null}
           {data.status === 'requested' || data.status === 'accepted' ? (
             <Button
               variant="secondary"

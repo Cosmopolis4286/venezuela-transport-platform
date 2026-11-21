@@ -345,6 +345,17 @@ const es = {
     onTheWay: 'Tu conductor va contigo; puedes seguirlo en el mapa.',
     approachUpdated: (clock: string) => `Ubicación de las ${clock}.`,
     viewOnMap: 'Ver en el mapa',
+    share: 'Compartir mi viaje',
+    shareMessage: (url: string) =>
+      `Sigue mi viaje en VTP: verás la placa, el conductor y por dónde va. ${url}`,
+    sos: 'Emergencia',
+    sosTitle: '¿Estás en peligro?',
+    sosBody: (phone: string) =>
+      `Llamaremos al ${phone} y avisaremos al equipo de VTP con los datos de tu viaje y dónde está el conductor.`,
+    sosConfirm: (phone: string) => `Llamar al ${phone} y avisar`,
+    sosCancel: 'Cancelar',
+    sosSent:
+      'Avisamos al equipo de VTP: ya tienen los datos de tu viaje. Si puedes, mantente en un lugar seguro y con gente.',
   },
 };
 
@@ -684,6 +695,17 @@ const en: Messages = {
     onTheWay: 'Your driver is with you; you can follow them on the map.',
     approachUpdated: (clock) => `Location as of ${clock}.`,
     viewOnMap: 'View on the map',
+    share: 'Share my ride',
+    shareMessage: (url) =>
+      `Follow my VTP ride: you will see the plate, the driver and where it is. ${url}`,
+    sos: 'Emergency',
+    sosTitle: 'Are you in danger?',
+    sosBody: (phone) =>
+      `We will call ${phone} and alert the VTP team with your ride's details and where the driver is.`,
+    sosConfirm: (phone) => `Call ${phone} and alert`,
+    sosCancel: 'Cancel',
+    sosSent:
+      'We alerted the VTP team: they have your ride details. If you can, stay somewhere safe and with people around.',
   },
 };
 
@@ -1027,6 +1049,17 @@ const ptBR: Messages = {
     onTheWay: 'Seu motorista está com você; você pode acompanhá-lo no mapa.',
     approachUpdated: (clock) => `Localização das ${clock}.`,
     viewOnMap: 'Ver no mapa',
+    share: 'Compartilhar minha corrida',
+    shareMessage: (url) =>
+      `Acompanhe minha corrida na VTP: você verá a placa, o motorista e por onde está passando. ${url}`,
+    sos: 'Emergência',
+    sosTitle: 'Você está em perigo?',
+    sosBody: (phone) =>
+      `Vamos ligar para o ${phone} e avisar a equipe da VTP com os dados da sua corrida e onde está o motorista.`,
+    sosConfirm: (phone) => `Ligar para o ${phone} e avisar`,
+    sosCancel: 'Cancelar',
+    sosSent:
+      'Avisamos a equipe da VTP: eles já têm os dados da sua corrida. Se puder, fique em um lugar seguro e com outras pessoas.',
   },
 };
 

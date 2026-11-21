@@ -13,6 +13,7 @@ import {
   userMessage,
 } from '@vtp/mobile-core';
 import {
+  EMERGENCY_PHONE,
   TAXI_RIDE_STATUS_LABELS,
   formatMoney,
   localPhone,
@@ -23,7 +24,7 @@ import {
   type TaxiRequest,
 } from '@vtp/shared-types';
 import { useEffect, useState } from 'react';
-import { RefreshControl } from 'react-native';
+import { Alert, Linking, RefreshControl } from 'react-native';
 import { parseFare, requestSummary, rideRoute, feesNotice } from '@/lib/taxi-board';
 import { useDriverLocation } from '@/lib/use-driver-location';
 import { useRefreshOnFocus } from '@/lib/use-refresh-on-focus';
@@ -220,6 +221,32 @@ export default function TaxiScreen() {
                 ) : null}
               </>
             )}
+            {/* The emergency button (ADR-043): calls 911 and alerts the VTP team. */}
+            <Button
+              variant="danger"
+              title="Emergencia"
+              disabled={busy}
+              onPress={() =>
+                Alert.alert(
+                  '¿Estás en peligro?',
+                  `Llamaremos al ${EMERGENCY_PHONE} y avisaremos al equipo de VTP con los datos del viaje y tu ubicación.`,
+                  [
+                    { text: 'Cancelar', style: 'cancel' },
+                    {
+                      text: `Llamar al ${EMERGENCY_PHONE} y avisar`,
+                      style: 'destructive',
+                      onPress: () => {
+                        void Linking.openURL(`tel:${EMERGENCY_PHONE}`);
+                        void run(
+                          () => api.request(`/me/taxi/rides/${current.id}/sos`, { method: 'POST' }),
+                          'Avisamos al equipo de VTP: ya tienen los datos del viaje.',
+                        );
+                      },
+                    },
+                  ],
+                )
+              }
+            />
           </Card>
         </>
       ) : null}

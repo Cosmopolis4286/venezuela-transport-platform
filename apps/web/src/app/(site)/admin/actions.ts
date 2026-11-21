@@ -59,6 +59,20 @@ export async function reviewApplication(_: FormState, form: FormData): Promise<F
   redirect('/admin?reviewed=1');
 }
 
+/** An emergency alert of a ride, attended (ADR-043): what staff did stays with it. */
+export async function resolveSafetyIncident(_: FormState, form: FormData): Promise<FormState> {
+  try {
+    await apiRequest(
+      `/admin/safety-incidents/${encodeURIComponent(text(form, 'incidentId'))}/resolve`,
+      { method: 'POST', body: { notes: text(form, 'notes') } },
+    );
+  } catch (error) {
+    return failure(error);
+  }
+  refresh();
+  return { success: 'Alerta marcada como atendida.' };
+}
+
 /** A renewed licence, medical certificate or RCV policy of an approved driver (ADR-042). */
 export async function reviewRenewal(_: FormState, form: FormData): Promise<FormState> {
   const decision = text(form, 'decision');

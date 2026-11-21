@@ -807,3 +807,24 @@ recibir viajes por olvido. Que una persona revise la copia nueva mantiene la ver
 **Compromisos.** Solo se exige a quienes tienen una solicitud aprobada (los independientes); los
 conductores invitados por una línea dependen de ella. Mientras la copia nueva espera revisión, un
 documento vencido sigue bloqueando: conviene renovar antes del vencimiento.
+
+## ADR-043: Compartir el viaje y botón de Emergencia
+
+**Decisión** (del dueño del producto, segunda parte de la tercera etapa). En un viaje de taxi o moto:
+
+- el pasajero **comparte** un enlace de solo lectura (`/taxi/shared/<token>`, 144 bits al azar) con
+  el vehículo, el nombre de pila del conductor, el recorrido y la ubicación del conductor mientras
+  el viaje está abierto; caduca 2 horas después de terminar;
+- el pasajero y el conductor tienen **Emergencia** mientras el viaje está aceptado o en curso: la
+  app llama al 911 y la API guarda la alerta con la última ubicación del conductor y avisa al
+  equipo con el permiso nuevo de plataforma `safety.manage` (administradores y soporte), que la
+  cierra escribiendo qué hizo.
+
+**Por qué.** Que alguien de confianza pueda seguir el viaje y que haya una forma rápida de pedir
+ayuda son las medidas de seguridad que más esperan los pasajeros (y los conductores) de una app de
+viajes, y bajan el riesgo de los viajes en moto y de noche.
+
+**Compromisos.** VTP no es un servicio de emergencias: el botón llama primero al 911, y el aviso al
+equipo no garantiza un tiempo de respuesta (Términos 6.10). La ubicación es la del teléfono del
+conductor (ADR-041); la del pasajero no se usa. El enlace compartido lo ve cualquiera que lo tenga,
+por eso no permite cancelar ni calificar y caduca. Documentos legales en la versión 2026-11-21.

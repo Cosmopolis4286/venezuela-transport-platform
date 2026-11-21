@@ -436,7 +436,54 @@ export interface PublicTaxiRide {
   canRate: boolean;
   /** While the driver comes to pick them up: estimated minutes, if the driver's app shares where they are. */
   etaMinutes: number | null;
+  /** While the ride is open, the driver's last location, if their app shares it (ADR-041). */
+  driverLocation: { latitude: number; longitude: number; updatedAt: string } | null;
   rating: number | null;
+}
+
+/** Venezuela's emergency number (VEN 911): the SOS button calls it (ADR-043). */
+export const EMERGENCY_PHONE = '911';
+
+/**
+ * `POST /me/taxi-rides/:id/share`: a read-only link to the ride for people the passenger trusts
+ * (ADR-043). `path` goes after the website and the language: `/es/taxi/shared/<token>`.
+ */
+export interface ShareTaxiRideResponse {
+  path: string;
+}
+
+/** Who pressed the emergency button. */
+export type SafetyReporterRole = 'passenger' | 'driver';
+
+/**
+ * An emergency alert (SOS) of a taxi or motorcycle ride (ADR-043), for the platform team: who sent
+ * it, the ride, both people's contacts and the driver's last location.
+ */
+export interface SafetyIncident {
+  id: string;
+  reporterRole: SafetyReporterRole;
+  createdAt: string;
+  /** Where the driver's app last was when it was sent, if it shared a location. */
+  location: { latitude: number; longitude: number } | null;
+  resolvedAt: string | null;
+  resolvedNotes: string | null;
+  ride: {
+    id: string;
+    status: TaxiRideStatus;
+    mode: OnDemandMode;
+    /** "Terminal → address" or "stop → stop". */
+    route: string;
+    address: string;
+    plate: string | null;
+    line: string | null;
+    driver: { name: string; phone: string | null } | null;
+    passenger: { name: string; phone: string | null };
+  };
+}
+
+/** `POST /admin/safety-incidents/:id/resolve`: what was done. */
+export interface ResolveSafetyIncidentRequest {
+  notes: string;
 }
 
 /** Rating a finished ride (app or link): 1 to 5 stars and an optional comment. */

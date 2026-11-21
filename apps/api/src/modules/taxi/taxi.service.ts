@@ -41,6 +41,13 @@ import {
   type TaxiRequest,
   type TaxiRide,
   type TaxiTerminal,
+  PLATFORM_ROLES,
+  platformRoleHasPermission,
+  taxiRideRoute,
+  type ResolveSafetyIncidentRequest,
+  type SafetyIncident,
+  type SafetyReporterRole,
+  type ShareTaxiRideResponse,
 } from '@vtp/shared-types';
 import {
   and,
@@ -90,9 +97,11 @@ import {
   driverPresence,
   onDemandFares,
   rideCancellationFees,
+  safetyIncidents,
   taxiRides,
   taxiServiceAreas,
   type RideCancellationFeeRow,
+  type SafetyIncidentRow,
   type TaxiRideRow,
 } from './taxi.schema.js';
 
@@ -103,6 +112,13 @@ const MINUTE_MS = 60_000;
 const WIDEN_EVERY_MS = 10_000;
 /** Finished rides stay on the dispatcher's board for this long. */
 const RECENT_MS = 24 * 3600_000;
+/** A shared link stops working this long after the ride ends (ADR-043). */
+const SHARED_AFTER_END_MS = 2 * 3600_000;
+const OPEN_RIDE = ['requested', 'accepted', 'in_progress'] as const;
+/** Platform roles that attend emergency alerts. */
+const SAFETY_ROLES = PLATFORM_ROLES.filter((role) =>
+  platformRoleHasPermission(role, 'safety.manage'),
+);
 
 const conflict = ApiException.conflict;
 const invalid = (message: string) =>
@@ -940,6 +956,7 @@ export class TaxiService {
   /** What the link shows: the driver's first name and the vehicle, never phones or surnames. */
   private async toPublic(ride: TaxiRideRow): Promise<PublicTaxiRide> {
     const { user, line, vehicle, stop } = await this.related([ride]);
+    const approach = (await this.toRides([ride]))[0]?.driverApproach ?? null;
     const driver = ride.driverUserId ? user.get(ride.driverUserId) : undefined;
     const company = ride.organizationId ? line.get(ride.organizationId) : undefined;
     const unit = ride.vehicleId ? vehicle.get(ride.vehicleId) : undefined;
@@ -970,8 +987,219 @@ export class TaxiService {
       canCancel: ride.status === 'requested' || ride.status === 'accepted',
       canRate: ride.status === 'completed' && ride.ratedAt === null,
       rating: ride.rating,
-      etaMinutes: (await this.toRides([ride]))[0]?.driverApproach?.etaMinutes ?? null,
+      etaMinutes: approach?.etaMinutes ?? null,
+      driverLocation: approach
+        ? {
+            latitude: approach.latitude,
+            longitude: approach.longitude,
+            updatedAt: approach.updatedAt,
+          }
+        : null,
     };
+  }
+
+  // --- Safety (ADR-043) --------------------------------------------------------------------
+
+  /** A read-only link to the passenger's open ride, for people they trust. */
+  async share(userId: string, rideId: string): Promise<ShareTaxiRideResponse> {
+    const ride = await this.requireMine(userId, rideId);
+    if (!OPEN_RIDE.includes(ride.status as (typeof OPEN_RIDE)[number])) {
+      throw conflict('Only an open ride can be shared', 'TAXI_RIDE_WRONG_STEP');
+    }
+    let token = ride.shareToken;
+    if (!token) {
+      token = randomBytes(18).toString('base64url');
+      const [updated] = await this.database.db
+        .update(taxiRides)
+        .set({ shareToken: sql`coalesce(${taxiRides.shareToken}, ${token})` })
+        .where(eq(taxiRides.id, ride.id))
+        .returning({ shareToken: taxiRides.shareToken });
+      token = updated!.shareToken!;
+    }
+    return { path: `/taxi/shared/${token}` };
+  }
+
+  /**
+   * What a shared link shows: the same as the tracking link, without cancelling or rating. It
+   * lasts until a few hours after the ride ends.
+   */
+  async shared(token: string): Promise<PublicTaxiRide> {
+    await expireTaxiRequests(this.database.db);
+    const [ride] = /^[A-Za-z0-9_-]{20,40}$/.test(token)
+      ? await this.database.db.select().from(taxiRides).where(eq(taxiRides.shareToken, token))
+      : [];
+    const ended = ride?.completedAt ?? ride?.cancelledAt ?? null;
+    if (!ride || (ended && Date.now() - ended.getTime() > SHARED_AFTER_END_MS)) throw notFound();
+    return { ...(await this.toPublic(ride)), canCancel: false, canRate: false, rating: null };
+  }
+
+  /**
+   * The emergency button of the passenger or the driver of an accepted or ongoing ride: records the
+   * alert with the driver's last location and tells the platform team at once. Pressing it again
+   * while the alert is open returns it without telling them twice.
+   */
+  async sos(
+    auth: Authenticated,
+    rideId: string,
+    role: SafetyReporterRole,
+    meta: RequestMeta,
+  ): Promise<SafetyIncident> {
+    const [ride] = await this.database.db
+      .select()
+      .from(taxiRides)
+      .where(
+        and(
+          eq(taxiRides.id, rideId),
+          eq(
+            role === 'passenger' ? taxiRides.passengerUserId : taxiRides.driverUserId,
+            auth.user.id,
+          ),
+        ),
+      );
+    if (!ride) throw notFound();
+    if (!ACTIVE.includes(ride.status as (typeof ACTIVE)[number])) {
+      throw conflict('The emergency button works during a ride', 'TAXI_RIDE_WRONG_STEP');
+    }
+    const at = ride.driverUserId ? await this.locationOf(ride.driverUserId) : null;
+    const [created] = await this.database.db
+      .insert(safetyIncidents)
+      .values({
+        rideId: ride.id,
+        reporterUserId: auth.user.id,
+        reporterRole: role,
+        latitude: at?.latitude ?? null,
+        longitude: at?.longitude ?? null,
+      })
+      .onConflictDoNothing()
+      .returning();
+    if (!created) {
+      const [open] = await this.database.db
+        .select()
+        .from(safetyIncidents)
+        .where(
+          and(
+            eq(safetyIncidents.rideId, ride.id),
+            eq(safetyIncidents.reporterUserId, auth.user.id),
+            isNull(safetyIncidents.resolvedAt),
+          ),
+        );
+      return (await this.toIncidents([open!]))[0]!;
+    }
+    await this.audit.record({
+      action: 'taxi.sos',
+      actorUserId: auth.user.id,
+      targetType: 'taxi_ride',
+      targetId: ride.id,
+      ip: meta.ip,
+      metadata: { role },
+    });
+    const [incident] = await this.toIncidents([created]);
+    this.notifications.later(async () => ({
+      kind: 'safety_alert',
+      userIds: (
+        await this.database.db
+          .select({ id: users.id })
+          .from(users)
+          .where(inArray(users.platformRole, SAFETY_ROLES))
+      ).map((u) => u.id),
+      app: 'transport',
+      email: true,
+      reference: { key: 'rideId', id: ride.id },
+      text: (m) => m.safetyAlert(role, incident!.ride.plate ?? '—', incident!.ride.route),
+    }));
+    return incident!;
+  }
+
+  /** The platform team's list: open alerts first, then the last attended ones. */
+  async incidents(): Promise<SafetyIncident[]> {
+    const rows = await this.database.db
+      .select()
+      .from(safetyIncidents)
+      .orderBy(sql`${safetyIncidents.resolvedAt} is not null`, desc(safetyIncidents.createdAt))
+      .limit(100);
+    return this.toIncidents(rows);
+  }
+
+  async resolveIncident(
+    auth: Authenticated,
+    incidentId: string,
+    input: ResolveSafetyIncidentRequest,
+    meta: RequestMeta,
+  ): Promise<SafetyIncident> {
+    const notes = input.notes.trim();
+    if (!notes) throw invalid('Write what was done');
+    const [row] = await this.database.db
+      .update(safetyIncidents)
+      .set({ resolvedAt: new Date(), resolvedBy: auth.user.id, resolvedNotes: notes })
+      .where(and(eq(safetyIncidents.id, incidentId), isNull(safetyIncidents.resolvedAt)))
+      .returning();
+    if (!row) {
+      const [exists] = await this.database.db
+        .select({ id: safetyIncidents.id })
+        .from(safetyIncidents)
+        .where(eq(safetyIncidents.id, incidentId));
+      if (!exists) {
+        throw new ApiException('NOT_FOUND', 'Alert not found', HttpStatus.NOT_FOUND);
+      }
+      throw conflict('This alert was already attended', 'RELOAD_AND_RETRY');
+    }
+    await this.audit.record({
+      action: 'taxi.sos_resolved',
+      actorUserId: auth.user.id,
+      targetType: 'taxi_ride',
+      targetId: row.rideId,
+      ip: meta.ip,
+    });
+    return (await this.toIncidents([row]))[0]!;
+  }
+
+  /** Both people's names and phones: the team may need to call them. */
+  private async toIncidents(rows: SafetyIncidentRow[]): Promise<SafetyIncident[]> {
+    if (!rows.length) return [];
+    const rides = await this.database.db
+      .select()
+      .from(taxiRides)
+      .where(inArray(taxiRides.id, [...new Set(rows.map((r) => r.rideId))]));
+    const { user, line, vehicle, stop } = await this.related(rides);
+    const person = (id: string | null) => {
+      const u = id ? user.get(id) : undefined;
+      return u
+        ? {
+            name: [u.firstName, u.lastName].filter(Boolean).join(' ') || 'Sin nombre',
+            phone: u.phone,
+          }
+        : null;
+    };
+    return rows.map((row) => {
+      const ride = rides.find((r) => r.id === row.rideId)!;
+      const company = ride.organizationId ? line.get(ride.organizationId) : undefined;
+      const fields = requestFields(ride, stop);
+      return {
+        id: row.id,
+        reporterRole: row.reporterRole,
+        createdAt: row.createdAt.toISOString(),
+        location:
+          row.latitude !== null && row.longitude !== null
+            ? { latitude: row.latitude, longitude: row.longitude }
+            : null,
+        resolvedAt: row.resolvedAt?.toISOString() ?? null,
+        resolvedNotes: row.resolvedNotes,
+        ride: {
+          id: ride.id,
+          status: ride.status,
+          mode: ride.mode as OnDemandMode,
+          route: taxiRideRoute(fields),
+          address: ride.address,
+          plate: ride.vehicleId ? (vehicle.get(ride.vehicleId)?.plate ?? null) : null,
+          line: company ? (company.tradeName ?? company.legalName) : null,
+          driver: person(ride.driverUserId),
+          passenger: {
+            ...person(ride.passengerUserId)!,
+            phone: ride.contactPhone ?? person(ride.passengerUserId)?.phone ?? null,
+          },
+        },
+      };
+    });
   }
 
   /** Late-cancellation fees the passenger still owes; paid in cash on the next ride. */

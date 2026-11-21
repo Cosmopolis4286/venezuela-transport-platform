@@ -13,6 +13,10 @@ pull request.
 
 ### Cambiado
 
+- **Documentos legales, versión 2026-11-21** (los usuarios aceptan de nuevo): Términos 6.10
+  (compartir el viaje y Emergencia; VTP no es un servicio de emergencias) y Política de Privacidad
+  (quién ve un viaje compartido y qué se guarda de una emergencia), con el registro y la
+  conservación al día.
 - **Documentos legales, versión 2026-11-16** (los usuarios aceptan de nuevo): la Política de
   Privacidad, los Términos y los registros internos dicen que se usa la última ubicación del
   conductor de taxi o moto mientras está en línea (se borra al desconectarse) y que el pasajero la
@@ -51,6 +55,12 @@ pull request.
 
 ### Agregado
 
+- **Compartir el viaje y Emergencia** (ADR-043): en la app de pasajeros, **Compartir mi viaje**
+  manda un enlace de solo lectura con la placa, el conductor, el recorrido y dónde va; durante el
+  viaje, pasajeros y conductores tienen **Emergencia**, que llama al 911 y avisa al equipo de VTP
+  (portal: **Emergencias**, permiso nuevo `safety.manage` para administradores y soporte). El
+  enlace de seguimiento de WhatsApp también muestra dónde está el conductor. Segunda parte de la
+  tercera etapa.
 - **Documentos al día** (ADR-042): 30 días antes de que venzan la licencia, el certificado médico
   o la póliza RCV de un conductor independiente, y al vencer, le llega un aviso; los renueva desde
   **Ver mi solicitud** y VTP revisa la copia nueva en **Revisiones → Documentos renovados**. Con la

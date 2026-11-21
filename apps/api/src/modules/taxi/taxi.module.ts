@@ -6,10 +6,12 @@ import { NetworkModule } from '../network/network.module.js';
 import { OrganizationsModule } from '../organizations/organizations.module.js';
 import { TripPacksModule } from '../trip-packs/trip-packs.module.js';
 import {
+  AdminSafetyController,
   AdminTaxiController,
   TaxiController,
   TaxiDriverController,
   TaxiLineController,
+  TaxiSharedController,
   TaxiTrackingController,
 } from './taxi.controller.js';
 import { TaxiService } from './taxi.service.js';
@@ -30,6 +32,8 @@ import { TaxiService } from './taxi.service.js';
     TaxiLineController,
     AdminTaxiController,
     TaxiTrackingController,
+    TaxiSharedController,
+    AdminSafetyController,
   ],
   providers: [TaxiService],
   exports: [TaxiService],

@@ -47,5 +47,6 @@ export const NOTIFICATION_KINDS = [
   'trip_pack_expiring',
   'document_expiring',
   'document_renewal_reviewed',
+  'safety_alert',
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];

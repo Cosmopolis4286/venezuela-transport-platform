@@ -10,9 +10,14 @@ import { useColors } from '../ui/theme';
 /** Public website (`EXPO_PUBLIC_WEB_URL`), where the legal documents are published. */
 const WEB_URL = (process.env.EXPO_PUBLIC_WEB_URL ?? '').replace(/\/$/, '');
 
+/** A page of the website (`/taxi/shared/…`) in the app's language: `https://…/es/taxi/shared/…`. */
+export function webUrl(path: string, locale: Parameters<typeof localeSegment>[0]): string {
+  return `${WEB_URL}/${localeSegment(locale)}${path}`;
+}
+
 /** Opens a legal document on the website, in the app's language. */
 export function openLegalPage(page: LegalPage, locale: Parameters<typeof localeSegment>[0]) {
-  void Linking.openURL(`${WEB_URL}/${localeSegment(locale)}/legal/${page}`);
+  void Linking.openURL(webUrl(`/legal/${page}`, locale));
 }
 
 /** "I accept the Terms and Conditions and the Privacy Policy." with tappable links. */
