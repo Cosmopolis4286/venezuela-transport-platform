@@ -126,6 +126,8 @@ export const taxiRides = pgTable(
     /** WhatsApp rides (ADR-037): asked for by staff, followed with a secret link. */
     channel: taxiChannel().notNull().default('app'),
     trackingToken: text(),
+    /** A read-only link the passenger shares with people they trust (ADR-043). */
+    shareToken: text(),
     /** The passenger's rating of the finished ride, once. */
     rating: smallint(),
     ratingComment: text(),
@@ -136,6 +138,9 @@ export const taxiRides = pgTable(
     uniqueIndex('taxi_rides_tracking_token_key')
       .on(t.trackingToken)
       .where(sql`${t.trackingToken} is not null`),
+    uniqueIndex('taxi_rides_share_token_key')
+      .on(t.shareToken)
+      .where(sql`${t.shareToken} is not null`),
     check('taxi_rides_rating_check', sql`${t.rating} is null or ${t.rating} between 1 and 5`),
     // One open ride per passenger, one active ride per driver and per vehicle.
     uniqueIndex('taxi_rides_passenger_open_key')
@@ -212,6 +217,38 @@ export const rideCancellationFees = pgTable(
 );
 
 export type TaxiRideRow = typeof taxiRides.$inferSelect;
+
+/**
+ * Emergency alerts (SOS) from a ride (ADR-043): who pressed it and where the driver was; the
+ * platform team marks them attended with what they did. One open alert per ride and person.
+ */
+export const safetyIncidents = pgTable(
+  'safety_incidents',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    rideId: uuid()
+      .notNull()
+      .references(() => taxiRides.id, { onDelete: 'cascade' }),
+    reporterUserId: uuid()
+      .notNull()
+      .references(() => users.id),
+    reporterRole: text({ enum: ['passenger', 'driver'] }).notNull(),
+    latitude: doublePrecision(),
+    longitude: doublePrecision(),
+    resolvedAt: timestamp({ withTimezone: true }),
+    resolvedBy: uuid().references(() => users.id, { onDelete: 'set null' }),
+    resolvedNotes: text(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('safety_incidents_open_key')
+      .on(t.rideId, t.reporterUserId)
+      .where(sql`${t.resolvedAt} is null`),
+    index('safety_incidents_created_idx').on(t.createdAt),
+  ],
+);
+
+export type SafetyIncidentRow = typeof safetyIncidents.$inferSelect;
 export type OnDemandFareRow = typeof onDemandFares.$inferSelect;
 export type RideCancellationFeeRow = typeof rideCancellationFees.$inferSelect;
 

@@ -23,6 +23,15 @@ export function formatDate(iso: string): string {
   }).format(new Date(iso));
 }
 
+/** Date and time in Venezuela, e.g. "21 nov 2026, 9:05 p. m.". */
+export function formatDateTime(iso: string): string {
+  return new Intl.DateTimeFormat('es-VE', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'America/Caracas',
+  }).format(new Date(iso));
+}
+
 /** "Unidad AB123CD · Conductor: Ana Pérez", or what is still missing. */
 export function assignmentText(trip: {
   vehicle: { plate: string; label: string | null } | null;

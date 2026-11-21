@@ -253,6 +253,16 @@ comercial de {{nombre_comercial}}). En esos viajes:
 - {{nombre_comercial}} no da a su línea preferencia frente a las demás: la solicitud es de la
   primera línea o el primer conductor que la acepta.
 
+6.10. **Seguridad en los viajes.** El pasajero puede **compartir su viaje** con un enlace que
+muestra el vehículo, el nombre de pila del conductor, el recorrido y, mientras el viaje está
+abierto, dónde está el conductor; quien tenga el enlace puede verlo, y deja de funcionar unas horas
+después de terminar el viaje. Durante el viaje, el pasajero y el conductor tienen un botón de
+**Emergencia** que llama al {{telefono_emergencias}} (servicio de emergencias) y avisa al equipo de
+{{nombre_comercial}} con los datos del viaje y la última ubicación del conductor. {{nombre_comercial}}
+**no es un servicio de emergencias**: su equipo procura comunicarse con los involucrados y, si hace
+falta, con las autoridades, pero no garantiza un tiempo de respuesta. Usar el botón sin motivo, de
+forma reiterada, puede dar lugar a la suspensión de la cuenta.
+
 ## 7. Avisos
 
 El Usuario acepta recibir avisos sobre sus reservas, paquetes, pagos, reembolsos, viajes y su cuenta por

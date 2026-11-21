@@ -139,6 +139,7 @@ secciones (`requirePlatformPermission` en `apps/web/src/lib/server/session.ts`).
 | `products.manage` (paquetes de viajes)                                                             |  ✅   |          |         |         |
 | `metrics.view` (métricas de la plataforma)                                                         |  ✅   |          |   ✅    |         |
 | `independents.manage` (líneas de independientes, ADR-039)                                          |  ✅   |          |         |         |
+| `safety.manage` (alertas de emergencia de los viajes, ADR-043)                                     |  ✅   |          |         |   ✅    |
 
 No hay un endpoint HTTP para otorgar un rol de plataforma; alguien con acceso a la base de datos
 ejecuta:

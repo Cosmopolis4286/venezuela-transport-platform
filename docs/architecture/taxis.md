@@ -238,6 +238,20 @@ calificaciones, liquidación).
 - Camino a un perfil de conductor independiente propio: la marca de la línea, el dueño de cada
   vehículo y el conductor de cada viaje permiten separarlos más adelante sin perder historial.
 
+## Seguridad: compartir el viaje y Emergencia (ADR-043)
+
+- **Compartir**: `POST /me/taxi-rides/:id/share` (viaje abierto) da `/taxi/shared/<token>`, siempre
+  el mismo (`taxi_rides.share_token`). `GET /taxi/shared/:token` (público) muestra lo mismo que el
+  enlace de seguimiento, sin cancelar ni calificar, con la ubicación del conductor mientras el viaje
+  está abierto; deja de responder 2 horas después de terminar. La web lo muestra en
+  `/[lang]/taxi/shared/<token>`.
+- **Emergencia**: el pasajero (`POST /me/taxi-rides/:id/sos`) o el conductor
+  (`POST /me/taxi/rides/:id/sos`) de un viaje aceptado o en curso. La app llama al 911
+  (`EMERGENCY_PHONE`) y la API guarda la alerta (`safety_incidents`) con la última ubicación del
+  conductor; avisa (push y correo, `safety_alert`) a los roles con `safety.manage`. Tocarlo otra vez
+  con la alerta abierta devuelve la misma, sin avisar dos veces.
+- El equipo las ve y las cierra con una nota en `/admin/safety-incidents` (portal: Emergencias).
+
 ## Todavía no
 
 Cobro del taxi dentro de la plataforma, tarifas fijas por zona para los taxis de terminal,

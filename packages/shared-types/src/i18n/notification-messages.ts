@@ -78,6 +78,8 @@ export interface NotificationMessages {
     accepted: boolean,
     reason: string | null,
   ) => NotificationText;
+  /** To the platform team: someone pressed the emergency button in a ride (ADR-043). */
+  safetyAlert: (reporter: 'passenger' | 'driver', plate: string, route: string) => NotificationText;
   /** Appended to every e-mail. */
   footer: string;
 }
@@ -241,6 +243,10 @@ const es: NotificationMessages = {
           body: `No pudimos aprobar la copia nueva de tu ${name}: ${reason ?? 'no es válida'}. Sube otra en Conduce con VTP.`,
         };
   },
+  safetyAlert: (reporter, plate, route) => ({
+    title: '🚨 Emergencia en un viaje',
+    body: `${reporter === 'driver' ? 'El conductor' : 'El pasajero'} del viaje ${plate} (${route}) tocó Emergencia. Atiéndelo ya en el portal, en Emergencias.`,
+  }),
   footer: 'VTP · Transporte terrestre en Venezuela. Este es un mensaje automático.',
 };
 
@@ -371,6 +377,10 @@ const en: NotificationMessages = {
           body: `We could not approve your new ${name}: ${reason ?? 'it is not valid'}. Upload another one in Drive with VTP.`,
         };
   },
+  safetyAlert: (reporter, plate, route) => ({
+    title: '🚨 Emergency on a ride',
+    body: `The ${reporter === 'driver' ? 'driver' : 'passenger'} of ride ${plate} (${route}) pressed Emergency. Attend to it now in the portal, under Emergencies.`,
+  }),
   footer: 'VTP · Ground transport in Venezuela. This is an automatic message.',
 };
 
@@ -504,6 +514,10 @@ const ptBR: NotificationMessages = {
           body: `Não pudemos aprovar a cópia nova do documento (${name}): ${reason ?? 'não é válida'}. Envie outro em Dirija com a VTP.`,
         };
   },
+  safetyAlert: (reporter, plate, route) => ({
+    title: '🚨 Emergência em uma corrida',
+    body: `${reporter === 'driver' ? 'O motorista' : 'O passageiro'} da corrida ${plate} (${route}) tocou em Emergência. Atenda agora no portal, em Emergências.`,
+  }),
   footer: 'VTP · Transporte rodoviário na Venezuela. Esta é uma mensagem automática.',
 };
 

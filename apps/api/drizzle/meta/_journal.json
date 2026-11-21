@@ -295,6 +295,13 @@
       "when": 1795233825849,
       "tag": "0041_document_renewals_expiry",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1795234929382,
+      "tag": "0042_ride_share_and_sos",
+      "breakpoints": true
     }
   ]
 }

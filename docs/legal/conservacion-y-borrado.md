@@ -20,6 +20,8 @@ revisión legal (ver [README](README.md#lista-para-el-abogado)).
 | Chats de WhatsApp (número, nombre)            | 1 año sin mensajes                | Contrato; soporte                                                                       | Se borran al año sin mensajes                                                            |
 | Disponibilidad de conductores                 | Mientras exista la cuenta         | Contrato                                                                                | Un registro por conductor que se reemplaza; se borra al borrar la cuenta                 |
 | Ubicación del conductor                       | Mientras está en línea            | Contrato y consentimiento                                                               | Solo la última; se borra al desconectarse (o a los 10 minutos sin abrir la app)          |
+| Alertas de emergencia de los viajes           | Con el viaje, hasta 5 años        | Seguridad; defensa de reclamos                                                          | Se borran con el viaje                                                                   |
+| Enlace para compartir un viaje                | Unas horas tras terminar el viaje | Contrato                                                                                | Deja de funcionar a las 2 horas de terminar el viaje                                     |
 | Auditoría                                     | 2 años                            | Seguridad; prueba                                                                       | Se borra a los 2 años                                                                    |
 
 **Purga automática:** la API ejecuta una vez al día `RetentionService`

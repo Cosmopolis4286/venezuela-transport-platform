@@ -40,6 +40,14 @@ mensaje que toca según el estado (enlace de seguimiento, placa y tarifa, califi
 que ve el cliente** abre su página. La lista se actualiza sola. Paso a paso en la
 [guía de WhatsApp](whatsapp-soporte.md#5-pedir-un-taxi-o-una-moto-por-whatsapp).
 
+## Emergencias (`/admin/safety`, administradores y soporte)
+
+Cuando un pasajero o un conductor toca **Emergencia** en un viaje de taxi o moto, al equipo con el
+permiso `safety.manage` le llega un aviso (push y correo) y la alerta aparece arriba, en rojo, con
+la placa, el recorrido, los nombres y teléfonos de ambos y **Ver en el mapa** (la última ubicación
+del conductor). Llama primero a quien la envió; si hay riesgo, al 911 con la placa y la ubicación.
+Al terminar, escribe qué hiciste y **Marcar como atendida**. Cada alerta queda registrada.
+
 ## Buscar reserva (`/admin/bookings`)
 
 Para atender por WhatsApp o correo: con el código que envía el pasajero (`VTP-7K3QXA` o solo

@@ -1,4 +1,5 @@
 import {
+  EMERGENCY_PHONE,
   formatMoney,
   localeSegment,
   networkClock,
@@ -10,6 +11,7 @@ import { Suspense } from 'react';
 import { ActionForm, SubmitButton } from '@/components/portal/action-form';
 import { AutoRefresh } from '@/components/portal/auto-refresh';
 import { Badge } from '@/components/ui/badge';
+import { DriverMap } from '@/components/taxi/driver-map';
 import { Card, CardTitle } from '@/components/ui/card';
 import { getMessages } from '@/i18n/locale';
 import type { Messages } from '@/i18n/messages';
@@ -98,7 +100,11 @@ async function TrackedRide({ params }: { params: Promise<{ lang: string; token: 
               </Item>
             ) : null}
           </dl>
+          <DriverMap ride={ride} label={t.track.driverMap} />
         </Card>
+      ) : null}
+      {open ? (
+        <p className="text-sm text-muted-foreground">{t.track.emergency(EMERGENCY_PHONE)}</p>
       ) : null}
 
       <Card>

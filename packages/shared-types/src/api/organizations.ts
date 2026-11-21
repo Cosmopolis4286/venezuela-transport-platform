@@ -156,6 +156,8 @@ export const PLATFORM_PERMISSIONS = [
   'finance.manage',
   /** Trip pack products. */
   'products.manage',
+  /** See and attend the emergency alerts (SOS) sent from taxi and motorcycle rides (ADR-043). */
+  'safety.manage',
   /** Platform metrics. */
   'metrics.view',
   /** Create the lines the platform runs for independent drivers (ADR-039). */
@@ -188,6 +190,7 @@ export const PLATFORM_ROLE_PERMISSIONS: Record<PlatformRole, readonly PlatformPe
     'network.view',
     'bookings.search',
     'taxi.assist',
+    'safety.manage',
   ],
 };
 

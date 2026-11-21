@@ -98,6 +98,9 @@ el código de reserva y el número de puesto. El resultado sale al instante:
 
 Solo puedes tener un viaje de taxi activo a la vez.
 
+Durante el viaje, **Emergencia** (en la tarjeta de tu viaje) llama al 911 y avisa al equipo de VTP
+con los datos del viaje y tu ubicación. Úsalo solo si estás en peligro.
+
 ## 6. Ventas en efectivo (urbano y suburbano)
 
 Si un pasajero te paga en efectivo, anótalo en **Ventas en efectivo**: eliges la ruta, dónde sube

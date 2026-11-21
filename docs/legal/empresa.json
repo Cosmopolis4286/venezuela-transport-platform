@@ -1,6 +1,6 @@
 {
   "revisado_por_abogado": false,
-  "version": "2026-11-16",
+  "version": "2026-11-21",
   "fecha_vigencia": "[FECHA DE ENTRADA EN VIGENCIA]",
   "nombre_comercial": "VTP",
   "razon_social": "[RAZÓN SOCIAL DE LA EMPRESA QUE OPERA VTP]",
@@ -13,5 +13,6 @@
   "sitio_web": "[https://dominio]",
   "ciudad_jurisdiccion": "[CIUDAD DE LOS TRIBUNALES COMPETENTES]",
   "encargado_datos": "[NOMBRE O CARGO DEL RESPONSABLE DE PROTECCIÓN DE DATOS]",
+  "telefono_emergencias": "911",
   "hospedaje": "[PROVEEDOR Y PAÍS DONDE SE ALOJAN LOS SERVIDORES]"
 }

@@ -32,6 +32,7 @@ const SECTIONS: [href: string, label: string, permission: PlatformPermission][] 
   ['/admin/stops', 'Terminales y paradas', 'network.manage'],
   ['/admin/bookings', 'Buscar reserva', 'bookings.search'],
   ['/admin/taxi', 'Taxis por WhatsApp', 'taxi.assist'],
+  ['/admin/safety', 'Emergencias', 'safety.manage'],
   ['/admin/zones', 'Zonas', 'zones.manage'],
   ['/admin/payments', 'Pagos', 'finance.manage'],
   ['/admin/settlements', 'Liquidaciones', 'finance.manage'],
