@@ -31,6 +31,15 @@ Para taxistas y mototaxistas independientes, con su propio carro o moto:
    trabajar: solo en línea ves y tomas solicitudes y te llegan los avisos. Tomas viajes solo con tu vehículo, y
    si tu póliza RCV vence no podrás tomar viajes hasta renovarla.
 
+### Tus documentos al día
+
+Treinta días antes de que venzan tu licencia, tu certificado médico o tu póliza RCV te avisamos
+(push y correo), y otra vez el día que vencen. En **Ver mi solicitud**, cada uno tiene **Renovar
+documento**: escribe el vencimiento de la copia nueva y sube la foto o el PDF. VTP la revisa y te
+avisa; al aprobarla reemplaza la anterior. Si la licencia o el certificado vencen, quedas
+desconectado y no puedes conectarte hasta que aprobemos la copia nueva; si vence la póliza, tu
+vehículo no toma viajes.
+
 ## Taxis y motos: en línea o desconectado
 
 En **Solicitudes de taxi** (o de moto) toca **Conectarme** cuando empieces a trabajar y

@@ -12,13 +12,22 @@ import {
   StreamableFile,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { platformRoleHasPermission, type ProviderApplication } from '@vtp/shared-types';
+import {
+  platformRoleHasPermission,
+  type DocumentRenewal,
+  type DocumentRenewalForReview,
+  type ProviderApplication,
+} from '@vtp/shared-types';
 import type { Response } from 'express';
 import { CurrentAuth, ReqMeta } from '../identity/auth.decorators.js';
 import { RequirePlatformPermission } from '../identity/platform-role.guard.js';
 import type { Authenticated, RequestMeta } from '../identity/sessions.service.js';
 import { sendDocument } from './document-response.js';
-import { ApplicationStatusQueryDto, ReviewApplicationDto } from './onboarding.dto.js';
+import {
+  ApplicationStatusQueryDto,
+  ReviewApplicationDto,
+  ReviewDocumentRenewalDto,
+} from './onboarding.dto.js';
 import { OnboardingService } from './onboarding.service.js';
 
 /** Platform staff: KYC review queue. */
@@ -77,5 +86,40 @@ export class AdminApplicationsController {
     @ReqMeta() meta: RequestMeta,
   ): Promise<ProviderApplication> {
     return this.onboarding.review(auth, applicationId, body, meta);
+  }
+}
+
+/** Platform staff: renewed documents of approved drivers (ADR-042). */
+@ApiTags('admin')
+@ApiBearerAuth()
+@RequirePlatformPermission('applications.review')
+@Controller({ path: 'admin/document-renewals', version: '1' })
+export class AdminDocumentRenewalsController {
+  constructor(private readonly onboarding: OnboardingService) {}
+
+  @Get()
+  list(): Promise<DocumentRenewalForReview[]> {
+    return this.onboarding.listRenewals();
+  }
+
+  @Get(':renewalId/file')
+  async download(
+    @CurrentAuth() auth: Authenticated,
+    @Param('renewalId', ParseUUIDPipe) renewalId: string,
+    @ReqMeta() meta: RequestMeta,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    return sendDocument(res, await this.onboarding.downloadRenewal(auth, renewalId, meta));
+  }
+
+  @Post(':renewalId/review')
+  @HttpCode(HttpStatus.OK)
+  review(
+    @CurrentAuth() auth: Authenticated,
+    @Param('renewalId', ParseUUIDPipe) renewalId: string,
+    @Body() body: ReviewDocumentRenewalDto,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<DocumentRenewal> {
+    return this.onboarding.reviewRenewal(auth, renewalId, body, meta);
   }
 }

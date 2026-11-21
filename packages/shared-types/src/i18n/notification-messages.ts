@@ -1,3 +1,5 @@
+import type { VehicleDocumentKind } from '../api/fleet.js';
+import type { RenewableDocumentKind } from '../api/onboarding.js';
 import { DEFAULT_LOCALE, type Locale } from './locales.js';
 
 /**
@@ -57,9 +59,58 @@ export interface NotificationMessages {
     reason: string,
     refund: string | null,
   ) => NotificationText;
+  /** A driver's document expires on `date` (or already did): renew it (ADR-042). */
+  documentExpiring: (
+    kind: RenewableDocumentKind,
+    date: string,
+    expired: boolean,
+  ) => NotificationText;
+  /** To a line's managers: a paper of one of their vehicles expires on `date` (or did). */
+  vehicleDocumentExpiring: (
+    plate: string,
+    kind: VehicleDocumentKind,
+    date: string,
+    expired: boolean,
+  ) => NotificationText;
+  /** Platform staff accepted or rejected a renewed document. */
+  documentRenewalReviewed: (
+    kind: RenewableDocumentKind,
+    accepted: boolean,
+    reason: string | null,
+  ) => NotificationText;
   /** Appended to every e-mail. */
   footer: string;
 }
+
+const DOCUMENT_NAMES: Record<
+  Locale,
+  Record<RenewableDocumentKind | VehicleDocumentKind, string>
+> = {
+  es: {
+    driver_license: 'licencia de conducir',
+    medical_certificate: 'certificado médico',
+    liability_insurance: 'póliza RCV',
+    registration: 'certificado de circulación',
+    insurance: 'póliza de seguro (RCV)',
+    transport_permit: 'permiso de transporte',
+  },
+  en: {
+    driver_license: 'driving licence',
+    medical_certificate: 'medical certificate',
+    liability_insurance: 'liability insurance (RCV)',
+    registration: 'vehicle registration',
+    insurance: 'insurance policy (RCV)',
+    transport_permit: 'transport permit',
+  },
+  'pt-BR': {
+    driver_license: 'carteira de motorista',
+    medical_certificate: 'atestado médico',
+    liability_insurance: 'seguro de responsabilidade civil (RCV)',
+    registration: 'documento do veículo',
+    insurance: 'apólice de seguro (RCV)',
+    transport_permit: 'licença de transporte',
+  },
+};
 
 const es: NotificationMessages = {
   otp: (code, minutes) => ({
@@ -159,6 +210,37 @@ const es: NotificationMessages = {
     title: 'No encontramos tu pago',
     body: `Paquete ${code}: ${reason} Revisa los datos y vuelve a intentarlo desde la app.`,
   }),
+  documentExpiring: (kind, date, expired) => {
+    const name = DOCUMENT_NAMES.es[kind];
+    return expired
+      ? {
+          title: `Tu ${name} venció`,
+          body: `Tu ${name} venció el ${date}. Sube la copia vigente en Conduce con VTP; ${kind === 'liability_insurance' ? 'hasta que la aprobemos, tu vehículo no puede tomar viajes' : 'hasta que la aprobemos, no puedes conectarte'}.`,
+        }
+      : {
+          title: `Tu ${name} vence pronto`,
+          body: `Tu ${name} vence el ${date}. Sube la copia nueva en Conduce con VTP antes de esa fecha para seguir recibiendo viajes.`,
+        };
+  },
+  vehicleDocumentExpiring: (plate, kind, date, expired) => {
+    const name = DOCUMENT_NAMES.es[kind];
+    return {
+      title: expired ? `Venció un documento de ${plate}` : `Vence un documento de ${plate}`,
+      body: `Vehículo ${plate}: ${name} ${expired ? 'vencido' : 'por vencer'} (${date}). Actualízalo en el portal, en Flota${kind === 'insurance' ? ': sin póliza vigente el vehículo no toma viajes' : ''}.`,
+    };
+  },
+  documentRenewalReviewed: (kind, accepted, reason) => {
+    const name = DOCUMENT_NAMES.es[kind];
+    return accepted
+      ? {
+          title: 'Documento aprobado',
+          body: `Aprobamos la copia nueva de tu ${name}. Ya está al día.`,
+        }
+      : {
+          title: 'Revisa tu documento',
+          body: `No pudimos aprobar la copia nueva de tu ${name}: ${reason ?? 'no es válida'}. Sube otra en Conduce con VTP.`,
+        };
+  },
   footer: 'VTP · Transporte terrestre en Venezuela. Este es un mensaje automático.',
 };
 
@@ -261,6 +343,34 @@ const en: NotificationMessages = {
     title: 'We could not find your payment',
     body: `Trip pack ${code}: ${reason} Check the details and try again from the app.`,
   }),
+  documentExpiring: (kind, date, expired) => {
+    const name = DOCUMENT_NAMES.en[kind];
+    return expired
+      ? {
+          title: `Your ${name} expired`,
+          body: `Your ${name} expired on ${date}. Upload a current one in Drive with VTP; ${kind === 'liability_insurance' ? 'until we approve it, your vehicle cannot take rides' : 'until we approve it, you cannot go online'}.`,
+        }
+      : {
+          title: `Your ${name} expires soon`,
+          body: `Your ${name} expires on ${date}. Upload the new one in Drive with VTP before then to keep getting rides.`,
+        };
+  },
+  vehicleDocumentExpiring: (plate, kind, date, expired) => {
+    const name = DOCUMENT_NAMES.en[kind];
+    return {
+      title: expired ? `A document of ${plate} expired` : `A document of ${plate} expires soon`,
+      body: `The ${name} of vehicle ${plate} ${expired ? 'expired' : 'expires'} on ${date}. Update it in the portal, under Fleet${kind === 'insurance' ? ': without a current policy the vehicle takes no rides' : ''}.`,
+    };
+  },
+  documentRenewalReviewed: (kind, accepted, reason) => {
+    const name = DOCUMENT_NAMES.en[kind];
+    return accepted
+      ? { title: 'Document approved', body: `We approved your new ${name}. You are up to date.` }
+      : {
+          title: 'Check your document',
+          body: `We could not approve your new ${name}: ${reason ?? 'it is not valid'}. Upload another one in Drive with VTP.`,
+        };
+  },
   footer: 'VTP · Ground transport in Venezuela. This is an automatic message.',
 };
 
@@ -363,6 +473,37 @@ const ptBR: NotificationMessages = {
     title: 'Não encontramos seu pagamento',
     body: `Pacote ${code}: ${reason} Revise os dados e tente novamente pelo app.`,
   }),
+  documentExpiring: (kind, date, expired) => {
+    const name = DOCUMENT_NAMES['pt-BR'][kind];
+    return expired
+      ? {
+          title: `Documento vencido: ${name}`,
+          body: `O documento (${name}) venceu em ${date}. Envie uma cópia válida em Dirija com a VTP; ${kind === 'liability_insurance' ? 'até aprovarmos, seu veículo não pode aceitar viagens' : 'até aprovarmos, você não pode ficar online'}.`,
+        }
+      : {
+          title: `Documento vencendo: ${name}`,
+          body: `O documento (${name}) vence em ${date}. Envie a cópia nova em Dirija com a VTP antes dessa data para continuar recebendo viagens.`,
+        };
+  },
+  vehicleDocumentExpiring: (plate, kind, date, expired) => {
+    const name = DOCUMENT_NAMES['pt-BR'][kind];
+    return {
+      title: expired ? `Venceu um documento de ${plate}` : `Vence um documento de ${plate}`,
+      body: `Veículo ${plate}: ${name} ${expired ? 'vencido' : 'vencendo'} (${date}). Atualize-o no portal, em Frota${kind === 'insurance' ? ': sem apólice válida o veículo não aceita viagens' : ''}.`,
+    };
+  },
+  documentRenewalReviewed: (kind, accepted, reason) => {
+    const name = DOCUMENT_NAMES['pt-BR'][kind];
+    return accepted
+      ? {
+          title: 'Documento aprovado',
+          body: `Aprovamos a cópia nova do documento (${name}). Está tudo em dia.`,
+        }
+      : {
+          title: 'Revise seu documento',
+          body: `Não pudemos aprovar a cópia nova do documento (${name}): ${reason ?? 'não é válida'}. Envie outro em Dirija com a VTP.`,
+        };
+  },
   footer: 'VTP · Transporte rodoviário na Venezuela. Esta é uma mensagem automática.',
 };
 

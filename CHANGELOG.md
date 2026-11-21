@@ -51,6 +51,12 @@ pull request.
 
 ### Agregado
 
+- **Documentos al día** (ADR-042): 30 días antes de que venzan la licencia, el certificado médico
+  o la póliza RCV de un conductor independiente, y al vencer, le llega un aviso; los renueva desde
+  **Ver mi solicitud** y VTP revisa la copia nueva en **Revisiones → Documentos renovados**. Con la
+  licencia o el certificado vencidos queda desconectado hasta que se apruebe la copia nueva. Las
+  empresas y líneas también reciben el aviso de los documentos de sus vehículos. Primera parte de
+  la tercera etapa.
 - **Primero los conductores cercanos** (ADR-041): en línea, la app de transportistas comparte la
   ubicación del conductor (solo la última, se borra al desconectarse). Cada pedido para ahora llega
   primero a los conductores a menos de 5 km de la recogida y, si nadie lo toma en 45 segundos, a

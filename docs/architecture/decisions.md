@@ -780,3 +780,30 @@ sigue trabajando: solo ve los pedidos cuando se abren a todos.
 **Compromisos.** No hay mapa en vivo dentro de la app ni rutas por calles: el pasajero abre la
 ubicación en su app de mapas y la llegada es una estimación. No se guarda el historial de
 posiciones. La ubicación no se usa en segundo plano ni con el conductor desconectado.
+
+## ADR-042: Vencimiento y renovación de documentos
+
+**Decisión** (del dueño del producto, primera parte de la tercera etapa del plan «al estilo de las
+apps de viajes»). Cada hora, `DocumentExpiryService`:
+
+- avisa a cada conductor aprobado (push y correo) `DOCUMENT_EXPIRY_NOTICE_DAYS` (30) días antes de
+  que venzan su licencia, su certificado médico o su póliza RCV, y otra vez al vencer;
+- avisa a los miembros con `fleet.manage` de cada empresa o línea cuando vence un documento de sus
+  vehículos (los de independientes no: su póliza ya se avisa al conductor);
+- desconecta a los conductores con la licencia o el certificado médico vencidos, que tampoco
+  pueden conectarse ni aceptar viajes (`DRIVER_DOCUMENTS_EXPIRED`).
+
+Cada aviso se registra antes de enviarse en `document_expiry_notices` (documento, fecha y etapa),
+así sale una sola vez aunque haya varias instancias, y vuelve a salir con la fecha nueva tras
+renovar. El conductor sube la copia nueva con su vencimiento (`PUT /me/application/renewals/:kind`);
+queda **pendiente** hasta que alguien con `applications.review` la aprueba o la rechaza con motivo
+(`/admin/document-renewals`). Al aprobarla reemplaza el documento: la licencia y el certificado en
+todas sus solicitudes aprobadas, y la póliza también como seguro de su vehículo.
+
+**Por qué.** Que un conductor siga trabajando con la licencia o el seguro vencidos es un riesgo
+para los pasajeros y un incumplimiento de las Condiciones; avisar con tiempo evita que deje de
+recibir viajes por olvido. Que una persona revise la copia nueva mantiene la verificación del KYC.
+
+**Compromisos.** Solo se exige a quienes tienen una solicitud aprobada (los independientes); los
+conductores invitados por una línea dependen de ella. Mientras la copia nueva espera revisión, un
+documento vencido sigue bloqueando: conviene renovar antes del vencimiento.

@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   date,
+  primaryKey,
   index,
   integer,
   jsonb,
@@ -106,5 +107,54 @@ export const applicationDocuments = pgTable(
   ],
 );
 
+/**
+ * A new copy of an approved driver's document (ADR-042). It replaces the current one when staff
+ * accept it; the file is kept only while pending (`storage_key` is then cleared).
+ */
+export const documentRenewals = pgTable(
+  'document_renewals',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    applicationId: uuid()
+      .notNull()
+      .references(() => applications.id, { onDelete: 'cascade' }),
+    kind: documentKind().notNull(),
+    storageKey: text(),
+    fileName: text().notNull(),
+    contentType: documentContentType().notNull(),
+    sizeBytes: integer().notNull(),
+    sha256: text().notNull(),
+    expiresOn: date({ mode: 'string' }).notNull(),
+    status: documentReviewStatus().notNull().default('pending'),
+    rejectionReason: text(),
+    reviewedBy: uuid().references(() => users.id, { onDelete: 'set null' }),
+    reviewedAt: timestamp({ withTimezone: true }),
+    uploadedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // One pending renewal per document: uploading again replaces it.
+    uniqueIndex('document_renewals_pending_key')
+      .on(t.applicationId, t.kind)
+      .where(sql`${t.status} = 'pending'`),
+  ],
+);
+
+/**
+ * Expiry reminders already sent (ADR-042), one per document, expiry date and stage: a renewed
+ * document has a new date and is reminded again. `subject` is `application:<documentId>` or
+ * `vehicle:<vehicleId>:<kind>`.
+ */
+export const documentExpiryNotices = pgTable(
+  'document_expiry_notices',
+  {
+    subject: text().notNull(),
+    expiresOn: date({ mode: 'string' }).notNull(),
+    stage: text({ enum: ['soon', 'expired'] }).notNull(),
+    sentAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.subject, t.expiresOn, t.stage] })],
+);
+
 export type ApplicationRow = typeof applications.$inferSelect;
+export type DocumentRenewalRow = typeof documentRenewals.$inferSelect;
 export type ApplicationDocumentRow = typeof applicationDocuments.$inferSelect;

@@ -45,5 +45,7 @@ export const NOTIFICATION_KINDS = [
   'departure_cancelled',
   'trip_pack_activated',
   'trip_pack_expiring',
+  'document_expiring',
+  'document_renewal_reviewed',
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];

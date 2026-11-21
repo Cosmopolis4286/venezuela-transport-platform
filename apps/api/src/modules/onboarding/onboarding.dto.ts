@@ -10,6 +10,7 @@ import {
   type IdentityDocumentType,
   type OnDemandMode,
   type ReviewApplicationRequest,
+  type ReviewDocumentRenewalRequest,
   type Vehicle,
 } from '@vtp/shared-types';
 import { Type } from 'class-transformer';
@@ -163,4 +164,16 @@ export class ApplicationStatusQueryDto {
   @IsOptional()
   @IsIn(APPLICATION_STATUSES)
   status?: ApplicationStatus;
+}
+
+export class ReviewDocumentRenewalDto implements ReviewDocumentRenewalRequest {
+  @ApiProperty({ enum: ['accept', 'reject'] })
+  @IsIn(['accept', 'reject'])
+  decision!: 'accept' | 'reject';
+
+  @ApiPropertyOptional({ description: 'Required to reject; shown to the driver' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  reason?: string;
 }

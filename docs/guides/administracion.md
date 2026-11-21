@@ -24,6 +24,11 @@ aviso (la API lo rechaza igual). Los roles se otorgan desde el servidor, nunca d
   registrada), marca cada documento como aceptado o rechazado con el motivo y decide: aprobar,
   pedir cambios o rechazar. Para conductores de una **línea de mototaxis**, verifica que la
   licencia sea del grado que permite conducir motos.
+- **Documentos renovados** (ADR-042): los conductores aprobados suben una copia nueva de su
+  licencia, certificado médico o póliza RCV cuando vence o está por vencer. Ábrela con **Ver
+  archivo** (queda registrado), compara la fecha nueva con la actual y **Aprueba** (reemplaza la
+  anterior; la póliza pasa también al vehículo) o **Rechaza** con el motivo, que el conductor ve.
+  Mientras la licencia o el certificado estén vencidos, el conductor no puede conectarse.
 
 ## Taxis por WhatsApp (`/admin/taxi`)
 

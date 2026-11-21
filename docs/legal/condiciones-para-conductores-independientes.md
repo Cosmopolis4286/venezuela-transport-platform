@@ -42,6 +42,13 @@ certificado médico, el carnet de circulación y la póliza RCV, y los **permiso
 la autoridad municipal** para prestar el servicio de taxi o mototaxi donde trabaja, y a actualizar
 sus documentos antes de que venzan.
 
+2.4. {{nombre_comercial}} le recuerda por la Plataforma y por correo, con 30 días de anticipación,
+cuándo vencen su licencia, su certificado médico y su póliza RCV. El Conductor sube la copia
+vigente desde la aplicación y una persona de {{nombre_comercial}} la revisa. Mientras su licencia o
+su certificado médico estén vencidos, el Conductor no puede conectarse ni aceptar viajes, y mientras
+su póliza esté vencida su vehículo tampoco; esto no es una sanción y termina al aprobarse la copia
+vigente.
+
 ## 3. Cómo trabaja
 
 3.1. Ve en la aplicación las solicitudes de los tramos y terminales que atiende la línea y decide

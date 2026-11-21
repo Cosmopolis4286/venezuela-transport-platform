@@ -83,6 +83,33 @@ export class ApplicantController {
     return this.onboarding.upload(auth, params.kind, file, body.expiresOn, meta);
   }
 
+  /**
+   * Approved drivers: a new copy of a document that expires (ADR-042), with its expiry date. It
+   * replaces the current one once platform staff accept it.
+   */
+  @Put('renewals/:kind')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file', 'expiresOn'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        expiresOn: { type: 'string', example: '2028-12-31' },
+      },
+    },
+  })
+  renew(
+    @CurrentAuth() auth: Authenticated,
+    @Param() params: DocumentKindParamDto,
+    @UploadedFile() file: Upload | undefined,
+    @Body() body: UploadDocumentDto,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<ProviderApplication> {
+    return this.onboarding.renew(auth, params.kind, file, body.expiresOn, meta);
+  }
+
   @Get('documents/:documentId/file')
   async download(
     @CurrentAuth() auth: Authenticated,

@@ -13,7 +13,11 @@ import { auditEvents } from '../audit/audit.schema.js';
 import { bookingPassengers, bookings } from '../bookings/bookings.schema.js';
 import { otpChallenges, sessions, users } from '../identity/identity.schema.js';
 import { notifications } from '../notifications/notifications.schema.js';
-import { applicationDocuments, applications } from '../onboarding/onboarding.schema.js';
+import {
+  applicationDocuments,
+  applications,
+  documentRenewals,
+} from '../onboarding/onboarding.schema.js';
 import { taxiRides } from '../taxi/taxi.schema.js';
 import { whatsappChats, whatsappMessages } from '../whatsapp/whatsapp.schema.js';
 
@@ -222,6 +226,20 @@ export class RetentionService implements OnApplicationBootstrap, OnApplicationSh
         files += 1;
       } catch (error) {
         this.logger.warn(`Could not delete KYC file ${document.id}: ${(error as Error).message}`);
+      }
+    }
+    // Renewals (ADR-042): the pending ones still keep a file of their own.
+    const renewals = await db
+      .select({ id: documentRenewals.id, storageKey: documentRenewals.storageKey })
+      .from(documentRenewals)
+      .where(inArray(documentRenewals.applicationId, ids));
+    for (const renewal of renewals) {
+      try {
+        if (renewal.storageKey) await this.storage.delete(renewal.storageKey);
+        await db.delete(documentRenewals).where(eq(documentRenewals.id, renewal.id));
+        files += 1;
+      } catch (error) {
+        this.logger.warn(`Could not delete KYC file ${renewal.id}: ${(error as Error).message}`);
       }
     }
     const remaining = await db
