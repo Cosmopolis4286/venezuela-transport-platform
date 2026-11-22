@@ -130,4 +130,6 @@ si va a cambiar, desde cuándo; un aumento siempre te lo avisamos con 30 días).
 pagan en efectivo la comisión queda como deuda; en los pagados con paquete te acreditamos la tarifa
 sin ella. Cada lunes te transferimos lo que te debemos, si llega al mínimo (US$ 5 o Bs. 200) y
 registraste tu cuenta: te avisamos con la referencia. Si debes más de US$ 20 o Bs. 800, no puedes
-conectarte hasta pagarla: escríbenos para pagarla y la registramos.
+conectarte hasta pagarla. Para pagarla, en **Pagar mi deuda** ves las cuentas de VTP: transfiere,
+escribe el monto y el número de operación y toca **Ya pagué**. Te avisamos cuando lo confirmemos
+(o por qué no pudimos).

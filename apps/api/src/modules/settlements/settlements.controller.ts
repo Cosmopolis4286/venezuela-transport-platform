@@ -13,6 +13,9 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type {
   AdminSettlementSummary,
+  DriverDebt,
+  DriverDebtReport,
+  DriverDebtReportForReview,
   DriverEarnings,
   DriverPayoutAccount,
   DriverPayoutRun,
@@ -36,6 +39,8 @@ import {
   CreatePayoutDto,
   DriverPayoutAccountDto,
   MarkPayoutSentDto,
+  RejectDebtReportDto,
+  ReportDebtPaymentDto,
   MarkRefundedDto,
   SetIndependentCommissionDto,
   SetOrganizationPolicyDto,
@@ -43,6 +48,7 @@ import {
   SettlementPolicyDto,
   VoidPayoutDto,
 } from './settlements.dto.js';
+import { DebtPaymentsService } from './debt-payments.service.js';
 import { IndependentPayoutsService } from './independent-payouts.service.js';
 import { SettlementsService } from './settlements.service.js';
 
@@ -266,5 +272,63 @@ export class AdminIndependentPayoutsController {
     @ReqMeta() meta: RequestMeta,
   ): Promise<Payout> {
     return this.payouts.markSent(auth, payoutId, body.reference, meta);
+  }
+}
+
+/** Independent drivers pay their commission debt and report it (ADR-046). */
+@ApiTags('settlements')
+@ApiBearerAuth()
+@Controller({ path: 'me', version: '1' })
+export class DriverDebtsController {
+  constructor(private readonly debts: DebtPaymentsService) {}
+
+  @Get('debts')
+  list(@CurrentAuth() auth: Authenticated): Promise<DriverDebt[]> {
+    return this.debts.debts(auth.user.id);
+  }
+
+  @Post('debt-payments')
+  @HttpCode(HttpStatus.OK)
+  report(
+    @CurrentAuth() auth: Authenticated,
+    @Body() body: ReportDebtPaymentDto,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<DriverDebt[]> {
+    return this.debts.report(auth, body, meta);
+  }
+}
+
+/** Finance: commission payments drivers reported (ADR-046). */
+@ApiTags('admin')
+@ApiBearerAuth()
+@RequirePlatformPermission('finance.manage')
+@Controller({ path: 'admin/driver-debt-reports', version: '1' })
+export class AdminDebtReportsController {
+  constructor(private readonly debts: DebtPaymentsService) {}
+
+  @Get()
+  list(): Promise<DriverDebtReportForReview[]> {
+    return this.debts.waiting();
+  }
+
+  @Post(':reportId/confirm')
+  @HttpCode(HttpStatus.OK)
+  confirm(
+    @CurrentAuth() auth: Authenticated,
+    @Param('reportId', ParseUUIDPipe) reportId: string,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<DriverDebtReport> {
+    return this.debts.confirm(auth, reportId, meta);
+  }
+
+  @Post(':reportId/reject')
+  @HttpCode(HttpStatus.OK)
+  reject(
+    @CurrentAuth() auth: Authenticated,
+    @Param('reportId', ParseUUIDPipe) reportId: string,
+    @Body() body: RejectDebtReportDto,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<DriverDebtReport> {
+    return this.debts.reject(auth, reportId, body.reason, meta);
   }
 }

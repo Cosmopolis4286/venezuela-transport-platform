@@ -57,6 +57,9 @@ pull request.
 
 ### Agregado
 
+- **El conductor reporta el pago de su deuda** (ADR-046): en Mis cobros ve las cuentas de VTP,
+  transfiere y reporta el monto y la operación; finanzas lo confirma o rechaza en Liquidaciones y
+  el conductor recibe el aviso.
 - **Comisión y pagos semanales de independientes** (ADR-045): finanzas fija la comisión de VTP por
   viaje (una subida rige a los 30 días y se avisa a los conductores); en los viajes en efectivo
   queda como deuda y en los pagados con paquete se descuenta. Cada lunes se crean los pagos a la

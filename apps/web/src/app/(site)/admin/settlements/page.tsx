@@ -4,8 +4,10 @@ import {
   formatPaymentAmount,
   INDEPENDENT_COMMISSION_NOTICE_DAYS,
   ORGANIZATION_TYPE_LABELS,
+  PAYMENT_METHOD_LABELS,
   PAYOUT_METHOD_LABELS,
   type AdminSettlementSummary,
+  type DriverDebtReportForReview,
   type IndependentCommission,
   type PendingDriverPayout,
   type SettlementPolicy,
@@ -23,6 +25,7 @@ import { requirePlatformPermission } from '@/lib/server/session';
 import { formatDate } from '@/lib/labels';
 import {
   markPayoutSent,
+  reviewDebtReport,
   runDriverPayouts,
   setIndependentCommission,
   setPlatformPolicy,
@@ -30,11 +33,12 @@ import {
 
 export default async function AdminSettlementsPage() {
   await requirePlatformPermission('finance.manage');
-  const [summaries, policy, commission, pending] = await Promise.all([
+  const [summaries, policy, commission, pending, debtReports] = await Promise.all([
     apiFetch<AdminSettlementSummary[]>('/admin/settlements'),
     apiFetch<SettlementPolicy>('/admin/settlement-policy'),
     apiFetch<IndependentCommission>('/admin/independent-commission'),
     apiFetch<PendingDriverPayout[]>('/admin/driver-payouts/pending'),
+    apiFetch<DriverDebtReportForReview[]>('/admin/driver-debt-reports'),
   ]);
   const pct = (rate: string) => `${rate.replace('.', ',')} %`;
   return (
@@ -81,6 +85,44 @@ export default async function AdminSettlementsPage() {
             <SubmitButton>Guardar comisión</SubmitButton>
           </div>
         </ActionForm>
+        <div className="flex flex-col gap-2">
+          <p className="font-medium">Pagos de comisiones reportados · {debtReports.length}</p>
+          {debtReports.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Ningún conductor reportó pagos.</p>
+          ) : (
+            <ul className="flex flex-col divide-y">
+              {debtReports.map((report) => (
+                <li key={report.id} className="flex flex-col gap-2 py-3">
+                  <p className="text-sm">
+                    <span className="font-medium tabular-nums">
+                      {formatPaymentAmount(report.amount, report.currency)}
+                    </span>{' '}
+                    de {report.driver.name} ({report.line}) por{' '}
+                    {PAYMENT_METHOD_LABELS[report.method]} · operación {report.reference} · debe{' '}
+                    {formatPaymentAmount(report.owed, report.currency)} ·{' '}
+                    {formatDate(report.createdAt)}
+                  </p>
+                  <ActionForm action={reviewDebtReport} hidden={{ reportId: report.id }}>
+                    <div className="flex flex-wrap gap-2">
+                      <Input
+                        name="reason"
+                        maxLength={300}
+                        placeholder="Motivo (para rechazar)"
+                        className="max-w-xs"
+                      />
+                      <SubmitButton name="decision" value="confirm" size="sm">
+                        Llegó: confirmar
+                      </SubmitButton>
+                      <SubmitButton name="decision" value="reject" size="sm" variant="outline">
+                        Rechazar
+                      </SubmitButton>
+                    </div>
+                  </ActionForm>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="font-medium">Pagos semanales por transferir · {pending.length}</p>

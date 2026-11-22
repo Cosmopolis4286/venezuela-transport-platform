@@ -178,3 +178,29 @@ export async function markPayoutSent(_: FormState, form: FormData): Promise<Form
   refresh();
   return { success: 'Pago marcado como enviado; avisamos al conductor.' };
 }
+
+/** A driver reported paying their commission debt (ADR-046): the money arrived, or it did not. */
+export async function reviewDebtReport(_: FormState, form: FormData): Promise<FormState> {
+  const decision = text(form, 'decision');
+  const id = encodeURIComponent(text(form, 'reportId'));
+  try {
+    await apiRequest(
+      `/admin/driver-debt-reports/${id}/${decision === 'confirm' ? 'confirm' : 'reject'}`,
+      {
+        method: 'POST',
+        ...(decision === 'confirm' ? {} : { body: { reason: text(form, 'reason') } }),
+      },
+    );
+  } catch (error) {
+    return failure(error, {
+      VALIDATION_FAILED: 'Para rechazarlo, escribe el motivo (lo verá el conductor).',
+    });
+  }
+  refresh();
+  return {
+    success:
+      decision === 'confirm'
+        ? 'Pago confirmado y registrado.'
+        : 'Pago rechazado; avisamos al conductor.',
+  };
+}

@@ -220,3 +220,7 @@ Solo en las líneas que opera la plataforma (`organizations.operated_by_platform
   `PAYOUT_PROVIDER=manual` esperan a que finanzas los marque enviados con la referencia
   (`POST /admin/payouts/:id/sent`); con `simulated` (desarrollo) salen al instante. El conductor
   recibe `payout_sent`.
+- **Pago de la deuda** (ADR-046): `GET /me/debts` (deuda por línea y moneda, cuentas de la
+  plataforma y el último reporte) y `POST /me/debt-payments`. Finanzas:
+  `GET /admin/driver-debt-reports`, `POST …/:id/confirm` (crea el cobro `from_operator`) y
+  `POST …/:id/reject` (con motivo).
