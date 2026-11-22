@@ -57,6 +57,9 @@ pull request.
 
 ### Agregado
 
+- **Mapa en vivo del viaje** (ADR-047): la app de pasajeros muestra al conductor acercándose y el
+  punto de recogida en un mapa (Apple Maps en iOS, Google Maps en Android con
+  `GOOGLE_MAPS_ANDROID_API_KEY`).
 - **El conductor reporta el pago de su deuda** (ADR-046): en Mis cobros ve las cuentas de VTP,
   transfiere y reporta el monto y la operación; finanzas lo confirma o rechaza en Liquidaciones y
   el conductor recibe el aviso.

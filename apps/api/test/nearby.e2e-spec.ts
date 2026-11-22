@@ -234,6 +234,8 @@ describe.runIf(expectDatabase)('Nearby drivers first (e2e)', () => {
       expect(mine.driverApproach).toMatchObject({ latitude: 8.38, longitude: -62.64 });
       expect(mine.driverApproach!.distanceKm).toBeLessThan(2);
       expect(mine.driverApproach!.etaMinutes).toBeGreaterThanOrEqual(1);
+      // The map shows where they pick the passenger up: the ride's first stop.
+      expect(mine.driverApproach!.pickup).toEqual({ latitude: 8.3725, longitude: -62.642 });
 
       // Going offline erases the location: the passenger no longer sees it.
       await online(near.owner.auth, false).expect(200);

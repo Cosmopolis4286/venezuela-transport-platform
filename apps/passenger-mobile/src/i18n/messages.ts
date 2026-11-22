@@ -345,6 +345,8 @@ const es = {
     onTheWay: 'Tu conductor va contigo; puedes seguirlo en el mapa.',
     approachUpdated: (clock: string) => `Ubicación de las ${clock}.`,
     viewOnMap: 'Ver en el mapa',
+    mapDriver: 'Tu conductor',
+    mapPickup: 'Te buscan aquí',
     share: 'Compartir mi viaje',
     shareMessage: (url: string) =>
       `Sigue mi viaje en VTP: verás la placa, el conductor y por dónde va. ${url}`,
@@ -695,6 +697,8 @@ const en: Messages = {
     onTheWay: 'Your driver is with you; you can follow them on the map.',
     approachUpdated: (clock) => `Location as of ${clock}.`,
     viewOnMap: 'View on the map',
+    mapDriver: 'Your driver',
+    mapPickup: 'Pickup here',
     share: 'Share my ride',
     shareMessage: (url) =>
       `Follow my VTP ride: you will see the plate, the driver and where it is. ${url}`,
@@ -1049,6 +1053,8 @@ const ptBR: Messages = {
     onTheWay: 'Seu motorista está com você; você pode acompanhá-lo no mapa.',
     approachUpdated: (clock) => `Localização das ${clock}.`,
     viewOnMap: 'Ver no mapa',
+    mapDriver: 'Seu motorista',
+    mapPickup: 'Buscam você aqui',
     share: 'Compartilhar minha corrida',
     shareMessage: (url) =>
       `Acompanhe minha corrida na VTP: você verá a placa, o motorista e por onde está passando. ${url}`,

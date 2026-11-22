@@ -893,3 +893,18 @@ que el conductor dependa de escribirle a soporte para salir del bloqueo por deud
 
 **Compromisos.** La verificación sigue siendo manual, contra el banco. No se adjunta comprobante:
 basta el número de operación.
+
+## ADR-047: Mapa en vivo del viaje en la app de pasajeros
+
+**Decisión.** La pantalla del viaje de taxi o moto muestra un mapa nativo con `react-native-maps`
+(la versión que trae Expo 58): Apple Maps en iOS, sin clave, y Google Maps en Android, con la clave
+`GOOGLE_MAPS_ANDROID_API_KEY` que `app.config.ts` toma al compilar. Marca al conductor (ADR-041)
+y, mientras viene, el punto de recogida (`DriverApproach.pickup`). No sigue la ruta por calles.
+
+**Por qué.** Ver al conductor acercarse sin salir de la app es lo que esperan los pasajeros de una
+app de viajes; la API ya mandaba la ubicación (ADR-041). Usar el mapa del sistema evita servir
+teselas propias y respeta los términos de los proveedores.
+
+**Compromisos.** Hace falta una clave de Google Maps para las compilaciones de Android (Expo Go
+funciona sin ella). En la versión web de la app no hay mapa, solo el enlace. La ubicación es la
+última que mandó el teléfono del conductor (cada 15 s como mucho).

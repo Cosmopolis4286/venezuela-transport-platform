@@ -134,7 +134,8 @@ hora que pediste), puedes cancelar sin costo.
    y una tarifa. Te llega un aviso con la placa y la tarifa.
 3. Sigue el estado en la app. Puedes cancelar mientras no hayas subido. **Al taxi se le paga
    directamente al conductor.** Mientras viene a buscarte (también en los viajes por tramo) ves a
-   cuántos km está, en cuántos minutos llega más o menos y **Ver en el mapa** para ubicarlo.
+   cuántos km está, en cuántos minutos llega más o menos y un mapa con él y el punto donde te busca
+   (se mueve solo; **Ver en el mapa** lo abre en tu app de mapas).
 4. Al terminar cualquier viaje de taxi o moto, califícalo de 1 a 5 estrellas: la línea ve tu
    calificación.
 

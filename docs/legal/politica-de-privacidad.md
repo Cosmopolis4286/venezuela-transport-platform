@@ -122,7 +122,8 @@ momento.
   confidencialidad y solo para esa finalidad: alojamiento de servidores ({{hospedaje}}), envío de
   correo electrónico, servicio de notificaciones push de Expo (que entrega los avisos a los
   teléfonos a través de los servicios de Google y Apple), Meta Platforms (WhatsApp, cuando nos
-  escribe por ese canal y le respondemos), bancos, instituciones de pago PIX y redes de
+  escribe por ese canal y le respondemos), Apple y Google (los mapas que muestran el viaje en la
+  aplicación, con la ubicación del conductor), bancos, instituciones de pago PIX y redes de
   criptoactivos por las que usted elige pagar.
 - **Autoridades** cuando lo exija una ley o una orden válida de autoridad competente (por
   ejemplo, judicial, tributaria, de transporte o de prevención de legitimación de capitales).
