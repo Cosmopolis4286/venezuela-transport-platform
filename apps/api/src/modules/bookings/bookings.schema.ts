@@ -13,7 +13,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { BOOKING_STATUSES, type LayoutSeat } from '@vtp/shared-types';
+import { BOARDING_ISSUE_KINDS, BOOKING_STATUSES, type LayoutSeat } from '@vtp/shared-types';
 import { timestamps, users } from '../identity/identity.schema.js';
 import { currency, routes, routeSchedules, stops } from '../network/network.schema.js';
 import { vehicles } from '../fleet/fleet.schema.js';
@@ -163,6 +163,39 @@ export const bookingPassengers = pgTable(
       .on(t.tripId, t.seatNumber)
       .where(sql`${t.active}`),
     index('booking_passengers_booking_idx').on(t.bookingId),
+  ],
+);
+
+export const boardingIssueKind = pgEnum('boarding_issue_kind', BOARDING_ISSUE_KINDS);
+
+/**
+ * What the boardings checked without signal showed when they reached the API (ADR-049): a ticket
+ * already used by another unit or driver, or one whose booking was cancelled meanwhile. The
+ * passenger rode anyway; the line reviews it in its portal.
+ */
+export const boardingIssues = pgTable(
+  'boarding_issues',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+    passengerId: uuid()
+      .notNull()
+      .references(() => bookingPassengers.id, { onDelete: 'cascade' }),
+    kind: boardingIssueKind().notNull(),
+    /** The boarding that counted (null for `not_paid`). */
+    firstBoardedAt: timestamp({ withTimezone: true }),
+    firstUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
+    /** The boarding reported without signal. */
+    secondBoardedAt: timestamp({ withTimezone: true }).notNull(),
+    secondUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // A phone that sends the same boarding again does not repeat the issue.
+    uniqueIndex('boarding_issues_once_key').on(t.passengerId, t.kind, t.secondUserId),
+    index('boarding_issues_organization_idx').on(t.organizationId, t.createdAt),
   ],
 );
 

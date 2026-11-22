@@ -62,6 +62,10 @@ pull request.
 
 ### Agregado
 
+- **Validar boletos sin señal** (ADR-049): la app de transportistas guarda sola los boletos
+  pagados del día de su empresa y, sin señal, los valida con esa lista y envía lo validado al
+  volver la señal. Un boleto usado en dos unidades, o con la reserva cancelada, aparece en el
+  portal en **Viajes y pasajeros** para revisarlo.
 - **Datos de ejemplo de la etapa 3**: comisión con una subida anunciada, viajes calificados de los
   independientes, un pago semanal, una licencia por vencer, un mototaxista suspendido
   (`suspendido@vtp.test`) con un pago de deuda por verificar y dos alertas de emergencia. El seed

@@ -330,6 +330,13 @@
       "when": 1795380712703,
       "tag": "0046_bcv_rate_sync",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1795381067227,
+      "tag": "0047_offline_boarding",
+      "breakpoints": true
     }
   ]
 }

@@ -273,6 +273,131 @@ export interface TicketValidation {
   to: StopSummary;
 }
 
+// --- Boarding without signal (ADR-049) -------------------------------------------------------
+
+/** A ticket is accepted from 12 hours before to 12 hours after the passenger's boarding time. */
+export const BOARDING_WINDOW_MS = 12 * 3600_000;
+/** An open ticket (frequency service) is accepted from 1 hour before the first unit to the last. */
+export const OPEN_TICKET_EARLY_MS = 3600_000;
+
+/**
+ * Whether `now` falls in the ticket's boarding window: the same rule in the API and in the
+ * driver's phone when it checks tickets without signal. Times in milliseconds.
+ */
+export function inBoardingWindow(
+  ticket: { departsAt: number; arrivesAt: number },
+  open: boolean,
+  now: number,
+): boolean {
+  if (open) return now >= ticket.departsAt - OPEN_TICKET_EARLY_MS && now <= ticket.arrivesAt;
+  return Math.abs(now - ticket.departsAt) <= BOARDING_WINDOW_MS;
+}
+
+const TICKET_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The ticket id in a QR payload (`VTP1.<id>`), or null when it is not a ticket of ours. */
+export function ticketIdFromQr(payload: string): string | null {
+  const value = payload.trim();
+  const id = value.startsWith(TICKET_QR_PREFIX) ? value.slice(TICKET_QR_PREFIX.length) : '';
+  return TICKET_ID.test(id) ? id.toLowerCase() : null;
+}
+
+/** `vtp-7k3qxa`, `VTP7K3QXA` or `7K3QXA` → `VTP-7K3QXA`; null if it cannot be a booking code. */
+export function normalizeBookingCode(input: string): string | null {
+  const bare = input
+    .trim()
+    .toUpperCase()
+    .replace(/^VTP-?/, '');
+  return /^[A-Z0-9]{6}$/.test(bare) ? `VTP-${bare}` : null;
+}
+
+/** How long ahead the driver's phone keeps tickets for checking them without signal. */
+export const OFFLINE_TICKETS_AHEAD_HOURS = 24;
+
+/**
+ * One ticket as the driver's phone keeps it to check without signal
+ * (`GET /organizations/:id/tickets/offline`). Only what the check needs: the ID number is masked.
+ */
+export interface OfflineTicket {
+  /** The id in the QR. */
+  ticketId: string;
+  bookingCode: string;
+  seatNumber: string;
+  passengerName: string;
+  /** Only the last digits, e.g. `V-•••5678`. */
+  documentHint: string;
+  route: { id: string; name: string };
+  serviceDate: string;
+  /** Network ISO times of the passenger's boarding window. */
+  departsAt: string;
+  arrivesAt: string;
+  /** An open ticket of a frequency service (ADR-032). */
+  open: boolean;
+  from: StopSummary;
+  to: StopSummary;
+  /** Already boarded when the list was made. */
+  boardedAt: string | null;
+}
+
+export interface OfflineTicketList {
+  generatedAt: string;
+  tickets: OfflineTicket[];
+}
+
+/** A ticket the phone let board without signal, sent when the signal is back. */
+export interface OfflineBoarding {
+  ticketId: string;
+  /** When it was scanned (ISO). */
+  boardedAt: string;
+}
+
+/** `POST /organizations/:id/tickets/offline-boardings` */
+export interface OfflineBoardingsRequest {
+  boardings: OfflineBoarding[];
+}
+
+export const OFFLINE_BOARDING_RESULTS = [
+  'boarded',
+  'already_boarded',
+  'not_paid',
+  'not_found',
+] as const;
+export type OfflineBoardingResult = (typeof OFFLINE_BOARDING_RESULTS)[number];
+
+export interface OfflineBoardingOutcome {
+  ticketId: string;
+  result: OfflineBoardingResult;
+}
+
+/**
+ * Found when the boardings checked without signal reach the API: a ticket another unit or driver
+ * had already used (`double_use`), or one whose booking was cancelled meanwhile (`not_paid`).
+ * The line reviews them in its portal.
+ */
+export const BOARDING_ISSUE_KINDS = ['double_use', 'not_paid'] as const;
+export type BoardingIssueKind = (typeof BOARDING_ISSUE_KINDS)[number];
+
+export const BOARDING_ISSUE_LABELS: Record<BoardingIssueKind, string> = {
+  double_use: 'Usado dos veces',
+  not_paid: 'Reserva cancelada',
+};
+
+/** `GET /organizations/:id/tickets/boarding-issues?date=` */
+export interface BoardingIssue {
+  id: string;
+  kind: BoardingIssueKind;
+  bookingCode: string;
+  seatNumber: string;
+  passengerName: string;
+  route: { id: string; name: string };
+  serviceDate: string;
+  /** The first, accepted boarding (null for `not_paid`). */
+  first: { boardedAt: string; driverName: string | null } | null;
+  /** The boarding reported without signal. */
+  second: { boardedAt: string; driverName: string | null };
+  createdAt: string;
+}
+
 /** "US$ 35,00", "Bs. 1.277,50", "R$ 175,00", "35,00 USDT" */
 export function formatPaymentAmount(
   amount: string,

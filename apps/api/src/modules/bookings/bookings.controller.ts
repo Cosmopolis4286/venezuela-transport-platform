@@ -13,6 +13,9 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type {
   AdminBookingLookup,
+  BoardingIssue,
+  OfflineBoardingOutcome,
+  OfflineTicketList,
   Booking,
   CancellationQuote,
   TicketValidation,
@@ -30,7 +33,9 @@ import {
   type OrganizationAccess,
 } from '../organizations/organization-access.js';
 import {
+  BoardingIssuesQueryDto,
   CreateBookingDto,
+  OfflineBoardingsDto,
   SetBookingBillingDto,
   TripQueryDto,
   TripsDateQueryDto,
@@ -173,5 +178,35 @@ export class OrganizationTicketsController {
     @ReqMeta() meta: RequestMeta,
   ): Promise<TicketValidation> {
     return this.tickets.validate(access, body as ValidateTicketRequest, auth, meta);
+  }
+
+  /** The tickets the driver's phone keeps to check them without signal (ADR-049). */
+  @Get('offline')
+  @RequireOrganizationAccess('tickets.validate')
+  offline(@CurrentOrganization() access: OrganizationAccess): Promise<OfflineTicketList> {
+    return this.tickets.offlineList(access);
+  }
+
+  /** Boardings checked without signal, sent when the signal is back. */
+  @Post('offline-boardings')
+  @HttpCode(HttpStatus.OK)
+  @RequireOrganizationAccess('tickets.validate')
+  offlineBoardings(
+    @CurrentOrganization() access: OrganizationAccess,
+    @Body() body: OfflineBoardingsDto,
+    @CurrentAuth() auth: Authenticated,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<OfflineBoardingOutcome[]> {
+    return this.tickets.offlineBoardings(access, body, auth, meta);
+  }
+
+  /** Tickets used twice, or with a cancelled booking, found when those boardings arrived. */
+  @Get('boarding-issues')
+  @RequireOrganizationAccess('bookings.view')
+  boardingIssues(
+    @CurrentOrganization() access: OrganizationAccess,
+    @Query() query: BoardingIssuesQueryDto,
+  ): Promise<BoardingIssue[]> {
+    return this.tickets.boardingIssues(access, query.date);
   }
 }

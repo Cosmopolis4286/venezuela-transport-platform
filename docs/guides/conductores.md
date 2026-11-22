@@ -88,6 +88,18 @@ el código de reserva y el número de puesto. El resultado sale al instante:
 | **Boleto no pagado**                | La reserva está apartada, cancelada o vencida: no puede abordar                                                          |
 | **Este boleto es para otra salida** | El viaje sale a más de 12 horas de ahora (dice cuándo); un boleto abierto es de otro día o fuera del horario de servicio |
 
+**Sin señal también se valida.** Mientras la app tiene señal guarda sola en el teléfono los boletos
+pagados de tu empresa para las próximas 24 horas (al abrirla, cada 5 minutos y al volver a ella).
+Sin señal, **Validar boletos** usa esa lista: verás "Validado sin señal con la lista de las…" y lo
+validado se envía solo cuando vuelve la señal. Arriba dice cuántos boletos hay guardados y cuántos
+faltan por enviar. Por eso:
+
+- **Abre la app con señal antes de salir** hacia la zona sin cobertura.
+- Si un boleto **no está en la lista** (lo compraron después), pide que espere a tener señal o
+  cóbrale en efectivo.
+- Si la lista tiene más de 3 horas, la app lo avisa: puede faltar algún boleto vendido después.
+- Del documento solo se guardan los últimos dígitos (V-•••5678): compáralos con la cédula.
+
 ## 5. Taxis (taxistas)
 
 1. En el inicio, **Solicitudes de taxi** (o **Solicitudes de moto** si tu línea es de mototaxis)

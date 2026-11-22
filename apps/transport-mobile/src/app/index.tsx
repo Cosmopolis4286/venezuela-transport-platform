@@ -33,7 +33,15 @@ import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { RefreshControl } from 'react-native';
 import { tripLoad, tripWhen } from '@/lib/driver-trip';
+import { useOfflineSync } from '@/lib/offline-store';
 import { useRefreshOnFocus } from '@/lib/use-refresh-on-focus';
+
+/** Downloads a line's tickets while the app is open (ADR-049); renders nothing. */
+function KeepTicketsOffline({ organizationId }: { organizationId: string }) {
+  const { api } = useAuth();
+  useOfflineSync(api, organizationId);
+  return null;
+}
 
 export default function Home() {
   const user = useCurrentUser();
@@ -91,6 +99,14 @@ export default function Home() {
     >
       <Heading>{user.firstName ? `Hola, ${user.firstName}` : 'Hola'}</Heading>
       <TermsPrompt />
+      {/* The day's tickets of each line where they validate, kept to check them without signal. */}
+      {organizations.data
+        ?.filter(
+          (m) => m.organization.status === 'active' && m.permissions.includes('tickets.validate'),
+        )
+        .map((m) => (
+          <KeepTicketsOffline key={m.organization.id} organizationId={m.organization.id} />
+        ))}
       {message ? <Banner tone={message.tone}>{message.text}</Banner> : null}
 
       {invitations.data?.length ? (
