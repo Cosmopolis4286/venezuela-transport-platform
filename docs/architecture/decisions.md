@@ -908,3 +908,22 @@ teselas propias y respeta los términos de los proveedores.
 **Compromisos.** Hace falta una clave de Google Maps para las compilaciones de Android (Expo Go
 funciona sin ella). En la versión web de la app no hay mapa, solo el enlace. La ubicación es la
 última que mandó el teléfono del conductor (cada 15 s como mucho).
+
+## ADR-048: Los bolívares se cobran siempre con la tasa oficial del BCV, actualizada sola
+
+**Decisión** (del dueño del producto). Toda conversión a bolívares (boletos de las empresas y
+paquetes de la plataforma) usa la **tasa oficial del BCV**. Un job de la API la busca cada
+`BCV_RATE_SYNC_HOURS` (6 por defecto) en la página del BCV y, si falla, en DolarApi, que la
+republica; la guarda por su "fecha valor" con su fuente. Se usa la más reciente cuya fecha ya
+llegó; con más de 5 días sin una nueva (más que un fin de semana largo) no se ofrece pagar en
+bolívares. Las empresas y la plataforma ya no escriben la tasa de bolívares; solo la de reales
+(PIX). El personal puede buscarla en el momento o escribirla a mano si ninguna fuente responde, y
+una tasa escrita a mano no se reemplaza. La misma tabla sirve para facturar (ADR-031).
+
+**Por qué.** El pasaje se ancla al dólar y el bolívar se mueve a diario: una tasa escrita a mano
+quedaba vieja (la de las empresas no vencía nunca) y hacía perder dinero o cobrar de más. Una sola
+tasa oficial es más simple para las empresas y más justa para el pasajero.
+
+**Compromisos.** El BCV no tiene API: se lee su página, que puede cambiar o fallar (para eso está
+DolarApi y la carga a mano). Una empresa que quiera cobrar con otra tasa no puede. El servidor
+necesita salir a `www.bcv.org.ve` y `ve.dolarapi.com`.

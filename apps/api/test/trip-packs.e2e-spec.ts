@@ -21,6 +21,7 @@ import type {
 import { eq, sql } from 'drizzle-orm';
 import request from 'supertest';
 import { DatabaseService } from '../src/database/database.service.js';
+import { setOfficialRate } from './support/official-rate.js';
 import { users } from '../src/modules/identity/identity.schema.js';
 import type { OtpMessage, OtpSender } from '../src/modules/identity/otp/otp-sender.js';
 import { bookings } from '../src/modules/bookings/bookings.schema.js';
@@ -203,29 +204,31 @@ describe.runIf(expectDatabase)('Trip packs (e2e)', () => {
     const options = async () =>
       (await http().get(optionsUrl).set('Authorization', passenger.auth).expect(200))
         .body as PaymentOption[];
-    await http()
-      .put('/api/v1/admin/exchange-rates')
-      .set('Authorization', admin.auth)
-      .send({ rates: [{ currency: 'VES', unitsPerUsd: '40' }] })
-      .expect(200);
+    // Bolívares at the BCV's official rate (ADR-048); the BRL rate (PIX) is set by hand.
+    await setOfficialRate(app);
+    const putRates = (rates: object[]) =>
+      http().put('/api/v1/admin/exchange-rates').set('Authorization', admin.auth).send({ rates });
+    await putRates([{ currency: 'VES', unitsPerUsd: '40' }]).expect(400);
+    await putRates([{ currency: 'BRL', unitsPerUsd: '5' }]).expect(200);
     expect(await options()).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ method: 'usdt', amount: '15.00', currency: 'USDT' }),
-        expect.objectContaining({ method: 'pago_movil', amount: '600.00', currency: 'VES' }),
+        expect.objectContaining({ method: 'pago_movil', amount: '547.50', currency: 'VES' }),
+        expect.objectContaining({ method: 'pix', amount: '75.00', currency: 'BRL' }),
       ]),
     );
-    // A rate older than a day is not used: no payment in bolívares until it is saved again.
+    // A rate typed by hand older than a day is not used: no PIX until it is saved again.
     const rates = app.get(DatabaseService).db;
     await rates
       .update(platformExchangeRates)
       .set({ updatedAt: new Date(Date.now() - 25 * 3600_000) })
-      .where(eq(platformExchangeRates.currency, 'VES'));
-    expect((await options()).map((o) => o.method)).not.toContain('pago_movil');
+      .where(eq(platformExchangeRates.currency, 'BRL'));
+    expect((await options()).map((o) => o.method)).not.toContain('pix');
     await rates
       .update(platformExchangeRates)
       .set({ updatedAt: new Date() })
-      .where(eq(platformExchangeRates.currency, 'VES'));
-    expect((await options()).map((o) => o.method)).toContain('pago_movil');
+      .where(eq(platformExchangeRates.currency, 'BRL'));
+    expect((await options()).map((o) => o.method)).toContain('pix');
     const payment = (
       await http()
         .post(`/api/v1/me/trip-packs/${pack.id}/payments`)

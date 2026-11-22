@@ -1,4 +1,5 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { BcvRatesService } from '../bcv-rates/bcv-rates.service.js';
 import {
   addAmounts,
   convertAmount,
@@ -6,6 +7,7 @@ import {
   splitVatIncluded,
   todayInVenezuela,
   type BcvRate,
+  type BcvRateInput,
   type FiscalSettings,
   type FiscalSettingsInput,
   type Invoice,
@@ -73,6 +75,7 @@ export class FiscalService {
     private readonly database: DatabaseService,
     private readonly audit: AuditService,
     @Inject(INVOICE_ISSUER) private readonly issuer: InvoiceIssuer,
+    private readonly bcv: BcvRatesService,
   ) {}
 
   async settings(): Promise<FiscalSettings> {
@@ -120,18 +123,18 @@ export class FiscalService {
   }
 
   async bcvRates(): Promise<BcvRate[]> {
-    const rows = await this.database.db
-      .select({ date: bcvRates.date, unitsPerUsd: bcvRates.unitsPerUsd })
-      .from(bcvRates)
-      .orderBy(desc(bcvRates.date))
-      .limit(60);
-    return rows;
+    return this.bcv.list();
   }
 
-  async setBcvRate(input: BcvRate, actor: Authenticated, meta: RequestMeta): Promise<BcvRate> {
+  /** Typed by an admin, e.g. when the BCV's website and DolarApi both fail (ADR-048). */
+  async setBcvRate(input: BcvRateInput, actor: Authenticated, meta: RequestMeta): Promise<BcvRate> {
     if (input.date > todayInVenezuela()) throw invalid('The rate date cannot be in the future');
     if (Number(input.unitsPerUsd) <= 0) throw invalid('unitsPerUsd must be positive');
-    const values = { unitsPerUsd: input.unitsPerUsd, updatedByUserId: actor.user.id };
+    const values = {
+      unitsPerUsd: input.unitsPerUsd,
+      updatedByUserId: actor.user.id,
+      source: 'manual' as const,
+    };
     await this.database.db
       .insert(bcvRates)
       .values({ date: input.date, ...values })
@@ -139,11 +142,7 @@ export class FiscalService {
     await this.record('fiscal.bcv_rate_set', 'bcv_rate', input.date, actor, meta, {
       unitsPerUsd: input.unitsPerUsd,
     });
-    const [row] = await this.database.db
-      .select({ date: bcvRates.date, unitsPerUsd: bcvRates.unitsPerUsd })
-      .from(bcvRates)
-      .where(eq(bcvRates.date, input.date));
-    return row!;
+    return (await this.bcv.list()).find((r) => r.date === input.date)!;
   }
 
   async invoices(query: InvoicesQuery = {}): Promise<Invoice[]> {

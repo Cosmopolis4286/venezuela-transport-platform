@@ -45,8 +45,9 @@ En la página de la organización:
    interurbanas le pagan a la empresa y las urbanas o suburbanas al conductor de cada viaje; puedes
    cambiarlo en cada ruta (vale para las ventas desde ese momento).
 6. **Publicar** la ruta: desde ese momento aparece en las búsquedas.
-7. **Tasas de cambio**: bolívares y reales por dólar. Sin una tasa, ese medio de pago no se ofrece
-   para tarifas en dólares.
+7. **Tasas de cambio**: los bolívares usan siempre la tasa oficial del BCV, que la plataforma
+   actualiza sola (la ves en el portal). Solo escribes la de reales por dólar si aceptas PIX; sin
+   ella, PIX no se ofrece para tarifas en dólares.
 
 ## 4. El día de la salida
 

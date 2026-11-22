@@ -86,8 +86,9 @@ En la web los pasajeros **buscan**; para comprar usan la app Android (o la taqui
 3. **Política** (`/admin/settlements`): cargo por servicio (15 % por defecto) y tramos de
    reembolso.
 4. **Cuentas de cobro** (`/admin/payments`): tus cuentas reales de pago móvil, banco y USDT.
-5. **Facturación** (`/admin/fiscal`): razón social, RIF, domicilio, tipo de contribuyente e IVA, y
-   la tasa BCV del día.
+5. **Facturación** (`/admin/fiscal`): razón social, RIF, domicilio, tipo de contribuyente e IVA.
+   Revisa que aparezca la tasa BCV del día (la API la busca sola; el servidor debe poder salir a
+   `www.bcv.org.ve` y `ve.dolarapi.com`).
 6. Completa `docs/legal/empresa.json` (razón social, RIF, domicilio, correos) y despliega.
 
 - **Comprobar:** la búsqueda de la web muestra la ciudad, y `/admin/fiscal` dice que los datos

@@ -4,7 +4,7 @@ import {
   ROLES_BY_ORGANIZATION_TYPE,
   ROUTE_STATUS_LABELS,
   TRANSPORT_MODE_LABELS,
-  RATE_CURRENCIES,
+  MANUAL_RATE_CURRENCIES,
   runsRoutes,
   type ExchangeRate,
   type OrganizationInvitation,
@@ -27,6 +27,7 @@ import { apiFetch } from '@/lib/server/api';
 import { requireOrganizationPermission } from '@/lib/server/organization-access';
 import { changeMemberRole, inviteMember, removeMember, revokeInvitation } from '../../actions';
 import { saveExchangeRates } from './exchange-rates/actions';
+import { OfficialRate } from '@/components/portal/official-rate';
 
 export default function OrganizationPage({
   params,
@@ -323,14 +324,15 @@ async function ExchangeRates({
       <div className="flex flex-col gap-1">
         <CardTitle>Tasas de cambio</CardTitle>
         <CardDescription>
-          Con ellas se convierten tus precios al cobrar. USDT se cobra 1:1 con el dólar. Sin tasa,
-          esa forma de pago no se ofrece para precios en otra moneda. El monto se fija cuando el
-          pasajero elige cómo pagar.
+          Con ellas se convierten tus precios al cobrar. Los bolívares usan siempre la tasa oficial
+          del BCV; USDT se cobra 1:1 con el dólar. Sin tasa en reales, PIX no se ofrece. El monto se
+          fija cuando el pasajero elige cómo pagar.
         </CardDescription>
       </div>
+      <OfficialRate />
       <ActionForm action={saveExchangeRates} hidden={{ organizationId }}>
         <div className="grid gap-3 sm:grid-cols-2">
-          {RATE_CURRENCIES.map((currency) => {
+          {MANUAL_RATE_CURRENCIES.map((currency) => {
             const rate = rateFor(currency);
             return canManage ? (
               <Field key={currency} label={RATE_LABELS[currency]} htmlFor={`rate-${currency}`}>

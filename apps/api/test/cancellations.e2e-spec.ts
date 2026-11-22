@@ -17,6 +17,7 @@ import {
 import { and, eq, sql } from 'drizzle-orm';
 import request from 'supertest';
 import { DatabaseService } from '../src/database/database.service.js';
+import { setOfficialRate } from './support/official-rate.js';
 import { bookings, trips } from '../src/modules/bookings/bookings.schema.js';
 import { users } from '../src/modules/identity/identity.schema.js';
 import { settlementEntries } from '../src/modules/settlements/settlements.schema.js';
@@ -198,11 +199,8 @@ describe.runIf(expectDatabase)('Cancelling paid bookings (e2e)', () => {
           ],
         })
         .expect(200);
-      await http()
-        .put(`${org}/exchange-rates`)
-        .set('Authorization', owner.auth)
-        .send({ rates: [{ currency: 'VES', unitsPerUsd: '36.5' }] })
-        .expect(200);
+      // Bolívares at the BCV's official rate (ADR-048), the same in every e2e file.
+      await setOfficialRate(app);
       const payWith = async (booking: Booking, method: string) => {
         const payment = (
           await http()

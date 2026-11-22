@@ -48,7 +48,7 @@ Ordenado por impacto en Casacoima.
    - El boleto (QR) del pasajero se carga de la API cada vez (`apps/passenger-mobile/src/app/booking/[id].tsx`): sin señal en la parada no hay boleto. Hay que **guardarlo en el teléfono** al pagar y mostrarlo sin conexión.
    - El escáner del conductor valida contra la API (`apps/transport-mobile/src/app/scan.tsx`); el roadmap ya lo marca pendiente. Hay que **descargar los boletos de la salida o del día** antes de salir, validar en el teléfono y sincronizar al recuperar la señal (sin vender dos veces el mismo boleto).
    - Las **ventas en efectivo**, la salida y la llegada fallan sin señal: hay que **guardarlas en una cola** y enviarlas después.
-2. **Tasa de cambio de la empresa sin vencimiento.** Al pagar una reserva en bolívares se usa la
+2. ✅ **Resuelto (ADR-048): los bolívares usan siempre la tasa oficial del BCV, actualizada cada 6 horas.** Antes: **tasa de cambio de la empresa sin vencimiento.** Al pagar una reserva en bolívares se usa la
    tasa que la empresa guardó, sin importar su antigüedad (`PaymentsService.optionsFor`), mientras
    que la tasa de la plataforma para paquetes debe tener menos de 24 horas
    (`PLATFORM_RATE_MAX_HOURS`). Con el pasaje anclado al dólar y el BCV moviéndose a diario, una

@@ -1,6 +1,6 @@
 'use server';
 
-import { RATE_CURRENCIES, type ReplaceExchangeRatesRequest } from '@vtp/shared-types';
+import { MANUAL_RATE_CURRENCIES, type ReplaceExchangeRatesRequest } from '@vtp/shared-types';
 import { refresh } from 'next/cache';
 import type { FormState } from '@/lib/form-state';
 import { apiRequest } from '@/lib/server/api';
@@ -50,7 +50,7 @@ export async function setTripPackProductActive(_: FormState, form: FormData): Pr
 
 /** The platform's own rates, for packs. Empty fields remove that currency's rate. */
 export async function savePlatformRates(_: FormState, form: FormData): Promise<FormState> {
-  const rates: ReplaceExchangeRatesRequest['rates'] = RATE_CURRENCIES.flatMap((currency) => {
+  const rates: ReplaceExchangeRatesRequest['rates'] = MANUAL_RATE_CURRENCIES.flatMap((currency) => {
     const unitsPerUsd = text(form, `rate:${currency}`).replace(',', '.');
     return unitsPerUsd ? [{ currency, unitsPerUsd }] : [];
   });

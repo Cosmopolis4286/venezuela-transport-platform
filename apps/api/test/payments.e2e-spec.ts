@@ -20,6 +20,7 @@ import {
 import { eq, sql } from 'drizzle-orm';
 import request from 'supertest';
 import { DatabaseService } from '../src/database/database.service.js';
+import { OFFICIAL_RATE, setOfficialRate } from './support/official-rate.js';
 import { bookings } from '../src/modules/bookings/bookings.schema.js';
 import { payments } from '../src/modules/payments/payments.schema.js';
 import { users } from '../src/modules/identity/identity.schema.js';
@@ -61,6 +62,7 @@ describe.runIf(expectDatabase)('Payments and tickets (e2e)', () => {
     app = moduleRef.createNestApplication<NestExpressApplication>();
     configureApp(app);
     await app.init();
+    await setOfficialRate(app);
   });
 
   afterAll(async () => {
@@ -209,7 +211,8 @@ describe.runIf(expectDatabase)('Payments and tickets (e2e)', () => {
       const paymentStatus = async (id: string) =>
         (await db.select().from(payments).where(eq(payments.id, id)))[0]!.status;
 
-      // --- Without rates, only USDT (1:1 with the dollar) can pay a dollar fare.
+      // --- Bolívares at the BCV's official rate (ADR-048); USDT 1:1 with the dollar; no PIX
+      // until the operator sets its BRL rate.
       const ana = await signIn();
       const held = await book(ana.auth, ['1', '2']);
       expect(held.payment).toBeNull();
@@ -221,43 +224,45 @@ describe.runIf(expectDatabase)('Payments and tickets (e2e)', () => {
         total: { amount: '46.00' },
       });
       expect((await options(ana.auth, held.id).expect(200)).body).toEqual([
+        { method: 'pago_movil', amount: '1679.00', currency: 'VES', rate: OFFICIAL_RATE },
+        { method: 'bank_transfer', amount: '1679.00', currency: 'VES', rate: OFFICIAL_RATE },
         { method: 'usdt', amount: '46.00', currency: 'USDT', rate: null },
       ]);
+      expect(
+        (await http().get('/api/v1/exchange-rates/official').expect(200)).body.rate,
+      ).toMatchObject({ unitsPerUsd: OFFICIAL_RATE });
 
-      // --- The operator sets its rates.
+      // --- The operator sets its BRL rate; bolívares cannot be set by hand.
       const rates = `${org}/exchange-rates`;
+      await http()
+        .put(rates)
+        .set('Authorization', owner.auth)
+        .send({ rates: [{ currency: 'VES', unitsPerUsd: '40' }] })
+        .expect(400);
       await http()
         .put(rates)
         .set('Authorization', owner.auth)
         .send({
           rates: [
-            { currency: 'VES', unitsPerUsd: '36.5' },
-            { currency: 'VES', unitsPerUsd: '37' },
+            { currency: 'BRL', unitsPerUsd: '5.4' },
+            { currency: 'BRL', unitsPerUsd: '5.5' },
           ],
         })
         .expect(400);
       await http()
         .put(rates)
         .set('Authorization', owner.auth)
-        .send({ rates: [{ currency: 'VES', unitsPerUsd: '0' }] })
+        .send({ rates: [{ currency: 'BRL', unitsPerUsd: '0' }] })
         .expect(400);
       await http().put(rates).set('Authorization', ana.auth).send({ rates: [] }).expect(404);
       const saved = (
         await http()
           .put(rates)
           .set('Authorization', owner.auth)
-          .send({
-            rates: [
-              { currency: 'VES', unitsPerUsd: '36.5' },
-              { currency: 'BRL', unitsPerUsd: '5.4321' },
-            ],
-          })
+          .send({ rates: [{ currency: 'BRL', unitsPerUsd: '5.4321' }] })
           .expect(200)
       ).body as ExchangeRate[];
-      expect(saved.map((r) => [r.currency, r.unitsPerUsd])).toEqual([
-        ['VES', '36.5000'],
-        ['BRL', '5.4321'],
-      ]);
+      expect(saved.map((r) => [r.currency, r.unitsPerUsd])).toEqual([['BRL', '5.4321']]);
       expect((await options(ana.auth, held.id).expect(200)).body as PaymentOption[]).toEqual([
         { method: 'pago_movil', amount: '1679.00', currency: 'VES', rate: '36.500000' },
         { method: 'bank_transfer', amount: '1679.00', currency: 'VES', rate: '36.500000' },
