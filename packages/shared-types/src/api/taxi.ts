@@ -264,6 +264,8 @@ export interface DriverApproach {
   /** From the driver to the pickup point; null once the passenger is on board. */
   distanceKm: number | null;
   etaMinutes: number | null;
+  /** Where the driver picks the passenger up (the terminal or the stop), for the map; null on board. */
+  pickup: { latitude: number; longitude: number } | null;
 }
 
 /** `PUT /me/taxi/availability`: take requests ("en línea") or stop ("desconectado"). */

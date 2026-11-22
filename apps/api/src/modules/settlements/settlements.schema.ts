@@ -26,6 +26,7 @@ import { bookings } from '../bookings/bookings.schema.js';
 import { timestamps, users } from '../identity/identity.schema.js';
 import { currency, payee } from '../network/network.schema.js';
 import { organizations } from '../organizations/organizations.schema.js';
+import { paymentMethod } from '../payments/payments.schema.js';
 import { taxiRides } from '../taxi/taxi.schema.js';
 
 export const payoutMethod = pgEnum('payout_method', PAYOUT_METHODS);
@@ -184,5 +185,41 @@ export const driverPayoutAccounts = pgTable('driver_payout_accounts', {
   ...timestamps,
 });
 
+/**
+ * A commission debt payment an independent driver reported (ADR-046), until finance confirms it
+ * (then `payout_id` is the collection recorded) or rejects it. One waiting per driver, line and
+ * currency.
+ */
+export const driverDebtReports = pgTable(
+  'driver_debt_reports',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: uuid()
+      .notNull()
+      .references(() => users.id),
+    organizationId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'restrict' }),
+    currency: currency().notNull(),
+    amount: numeric({ precision: 12, scale: 2 }).notNull(),
+    method: paymentMethod().notNull(),
+    reference: text().notNull(),
+    status: text({ enum: ['reported', 'confirmed', 'rejected'] })
+      .notNull()
+      .default('reported'),
+    rejectionReason: text(),
+    payoutId: uuid().references(() => payouts.id, { onDelete: 'set null' }),
+    reviewedBy: uuid().references(() => users.id, { onDelete: 'set null' }),
+    reviewedAt: timestamp({ withTimezone: true }),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('driver_debt_reports_waiting_key')
+      .on(t.userId, t.organizationId, t.currency)
+      .where(sql`${t.status} = 'reported'`),
+  ],
+);
+
+export type DriverDebtReportRow = typeof driverDebtReports.$inferSelect;
 export type SettlementEntryRow = typeof settlementEntries.$inferSelect;
 export type PayoutRow = typeof payouts.$inferSelect;

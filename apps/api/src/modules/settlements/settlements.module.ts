@@ -3,12 +3,15 @@ import { AuditModule } from '../audit/audit.module.js';
 import { IdentityModule } from '../identity/identity.module.js';
 import { OrganizationsModule } from '../organizations/organizations.module.js';
 import {
+  AdminDebtReportsController,
   AdminIndependentPayoutsController,
   AdminSettlementsController,
+  DriverDebtsController,
   DriverEarningsController,
   OrganizationRefundsController,
   OrganizationSettlementsController,
 } from './settlements.controller.js';
+import { DebtPaymentsService } from './debt-payments.service.js';
 import { IndependentPayoutsService } from './independent-payouts.service.js';
 import { SettlementsService } from './settlements.service.js';
 
@@ -23,9 +26,11 @@ import { SettlementsService } from './settlements.service.js';
     OrganizationRefundsController,
     AdminSettlementsController,
     AdminIndependentPayoutsController,
+    AdminDebtReportsController,
     DriverEarningsController,
+    DriverDebtsController,
   ],
-  providers: [SettlementsService, IndependentPayoutsService],
+  providers: [SettlementsService, IndependentPayoutsService, DebtPaymentsService],
   exports: [IndependentPayoutsService],
 })
 export class SettlementsModule {}

@@ -238,6 +238,14 @@ calificaciones, liquidación).
 - Camino a un perfil de conductor independiente propio: la marca de la línea, el dueño de cada
   vehículo y el conductor de cada viaje permiten separarlos más adelante sin perder historial.
 
+## Mapa en vivo (ADR-047)
+
+Mientras el conductor viene y durante el viaje, la app de pasajeros muestra un mapa
+(`react-native-maps`: Apple Maps en iOS, Google Maps en Android) con el conductor y, mientras viene,
+el punto de recogida (`DriverApproach.pickup`, el terminal o la parada de salida). La pantalla se
+recarga cada 5 segundos y el marcador se mueve con él. En la web de la app (`*.web.tsx`) no hay
+mapa: queda el enlace **Ver en el mapa**.
+
 ## Seguridad: compartir el viaje y Emergencia (ADR-043)
 
 - **Compartir**: `POST /me/taxi-rides/:id/share` (viaje abierto) da `/taxi/shared/<token>`, siempre
@@ -265,6 +273,6 @@ calificaciones, liquidación).
 ## Todavía no
 
 Cobro del taxi dentro de la plataforma, tarifas fijas por zona para los taxis de terminal,
-mapa en vivo dentro de la app (hoy se abre la ubicación del conductor en la app de mapas) y la del pasajero, avisos push de cada cambio de estado (hoy:
+la ubicación del pasajero en el mapa (la app de pasajeros ya muestra al conductor y la recogida, ADR-047), avisos push de cada cambio de estado (hoy:
 solicitud nueva y aceptada), recordatorio al conductor antes de un viaje programado y avisos
 automáticos por WhatsApp (los manda el personal con un toque).

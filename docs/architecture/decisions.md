@@ -877,3 +877,34 @@ pedirlo. El límite evita que la deuda en efectivo crezca sin control.
 proveedor de dispersión podrá enviarlas solo cambiando `PAYOUT_PROVIDER`. Los montos mínimos y el
 límite son iguales para todos y están en `shared-types`. El pago de la deuda lo registra finanzas:
 el conductor todavía no lo reporta desde la app.
+
+## ADR-046: El conductor reporta el pago de su deuda de comisiones
+
+**Decisión.** El conductor independiente que debe comisiones (ADR-045) ve en **Mis cobros** las
+cuentas activas de la plataforma para la moneda de su deuda (`DEBT_PAYMENT_METHODS`: pago móvil o
+transferencia en bolívares, USDT en dólares), transfiere y reporta el monto y el número de
+operación (`POST /me/debt-payments`, tabla `driver_debt_reports`; nunca más de lo que debe, uno a la
+vez por línea y moneda: `DEBT_REPORT_PENDING`). Finanzas recibe un aviso, lo ve en Liquidaciones y
+lo **confirma** (se registra como el cobro de ADR-045, con la misma regla de no superar la deuda) o
+lo **rechaza** con un motivo; el conductor recibe el aviso en ambos casos.
+
+**Por qué.** Es el mismo flujo que ya usan los pasajeros con los pagos manuales (ADR-027) y evita
+que el conductor dependa de escribirle a soporte para salir del bloqueo por deuda.
+
+**Compromisos.** La verificación sigue siendo manual, contra el banco. No se adjunta comprobante:
+basta el número de operación.
+
+## ADR-047: Mapa en vivo del viaje en la app de pasajeros
+
+**Decisión.** La pantalla del viaje de taxi o moto muestra un mapa nativo con `react-native-maps`
+(la versión que trae Expo 58): Apple Maps en iOS, sin clave, y Google Maps en Android, con la clave
+`GOOGLE_MAPS_ANDROID_API_KEY` que `app.config.ts` toma al compilar. Marca al conductor (ADR-041)
+y, mientras viene, el punto de recogida (`DriverApproach.pickup`). No sigue la ruta por calles.
+
+**Por qué.** Ver al conductor acercarse sin salir de la app es lo que esperan los pasajeros de una
+app de viajes; la API ya mandaba la ubicación (ADR-041). Usar el mapa del sistema evita servir
+teselas propias y respeta los términos de los proveedores.
+
+**Compromisos.** Hace falta una clave de Google Maps para las compilaciones de Android (Expo Go
+funciona sin ella). En la versión web de la app no hay mapa, solo el enlace. La ubicación es la
+última que mandó el teléfono del conductor (cada 15 s como mucho).

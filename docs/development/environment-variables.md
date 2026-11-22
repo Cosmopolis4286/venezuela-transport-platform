@@ -112,10 +112,11 @@ Las variables de la web que son solo del servidor **no** deben usar el prefijo `
 
 Plantillas: `apps/*-mobile/.env.example`. Se validan en `src/config/env.ts`.
 
-| Variable                   | Obligatoria | Secreta          | Por defecto                    | Para qué                                                                                  |
-| -------------------------- | ----------- | ---------------- | ------------------------------ | ----------------------------------------------------------------------------------------- |
-| `EXPO_PUBLIC_API_BASE_URL` | sí          | **no — pública** | `http://localhost:4000/api/v1` | URL base de la API incluida en el bundle de JS                                            |
-| `EXPO_PUBLIC_WEB_URL`      | sí          | **no — pública** | `http://localhost:3000`        | Sitio web público, donde se abren los Términos y la Política de Privacidad desde las apps |
+| Variable                      | Obligatoria                | Secreta          | Por defecto                    | Para qué                                                                                                                                                                                                 |
+| ----------------------------- | -------------------------- | ---------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EXPO_PUBLIC_API_BASE_URL`    | sí                         | **no — pública** | `http://localhost:4000/api/v1` | URL base de la API incluida en el bundle de JS                                                                                                                                                           |
+| `EXPO_PUBLIC_WEB_URL`         | sí                         | **no — pública** | `http://localhost:3000`        | Sitio web público, donde se abren los Términos y la Política de Privacidad desde las apps                                                                                                                |
+| `GOOGLE_MAPS_ANDROID_API_KEY` | no (solo app de pasajeros) | queda en la app  | —                              | Solo al compilar para Android (`app.config.ts`): clave de Google Maps del mapa en vivo del viaje (ADR-047). Restríngela al paquete de la app en Google Cloud. Expo Go e iOS (Apple Maps) no la necesitan |
 
 Valores según el destino:
 

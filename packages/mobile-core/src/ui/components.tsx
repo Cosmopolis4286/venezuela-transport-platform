@@ -61,10 +61,24 @@ export function Subheading({ children }: { children: ReactNode }) {
   return <Text style={[styles.subheading, { color: colors.text }]}>{children}</Text>;
 }
 
-export function Body({ children, muted = false }: { children: ReactNode; muted?: boolean }) {
+/** `selectable`: the text can be copied (account numbers, references). */
+export function Body({
+  children,
+  muted = false,
+  selectable = false,
+}: {
+  children: ReactNode;
+  muted?: boolean;
+  selectable?: boolean;
+}) {
   const colors = useColors();
   return (
-    <Text style={[styles.body, { color: muted ? colors.muted : colors.text }]}>{children}</Text>
+    <Text
+      selectable={selectable}
+      style={[styles.body, { color: muted ? colors.muted : colors.text }]}
+    >
+      {children}
+    </Text>
   );
 }
 

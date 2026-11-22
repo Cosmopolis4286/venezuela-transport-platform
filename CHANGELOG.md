@@ -57,6 +57,17 @@ pull request.
 
 ### Agregado
 
+- **Datos de ejemplo de la etapa 3**: comisión con una subida anunciada, viajes calificados de los
+  independientes, un pago semanal, una licencia por vencer, un mototaxista suspendido
+  (`suspendido@vtp.test`) con un pago de deuda por verificar y dos alertas de emergencia. El seed
+  acepta `VTP_SEED_DB` para cargar otra base local, y el viaje en moto de ejemplo vuelve a cargarse
+  (el conductor se conecta antes de tomarlo).
+- **Mapa en vivo del viaje** (ADR-047): la app de pasajeros muestra al conductor acercándose y el
+  punto de recogida en un mapa (Apple Maps en iOS, Google Maps en Android con
+  `GOOGLE_MAPS_ANDROID_API_KEY`).
+- **El conductor reporta el pago de su deuda** (ADR-046): en Mis cobros ve las cuentas de VTP,
+  transfiere y reporta el monto y la operación; finanzas lo confirma o rechaza en Liquidaciones y
+  el conductor recibe el aviso.
 - **Comisión y pagos semanales de independientes** (ADR-045): finanzas fija la comisión de VTP por
   viaje (una subida rige a los 30 días y se avisa a los conductores); en los viajes en efectivo
   queda como deuda y en los pagados con paquete se descuenta. Cada lunes se crean los pagos a la

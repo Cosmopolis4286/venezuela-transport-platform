@@ -171,6 +171,7 @@ const es: SharedMessages = {
     DRIVER_DEBT_LIMIT:
       'Debes comisiones por encima del límite: págalas (Mis cobros) para volver a conectarte.',
     PAYOUT_NOT_PENDING: 'Ese pago ya no está pendiente.',
+    DEBT_REPORT_PENDING: 'Ya reportaste un pago que estamos revisando: espera nuestra respuesta.',
     DRIVER_SUSPENDED:
       'Tu cuenta de conductor está suspendida por calificaciones bajas mientras VTP la revisa. Te escribiremos.',
     DRIVER_DOCUMENTS_EXPIRED:
@@ -361,6 +362,7 @@ const en: SharedMessages = {
     DRIVER_DEBT_LIMIT:
       'You owe commissions above the limit: pay them (My earnings) to go online again.',
     PAYOUT_NOT_PENDING: 'That payout is no longer pending.',
+    DEBT_REPORT_PENDING: 'You already reported a payment we are checking: wait for our answer.',
     DRIVER_SUSPENDED:
       'Your driver account is suspended for low ratings while VTP reviews it. We will contact you.',
     DRIVER_DOCUMENTS_EXPIRED:
@@ -548,6 +550,8 @@ const ptBR: SharedMessages = {
     DRIVER_DEBT_LIMIT:
       'Você deve comissões acima do limite: pague-as (Meus ganhos) para voltar a ficar online.',
     PAYOUT_NOT_PENDING: 'Esse pagamento não está mais pendente.',
+    DEBT_REPORT_PENDING:
+      'Você já informou um pagamento que estamos verificando: aguarde nossa resposta.',
     DRIVER_SUSPENDED:
       'Sua conta de motorista está suspensa por avaliações baixas enquanto a VTP a revisa. Entraremos em contato.',
     DRIVER_DOCUMENTS_EXPIRED:
