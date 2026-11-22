@@ -243,7 +243,7 @@ describe.runIf(expectDatabase)('Fiscal: service-fee invoices and books (e2e)', (
         .send({ number, controlNumber: `00-${run}`, issuedOn: '2000-01-03' })
         .expect(409)
         .expect((res) => expect(res.body.error.reason).toBe('BCV_RATE_MISSING'));
-      // The same official rate every e2e file uses (one for the whole platform, ADR-046).
+      // The same official rate every e2e file uses (one for the whole platform, ADR-048).
       await asAdmin('put', '/bcv-rates').send({ date: today, unitsPerUsd: '36.5' }).expect(200);
 
       // The buyer can still change on a draft.

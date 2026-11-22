@@ -16,15 +16,122 @@ import {
   DRIVER_DEBT_LIMIT,
   DRIVER_PAYOUT_MINIMUM,
   formatPaymentAmount,
+  PAYMENT_ACCOUNT_FIELDS,
+  PAYMENT_METHOD_LABELS,
   PAYOUT_METHOD_LABELS,
   PAYOUT_METHODS,
+  type DriverDebt,
   type DriverEarnings,
+  type PaymentMethod,
   type DriverPayoutAccount,
   type PayoutMethod,
 } from '@vtp/shared-types';
 import { useState } from 'react';
 import { RefreshControl } from 'react-native';
 import { useRefreshOnFocus } from '@/lib/use-refresh-on-focus';
+
+/**
+ * Paying a commission debt (ADR-046): the platform's accounts for its currency, and the form to
+ * report the transfer. Finance confirms it; until then it shows as being checked.
+ */
+function PayDebt({ debt, onReported }: { debt: DriverDebt; onReported: () => void }) {
+  const { api } = useAuth();
+  const [method, setMethod] = useState<PaymentMethod | null>(debt.accounts[0]?.method ?? null);
+  const [amount, setAmount] = useState(debt.amount);
+  const [reference, setReference] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const account = debt.accounts.find((a) => a.method === method);
+  const waiting = debt.report?.status === 'reported';
+
+  const send = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await api.request('/me/debt-payments', {
+        method: 'POST',
+        body: {
+          organizationId: debt.organization.id,
+          currency: debt.currency,
+          amount: amount.replace(',', '.'),
+          method,
+          reference: reference.trim(),
+        },
+      });
+      setReference('');
+      onReported();
+    } catch (e) {
+      setError(userMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card>
+      <Subheading>Pagar mi deuda con {debt.organization.name}</Subheading>
+      <Body>Debes {formatPaymentAmount(debt.amount, debt.currency)} de comisiones.</Body>
+      {waiting ? (
+        <Banner tone="info">
+          Reportaste {formatPaymentAmount(debt.report!.amount, debt.currency)} (operación{' '}
+          {debt.report!.reference}). Lo estamos verificando: te avisamos al confirmarlo.
+        </Banner>
+      ) : (
+        <>
+          {debt.report?.status === 'rejected' ? (
+            <Banner tone="error">
+              No confirmamos tu pago anterior: {debt.report.rejectionReason}
+            </Banner>
+          ) : null}
+          {debt.accounts.length === 0 ? (
+            <Body muted>
+              Todavía no hay una cuenta de VTP para pagar en esta moneda: escríbenos para pagarla.
+            </Body>
+          ) : (
+            <>
+              <Segmented
+                label="Paga por"
+                options={debt.accounts.map((a) => ({
+                  value: a.method,
+                  label: PAYMENT_METHOD_LABELS[a.method],
+                }))}
+                value={method ?? debt.accounts[0]!.method}
+                onChange={setMethod}
+              />
+              {account
+                ? PAYMENT_ACCOUNT_FIELDS[account.method].map((field) => (
+                    <Body key={field.key} selectable>
+                      {field.label}: {account.fields[field.key]}
+                    </Body>
+                  ))
+                : null}
+              <Field
+                label="Monto que pagaste"
+                value={amount}
+                onChangeText={setAmount}
+                keyboardType="decimal-pad"
+              />
+              <Field
+                label="Número de operación"
+                value={reference}
+                onChangeText={setReference}
+                autoCapitalize="characters"
+                maxLength={100}
+              />
+              {error ? <Banner tone="error">{error}</Banner> : null}
+              <Button
+                title="Ya pagué"
+                loading={busy}
+                disabled={reference.trim().length < 3 || !account}
+                onPress={() => void send()}
+              />
+            </>
+          )}
+        </>
+      )}
+    </Card>
+  );
+}
 
 const EMPTY: DriverPayoutAccount = {
   method: 'pago_movil',
@@ -76,6 +183,7 @@ export default function EarningsScreen() {
     }
   };
 
+  const debts = useApi<DriverDebt[]>('/me/debts');
   const balances = earnings.data?.balances ?? [];
   const commission = earnings.data?.commission ?? null;
   const pct = (rate: string) => `${Number(rate).toLocaleString('es-VE')} %`;
@@ -106,13 +214,23 @@ export default function EarningsScreen() {
             {formatPaymentAmount(DRIVER_PAYOUT_MINIMUM.VES, 'VES')}). Si debes más de{' '}
             {formatPaymentAmount(DRIVER_DEBT_LIMIT.USD, 'USD')} o{' '}
             {formatPaymentAmount(DRIVER_DEBT_LIMIT.VES, 'VES')}, no puedes conectarte hasta pagarla:
-            escríbenos para pagarla.
+            págala aquí abajo y repórtala.
           </Body>
         </Card>
       ) : null}
       {balances.length === 0 && !earnings.loading ? (
         <Body muted>Todavía no tienes ventas en rutas que paguen al conductor.</Body>
       ) : null}
+      {(debts.data ?? []).map((debt) => (
+        <PayDebt
+          key={`${debt.organization.id}:${debt.currency}`}
+          debt={debt}
+          onReported={() => {
+            void debts.reload();
+            void reload();
+          }}
+        />
+      ))}
       {balances.map((b) => (
         <Card key={`${b.organization.id}:${b.currency}`}>
           <Subheading>{b.organization.name}</Subheading>

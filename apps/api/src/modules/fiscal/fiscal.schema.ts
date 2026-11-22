@@ -55,7 +55,7 @@ export const bcvRateSource = pgEnum('bcv_rate_source', BCV_RATE_SOURCES);
 export const bcvRates = pgTable('bcv_rates', {
   date: date().primaryKey(),
   unitsPerUsd: numeric({ precision: 18, scale: 6 }).notNull(),
-  /** Fetched by the job (ADR-046) or typed by an admin; typed rates are never overwritten. */
+  /** Fetched by the job (ADR-048) or typed by an admin; typed rates are never overwritten. */
   source: bcvRateSource().notNull().default('manual'),
   updatedByUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
   ...timestamps,

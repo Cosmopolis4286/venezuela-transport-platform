@@ -30,6 +30,7 @@ import {
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Linking, RefreshControl, Share } from 'react-native';
+import { DriverMap } from '@/components/driver-map';
 import { useFeeTotal } from '@/components/pending-fees';
 import { useT } from '@/i18n/use-t';
 import { driverLine, isOpenRide, ridePlace } from '@/lib/taxi';
@@ -190,6 +191,11 @@ export default function TaxiRideScreen() {
               {/* Where the driver is while they come for you (ADR-041). */}
               {data.driverApproach ? (
                 <>
+                  <DriverMap
+                    approach={data.driverApproach}
+                    driverLabel={t.taxi.mapDriver}
+                    pickupLabel={t.taxi.mapPickup}
+                  />
                   <Body>
                     {data.driverApproach.distanceKm !== null &&
                     data.driverApproach.etaMinutes !== null

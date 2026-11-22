@@ -5,7 +5,7 @@ import { Public } from '../identity/auth.decorators.js';
 import { RequirePlatformPermission } from '../identity/platform-role.guard.js';
 import { BcvRatesService } from './bcv-rates.service.js';
 
-/** The BCV rate in force (public): bolívar prices are worked out with it (ADR-046). */
+/** The BCV rate in force (public): bolívar prices are worked out with it (ADR-048). */
 @ApiTags('payments')
 @Controller({ path: 'exchange-rates/official', version: '1' })
 export class OfficialRateController {

@@ -981,7 +981,7 @@ export class PaymentsService {
   }
 
   /**
-   * Bolívars always at the BCV's official rate in force (ADR-046); other currencies (BRL for PIX)
+   * Bolívars always at the BCV's official rate in force (ADR-048); other currencies (BRL for PIX)
    * at the rate set by hand. Without a recent BCV rate nothing is offered in bolívares.
    */
   private async withOfficialBolivar(

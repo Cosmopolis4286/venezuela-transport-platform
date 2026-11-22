@@ -6,10 +6,14 @@ import {
   PAYMENT_COLLECTIONS,
   PAYOUT_DIRECTIONS,
   PAYOUT_METHODS,
+  PAYMENT_METHODS,
   type CreatePayoutRequest,
   type DriverPayoutAccount,
   type Currency,
   type MarkPayoutSentRequest,
+  type PaymentMethod,
+  type RejectDebtReportRequest,
+  type ReportDebtPaymentRequest,
   type MarkRefundedRequest,
   type PaymentCollection,
   type PayoutDirection,
@@ -245,4 +249,34 @@ export class MarkPayoutSentDto implements MarkPayoutSentRequest {
   @MinLength(1)
   @MaxLength(100)
   reference!: string;
+}
+
+export class ReportDebtPaymentDto implements ReportDebtPaymentRequest {
+  @IsUUID()
+  organizationId!: string;
+
+  @ApiProperty({ enum: CURRENCIES })
+  @IsIn(CURRENCIES)
+  currency!: Currency;
+
+  @ApiProperty({ example: '25.00' })
+  @Matches(AMOUNT, { message: 'amount must look like 25.00' })
+  amount!: string;
+
+  @ApiProperty({ enum: PAYMENT_METHODS })
+  @IsIn(PAYMENT_METHODS)
+  method!: PaymentMethod;
+
+  @ApiProperty({ example: '00123456', description: 'Operation number of the transfer' })
+  @IsString()
+  @MinLength(3)
+  @MaxLength(100)
+  reference!: string;
+}
+
+export class RejectDebtReportDto implements RejectDebtReportRequest {
+  @IsString()
+  @MinLength(3)
+  @MaxLength(300)
+  reason!: string;
 }

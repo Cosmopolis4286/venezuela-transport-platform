@@ -195,7 +195,7 @@ describe.runIf(expectDatabase)('Reports (e2e)', () => {
           ],
         })
         .expect(200);
-      // Bolívares at the BCV's official rate (ADR-046), the same in every e2e file.
+      // Bolívares at the BCV's official rate (ADR-048), the same in every e2e file.
       await setOfficialRate(app);
       const payWith = async (booking: Booking) => {
         const payment = (

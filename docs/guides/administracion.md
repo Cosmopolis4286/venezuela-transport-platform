@@ -146,8 +146,10 @@ Arriba en **Liquidaciones**:
   cuentan en su saldo mientras están pendientes. **Generar los pagos de esta semana** los crea antes
   (no duplica los ya creados).
 - **Deudas**: en la liquidación de la línea, un conductor con saldo negativo debe comisiones; con
-  más de US$ 20 o Bs. 800 no puede conectarse. Cuando pague, registra el monto en su fila
-  (**Registrar lo que pagó el conductor**): nunca más de lo que debe.
+  más de US$ 20 o Bs. 800 no puede conectarse. Los conductores reportan sus pagos desde la app
+  (**Pagos de comisiones reportados**, ADR-046): verifica en el banco el monto y la operación y
+  **Llegó: confirmar** (queda registrado en su saldo) o **Rechazar** con el motivo. Si pagó por
+  otro medio, regístralo en su fila de la liquidación (**Registrar lo que pagó el conductor**).
 
 ## Paquetes de viajes (`/admin/trip-packs`, solo administradores)
 

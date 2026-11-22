@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/server/api';
 
 /**
  * Bolívar prices always use the BCV's official rate, fetched by the API every few hours
- * (ADR-046): shown here instead of a field to type it.
+ * (ADR-048): shown here instead of a field to type it.
  */
 export async function OfficialRate() {
   const { rate } = await apiFetch<{ rate: BcvRate | null }>('/exchange-rates/official', {

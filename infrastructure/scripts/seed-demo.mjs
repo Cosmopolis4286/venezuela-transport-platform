@@ -11,6 +11,9 @@
 //   review, a cancelled ticket in the refund queue, trips assigned to a bus and driver, cash sales,
 //   taxi and motorcycle rides (one finished and rated), a WhatsApp ride, trip packs, and an
 //   operator waiting for approval.
+// - Drivers' money, quality and safety (stage 3): a 10 % commission with a raise to 12 % announced,
+//   rated rides of the independents, a weekly payout, a driver suspended for low ratings who
+//   reported paying his commission debt, a licence about to expire, and two emergency alerts.
 //
 // Usage: node infrastructure/scripts/seed-demo.mjs [--api http://localhost:4000/api/v1]
 //        node infrastructure/scripts/seed-demo.mjs --accounts   (only lists the accounts)
@@ -20,6 +23,8 @@ import { spawnSync } from 'node:child_process';
 
 const API = argValue('--api') ?? process.env.VTP_API_URL ?? 'http://localhost:4000/api/v1';
 const PASSWORD = 'vtp-demo-2026';
+/** The local database the API uses; by default the container's own (`$POSTGRES_DB`). */
+const DATABASE = process.env.VTP_SEED_DB || '$POSTGRES_DB';
 const ZONE_SLUG = 'eje-casacoima-san-felix-puerto-ordaz';
 const INTERURBAN_MARK = 'Expresos Los Llanos (ejemplo)';
 /** Added with the accounts of every role: its presence means that part is loaded. */
@@ -212,7 +217,15 @@ const ACCOUNTS = {
     firstName: 'Iván',
     lastName: 'Independiente',
     role: 'Mototaxista independiente de VTP (app de transportistas)',
-    can: 'Tomar viajes en moto con VTP, solo con su propia moto',
+    can: 'Tomar viajes en moto con VTP, solo con su propia moto; ver su calificación, la comisión y su pago semanal en Mis cobros',
+  },
+  suspendido: {
+    group: 'Conductores de taxi y moto',
+    email: 'suspendido@vtp.test',
+    firstName: 'Samuel',
+    lastName: 'Suspendido',
+    role: 'Mototaxista independiente suspendido por calificación baja',
+    can: 'Ver la suspensión y pagar su deuda de comisiones (Mis cobros); Independientes la revisa en Administración',
   },
   // --- Passengers.
   passenger: {
@@ -330,7 +343,7 @@ function sql(statement, what) {
       'postgres',
       'sh',
       '-c',
-      `psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "${statement}"`,
+      `psql -U "$POSTGRES_USER" -d "${DATABASE}" -c "${statement}"`,
     ],
     { encoding: 'utf8' },
   );
@@ -349,7 +362,7 @@ function sqlValue(statement, what) {
       'postgres',
       'sh',
       '-c',
-      `psql -tA -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "${statement}"`,
+      `psql -tA -U "$POSTGRES_USER" -d "${DATABASE}" -c "${statement}"`,
     ],
     { encoding: 'utf8' },
   );
@@ -781,7 +794,7 @@ async function interurban(admin, sub) {
     return { ...created, stops: stops.map(([s]) => s), schedules };
   };
 
-  // Bolívar prices use the BCV's official rate (ADR-046). The API fetches it every few hours;
+  // Bolívar prices use the BCV's official rate (ADR-048). The API fetches it every few hours;
   // offline, the demo types one so Pago Móvil shows amounts.
   await attempt('tasa oficial del BCV', () =>
     call('PUT', '/admin/fiscal/bcv-rates', {
@@ -1111,10 +1124,13 @@ async function activity(admin, sub, net) {
       });
       const step = (path, body = {}) =>
         call('POST', `/me/taxi/rides/${ride.id}/${path}`, { auth: sub.moto.auth, body });
+      // Only online drivers take rides (ADR-040); offline again once it is done.
+      await call('PUT', '/me/taxi/availability', { auth: sub.moto.auth, body: { online: true } });
       await step('accept', { organizationId: sub.moto.id, vehicleId: sub.motoVehicle.id });
       const seen = await call('GET', `/me/taxi-rides/${ride.id}`, { auth });
       await step('pickup', seen.pickupCode ? { pickupCode: seen.pickupCode } : {});
       await step('complete', {});
+      await call('PUT', '/me/taxi/availability', { auth: sub.moto.auth, body: { online: false } });
       await call('POST', `/me/taxi-rides/${ride.id}/rate`, {
         auth,
         body: { rating: 5, comment: 'Rápido y amable' },
@@ -1427,6 +1443,196 @@ async function latestRoles() {
   if (done.length) console.log(`  ✔ Roles nuevos: ${done.join(', ')}`);
 }
 
+/**
+ * Stage 3 of the independent drivers (ADR-042 to ADR-046), on top of `independents()`: the
+ * commission, rated rides with their commissions and credits, the weekly payout, a driver
+ * suspended for low ratings who reported paying his debt, an expiring licence and two emergency
+ * alerts. Past rides go straight into the database (they happened before today); what has a flow
+ * (the suspension, the payout, the debt report, the commission raise) goes through the API.
+ */
+async function stageThree() {
+  const done = [];
+  const [admin, finance, passenger] = [
+    await account('admin'),
+    await account('finanzas'),
+    await account('passenger'),
+  ];
+  const id = (statement, what) => {
+    const value = sqlValue(statement, what);
+    if (!value) throw new Error(`${what}: no está en la base`);
+    return value;
+  };
+  const line = id(
+    `select id from organizations where operated_by_platform and type = 'moto_line'`,
+    'la línea de motos de VTP',
+  );
+  const zone = id(
+    `select id from operating_zones where slug = '${ZONE_SLUG}'`,
+    'la zona de ejemplo',
+  );
+  const from = id(`select id from stops where name = 'Terminal de San Félix'`, 'San Félix');
+  const to = id(`select id from stops where name = 'Terminal de Puerto Ordaz'`, 'Puerto Ordaz');
+  const userId = (who) => id(`select id from users where email = '${ACCOUNTS[who].email}'`, who);
+
+  // --- The suspended driver: an approved independent with his own motorcycle.
+  await account('suspendido');
+  const reviewer = await account('revisor');
+  const application = await applyAsIndependent('suspendido', 'motorcycle', 'V-21987654', {
+    plate: 'MOT888S',
+    make: 'Empire',
+    model: 'Owen',
+    year: 2020,
+    color: 'Negro',
+  });
+  const full = await call('GET', `/admin/applications/${application.id}`, { auth: reviewer });
+  await call('POST', `/admin/applications/${application.id}/review`, {
+    auth: reviewer,
+    body: {
+      decision: 'approve',
+      documents: full.documents.map((d) => ({ documentId: d.id, status: 'accepted' })),
+    },
+    what: 'aprobar al mototaxista suspendido',
+  });
+
+  // --- The commission: 10 % today (as if announced a month ago) and a raise to 12 % announced now.
+  sql(
+    `update platform_settings set independent_commission_rate = 10.00, independent_commission_next_rate = null, independent_commission_next_from = null`,
+    'comisión de independientes',
+  );
+  await attempt('anunciar la comisión del 12 %', () =>
+    call('PUT', '/admin/independent-commission', { auth: finance, body: { rate: '12' } }),
+  );
+  done.push('comisión del 10 % con subida al 12 % anunciada');
+
+  // --- Past rides of both drivers, rated; `credited` ones were paid with a pack (the driver gets
+  // the fare minus 10 %), the rest in cash (the driver owes the 10 %).
+  const rides = (who, ratings, comments, credited) => {
+    const driver = userId(who);
+    const vehicle = id(
+      `select id from vehicles where owner_user_id = '${driver}' and organization_id = '${line}'`,
+      `la moto de ${who}`,
+    );
+    const values = ratings
+      .map(
+        (rating, i) =>
+          `('${userId('passenger')}', 'stretch', '${from}', '${to}', '${zone}', 'motorcycle', 'Calle Bolívar, frente a la plaza (ejemplo)', 1, 'completed', now() - interval '${i + 1} days', '${line}', '${driver}', '${vehicle}', 1.80, 'USD', now() - interval '${i + 1} days', now() - interval '${i + 1} days', now() - interval '${i + 1} days', ${rating}, ${comments[i] ? `'${comments[i]}'` : 'null'}, now() - interval '${i + 1} days')`,
+      )
+      .join(', ');
+    sql(
+      `insert into taxi_rides (passenger_user_id, kind, from_stop_id, to_stop_id, zone_id, mode, address, passengers, status, expires_at, organization_id, driver_user_id, vehicle_id, fare_amount, fare_currency, accepted_at, picked_up_at, completed_at, rating, rating_comment, rated_at) values ${values}`,
+      `viajes de ${who}`,
+    );
+    sql(
+      `insert into settlement_entries (organization_id, taxi_ride_id, kind, collected_by, payee, seats, currency, gross, commission_rate, commission, earned) select organization_id, id, case when n <= ${credited} then 'booking' else 'ride_commission' end::settlement_entry_kind, case when n <= ${credited} then 'platform' else 'operator' end::payment_collection, 'driver', 1, 'USD', 1.80, 10.00, 0.18, case when n <= ${credited} then 1.62 else -0.18 end from (select id, organization_id, row_number() over (order by completed_at) as n from taxi_rides where driver_user_id = '${driver}' and status = 'completed' and not exists (select 1 from settlement_entries e where e.taxi_ride_id = taxi_rides.id)) r`,
+      `comisiones de ${who}`,
+    );
+  };
+  rides('independiente', [5, 5, 4, 5, 5, 4, 5, 5, 5, 4, 5, 5], ['Muy amable y puntual'], 6);
+  rides(
+    'suspendido',
+    [2, 3, 2, 3, 3, 2, 3, 2, 3, 2, 3],
+    ['Manejó muy rápido', 'Llegó tarde', 'No tenía casco para el pasajero'],
+    0,
+  );
+  done.push('23 viajes calificados de los independientes');
+
+  // --- One more ride of the suspended driver, rated now through the app: his average falls
+  // below 4 and the platform suspends him (the real flow, with its notice).
+  sql(
+    `insert into taxi_rides (passenger_user_id, kind, from_stop_id, to_stop_id, zone_id, mode, address, passengers, status, expires_at, organization_id, driver_user_id, vehicle_id, fare_amount, fare_currency, accepted_at, picked_up_at, completed_at) select '${userId('passenger')}', 'stretch', '${from}', '${to}', '${zone}', 'motorcycle', 'Calle Bolívar (ejemplo)', 1, 'completed', now(), '${line}', u.id, v.id, 1.80, 'USD', now() - interval '40 minutes', now() - interval '30 minutes', now() - interval '10 minutes' from users u join vehicles v on v.owner_user_id = u.id where u.email = '${ACCOUNTS.suspendido.email}'`,
+    'último viaje del suspendido',
+  );
+  const last = id(
+    `select id from taxi_rides where driver_user_id = '${userId('suspendido')}' and rating is null order by completed_at desc limit 1`,
+    'el último viaje del suspendido',
+  );
+  sql(
+    `insert into settlement_entries (organization_id, taxi_ride_id, kind, collected_by, payee, seats, currency, gross, commission_rate, commission, earned) values ('${line}', '${last}', 'ride_commission', 'operator', 'driver', 1, 'USD', 1.80, 10.00, 0.18, -0.18)`,
+    'comisión del último viaje',
+  );
+  if (
+    await attempt('calificar al suspendido', () =>
+      call('POST', `/me/taxi-rides/${last}/rate`, {
+        auth: passenger,
+        body: { rating: 1, comment: 'Iba hablando por teléfono' },
+      }),
+    )
+  ) {
+    done.push('un mototaxista suspendido por calificación');
+  }
+
+  // --- He pays his commission debt in USDT and reports it: finance verifies it in Liquidaciones.
+  await attempt('cuenta USDT de la plataforma', () =>
+    call('PUT', '/admin/payment-accounts/usdt', {
+      auth: admin,
+      body: {
+        fields: { network: 'TRON (TRC-20)', address: 'TVtpEjemplo000000000000000000000' },
+        active: true,
+      },
+    }),
+  );
+  const suspended = await account('suspendido');
+  const [debt] = await call('GET', '/me/debts', { auth: suspended });
+  if (
+    debt &&
+    (await attempt('reportar el pago de la deuda', () =>
+      call('POST', '/me/debt-payments', {
+        auth: suspended,
+        body: {
+          organizationId: debt.organization.id,
+          currency: debt.currency,
+          amount: debt.amount,
+          method: 'usdt',
+          reference: 'TX-EJEMPLO-7731',
+        },
+      }),
+    ))
+  ) {
+    done.push('un pago de deuda por verificar');
+  }
+
+  // --- The healthy independent: where to be paid, and this week's payout of what he is owed.
+  const independent = await account('independiente');
+  await attempt('cuenta de cobro del independiente', () =>
+    call('PUT', '/me/payout-account', {
+      auth: independent,
+      body: {
+        method: 'pago_movil',
+        bank: '0102 – Banco de Venezuela',
+        account: '0414-5550123',
+        holderId: 'V-20123456',
+        holderName: 'Iván Independiente',
+      },
+    }),
+  );
+  if (
+    await attempt('pagos semanales', () =>
+      call('POST', '/admin/driver-payouts/run', { auth: finance }),
+    )
+  ) {
+    done.push('el pago semanal del independiente');
+  }
+
+  // --- His licence expires in 20 days: the app asks him to renew it.
+  sql(
+    `update provider_application_documents d set expires_on = current_date + 20 from provider_applications a join users u on u.id = a.user_id where d.application_id = a.id and d.kind = 'driver_license' and u.email = '${ACCOUNTS.independiente.email}'`,
+    'licencia por vencer',
+  );
+  done.push('una licencia por vencer');
+
+  // --- Two emergency alerts on his past rides: one open, one attended.
+  sql(
+    `insert into safety_incidents (ride_id, reporter_user_id, reporter_role, latitude, longitude, created_at, resolved_at, resolved_by, resolved_notes) select r.id, '${userId('passenger')}', 'passenger', 8.3005, -62.7111, now() - interval '20 minutes', null, null, null from taxi_rides r where r.driver_user_id = '${userId('independiente')}' order by r.completed_at desc limit 1`,
+    'emergencia abierta',
+  );
+  sql(
+    `insert into safety_incidents (ride_id, reporter_user_id, reporter_role, latitude, longitude, created_at, resolved_at, resolved_by, resolved_notes) select r.id, r.driver_user_id, 'driver', 8.2954, -62.7340, now() - interval '3 days', now() - interval '3 days' + interval '15 minutes', '${userId('soporte')}', 'Llamamos al conductor: un pasajero agresivo se bajó; el conductor está bien.' from taxi_rides r where r.driver_user_id = '${userId('independiente')}' order by r.completed_at asc limit 1`,
+    'emergencia atendida',
+  );
+  done.push('dos alertas de emergencia');
+  console.log(`  ✔ Etapa 3: ${done.join(', ')}`);
+}
+
 function printAccounts() {
   console.log(`\nCuentas de ejemplo (contraseña para todas: ${PASSWORD}):`);
   let group;
@@ -1509,6 +1715,12 @@ async function main() {
       'buscar las solicitudes de ejemplo',
     ) === '2';
   if (!independentsReady) await attempt('independientes', () => independents());
+  const stageThreeReady =
+    sqlValue(
+      `select count(*) from provider_applications a join users u on u.id = a.user_id where u.email = '${ACCOUNTS.suspendido.email}' and a.status = 'approved'`,
+      'buscar los datos de la etapa 3',
+    ) !== '0';
+  if (!stageThreeReady) await attempt('etapa 3', () => stageThree());
   verifyEmails();
   printAccounts();
   if (warnings) {

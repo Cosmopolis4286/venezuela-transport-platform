@@ -32,7 +32,7 @@ const inDays = (days: number) =>
     .toISOString()
     .slice(0, 10);
 
-/** The BCV's official rate, fetched by a job (ADR-046). */
+/** The BCV's official rate, fetched by a job (ADR-048). */
 describe.runIf(expectDatabase)('BCV official rate (e2e)', () => {
   let app: NestExpressApplication;
   const bcv = new FakeFetcher('bcv');

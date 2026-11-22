@@ -135,7 +135,7 @@ export const envSchema = z
      */
     INVOICE_ISSUER: z.enum(['draft', 'digital_printer']).default('draft'),
     /**
-     * Every how many hours the BCV's official rate is fetched (ADR-046): from bcv.org.ve, or
+     * Every how many hours the BCV's official rate is fetched (ADR-048): from bcv.org.ve, or
      * ve.dolarapi.com when it fails. Bolívar prices always use it. 0 turns the job off (then an
      * admin types the rate in Administración → Facturación).
      */

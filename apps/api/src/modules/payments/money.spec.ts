@@ -34,7 +34,7 @@ describe('money', () => {
     expect(convert('1000.00', 'VES', 'BRL', rates)?.amount).toBe('148.82');
   });
 
-  it("converts with the BCV's official rate, which has six decimals (ADR-046)", () => {
+  it("converts with the BCV's official rate, which has six decimals (ADR-048)", () => {
     const rates = new Map([['VES', '236.457812']] as const);
     expect(convert('1.00', 'USD', 'VES', rates)).toEqual({ amount: '236.46', rate: '236.457812' });
     expect(convert('10.00', 'USD', 'VES', rates)).toEqual({

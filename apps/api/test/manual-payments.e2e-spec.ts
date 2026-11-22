@@ -5,6 +5,11 @@ import {
   presetLayout,
   type AuthResponse,
   type Booking,
+  type DriverDebt,
+  type DriverDebtReport,
+  type DriverDebtReportForReview,
+  type IndependentLine,
+  type Organization,
   type OrganizationMembershipSummary,
   type OtpChallengeResponse,
   type Payment,
@@ -28,7 +33,11 @@ import type { OtpMessage, OtpSender } from '../src/modules/identity/otp/otp-send
 import { addDays, todayInVenezuela } from '../src/modules/network/departures.js';
 import { notifications } from '../src/modules/notifications/notifications.schema.js';
 import { NotificationsService } from '../src/modules/notifications/notifications.service.js';
+import { vehicles } from '../src/modules/fleet/fleet.schema.js';
+import { memberships } from '../src/modules/organizations/organizations.schema.js';
+import { recordRideCommission } from '../src/modules/settlements/ledger.js';
 import { settlementEntries } from '../src/modules/settlements/settlements.schema.js';
+import { taxiRides } from '../src/modules/taxi/taxi.schema.js';
 
 const expectDatabase = process.env.E2E_EXPECT_DATABASE === 'true';
 
@@ -90,6 +99,9 @@ describe.runIf(expectDatabase)('Manual payments (e2e)', () => {
     ).body as AuthResponse;
     return { auth: `Bearer ${res.tokens.accessToken}`, user: res.user, email };
   };
+
+  const reason = (res: request.Response) =>
+    (res.body as { error: { reason?: string } }).error.reason;
 
   const passenger = (seatNumber: string, n = randomInt(10_000_000, 30_000_000)) => ({
     seatNumber,
@@ -258,7 +270,7 @@ describe.runIf(expectDatabase)('Manual payments (e2e)', () => {
         ['usdt', false],
       ]);
 
-      // Bolívares at the BCV's official rate (ADR-046), the same in every e2e file.
+      // Bolívares at the BCV's official rate (ADR-048), the same in every e2e file.
       await setOfficialRate(app);
 
       // --- Only active accounts are offered; the instructions are the account and the concept.
@@ -525,6 +537,190 @@ describe.runIf(expectDatabase)('Manual payments (e2e)', () => {
         .set('Authorization', owner.auth)
         .send({ reference: 'DEV-001' })
         .expect(204);
+    },
+  );
+
+  it(
+    'lets an independent driver report paying their commission debt, for finance to confirm',
+    { timeout: 30_000 },
+    async () => {
+      const db = app.get(DatabaseService).db;
+      const admin = await signIn();
+      await db.update(users).set({ platformRole: 'admin' }).where(eq(users.id, admin.user.id));
+      const asAdmin = (req: request.Test) => req.set('Authorization', admin.auth);
+      // This file owns the platform's accounts: pago móvil is active, USDT is not.
+      await asAdmin(http().put('/api/v1/admin/payment-accounts/pago_movil'))
+        .send({
+          fields: { bank: '0102 – Banco de Venezuela', phone: '0414-1234567', document: 'J-1' },
+          active: true,
+        })
+        .expect(200);
+
+      // An independent driver of the platform's car line owes Bs. 100,00 in commissions.
+      const first = await asAdmin(http().post('/api/v1/admin/independent-lines')).send({
+        type: 'taxi_line',
+        legalName: `VTP Taxis ${run}`,
+        tradeName: 'VTP',
+        rif: `J-${randomInt(10_000_000, 99_999_999)}-${randomInt(0, 9)}`,
+      });
+      const line: Organization =
+        first.status === 201
+          ? (first.body as OrganizationMembershipSummary).organization
+          : (
+              (await asAdmin(http().get('/api/v1/admin/independent-lines')).expect(200))
+                .body as IndependentLine[]
+            ).find((l) => l.organization.type === 'taxi_line')!.organization;
+      const driver = await signIn();
+      await db
+        .insert(memberships)
+        .values({ organizationId: line.id, userId: driver.user.id, role: 'driver' });
+      const [car] = await db
+        .insert(vehicles)
+        .values({
+          organizationId: line.id,
+          plate: `DE${randomInt(100, 999)}DA`,
+          mode: 'car',
+          ownerUserId: driver.user.id,
+        })
+        .returning({ id: vehicles.id });
+      const stop = async (name: string) =>
+        (
+          await asAdmin(http().post('/api/v1/admin/stops'))
+            .send({ kind: 'stop', name: `${name} ${run}`, city: `${name} ${run}`, state: 'Lara' })
+            .expect(201)
+        ).body as Stop;
+      const [a, b] = [await stop('Deuda A'), await stop('Deuda B')];
+      const zone = (
+        await asAdmin(http().post('/api/v1/admin/zones'))
+          .send({ name: `Deuda ${run}`, slug: `deuda-${run}`, status: 'active' })
+          .expect(201)
+      ).body as { id: string };
+      const [ride] = await db
+        .insert(taxiRides)
+        .values({
+          passengerUserId: admin.user.id,
+          kind: 'stretch',
+          fromStopId: a.id,
+          toStopId: b.id,
+          zoneId: zone.id,
+          mode: 'car',
+          address: 'Calle 5',
+          passengers: 1,
+          status: 'completed',
+          expiresAt: new Date(),
+          organizationId: line.id,
+          driverUserId: driver.user.id,
+          vehicleId: car!.id,
+          fareAmount: '1000.00',
+          fareCurrency: 'VES',
+          completedAt: new Date(),
+        })
+        .returning();
+      await db.transaction((tx) =>
+        recordRideCommission(
+          tx,
+          {
+            id: ride!.id,
+            organizationId: line.id,
+            passengers: 1,
+            fareAmount: '1000.00',
+            fareCurrency: 'VES',
+          },
+          '10.00',
+        ),
+      );
+      const debts = async () =>
+        (await http().get('/api/v1/me/debts').set('Authorization', driver.auth).expect(200))
+          .body as DriverDebt[];
+      expect(await debts()).toEqual([
+        {
+          organization: { id: line.id, name: expect.any(String) },
+          currency: 'VES',
+          amount: '100.00',
+          accounts: [
+            { method: 'pago_movil', fields: expect.objectContaining({ phone: '0414-1234567' }) },
+          ],
+          report: null,
+        },
+      ]);
+
+      // --- They report it: never above the debt, only to an account of the platform, one at a time.
+      const report = (amount: string, method = 'pago_movil') =>
+        http()
+          .post('/api/v1/me/debt-payments')
+          .set('Authorization', driver.auth)
+          .send({
+            organizationId: line.id,
+            currency: 'VES',
+            amount,
+            method,
+            reference: `OP-${run}`,
+          });
+      expect(reason(await report('100.01').expect(409))).toBe('COLLECTION_EXCEEDS_DEBT');
+      expect(reason(await report('50.00', 'usdt').expect(409))).toBe('PAYMENT_METHOD_UNAVAILABLE');
+      await http()
+        .post('/api/v1/me/debt-payments')
+        .set('Authorization', admin.auth)
+        .send({
+          organizationId: line.id,
+          currency: 'VES',
+          amount: '1.00',
+          method: 'pago_movil',
+          reference: 'X12',
+        })
+        .expect(409); // admins owe nothing to the line
+      expect(((await report('60.00').expect(200)).body as DriverDebt[])[0]!.report).toMatchObject({
+        status: 'reported',
+        amount: '60.00',
+      });
+      expect(reason(await report('40.00').expect(409))).toBe('DEBT_REPORT_PENDING');
+
+      // --- Finance sees it with what is owed now; a rejection needs a reason.
+      const queue = async () =>
+        (
+          (await asAdmin(http().get('/api/v1/admin/driver-debt-reports')).expect(200))
+            .body as DriverDebtReportForReview[]
+        ).filter((r) => r.driver.id === driver.user.id);
+      const [waiting] = await queue();
+      expect(waiting).toMatchObject({ owed: '100.00', amount: '60.00', line: expect.any(String) });
+      await http()
+        .get('/api/v1/admin/driver-debt-reports')
+        .set('Authorization', driver.auth)
+        .expect(403);
+      await asAdmin(http().post(`/api/v1/admin/driver-debt-reports/${waiting!.id}/reject`))
+        .send({})
+        .expect(400);
+      await asAdmin(http().post(`/api/v1/admin/driver-debt-reports/${waiting!.id}/reject`))
+        .send({ reason: 'No llegó ese pago móvil' })
+        .expect(200);
+      expect((await debts())[0]!.report).toMatchObject({
+        status: 'rejected',
+        rejectionReason: 'No llegó ese pago móvil',
+      });
+
+      // --- The right one is confirmed: recorded as their payment, the debt is gone.
+      await report('100.00').expect(200);
+      const [again] = await queue();
+      const confirmed = (
+        await asAdmin(http().post(`/api/v1/admin/driver-debt-reports/${again!.id}/confirm`)).expect(
+          200,
+        )
+      ).body as DriverDebtReport;
+      expect(confirmed.status).toBe('confirmed');
+      expect(await debts()).toEqual([]);
+      expect(
+        reason(
+          await asAdmin(
+            http().post(`/api/v1/admin/driver-debt-reports/${again!.id}/confirm`),
+          ).expect(409),
+        ),
+      ).toBe('RELOAD_AND_RETRY');
+      await app.get(NotificationsService).settled();
+      const told = await db
+        .select({ kind: notifications.kind })
+        .from(notifications)
+        .where(and(eq(notifications.userId, driver.user.id), eq(notifications.channel, 'email')));
+      expect(told.filter((n) => n.kind === 'debt_payment')).toHaveLength(2);
     },
   );
 });

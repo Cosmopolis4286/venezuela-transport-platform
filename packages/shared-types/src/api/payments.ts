@@ -63,7 +63,7 @@ export type RateCurrency = (typeof RATE_CURRENCIES)[number];
 
 /**
  * Currencies operators and the platform still set by hand. Bolívares always use the BCV's
- * official rate, fetched automatically (ADR-046).
+ * official rate, fetched automatically (ADR-048).
  */
 export const MANUAL_RATE_CURRENCIES = ['BRL'] as const satisfies readonly RateCurrency[];
 export type ManualRateCurrency = (typeof MANUAL_RATE_CURRENCIES)[number];

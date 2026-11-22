@@ -46,7 +46,7 @@ export async function saveBcvRate(_: FormState, form: FormData): Promise<FormSta
   return { success: 'Tasa BCV guardada.' };
 }
 
-/** Fetches the BCV's official rate now instead of waiting for the job (ADR-046). */
+/** Fetches the BCV's official rate now instead of waiting for the job (ADR-048). */
 export async function syncBcvRate(): Promise<FormState> {
   try {
     const result = await apiRequest<BcvSyncResult>('/admin/fiscal/bcv-rates/sync', {

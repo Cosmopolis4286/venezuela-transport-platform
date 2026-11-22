@@ -1,7 +1,7 @@
 import type { Currency, PaymentCurrency, RateCurrency } from '@vtp/shared-types';
 
 /**
- * Rates have up to six decimals (the BCV's official rate, ADR-046; rates typed by hand have four);
+ * Rates have up to six decimals (the BCV's official rate, ADR-048; rates typed by hand have four);
  * amounts two. Everything is computed in integers.
  */
 const RATE_PLACES = 6;

@@ -43,7 +43,7 @@ export interface FiscalSettings {
 export type FiscalSettingsInput = Omit<FiscalSettings, 'issuer' | 'complete'>;
 
 /**
- * Where a BCV rate came from (ADR-046): the BCV's website, DolarApi (which republishes it) when
+ * Where a BCV rate came from (ADR-048): the BCV's website, DolarApi (which republishes it) when
  * the website fails, or typed by an admin.
  */
 export const BCV_RATE_SOURCES = ['bcv', 'dolarapi', 'manual'] as const;

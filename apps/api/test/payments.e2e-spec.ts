@@ -211,7 +211,7 @@ describe.runIf(expectDatabase)('Payments and tickets (e2e)', () => {
       const paymentStatus = async (id: string) =>
         (await db.select().from(payments).where(eq(payments.id, id)))[0]!.status;
 
-      // --- Bolívares at the BCV's official rate (ADR-046); USDT 1:1 with the dollar; no PIX
+      // --- Bolívares at the BCV's official rate (ADR-048); USDT 1:1 with the dollar; no PIX
       // until the operator sets its BRL rate.
       const ana = await signIn();
       const held = await book(ana.auth, ['1', '2']);

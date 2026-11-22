@@ -29,7 +29,7 @@ const RATE = /^\d{1,13}(\.\d{1,4})?$/;
 const AMOUNT = /^\d{1,12}(\.\d{1,2})?$/;
 
 export class ExchangeRateDto {
-  /** Bolívares are not set by hand: they always use the BCV's official rate (ADR-046). */
+  /** Bolívares are not set by hand: they always use the BCV's official rate (ADR-048). */
   @ApiProperty({ enum: MANUAL_RATE_CURRENCIES })
   @IsIn(MANUAL_RATE_CURRENCIES, {
     message: 'currency must be BRL: bolívares always use the BCV official rate',

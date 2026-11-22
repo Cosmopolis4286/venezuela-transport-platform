@@ -90,6 +90,14 @@ export interface NotificationMessages {
   commissionChanged: (rate: string, from: string) => NotificationText;
   /** To a driver: the platform transferred `amount` to their account. */
   payoutSent: (amount: string, reference: string) => NotificationText;
+  /** To finance (ADR-046): a driver reported paying their commission debt. */
+  debtPaymentReported: (driver: string, amount: string) => NotificationText;
+  /** To the driver: finance confirmed or rejected their reported payment. */
+  debtPaymentReviewed: (
+    amount: string,
+    confirmed: boolean,
+    reason: string | null,
+  ) => NotificationText;
   /** Appended to every e-mail. */
   footer: string;
 }
@@ -283,6 +291,20 @@ const es: NotificationMessages = {
     title: 'Te pagamos',
     body: `Te transferimos ${amount} a tu cuenta de Mis cobros. Referencia: ${reference}.`,
   }),
+  debtPaymentReported: (driver, amount) => ({
+    title: 'Pago de comisiones por verificar',
+    body: `${driver} reportó que pagó ${amount} de comisiones. Verifícalo en Liquidaciones.`,
+  }),
+  debtPaymentReviewed: (amount, confirmed, reason) =>
+    confirmed
+      ? {
+          title: 'Recibimos tu pago',
+          body: `Confirmamos tu pago de ${amount}. Ya está en tu saldo de Mis cobros.`,
+        }
+      : {
+          title: 'No encontramos tu pago',
+          body: `No pudimos confirmar tu pago de ${amount}: ${reason ?? 'revisa los datos'}. Repórtalo de nuevo en Mis cobros.`,
+        },
   footer: 'VTP · Transporte terrestre en Venezuela. Este es un mensaje automático.',
 };
 
@@ -443,6 +465,20 @@ const en: NotificationMessages = {
     title: 'We paid you',
     body: `We transferred ${amount} to your account in My earnings. Reference: ${reference}.`,
   }),
+  debtPaymentReported: (driver, amount) => ({
+    title: 'Commission payment to check',
+    body: `${driver} reported paying ${amount} in commissions. Check it in Settlements.`,
+  }),
+  debtPaymentReviewed: (amount, confirmed, reason) =>
+    confirmed
+      ? {
+          title: 'We received your payment',
+          body: `We confirmed your payment of ${amount}. It is in your balance in My earnings.`,
+        }
+      : {
+          title: 'We could not find your payment',
+          body: `We could not confirm your payment of ${amount}: ${reason ?? 'check the details'}. Report it again in My earnings.`,
+        },
   footer: 'VTP · Ground transport in Venezuela. This is an automatic message.',
 };
 
@@ -606,6 +642,20 @@ const ptBR: NotificationMessages = {
     title: 'Pagamos você',
     body: `Transferimos ${amount} para a sua conta de Meus ganhos. Referência: ${reference}.`,
   }),
+  debtPaymentReported: (driver, amount) => ({
+    title: 'Pagamento de comissões a verificar',
+    body: `${driver} informou que pagou ${amount} de comissões. Verifique em Liquidações.`,
+  }),
+  debtPaymentReviewed: (amount, confirmed, reason) =>
+    confirmed
+      ? {
+          title: 'Recebemos seu pagamento',
+          body: `Confirmamos seu pagamento de ${amount}. Já está no seu saldo em Meus ganhos.`,
+        }
+      : {
+          title: 'Não encontramos seu pagamento',
+          body: `Não pudemos confirmar seu pagamento de ${amount}: ${reason ?? 'revise os dados'}. Informe-o de novo em Meus ganhos.`,
+        },
   footer: 'VTP · Transporte rodoviário na Venezuela. Esta é uma mensagem automática.',
 };
 

@@ -126,7 +126,7 @@ export class FiscalService {
     return this.bcv.list();
   }
 
-  /** Typed by an admin, e.g. when the BCV's website and DolarApi both fail (ADR-046). */
+  /** Typed by an admin, e.g. when the BCV's website and DolarApi both fail (ADR-048). */
   async setBcvRate(input: BcvRateInput, actor: Authenticated, meta: RequestMeta): Promise<BcvRate> {
     if (input.date > todayInVenezuela()) throw invalid('The rate date cannot be in the future');
     if (Number(input.unitsPerUsd) <= 0) throw invalid('unitsPerUsd must be positive');

@@ -24,7 +24,7 @@ reembolsos están en [settlements.md](settlements.md).
 
 ## Tasas de cambio
 
-- **Bolívares: siempre la tasa oficial del BCV** (ADR-046). El módulo `bcv-rates` la busca cada
+- **Bolívares: siempre la tasa oficial del BCV** (ADR-048). El módulo `bcv-rates` la busca cada
   `BCV_RATE_SYNC_HOURS` (6 por defecto) en bcv.org.ve y, si la página falla, en
   ve.dolarapi.com, y la guarda en `bcv_rates` por su "fecha valor". Se usa la más reciente cuya
   fecha ya llegó; si tiene más de `BCV_RATE_MAX_AGE_DAYS` (5) días, no se ofrece pagar en

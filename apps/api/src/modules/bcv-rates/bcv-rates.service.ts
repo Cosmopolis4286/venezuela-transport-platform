@@ -33,7 +33,7 @@ const toRate = (row: BcvRateRow): BcvRate => ({
 });
 
 /**
- * The BCV's official bolívar rate (ADR-046). A job fetches it every `BCV_RATE_SYNC_HOURS` (6 by
+ * The BCV's official bolívar rate (ADR-048). A job fetches it every `BCV_RATE_SYNC_HOURS` (6 by
  * default) from the BCV's website, or from DolarApi when the website fails, and saves it by its
  * "fecha valor". Bolívar prices of bookings and trip packs use the rate in force; staff can type
  * one when both sources fail, and a typed rate is never overwritten by the job.

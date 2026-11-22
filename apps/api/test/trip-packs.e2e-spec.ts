@@ -204,7 +204,7 @@ describe.runIf(expectDatabase)('Trip packs (e2e)', () => {
     const options = async () =>
       (await http().get(optionsUrl).set('Authorization', passenger.auth).expect(200))
         .body as PaymentOption[];
-    // Bolívares at the BCV's official rate (ADR-046); the BRL rate (PIX) is set by hand.
+    // Bolívares at the BCV's official rate (ADR-048); the BRL rate (PIX) is set by hand.
     await setOfficialRate(app);
     const putRates = (rates: object[]) =>
       http().put('/api/v1/admin/exchange-rates').set('Authorization', admin.auth).send({ rates });

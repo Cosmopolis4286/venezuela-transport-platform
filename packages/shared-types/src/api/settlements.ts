@@ -1,6 +1,6 @@
 import type { Currency } from './network.js';
 import type { OrganizationType } from './organizations.js';
-import type { PaymentCurrency, PaymentMethod } from './payments.js';
+import type { PaymentAccount, PaymentCurrency, PaymentMethod } from './payments.js';
 
 /**
  * Settlements (ADR-018, step 4). Every paid booking earns its operator the fare minus the
@@ -241,6 +241,66 @@ export interface PendingDriverPayout extends Payout {
   line: string;
   /** Where to send it, as the driver registered it. */
   account: DriverPayoutAccount | null;
+}
+
+/**
+ * Paying a commission debt (ADR-046): the independent driver transfers to one of the platform's
+ * accounts, in the debt's currency, and reports it; finance confirms it (it is then recorded as
+ * a collection) or rejects it.
+ */
+export const DEBT_PAYMENT_METHODS: Record<Currency, readonly PaymentMethod[]> = {
+  VES: ['pago_movil', 'bank_transfer'],
+  USD: ['usdt'],
+};
+
+export type DriverDebtReportStatus = 'reported' | 'confirmed' | 'rejected';
+
+export interface DriverDebtReport {
+  id: string;
+  organizationId: string;
+  currency: Currency;
+  amount: string;
+  method: PaymentMethod;
+  /** The transfer's operation number. */
+  reference: string;
+  status: DriverDebtReportStatus;
+  rejectionReason: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+}
+
+/** `GET /me/debts`: what the driver owes each line of the platform, and where to pay it. */
+export interface DriverDebt {
+  organization: { id: string; name: string };
+  currency: Currency;
+  /** Positive: what they owe. */
+  amount: string;
+  /** The platform's active accounts for this currency. */
+  accounts: Pick<PaymentAccount, 'method' | 'fields'>[];
+  /** The last report: waiting for review, or rejected with its reason. */
+  report: DriverDebtReport | null;
+}
+
+/** `POST /me/debt-payments` */
+export interface ReportDebtPaymentRequest {
+  organizationId: string;
+  currency: Currency;
+  amount: string;
+  method: PaymentMethod;
+  reference: string;
+}
+
+/** `GET /admin/driver-debt-reports`: reports waiting for finance. */
+export interface DriverDebtReportForReview extends DriverDebtReport {
+  driver: { id: string; name: string; phone: string | null };
+  line: string;
+  /** What they owe now. */
+  owed: string;
+}
+
+/** `POST /admin/driver-debt-reports/:id/reject` */
+export interface RejectDebtReportRequest {
+  reason: string;
 }
 
 /** `POST /admin/driver-payouts/run`: what a weekly run created. */

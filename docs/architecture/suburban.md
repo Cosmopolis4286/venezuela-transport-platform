@@ -208,7 +208,7 @@ y uno nuevo para paquetes).
   la plataforma** (si el paquete tiene descuento, la plataforma lo subsidia). Los viajes que vencen
   sin usarse se los queda la plataforma.
 - **Moneda y tasas:** el paquete tiene precio en US$ o Bs. Como lo vende la plataforma, se paga con
-  la tasa oficial del BCV en bolívares (ADR-046) y, para PIX, la tasa de reales que fija el
+  la tasa oficial del BCV en bolívares (ADR-048) y, para PIX, la tasa de reales que fija el
   administrador.
 - Reportes de la administración: paquetes vendidos, viajes usados, **viajes vendidos sin usar**
   (lo que la plataforma debe en servicio) y vencidos. Las empresas ven en sus reportes cuántas

@@ -12,7 +12,7 @@ Decisión: [ADR-031](decisions.md#adr-031-la-plataforma-factura-su-tarifa-por-se
 | Tabla             | Qué guarda                                                                               |
 | ----------------- | ---------------------------------------------------------------------------------------- |
 | `fiscal_settings` | Una fila: razón social, RIF, domicilio fiscal, tipo de contribuyente, IVA.               |
-| `bcv_rates`       | Tasa oficial BCV por día (Bs por USD), buscada sola cada 6 h o escrita a mano (ADR-046). |
+| `bcv_rates`       | Tasa oficial BCV por día (Bs por USD), buscada sola cada 6 h o escrita a mano (ADR-048). |
 | `invoices`        | Facturas y notas de crédito: borrador → emitida (o anulada).                             |
 | `purchases`       | Facturas de compra recibidas, para el libro de compras.                                  |
 

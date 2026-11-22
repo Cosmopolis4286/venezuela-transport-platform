@@ -2209,6 +2209,7 @@ export class TaxiService {
         updatedAt: at.locatedAt.toISOString(),
         distanceKm: km === null ? null : Math.round(km * 10) / 10,
         etaMinutes: km === null ? null : etaMinutes(km),
+        pickup: point ? { latitude: point.latitude, longitude: point.longitude } : null,
       };
     };
     return rows.map((ride) => {
