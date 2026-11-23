@@ -45,8 +45,9 @@ En la página de la organización:
    interurbanas le pagan a la empresa y las urbanas o suburbanas al conductor de cada viaje; puedes
    cambiarlo en cada ruta (vale para las ventas desde ese momento).
 6. **Publicar** la ruta: desde ese momento aparece en las búsquedas.
-7. **Tasas de cambio**: bolívares y reales por dólar. Sin una tasa, ese medio de pago no se ofrece
-   para tarifas en dólares.
+7. **Tasas de cambio**: los bolívares usan siempre la tasa oficial del BCV, que la plataforma
+   actualiza sola (la ves en el portal). Solo escribes la de reales por dólar si aceptas PIX; sin
+   ella, PIX no se ofrece para tarifas en dólares.
 
 ## 4. El día de la salida
 
@@ -64,7 +65,10 @@ En la página de la organización:
 - **Viajes y pasajeros**: las reservas de cada salida y la lista de pasajeros, con quién abordó.
   Cuando el conductor marca la salida y la llegada, la salida muestra "En ruta desde las…" y
   "Llegó…".
-- Los inspectores escanean los boletos con la app de transportistas ([guía](conductores.md)).
+- Los inspectores escanean los boletos con la app de transportistas ([guía](conductores.md)),
+  también **sin señal**: el teléfono guarda los boletos del día y envía lo validado al volver la
+  señal. Si al llegar resulta que un boleto se usó en dos unidades, o su reserva estaba cancelada,
+  aparece en **Viajes y pasajeros → Abordajes sin señal para revisar** de ese día.
 
 ## Líneas de mototaxis
 

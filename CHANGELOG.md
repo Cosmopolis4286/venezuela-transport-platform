@@ -16,6 +16,11 @@ pull request.
 - **Documentos legales, versión 2026-11-22** (los usuarios aceptan de nuevo): reúne todos los
   cambios de la etapa 3 y los proveedores de mapas (Apple y Google) en la Política de Privacidad, por
   si la 2026-11-21 ya se había publicado sin alguno de ellos.
+- **Los bolívares se cobran siempre con la tasa oficial del BCV** (ADR-048): un job la busca cada
+  6 horas en bcv.org.ve (o en DolarApi si la página falla) y la guarda con su "fecha valor" y su
+  fuente. Las empresas y la plataforma solo escriben la tasa de reales (PIX). Sin tasa de los
+  últimos 5 días no se ofrece pagar en bolívares. En Facturación: botón para actualizarla en el
+  momento y la fuente de cada tasa. Corrige que la tasa de bolívares de las empresas no vencía.
 - **Documentos legales, versión 2026-11-21** (los usuarios aceptan de nuevo): Condiciones para
   Conductores Independientes, secciones 4 (comisión, pagos semanales y límite de deuda) y 5
   (promedio, aviso y suspensión por calificación); Términos 6.10
@@ -60,6 +65,10 @@ pull request.
 
 ### Agregado
 
+- **Validar boletos sin señal** (ADR-049): la app de transportistas guarda sola los boletos
+  pagados del día de su empresa y, sin señal, los valida con esa lista y envía lo validado al
+  volver la señal. Un boleto usado en dos unidades, o con la reserva cancelada, aparece en el
+  portal en **Viajes y pasajeros** para revisarlo.
 - **Datos de ejemplo de la etapa 3**: comisión con una subida anunciada, viajes calificados de los
   independientes, un pago semanal, una licencia por vencer, un mototaxista suspendido
   (`suspendido@vtp.test`) con un pago de deuda por verificar y dos alertas de emergencia. El seed

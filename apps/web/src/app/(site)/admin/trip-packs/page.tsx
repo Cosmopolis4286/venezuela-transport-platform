@@ -4,7 +4,7 @@ import {
   formatMoney,
   networkClock,
   PLATFORM_RATE_MAX_HOURS,
-  RATE_CURRENCIES,
+  MANUAL_RATE_CURRENCIES,
   toNetworkIso,
   TRANSPORT_MODE_LABELS,
   TRANSPORT_MODES,
@@ -16,6 +16,7 @@ import {
 } from '@vtp/shared-types';
 import Link from 'next/link';
 import { ActionForm, SubmitButton } from '@/components/portal/action-form';
+import { OfficialRate } from '@/components/portal/official-rate';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { Input, Select } from '@/components/ui/input';
@@ -178,18 +179,19 @@ export default async function TripPacksPage() {
         <div className="flex flex-col gap-1">
           <CardTitle>Tasas de cambio de la plataforma</CardTitle>
           <CardDescription>
-            Convierten el precio de los paquetes al cobrar (las empresas tienen las suyas para sus
-            boletos). USDT se cobra 1:1 con el dólar. Sin tasa, o con una de más de{' '}
-            {PLATFORM_RATE_MAX_HOURS} horas, ese medio de pago no se ofrece: guárdalas al menos una
-            vez al día, aunque no cambien.
+            Convierten el precio de los paquetes al cobrar. Los bolívares usan siempre la tasa
+            oficial del BCV; USDT se cobra 1:1 con el dólar. Sin tasa en reales, o con una de más de{' '}
+            {PLATFORM_RATE_MAX_HOURS} horas, PIX no se ofrece: guárdala al menos una vez al día,
+            aunque no cambie.
             {rates.length
               ? ` Última actualización: ${networkClock(rates[0]!.updatedAt)} del ${toNetworkIso(rates[0]!.updatedAt).slice(0, 10)}.`
               : ''}
           </CardDescription>
         </div>
+        <OfficialRate />
         <ActionForm action={savePlatformRates}>
           <div className="grid gap-3 sm:grid-cols-2">
-            {RATE_CURRENCIES.map((currency) => (
+            {MANUAL_RATE_CURRENCIES.map((currency) => (
               <Field key={currency} label={RATE_LABELS[currency]} htmlFor={`rate-${currency}`}>
                 <Input
                   id={`rate-${currency}`}

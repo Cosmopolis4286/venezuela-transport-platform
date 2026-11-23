@@ -27,6 +27,7 @@ import { ApiException } from '../../common/errors/api.exception.js';
 import { AppConfigService } from '../../config/app-config.service.js';
 import { DatabaseService } from '../../database/database.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import { BcvRatesService } from '../bcv-rates/bcv-rates.service.js';
 import { bookings, trips, type BookingRow } from '../bookings/bookings.schema.js';
 import { BookingsService } from '../bookings/bookings.service.js';
 import { expireHolds } from '../bookings/occupancy.js';
@@ -83,6 +84,7 @@ export class PaymentsService {
     private readonly notifications: NotificationsService,
     private readonly packs: TripPacksService,
     @Inject(PAYMENT_PROVIDER) private readonly provider: PaymentProvider | null,
+    private readonly bcv: BcvRatesService,
   ) {}
 
   // --- Exchange rates (operators) ------------------------------------------------------------
@@ -947,7 +949,12 @@ export class PaymentsService {
       .select({ currency: exchangeRates.currency, unitsPerUsd: exchangeRates.unitsPerUsd })
       .from(exchangeRates)
       .where(eq(exchangeRates.organizationId, organizationId));
-    return this.convertedOptions(booking.totalAmount, booking.currency, rows, collector);
+    return this.convertedOptions(
+      booking.totalAmount,
+      booking.currency,
+      await this.withOfficialBolivar(rows),
+      collector,
+    );
   }
 
   /** Trip packs: the platform sells them, at its own rates, into its own accounts. */
@@ -965,7 +972,24 @@ export class PaymentsService {
           new Date(Date.now() - PLATFORM_RATE_MAX_HOURS * 3600_000),
         ),
       );
-    return this.convertedOptions(pack.price, pack.currency, rows, null);
+    return this.convertedOptions(
+      pack.price,
+      pack.currency,
+      await this.withOfficialBolivar(rows),
+      null,
+    );
+  }
+
+  /**
+   * Bolívars always at the BCV's official rate in force (ADR-048); other currencies (BRL for PIX)
+   * at the rate set by hand. Without a recent BCV rate nothing is offered in bolívares.
+   */
+  private async withOfficialBolivar(
+    rows: { currency: RateCurrency; unitsPerUsd: string }[],
+  ): Promise<{ currency: RateCurrency; unitsPerUsd: string }[]> {
+    const official = await this.bcv.current();
+    const manual = rows.filter((r) => r.currency !== 'VES');
+    return official ? [...manual, { currency: 'VES', unitsPerUsd: official.unitsPerUsd }] : manual;
   }
 
   private async convertedOptions(

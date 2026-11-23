@@ -14,6 +14,7 @@ import {
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 import {
+  BCV_RATE_SOURCES,
   BUYER_ID_TYPES,
   INVOICE_KINDS,
   INVOICE_REASONS,
@@ -49,9 +50,13 @@ export const fiscalSettings = pgTable(
 );
 
 /** The BCV official rate per day, entered by staff; documents in dollars are converted with it. */
+export const bcvRateSource = pgEnum('bcv_rate_source', BCV_RATE_SOURCES);
+
 export const bcvRates = pgTable('bcv_rates', {
   date: date().primaryKey(),
   unitsPerUsd: numeric({ precision: 18, scale: 6 }).notNull(),
+  /** Fetched by the job (ADR-048) or typed by an admin; typed rates are never overwritten. */
+  source: bcvRateSource().notNull().default('manual'),
   updatedByUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
   ...timestamps,
 });

@@ -1,4 +1,5 @@
 import {
+  BCV_RATE_SOURCE_LABELS,
   TAXPAYER_TYPE_LABELS,
   TAXPAYER_TYPES,
   todayInVenezuela,
@@ -16,7 +17,9 @@ import { Input, Select } from '@/components/ui/input';
 import { Field } from '@/components/ui/label';
 import { apiFetch } from '@/lib/server/api';
 import { requirePlatformPermission } from '@/lib/server/session';
-import { saveBcvRate, saveFiscalSettings } from './actions';
+import { saveBcvRate, saveFiscalSettings, syncBcvRate } from './actions';
+import { OfficialRate } from '@/components/portal/official-rate';
+import { formatDateTime } from '@/lib/labels';
 
 export const metadata: Metadata = { title: 'Facturación' };
 
@@ -124,10 +127,18 @@ export default async function FiscalPage() {
         <div className="flex flex-col gap-1">
           <CardTitle>Tasa oficial BCV</CardTitle>
           <CardDescription>
-            Bolívares por dólar. Para emitir se usa la tasa del día de emisión o, si falta, la del
-            último día anterior que tenga tasa.
+            Bolívares por dólar. La API la busca sola cada 6 horas en bcv.org.ve (o en DolarApi si
+            la página del BCV falla) y con ella se cobra en bolívares y se facturan los cargos (del
+            día de emisión o, si falta, del último día anterior con tasa). Si ninguna fuente
+            responde, escríbela aquí: una tasa escrita a mano no se reemplaza.
           </CardDescription>
         </div>
+        <OfficialRate />
+        <ActionForm action={syncBcvRate}>
+          <div>
+            <SubmitButton variant="outline">Actualizar ahora desde el BCV</SubmitButton>
+          </div>
+        </ActionForm>
         <ActionForm action={saveBcvRate} className="sm:flex-row sm:items-end">
           <Field label="Fecha" htmlFor="date">
             <Input
@@ -154,6 +165,7 @@ export default async function FiscalPage() {
               <tr>
                 <th className="py-1 font-medium">Fecha</th>
                 <th className="py-1 text-right font-medium">Bs por USD</th>
+                <th className="py-1 pl-3 font-medium">Fuente</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -161,6 +173,9 @@ export default async function FiscalPage() {
                 <tr key={rate.date}>
                   <td className="py-1">{rate.date}</td>
                   <td className="py-1 text-right tabular-nums">{rate.unitsPerUsd}</td>
+                  <td className="py-1 pl-3 text-muted-foreground">
+                    {BCV_RATE_SOURCE_LABELS[rate.source]} · {formatDateTime(rate.updatedAt)}
+                  </td>
                 </tr>
               ))}
             </tbody>

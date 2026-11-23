@@ -1,6 +1,9 @@
 import {
+  BOARDING_ISSUE_LABELS,
   SERVICE_CLASS_LABELS,
   longDate,
+  networkClock,
+  type BoardingIssue,
   todayInVenezuela,
   type OrganizationMembershipSummary,
   type TripSummary,
@@ -41,9 +44,10 @@ async function Trips({
       ? rawDate
       : todayInVenezuela();
   const base = `/organizations/${encodeURIComponent(organizationId)}`;
-  const [{ organization }, trips] = await Promise.all([
+  const [{ organization }, trips, issues] = await Promise.all([
     apiFetch<OrganizationMembershipSummary>(base),
     apiFetch<TripSummary[]>(`${base}/trips?date=${date}`),
+    apiFetch<BoardingIssue[]>(`${base}/tickets/boarding-issues?date=${date}`),
   ]);
 
   return (
@@ -107,6 +111,46 @@ async function Trips({
           </ul>
         )}
       </Card>
+      {issues.length ? <BoardingIssues issues={issues} /> : null}
     </>
+  );
+}
+
+/**
+ * Boardings checked without signal that, once they reached the API, turned out to be a ticket
+ * already used (another unit or driver) or one whose booking had been cancelled (ADR-049).
+ */
+function BoardingIssues({ issues }: { issues: BoardingIssue[] }) {
+  return (
+    <Card>
+      <div className="flex flex-col gap-1">
+        <CardTitle>Abordajes sin señal para revisar ({issues.length})</CardTitle>
+        <CardDescription>
+          Los conductores validan con la lista guardada en su teléfono cuando no hay señal, y lo
+          envían al volver la señal. Estos boletos se aceptaron dos veces o su reserva ya estaba
+          cancelada: habla con los conductores y, si hace falta, con el pasajero.
+        </CardDescription>
+      </div>
+      <ul className="flex flex-col divide-y">
+        {issues.map((issue) => (
+          <li key={issue.id} className="flex flex-col gap-1 py-3 text-sm">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="destructive">{BOARDING_ISSUE_LABELS[issue.kind]}</Badge>
+              <span className="font-medium">
+                {issue.bookingCode} · puesto {issue.seatNumber} · {issue.passengerName}
+              </span>
+            </div>
+            <p className="text-muted-foreground">
+              {issue.route.name}
+              {issue.first
+                ? ` · primero: ${networkClock(issue.first.boardedAt)} con ${issue.first.driverName ?? 'otro conductor'}`
+                : ''}{' '}
+              · sin señal: {networkClock(issue.second.boardedAt)} con{' '}
+              {issue.second.driverName ?? 'un conductor'}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }

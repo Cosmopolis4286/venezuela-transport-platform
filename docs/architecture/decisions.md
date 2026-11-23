@@ -908,3 +908,40 @@ teselas propias y respeta los términos de los proveedores.
 **Compromisos.** Hace falta una clave de Google Maps para las compilaciones de Android (Expo Go
 funciona sin ella). En la versión web de la app no hay mapa, solo el enlace. La ubicación es la
 última que mandó el teléfono del conductor (cada 15 s como mucho).
+
+## ADR-048: Los bolívares se cobran siempre con la tasa oficial del BCV, actualizada sola
+
+**Decisión** (del dueño del producto). Toda conversión a bolívares (boletos de las empresas y
+paquetes de la plataforma) usa la **tasa oficial del BCV**. Un job de la API la busca cada
+`BCV_RATE_SYNC_HOURS` (6 por defecto) en la página del BCV y, si falla, en DolarApi, que la
+republica; la guarda por su "fecha valor" con su fuente. Se usa la más reciente cuya fecha ya
+llegó; con más de 5 días sin una nueva (más que un fin de semana largo) no se ofrece pagar en
+bolívares. Las empresas y la plataforma ya no escriben la tasa de bolívares; solo la de reales
+(PIX). El personal puede buscarla en el momento o escribirla a mano si ninguna fuente responde, y
+una tasa escrita a mano no se reemplaza. La misma tabla sirve para facturar (ADR-031).
+
+**Por qué.** El pasaje se ancla al dólar y el bolívar se mueve a diario: una tasa escrita a mano
+quedaba vieja (la de las empresas no vencía nunca) y hacía perder dinero o cobrar de más. Una sola
+tasa oficial es más simple para las empresas y más justa para el pasajero.
+
+**Compromisos.** El BCV no tiene API: se lee su página, que puede cambiar o fallar (para eso está
+DolarApi y la carga a mano). Una empresa que quiera cobrar con otra tasa no puede. El servidor
+necesita salir a `www.bcv.org.ve` y `ve.dolarapi.com`.
+
+## ADR-049: Validar boletos sin señal con la lista guardada en el teléfono del conductor
+
+**Decisión** (del dueño del producto). La app de transportistas guarda sola, mientras tiene
+señal, los boletos pagados de cada empresa en la que el usuario valida (próximas 24 horas, con el
+documento enmascarado) y los renueva cada 5 minutos. Sin señal, el escáner los valida contra esa
+lista con las mismas reglas que la API y guarda el abordaje; al volver la señal los envía. Si dos
+unidades sin señal aceptaron el mismo boleto (sobre todo los boletos abiertos del suburbano), se
+acepta en las dos y el segundo uso queda como `double_use` para que la empresa lo revise; un
+boleto cuya reserva se canceló entretanto queda como `not_paid`.
+
+**Por qué.** En El Triunfo, Sierra Imataca y otras zonas del piloto casi no hay señal (análisis
+de Casacoima): sin esto, el pasajero que pagó no puede subir. Es preferible dejarlo subir y revisar
+después que dejarlo en la parada.
+
+**Compromisos.** Un boleto comprado después de la última descarga no está en la lista: el
+conductor lo cobra en efectivo o espera señal. Dos unidades sin señal pueden aceptar el mismo
+boleto; se ve después, no se impide. El teléfono guarda nombres de pasajeros hasta 3 días.
