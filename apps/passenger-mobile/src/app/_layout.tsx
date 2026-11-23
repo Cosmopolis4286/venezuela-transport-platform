@@ -1,16 +1,19 @@
 import {
   AuthProvider,
+  Button,
   I18nProvider,
   SplashScreen,
   useAuth,
   usePushNotifications,
 } from '@vtp/mobile-core';
 import { Stack, useRouter } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { useT } from '@/i18n/use-t';
 import { api } from '@/lib/api';
+import { SavedTicketsView } from '@/components/saved-tickets-view';
 import { BookingDraftProvider } from '@/lib/booking-draft';
+import { clearSavedTickets, useKeepTicketsSaved, useSavedTickets } from '@/lib/saved-tickets-store';
 import { SearchProvider } from '@/lib/search-context';
 
 function RootNavigator() {
@@ -30,13 +33,48 @@ function RootNavigator() {
     [router],
   );
   usePushNotifications(api, 'passenger', signedIn, openNotice);
-  if (state.status === 'loading' || state.status === 'unavailable') return <SplashScreen />;
+  // Paid tickets stay on the phone to show without signal (ADR-050).
+  const userId = signedIn ? state.user.id : null;
+  useKeepTicketsSaved(api, userId);
+  const saved = useSavedTickets();
+  const [showSaved, setShowSaved] = useState(false);
+  const previous = useRef(state.status);
+  useEffect(() => {
+    const was = previous.current;
+    previous.current = state.status;
+    // Signing out (or deleting the account) deletes them; a session that just expired keeps them.
+    const signedOutOnPurpose =
+      state.status === 'signedOut' &&
+      !state.expired &&
+      (was === 'signedIn' || was === 'unavailable');
+    // Another account on this phone never sees the previous one's tickets.
+    const otherAccount = userId !== null && saved.userId !== null && saved.userId !== userId;
+    if (signedOutOnPurpose || otherAccount) clearSavedTickets();
+  }, [state, userId, saved.userId]);
+
+  if (state.status === 'loading') return <SplashScreen />;
+  if (state.status === 'unavailable') {
+    // No signal to load the session: the saved tickets are still there.
+    if (showSaved) return <SavedTicketsView onBack={() => setShowSaved(false)} />;
+    return (
+      <SplashScreen>
+        {saved.bookings.length ? (
+          <Button
+            variant="secondary"
+            title={t.saved.button(saved.bookings.length)}
+            onPress={() => setShowSaved(true)}
+          />
+        ) : null}
+      </SplashScreen>
+    );
+  }
   return (
     <Stack>
       {/* Searching is public: no account needed to look up departures. */}
       <Stack.Screen name="index" options={{ title: t.nav.home }} />
       <Stack.Screen name="results" options={{ title: t.nav.results }} />
       <Stack.Screen name="trip" options={{ title: t.nav.trip }} />
+      <Stack.Screen name="saved-tickets" options={{ title: t.nav.savedTickets }} />
       <Stack.Screen
         name="stop-picker"
         options={{ title: t.nav.stopPicker, presentation: 'modal' }}

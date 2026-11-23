@@ -945,3 +945,22 @@ después que dejarlo en la parada.
 **Compromisos.** Un boleto comprado después de la última descarga no está en la lista: el
 conductor lo cobra en efectivo o espera señal. Dos unidades sin señal pueden aceptar el mismo
 boleto; se ve después, no se impide. El teléfono guarda nombres de pasajeros hasta 3 días.
+
+## ADR-050: El pasajero ve sus boletos pagados sin señal, guardados en su teléfono
+
+**Decisión** (del dueño del producto). La app de pasajeros guarda sola, mientras tiene señal, los
+boletos pagados de las salidas que aún no terminan (al abrir la app, al volver a ella y al abrir
+**Mis viajes** o una reserva). Sin señal se ven en **Mis boletos guardados**: en el inicio, en la
+pantalla de "no hay conexión" y en **Mis viajes** cuando no carga. Se ven aunque la sesión haya
+vencido; cerrar sesión o borrar la cuenta los borra, y otra cuenta en el mismo teléfono no ve los
+de la anterior. Cada boleto se borra 2 días después de que termina el viaje.
+
+**Por qué.** En la parada de El Triunfo o Sierra Imataca no hay señal (análisis de Casacoima): si
+el QR se carga de la API, el pasajero que pagó no tiene qué mostrar. Junto con ADR-049 (el
+conductor valida sin señal) el abordaje funciona sin señal de punta a punta.
+
+**Compromisos.** Un boleto pagado sin haber abierto la app con señal después del pago no está en
+el teléfono (el conductor puede buscarlo por el código de reserva). Una cancelación hecha desde
+otro teléfono se ve recién al recuperar la señal; el conductor la rechaza con su propia lista.
+Guarda en un archivo de la app el nombre y el documento de los pasajeros de la reserva, como ya los
+muestra la pantalla de la reserva.

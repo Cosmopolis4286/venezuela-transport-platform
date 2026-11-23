@@ -13,6 +13,7 @@ const es = {
     passengers: 'Pasajeros',
     booking: 'Tu reserva',
     bookings: 'Mis viajes',
+    savedTickets: 'Boletos guardados',
     taxiRequest: 'Pedir un taxi',
     taxiRide: 'Tu taxi',
     tripPacks: 'Paquetes de viajes',
@@ -241,6 +242,16 @@ const es = {
     none: 'Aún no tienes reservas.',
     a11y: (code: string) => `Reserva ${code}`,
   },
+  saved: {
+    title: 'Boletos guardados',
+    button: (n: number) => `Mis boletos guardados (${n})`,
+    intro:
+      'Tus boletos pagados quedan guardados en este teléfono. Muéstralos al abordar aunque no tengas señal.',
+    savedAt: (date: string, time: string) => `Actualizados el ${date} a las ${time}.`,
+    noSignal: 'No pudimos cargar tus viajes. Si no tienes señal, usa tus boletos guardados.',
+    none: 'No tienes boletos pagados guardados en este teléfono.',
+    back: 'Volver',
+  },
   account: {
     hello: (name: string | null) => (name ? `Hola, ${name}` : 'Hola'),
     yourAccount: 'Tu cuenta',
@@ -373,6 +384,7 @@ const en: Messages = {
     passengers: 'Passengers',
     booking: 'Your booking',
     bookings: 'My trips',
+    savedTickets: 'Saved tickets',
     taxiRequest: 'Request a taxi',
     taxiRide: 'Your taxi',
     tripPacks: 'Trip packs',
@@ -594,6 +606,16 @@ const en: Messages = {
     none: 'You have no bookings yet.',
     a11y: (code) => `Booking ${code}`,
   },
+  saved: {
+    title: 'Saved tickets',
+    button: (n) => `My saved tickets (${n})`,
+    intro:
+      'Your paid tickets are saved on this phone. Show them when boarding, even without signal.',
+    savedAt: (date, time) => `Updated on ${date} at ${time}.`,
+    noSignal: "We couldn't load your trips. If you have no signal, use your saved tickets.",
+    none: 'You have no paid tickets saved on this phone.',
+    back: 'Back',
+  },
   account: {
     hello: (name) => (name ? `Hello, ${name}` : 'Hello'),
     yourAccount: 'Your account',
@@ -723,6 +745,7 @@ const ptBR: Messages = {
     passengers: 'Passageiros',
     booking: 'Sua reserva',
     bookings: 'Minhas viagens',
+    savedTickets: 'Bilhetes salvos',
     taxiRequest: 'Pedir um táxi',
     taxiRide: 'Seu táxi',
     tripPacks: 'Pacotes de viagens',
@@ -947,6 +970,17 @@ const ptBR: Messages = {
   bookings: {
     none: 'Você ainda não tem reservas.',
     a11y: (code) => `Reserva ${code}`,
+  },
+  saved: {
+    title: 'Bilhetes salvos',
+    button: (n) => `Meus bilhetes salvos (${n})`,
+    intro:
+      'Seus bilhetes pagos ficam salvos neste telefone. Mostre-os ao embarcar, mesmo sem sinal.',
+    savedAt: (date, time) => `Atualizados em ${date} às ${time}.`,
+    noSignal:
+      'Não conseguimos carregar suas viagens. Se estiver sem sinal, use seus bilhetes salvos.',
+    none: 'Você não tem bilhetes pagos salvos neste telefone.',
+    back: 'Voltar',
   },
   account: {
     hello: (name) => (name ? `Olá, ${name}` : 'Olá'),

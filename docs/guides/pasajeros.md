@@ -73,6 +73,10 @@ factura se emita; después la reserva muestra su número, número de control y f
 - Al abordar, muestra el **código QR** de cada pasajero. Si la pantalla no se lee, el inspector
   puede escribir el código de reserva y el puesto.
 - Tus reservas están en **Mi cuenta → Mis viajes**.
+- **Sin señal en la parada:** la app guarda sola tus boletos pagados cada vez que la abres con
+  señal. Sin señal, toca **Mis boletos guardados** (en el inicio o en **Mis viajes**) y muestra el
+  QR. Funciona aunque tu sesión haya vencido. Si cierras sesión se borran; cada boleto se borra 2
+  días después del viaje.
 
 ## 5. Cancelar un viaje pagado
 

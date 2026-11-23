@@ -12,6 +12,7 @@ import {
   useApi,
   useAuth,
   useColors,
+  useCurrentUser,
   userMessage,
 } from '@vtp/mobile-core';
 import {
@@ -24,8 +25,8 @@ import {
   type CancellationQuote,
   type RefundTier,
 } from '@vtp/shared-types';
-import { useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { InvoicePanel } from '@/components/invoice-panel';
 import { PriceBreakdown } from '@/components/price-breakdown';
@@ -33,6 +34,7 @@ import { PaymentPanel } from '@/components/payment-panel';
 import { QrCode } from '@/components/qr-code';
 import { useT } from '@/i18n/use-t';
 import { BOOKING_TONE } from '@/lib/booking-labels';
+import { saveBooking, useSavedTickets } from '@/lib/saved-tickets-store';
 import { formatClock, useSecondsLeft } from '@/lib/use-countdown';
 
 export default function BookingScreen() {
@@ -40,7 +42,13 @@ export default function BookingScreen() {
   const { api } = useAuth();
   const colors = useColors();
   const { t, shared, locale } = useT();
+  const user = useCurrentUser();
   const booking = useApi<Booking>(id ? `/me/bookings/${id}` : null);
+  const saved = useSavedTickets();
+  // Paid, it stays on the phone to show without signal; cancelled, it goes away.
+  useEffect(() => {
+    if (booking.data) saveBooking(user.id, booking.data);
+  }, [booking.data, user.id]);
   const secondsLeft = useSecondsLeft(booking.data?.expiresAt ?? null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +57,15 @@ export default function BookingScreen() {
     return (
       <Screen>
         {booking.error ? (
-          <Banner tone="error">{booking.error.userMessage}</Banner>
+          <>
+            <Banner tone="error">{booking.error.userMessage}</Banner>
+            {saved.bookings.length ? (
+              <Button
+                title={t.saved.button(saved.bookings.length)}
+                onPress={() => router.push('/saved-tickets')}
+              />
+            ) : null}
+          </>
         ) : (
           <ActivityIndicator color={colors.text} />
         )}

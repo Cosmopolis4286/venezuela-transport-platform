@@ -16,6 +16,7 @@ import type { StopSummary } from '@vtp/shared-types';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useT } from '@/i18n/use-t';
+import { useSavedTickets } from '@/lib/saved-tickets-store';
 import { useSellingZones } from '@/lib/zones';
 import { upcomingDays } from '@/lib/dates';
 import { useSearch } from '@/lib/search-context';
@@ -49,6 +50,7 @@ function StopButton({
 
 export default function SearchScreen() {
   const { state } = useAuth();
+  const saved = useSavedTickets();
   const zones = useSellingZones();
   const { from, to, date, setDate, swap } = useSearch();
   const { t, locale } = useT();
@@ -63,6 +65,13 @@ export default function SearchScreen() {
         <Banner tone="info">{state.notice}</Banner>
       ) : null}
       <TermsPrompt />
+      {/* Signed out (e.g. the session expired without signal): the paid tickets are still here. */}
+      {state.status !== 'signedIn' && saved.bookings.length ? (
+        <Button
+          title={t.saved.button(saved.bookings.length)}
+          onPress={() => router.push('/saved-tickets')}
+        />
+      ) : null}
       <Card>
         <StopButton
           label={t.home.origin}

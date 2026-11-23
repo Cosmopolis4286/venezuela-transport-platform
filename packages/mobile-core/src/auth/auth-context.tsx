@@ -27,7 +27,11 @@ export type AuthState =
   | { status: 'loading' }
   /** A saved session exists but the API could not be reached to load the user. */
   | { status: 'unavailable'; message: string }
-  | { status: 'signedOut'; notice?: string }
+  /**
+   * `expired`: the API ended the session (not the person signing out); what the app keeps on the
+   * phone for that account (e.g. saved tickets) stays.
+   */
+  | { status: 'signedOut'; notice?: string; expired?: boolean }
   | { status: 'signedIn'; user: UserProfile };
 
 export interface AuthContextValue {
@@ -61,7 +65,8 @@ export interface AuthContextValue {
 /** Restores the saved session and loads the user it belongs to. */
 async function loadSession(api: ApiClient): Promise<AuthState> {
   try {
-    if (!api.hasSession && !(await api.restore())) return { status: 'signedOut' };
+    // A saved session that can no longer be refreshed ended by itself, not by signing out.
+    if (!api.hasSession && !(await api.restore())) return { status: 'signedOut', expired: true };
     return { status: 'signedIn', user: await api.request<UserProfile>('/me') };
   } catch (error) {
     return api.hasSession
@@ -86,6 +91,7 @@ export function AuthProvider({ api, children }: { api: ApiClient; children: Reac
       setState({
         status: 'signedOut',
         notice: sharedMessages(currentLocale()).errors.SESSION_EXPIRED,
+        expired: true,
       }),
     );
     return () => {
