@@ -49,6 +49,24 @@ Estados de una reserva: `held` (puestos apartados hasta `expiresAt`, esperando e
 - Al validarlo, el primer conductor (o inspector) queda en `bookings.boarding_driver_user_id`; en
   una ruta que le paga al conductor, ese es quien cobra (ADR-030).
 
+## Validar sin señal (ADR-049)
+
+- `GET /organizations/:id/tickets/offline` (`tickets.validate`): los boletos pagados de la empresa
+  que abordan en las próximas 24 horas (y los que siguen en su ventana), con el documento
+  enmascarado. La app de transportistas los guarda en un archivo por empresa
+  (`apps/transport-mobile/src/lib/offline-store.ts`) al abrirse, cada 5 minutos y al volver al
+  frente, y los borra a los 3 días.
+- Sin señal (error de red o sin respuesta en 8 s), el escáner aplica las mismas reglas que la API
+  (`inBoardingWindow`, `ticketIdFromQr`, `normalizeBookingCode` en `shared-types`) contra esa
+  lista y guarda el abordaje.
+- `POST /organizations/:id/tickets/offline-boardings` (`tickets.validate`, hasta 500) recibe esos
+  abordajes al volver la señal. El primer abordaje de un boleto cuenta; si otro conductor ya lo
+  había usado queda un `boarding_issues` `double_use`, y si la reserva se canceló entretanto,
+  `not_paid`. Reenviar lo mismo no repite nada. La hora del abordaje se acepta hasta 48 h atrás y
+  nunca en el futuro.
+- `GET /organizations/:id/tickets/boarding-issues?date=` (`bookings.view`): lo que la empresa
+  revisa; el portal lo muestra en **Viajes y pasajeros**.
+
 ## Reservas pagadas con un paquete de viajes (ADR-035)
 
 `POST /bookings` con `tripPackId` paga con un paquete del pasajero: se gasta un viaje por puesto en

@@ -6,6 +6,8 @@ import {
   type BuyerIdType,
   type CreateBookingRequest,
   type InvoiceBuyer,
+  type OfflineBoarding,
+  type OfflineBoardingsRequest,
   type SetBookingBillingRequest,
   type IdentityDocumentType,
   type PassengerInput,
@@ -16,6 +18,7 @@ import {
   ArrayMinSize,
   IsArray,
   IsIn,
+  IsISO8601,
   IsOptional,
   IsString,
   IsUUID,
@@ -134,6 +137,33 @@ export class ValidateTicketDto {
   @IsString()
   @Length(1, 4)
   seatNumber?: string;
+}
+
+export class OfflineBoardingDto implements OfflineBoarding {
+  @ApiProperty()
+  @IsUUID()
+  ticketId!: string;
+
+  @ApiProperty({ example: '2026-11-22T13:05:00.000Z', description: 'When it was scanned' })
+  @IsISO8601()
+  boardedAt!: string;
+}
+
+/** Boardings checked without signal (ADR-049), sent when the signal is back. */
+export class OfflineBoardingsDto implements OfflineBoardingsRequest {
+  @ApiProperty({ type: [OfflineBoardingDto] })
+  @IsArray()
+  @ArrayMaxSize(500)
+  @ValidateNested({ each: true })
+  @Type(() => OfflineBoardingDto)
+  boardings!: OfflineBoardingDto[];
+}
+
+export class BoardingIssuesQueryDto {
+  @ApiPropertyOptional({ example: '2026-11-22' })
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'date must be YYYY-MM-DD' })
+  date?: string;
 }
 
 export class BillingDto implements InvoiceBuyer {

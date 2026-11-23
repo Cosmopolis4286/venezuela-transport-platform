@@ -65,7 +65,10 @@ En la página de la organización:
 - **Viajes y pasajeros**: las reservas de cada salida y la lista de pasajeros, con quién abordó.
   Cuando el conductor marca la salida y la llegada, la salida muestra "En ruta desde las…" y
   "Llegó…".
-- Los inspectores escanean los boletos con la app de transportistas ([guía](conductores.md)).
+- Los inspectores escanean los boletos con la app de transportistas ([guía](conductores.md)),
+  también **sin señal**: el teléfono guarda los boletos del día y envía lo validado al volver la
+  señal. Si al llegar resulta que un boleto se usó en dos unidades, o su reserva estaba cancelada,
+  aparece en **Viajes y pasajeros → Abordajes sin señal para revisar** de ese día.
 
 ## Líneas de mototaxis
 
