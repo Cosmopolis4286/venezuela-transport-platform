@@ -112,6 +112,17 @@ export class DriverController {
     return this.dispatch.markTrip(auth, tripId, 'arrive', meta, body.at);
   }
 
+  @Post(':tripId/stops/:stopId/arrived')
+  @HttpCode(HttpStatus.OK)
+  arrivedAtStop(
+    @CurrentAuth() auth: Authenticated,
+    @Param('tripId', ParseUUIDPipe) tripId: string,
+    @Param('stopId', ParseUUIDPipe) stopId: string,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<DriverManifest['stops']> {
+    return this.dispatch.arrivedAtStop(auth, tripId, stopId, meta);
+  }
+
   @Get(':tripId/passengers')
   passengers(
     @CurrentAuth() auth: Authenticated,

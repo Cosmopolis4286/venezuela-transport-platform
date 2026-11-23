@@ -70,8 +70,10 @@ factura se emita; después la reserva muestra su número, número de control y f
 ## 4. Viajar
 
 - Unas horas antes de salir te llega un **recordatorio**.
-- Al abordar, muestra el **código QR** de cada pasajero. Si la pantalla no se lee, el inspector
-  puede escribir el código de reserva y el puesto.
+- Al abordar, muestra el **código QR** de cada pasajero. Si no puedes mostrarlo, dile al conductor
+  el **PIN de 4 dígitos** que aparece debajo del QR (o el inspector puede escribir el código de
+  reserva y el puesto).
+- Cuando el carro llega a tu parada te llega el aviso **Tu carro llegó**: te espera 2 minutos.
 - Tus reservas están en **Mi cuenta → Mis viajes**.
 - **Sin señal en la parada:** la app guarda sola tus boletos pagados cada vez que la abres con
   señal. Sin señal, toca **Mis boletos guardados** (en el inicio o en **Mis viajes**) y muestra el

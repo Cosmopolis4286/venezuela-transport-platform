@@ -19,6 +19,8 @@ export interface SavedBooking {
     name: string;
     document: string;
     qr: string;
+    /** 4 digits to say to the driver instead of the QR (ADR-052). */
+    pin: string | null;
     boardedAt: string | null;
   }[];
 }
@@ -63,6 +65,7 @@ export function toSaved(bookings: Booking[], now: number): SavedBooking[] {
                 name: `${p.firstName} ${p.lastName}`,
                 document: `${p.documentType}-${p.documentNumber}`,
                 qr: p.ticket.qr,
+                pin: p.ticket.pin ?? null,
                 boardedAt: p.ticket.boardedAt,
               },
             ]

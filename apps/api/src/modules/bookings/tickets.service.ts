@@ -2,6 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   inBoardingWindow as boardingWindowOk,
   normalizeBookingCode,
+  normalizePin,
   OFFLINE_TICKETS_AHEAD_HOURS,
   offlineTime,
   ticketIdFromQr,
@@ -188,6 +189,8 @@ export class TicketsService {
       generatedAt: new Date(now).toISOString(),
       tickets: rows.map((r) => ({
         ticketId: r.passenger.id,
+        tripId: r.passenger.tripId,
+        pin: r.passenger.pin,
         bookingCode: r.booking.code,
         seatNumber: r.passenger.seatNumber,
         passengerName: `${r.passenger.firstName} ${r.passenger.lastName}`,
@@ -360,6 +363,16 @@ function ticketMatch(input: ValidateTicketRequest): SQL {
     const ticketId = ticketIdFromQr(input.qr);
     if (!ticketId) throw ticketNotFound();
     return eq(bookingPassengers.id, ticketId);
+  }
+  if ('pin' in input && typeof input.pin === 'string') {
+    // Only among the active tickets of that departure (ADR-052): 4 digits are few.
+    const pin = normalizePin(input.pin);
+    if (!pin) throw ticketNotFound();
+    return and(
+      eq(bookingPassengers.tripId, input.tripId),
+      eq(bookingPassengers.pin, pin),
+      eq(bookingPassengers.active, true),
+    )!;
   }
   const typed = input as { bookingCode: string; seatNumber: string };
   const code = normalizeBookingCode(typed.bookingCode);

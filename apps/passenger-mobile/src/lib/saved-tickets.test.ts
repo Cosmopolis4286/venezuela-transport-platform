@@ -39,7 +39,7 @@ function booking(overrides: Partial<Booking> = {}, trip: Partial<Booking['trip']
         documentNumber: '12345678',
         seatNumber: '3',
         fare: '5.00',
-        ticket: { qr: 'vtp:ticket:1', boardedAt: null },
+        ticket: { qr: 'vtp:ticket:1', pin: '0427', boardedAt: null },
       },
     ],
     ...overrides,
@@ -58,7 +58,13 @@ describe('saved tickets', () => {
       to: 'El Triunfo',
       open: false,
       passengers: [
-        { seatNumber: '3', name: 'Ana Pérez', document: 'V-12345678', qr: 'vtp:ticket:1' },
+        {
+          seatNumber: '3',
+          name: 'Ana Pérez',
+          document: 'V-12345678',
+          qr: 'vtp:ticket:1',
+          pin: '0427',
+        },
       ],
     });
   });

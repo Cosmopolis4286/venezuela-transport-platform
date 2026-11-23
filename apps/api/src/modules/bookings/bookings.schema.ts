@@ -8,6 +8,7 @@ import {
   numeric,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -151,6 +152,8 @@ export const bookingPassengers = pgTable(
     lastName: text().notNull(),
     documentType: identityDocumentType().notNull(),
     documentNumber: text().notNull(),
+    /** 4 digits the passenger says to the driver instead of the QR (ADR-052). */
+    pin: text(),
     active: boolean().notNull().default(true),
     /** Set when the ticket is scanned at boarding. */
     boardedAt: timestamp({ withTimezone: true }),
@@ -161,6 +164,10 @@ export const bookingPassengers = pgTable(
     // The guarantee against selling a seat twice.
     uniqueIndex('booking_passengers_active_seat_key')
       .on(t.tripId, t.seatNumber)
+      .where(sql`${t.active}`),
+    // A PIN points to one ticket of the departure.
+    uniqueIndex('booking_passengers_active_pin_key')
+      .on(t.tripId, t.pin)
       .where(sql`${t.active}`),
     index('booking_passengers_booking_idx').on(t.bookingId),
   ],
@@ -202,3 +209,22 @@ export const boardingIssues = pgTable(
 export type TripRow = typeof trips.$inferSelect;
 export type BookingRow = typeof bookings.$inferSelect;
 export type BookingPassengerRow = typeof bookingPassengers.$inferSelect;
+
+/**
+ * When the driver said "Llegué" at a stop of a trip (ADR-052): the passengers who board there are
+ * notified once, and the driver's countdown starts from this time.
+ */
+export const tripStopArrivals = pgTable(
+  'trip_stop_arrivals',
+  {
+    tripId: uuid()
+      .notNull()
+      .references(() => trips.id, { onDelete: 'cascade' }),
+    stopId: uuid()
+      .notNull()
+      .references(() => stops.id, { onDelete: 'restrict' }),
+    driverUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
+    arrivedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.tripId, t.stopId] })],
+);

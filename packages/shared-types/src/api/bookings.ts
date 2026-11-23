@@ -89,8 +89,11 @@ export interface BookingPassenger extends PassengerInput {
   seatNumber: string;
   /** Per passenger, in the fare's currency. */
   fare: string;
-  /** Issued once the booking is confirmed. `qr` is the payload to render as a QR code. */
-  ticket: { qr: string; boardedAt: string | null } | null;
+  /**
+   * Issued once the booking is confirmed. `qr` is the payload to render as a QR code; `pin` the
+   * 4 digits to say to the driver instead (ADR-052; null on older tickets).
+   */
+  ticket: { qr: string; pin: string | null; boardedAt: string | null } | null;
 }
 
 export interface Booking {

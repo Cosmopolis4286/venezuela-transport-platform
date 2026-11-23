@@ -122,21 +122,31 @@ export class TripsDateQueryDto {
 /** Either `qr`, or `bookingCode` with `seatNumber` (typed by hand). */
 export class ValidateTicketDto {
   @ApiPropertyOptional({ example: 'VTP1.6f1c…', description: 'Payload read from the ticket QR' })
-  @ValidateIf((o: ValidateTicketDto) => o.bookingCode === undefined)
+  @ValidateIf((o: ValidateTicketDto) => o.bookingCode === undefined && o.pin === undefined)
   @IsString()
   @Length(1, 100)
   qr?: string;
 
   @ApiPropertyOptional({ example: 'VTP-7K3QXA' })
-  @ValidateIf((o: ValidateTicketDto) => o.qr === undefined)
+  @ValidateIf((o: ValidateTicketDto) => o.qr === undefined && o.pin === undefined)
   @Matches(/^(VTP-?)?[A-Za-z0-9]{6}$/i, { message: 'bookingCode is not valid' })
   bookingCode?: string;
 
   @ApiPropertyOptional({ example: '12' })
-  @ValidateIf((o: ValidateTicketDto) => o.qr === undefined)
+  @ValidateIf((o: ValidateTicketDto) => o.qr === undefined && o.pin === undefined)
   @IsString()
   @Length(1, 4)
   seatNumber?: string;
+
+  @ApiPropertyOptional({ example: '4821', description: 'Ticket PIN, with tripId (ADR-052)' })
+  @ValidateIf((o: ValidateTicketDto) => o.pin !== undefined)
+  @Matches(/^\s*\d{4}\s*$/, { message: 'pin must be 4 digits' })
+  pin?: string;
+
+  @ApiPropertyOptional({ description: 'The departure the PIN belongs to' })
+  @ValidateIf((o: ValidateTicketDto) => o.pin !== undefined)
+  @IsUUID()
+  tripId?: string;
 }
 
 export class OfflineBoardingDto implements OfflineBoarding {

@@ -1,6 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   DEPART_EARLY_HOURS,
+  WAIT_AT_STOP_MINUTES,
   NETWORK_UTC_OFFSET,
   offlineTime,
   rolesWith,
@@ -18,7 +19,13 @@ import { DatabaseService, type Transaction } from '../../database/database.servi
 import { AuditService } from '../audit/audit.service.js';
 import { departureText } from '../notifications/format.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
-import { trips, type TripRow } from '../bookings/bookings.schema.js';
+import {
+  bookingPassengers,
+  bookings,
+  trips,
+  tripStopArrivals,
+  type TripRow,
+} from '../bookings/bookings.schema.js';
 import { BookingsService, summary } from '../bookings/bookings.service.js';
 import { TripsService } from '../bookings/trips.service.js';
 import { vehicleDocuments, vehicles } from '../fleet/fleet.schema.js';
@@ -358,6 +365,7 @@ export class DispatchService {
     const manifest = await this.bookings.manifest(trip.organization.id, tripId);
     return {
       ...trip,
+      stops: await this.tripStops(trip.route.id, tripId),
       // Drivers see who boards and alights where; documents stay with the inspectors.
       passengers: manifest.passengers.map((p) => ({
         seatNumber: p.seatNumber,
@@ -369,6 +377,95 @@ export class DispatchService {
         boardedAt: p.boardedAt,
       })),
     };
+  }
+
+  /** The route's stops in order, with when the driver said "Llegué" at each (ADR-052). */
+  private async tripStops(routeId: string, tripId: string): Promise<DriverManifest['stops']> {
+    const ordered = await this.database.db
+      .select({ stopId: routeStops.stopId })
+      .from(routeStops)
+      .where(eq(routeStops.routeId, routeId))
+      .orderBy(asc(routeStops.sequence));
+    const arrivals = await this.database.db
+      .select({ stopId: tripStopArrivals.stopId, arrivedAt: tripStopArrivals.arrivedAt })
+      .from(tripStopArrivals)
+      .where(eq(tripStopArrivals.tripId, tripId));
+    const summaries = await this.stops.summaries(ordered.map((s) => s.stopId));
+    return ordered.map(({ stopId }) => ({
+      ...summaries.get(stopId)!,
+      arrivedAt: arrivals.find((a) => a.stopId === stopId)?.arrivedAt.toISOString() ?? null,
+    }));
+  }
+
+  /**
+   * The driver is at a stop (ADR-052): the passengers who board there, paid and not boarded yet,
+   * are told the car waits {@link WAIT_AT_STOP_MINUTES} minutes. Said again, nobody is notified
+   * twice; the answer is the trip's stops with when the driver arrived at each.
+   */
+  async arrivedAtStop(
+    actor: Authenticated,
+    tripId: string,
+    stopId: string,
+    meta: RequestMeta,
+  ): Promise<DriverManifest['stops']> {
+    const [row] = await this.drivenTrips(actor.user.id, null, tripId);
+    if (!row) throw tripNotFound();
+    const [onRoute] = await this.database.db
+      .select({ stopId: routeStops.stopId })
+      .from(routeStops)
+      .where(and(eq(routeStops.routeId, row.trip.routeId), eq(routeStops.stopId, stopId)));
+    if (!onRoute) {
+      throw new ApiException('NOT_FOUND', 'The stop is not on this route', HttpStatus.NOT_FOUND);
+    }
+    const [arrival] = await this.database.db
+      .insert(tripStopArrivals)
+      .values({ tripId, stopId, driverUserId: actor.user.id })
+      .onConflictDoNothing()
+      .returning();
+    if (arrival) {
+      await this.audit.record({
+        action: 'trip.arrived_at_stop',
+        actorUserId: actor.user.id,
+        targetType: 'trip',
+        targetId: tripId,
+        ip: meta.ip,
+        metadata: { stopId },
+      });
+      const waiting = await this.database.db
+        .selectDistinct({ userId: bookings.userId, bookingId: bookings.id })
+        .from(bookingPassengers)
+        .innerJoin(bookings, eq(bookings.id, bookingPassengers.bookingId))
+        .where(
+          and(
+            eq(bookingPassengers.tripId, tripId),
+            eq(bookingPassengers.active, true),
+            isNull(bookingPassengers.boardedAt),
+            eq(bookings.status, 'confirmed'),
+            eq(bookings.fromStopId, stopId),
+          ),
+        );
+      if (waiting.length) {
+        const [stop] = [...(await this.stops.summaries([stopId])).values()];
+        const [vehicle] = row.trip.vehicleId
+          ? await this.database.db
+              .select({ plate: vehicles.plate })
+              .from(vehicles)
+              .where(eq(vehicles.id, row.trip.vehicleId))
+          : [];
+        // One notice per passenger account, opening its booking.
+        const byUser = new Map(waiting.map((w) => [w.userId, w.bookingId]));
+        for (const [userId, bookingId] of byUser) {
+          this.notifications.send({
+            kind: 'driver_at_stop',
+            userIds: [userId],
+            app: 'passenger',
+            reference: { key: 'bookingId', id: bookingId },
+            text: (m) => m.driverAtStop(stop!.name, WAIT_AT_STOP_MINUTES, vehicle?.plate ?? null),
+          });
+        }
+      }
+    }
+    return this.tripStops(row.trip.routeId, tripId);
   }
 
   /** Members whose role drives. */

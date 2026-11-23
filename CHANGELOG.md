@@ -11,6 +11,13 @@ pull request.
 
 ## Sin publicar
 
+### Agregado
+
+- **PIN de 4 dígitos, recogida por parada y "Llegué"** (ADR-052): cada boleto pagado trae un PIN
+  que el pasajero le dice al conductor (también sin señal); la pantalla del viaje ordena la recogida
+  por parada en el orden de la ruta, y el botón **Llegué** avisa a los pasajeros de esa parada y
+  cuenta 2 minutos de espera. Migración `0049`.
+
 ### Cambiado
 
 - **Documentos legales, versión 2026-11-22** (los usuarios aceptan de nuevo): reúne todos los

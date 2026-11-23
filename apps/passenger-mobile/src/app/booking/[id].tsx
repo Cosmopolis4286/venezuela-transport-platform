@@ -32,6 +32,7 @@ import { InvoicePanel } from '@/components/invoice-panel';
 import { PriceBreakdown } from '@/components/price-breakdown';
 import { PaymentPanel } from '@/components/payment-panel';
 import { QrCode } from '@/components/qr-code';
+import { TicketPin } from '@/components/ticket-pin';
 import { useT } from '@/i18n/use-t';
 import { BOOKING_TONE } from '@/lib/booking-labels';
 import { saveBooking, useSavedTickets } from '@/lib/saved-tickets-store';
@@ -219,6 +220,7 @@ export default function BookingScreen() {
             <View style={{ paddingVertical: 8 }}>
               <QrCode value={p.ticket.qr} />
             </View>
+            {p.ticket.pin ? <TicketPin pin={p.ticket.pin} /> : null}
           </Card>
         ) : (
           <Row key={p.seatNumber}>

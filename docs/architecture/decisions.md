@@ -985,3 +985,30 @@ sobreventa que revisar. Una ruta que el teléfono nunca descargó con señal no 
 señal. Solo la cuenta que hizo el trabajo pendiente lo envía; cerrar sesión borra las pantallas
 guardadas (no la cola). El teléfono guarda las pantallas hasta 3 días, con nombres de pasajeros.
 Una venta enviada tarde cuenta en el día en que se vendió, y ya no se puede anular si ese día pasó.
+
+## ADR-052: PIN de 4 dígitos, recogida por parada y "Llegué" con 2 minutos de espera
+
+**Decisión** (del dueño del producto, para el suburbano de Casacoima). Tres funciones del
+conductor y del pasajero:
+
+- **PIN de 4 dígitos.** Cada boleto pagado tiene un PIN aleatorio, único entre los boletos activos
+  de esa salida (`booking_passengers_active_pin_key`). El pasajero lo ve debajo del QR (también en
+  los boletos guardados sin señal) y lo dice en voz alta; el conductor lo escribe en la pantalla
+  del viaje. Se valida con `{ tripId, pin }`, solo dentro de esa salida: 4 dígitos son pocos para
+  toda la red. Sin señal se busca en la lista guardada (ADR-049), que ahora trae `tripId` y `pin`.
+- **Recogida "de adentro hacia afuera".** La pantalla del viaje ordena a los pasajeros por parada
+  de subida, en el orden de la ruta (`DriverManifest.stops`): la empresa define el orden al crear
+  la ruta, de adentro del pueblo hacia la salida. Sin GPS: barato y funciona sin señal.
+- **"Llegué" en una parada.** El conductor lo toca y les llega un aviso (`driver_at_stop`) a los
+  pasajeros que suben ahí, pagados y sin abordar; en su pantalla corre una espera de
+  `WAIT_AT_STOP_MINUTES` (2). Se guarda una vez por parada y viaje (`trip_stop_arrivals`): tocarlo
+  de nuevo no avisa otra vez. Sin señal, la espera corre igual pero el aviso no sale (no se pone en
+  cola: llegaría tarde).
+
+**Por qué.** En la parada muchos pasajeros no pueden mostrar el QR (teléfono básico, pantalla
+rota, sin batería); el conductor pierde tiempo y gasolina buscando a cada pasajero y esperando sin
+límite.
+
+**Compromisos.** Un PIN se puede adivinar con 1 en 10.000 de probabilidad por intento y solo sirve
+en su salida; quien lo use dejaría sin puesto al dueño, que reclamaría con su QR (queda registrado
+quién validó). Los boletos emitidos antes de esta versión no tienen PIN.

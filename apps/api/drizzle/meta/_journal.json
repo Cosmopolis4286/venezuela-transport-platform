@@ -344,6 +344,13 @@
       "when": 1795400254007,
       "tag": "0048_offline_driver_queue",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1795445723007,
+      "tag": "0049_ticket_pin_and_stop_arrivals",
+      "breakpoints": true
     }
   ]
 }
