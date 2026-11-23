@@ -218,6 +218,26 @@ describe.runIf(expectDatabase)('Boarding without signal (e2e)', () => {
           .expect(200)
       ).body as TicketValidation;
       expect(validated.result).toBe('boarded');
+
+      // --- Or by the 4-digit PIN the passenger says aloud (ADR-052), only on its own departure.
+      const [anaPin, luisPin] = paid.passengers.map((p) => p.ticket!.pin!);
+      expect(anaPin).toMatch(/^\d{4}$/);
+      expect(luisPin).not.toBe(anaPin);
+      expect(unpaid.passengers[0]!.ticket).toBeNull();
+      expect(mine.find((t) => t.ticketId === ana)).toMatchObject({
+        pin: anaPin,
+        tripId: paid.trip.id,
+      });
+      const byPin = (pin: string, tripId = paid.trip.id) =>
+        http()
+          .post(`${org}/tickets/validate`)
+          .set('Authorization', jose.auth)
+          .send({ tripId, pin });
+      expect(((await byPin(` ${anaPin} `).expect(200)).body as TicketValidation).result).toBe(
+        'already_boarded',
+      );
+      await byPin(anaPin!, '00000000-0000-4000-8000-000000000001').expect(404);
+      await byPin('12a4').expect(400);
       const send = (boardings: object[]) =>
         http()
           .post(`${org}/tickets/offline-boardings`)

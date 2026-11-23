@@ -1,9 +1,4 @@
-import {
-  BOOKING_STATUS_LABELS,
-  DEPART_EARLY_HOURS,
-  networkClock,
-  type DriverManifest,
-} from '@vtp/shared-types';
+import { DEPART_EARLY_HOURS, networkClock, type DriverManifest } from '@vtp/shared-types';
 import {
   Badge,
   Banner,
@@ -11,7 +6,6 @@ import {
   Button,
   Card,
   Heading,
-  Row,
   Screen,
   Subheading,
   useApi,
@@ -19,13 +13,15 @@ import {
   useCurrentUser,
   userMessage,
 } from '@vtp/mobile-core';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { RefreshControl } from 'react-native';
 import { tripLoad, tripWhen } from '@/lib/driver-trip';
 import { noSignal, withTimeout } from '@/lib/no-signal';
 import { tripWithPending } from '@/lib/outbox';
 import { enqueue, useOutbox } from '@/lib/outbox-store';
+import { pickupList, waitLeft } from '@/lib/pickup';
+import { PickupStopCard, PinCheck } from '@/lib/trip-cards';
 import { SavedAt } from '@/lib/saved-at';
 import { useRefreshOnFocus } from '@/lib/use-refresh-on-focus';
 
@@ -40,6 +36,45 @@ export default function TripScreen() {
   const { api } = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // "Llegué" said without signal: the countdown runs here anyway (ADR-052).
+  const [localArrivals, setLocalArrivals] = useState<Record<string, string>>({});
+  const [arriving, setArriving] = useState<string | null>(null);
+  const [notices, setNotices] = useState<Record<string, string>>({});
+  const arrivals: Record<string, string> = { ...localArrivals };
+  for (const stop of trip?.stops ?? []) if (stop.arrivedAt) arrivals[stop.id] = stop.arrivedAt;
+  // Ticks every second while a wait counts down.
+  const [now, setNow] = useState(() => Date.now());
+  const counting = Object.values(arrivals).some((at) => waitLeft(at, now) > 0);
+  useEffect(() => {
+    if (!counting) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [counting]);
+
+  const arrive = async (stopId: string) => {
+    setArriving(stopId);
+    const at = new Date().toISOString();
+    try {
+      await withTimeout(
+        api.request(`/me/driving/${encodeURIComponent(tripId)}/stops/${stopId}/arrived`, {
+          method: 'POST',
+        }),
+      );
+      setNotices((n) => ({ ...n, [stopId]: 'Les avisamos a los pasajeros de esta parada.' }));
+      await manifest.reload();
+    } catch (e) {
+      setNotices((n) => ({
+        ...n,
+        [stopId]: noSignal(e)
+          ? 'Sin señal: no pudimos avisarles. Espera igual los 2 minutos.'
+          : userMessage(e),
+      }));
+      if (noSignal(e)) setLocalArrivals((a) => ({ ...a, [stopId]: at }));
+    } finally {
+      setNow(Date.now());
+      setArriving(null);
+    }
+  };
 
   const mark = async (step: 'depart' | 'arrive') => {
     setBusy(true);
@@ -123,30 +158,27 @@ export default function TripScreen() {
             {error ? <Banner tone="error">{error}</Banner> : null}
           </Card>
 
-          <Subheading>Pasajeros ({trip.passengers.length})</Subheading>
+          <PinCheck
+            organizationId={trip.organization.id}
+            tripId={trip.id}
+            onBoarded={() => void manifest.reload()}
+          />
+
+          <Subheading>Recogida, parada por parada ({trip.passengers.length})</Subheading>
           {trip.passengers.length === 0 ? (
             <Body muted>Todavía nadie ha reservado este viaje.</Body>
           ) : (
-            trip.passengers.map((passenger) => (
-              <Card key={passenger.seatNumber}>
-                <Row>
-                  <Body>
-                    Puesto {passenger.seatNumber} · {passenger.firstName} {passenger.lastName}
-                  </Body>
-                </Row>
-                <Body muted>
-                  {passenger.from.name} → {passenger.to.name}
-                </Body>
-                <Row>
-                  {passenger.boardedAt ? (
-                    <Badge label={`Abordó ${networkClock(passenger.boardedAt)}`} tone="success" />
-                  ) : passenger.bookingStatus === 'held' ? (
-                    <Badge label={BOOKING_STATUS_LABELS.held} tone="warning" />
-                  ) : (
-                    <Badge label="Por abordar" />
-                  )}
-                </Row>
-              </Card>
+            pickupList(trip).map((pickup) => (
+              <PickupStopCard
+                key={pickup.stop.id}
+                pickup={pickup}
+                arrivedAt={arrivals[pickup.stop.id] ?? null}
+                now={now}
+                canArrive={!trip.arrivedAt}
+                busy={arriving === pickup.stop.id}
+                notice={notices[pickup.stop.id] ?? null}
+                onArrive={() => void arrive(pickup.stop.id)}
+              />
             ))
           )}
         </>

@@ -97,6 +97,11 @@ export interface DriverTrip extends Omit<TripSummary, 'vehicle' | 'driver'> {
 
 /** `GET /me/driving/:tripId/passengers` — who boards and alights where, for the driver. */
 export interface DriverManifest extends DriverTrip {
+  /**
+   * The route's stops in order, from where the trip starts: the pickup list goes stop by stop
+   * (ADR-052). `arrivedAt` is when the driver said "Llegué" there (UTC ISO), null before.
+   */
+  stops: (StopSummary & { arrivedAt: string | null })[];
   passengers: {
     seatNumber: string;
     firstName: string;
@@ -113,6 +118,13 @@ export interface DriverManifest extends DriverTrip {
  * departure) and then `…/arrive`. Once departed, passengers can no longer cancel.
  */
 export const DEPART_EARLY_HOURS = 2;
+
+/**
+ * `POST /me/driving/:tripId/stops/:stopId/arrived`: the driver is at a stop (ADR-052). The
+ * passengers who board there and have not boarded get a notice; the driver's screen counts down
+ * this long. Said again at the same stop, nobody is notified twice.
+ */
+export const WAIT_AT_STOP_MINUTES = 2;
 
 /**
  * `POST /me/driving/:tripId/depart|arrive`: `at` is when the driver tapped it, if marked without

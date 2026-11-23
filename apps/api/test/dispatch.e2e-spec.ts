@@ -404,6 +404,20 @@ describe.runIf(expectDatabase)('Dispatch (e2e)', () => {
         expect.objectContaining({ seatNumber: '3', firstName: 'Ana', bookingStatus: 'held' }),
       ]);
       expect(manifest.passengers[0]).not.toHaveProperty('documentNumber');
+      // The pickup list goes stop by stop, in the route's order (ADR-052).
+      expect(manifest.stops[0]).toMatchObject({ id: caracas.id, arrivedAt: null });
+      expect(manifest.stops.at(-1)).toMatchObject({ id: maracaibo.id, arrivedAt: null });
+      // "Llegué" at a stop: kept once, said again changes nothing.
+      const atStop = (path: string, auth = driver.auth) =>
+        http()
+          .post(`/api/v1/me/driving/${assigned.tripId}/stops/${path}/arrived`)
+          .set('Authorization', auth);
+      const first = (await atStop(caracas.id).expect(200)).body as DriverManifest['stops'];
+      expect(first[0]!.arrivedAt).toEqual(expect.any(String));
+      const again = (await atStop(caracas.id).expect(200)).body as DriverManifest['stops'];
+      expect(again[0]!.arrivedAt).toBe(first[0]!.arrivedAt);
+      await atStop(caracas.id, ana.auth).expect(404);
+      await atStop('00000000-0000-4000-8000-000000000002').expect(404);
       await http()
         .get(`/api/v1/me/driving/${assigned.tripId}/passengers`)
         .set('Authorization', ana.auth)

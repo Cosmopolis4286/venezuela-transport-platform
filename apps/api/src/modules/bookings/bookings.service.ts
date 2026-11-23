@@ -89,6 +89,9 @@ export const assignmentColumns = {
   driver: { userId: drivers.id, firstName: drivers.firstName, lastName: drivers.lastName },
 };
 
+/** How many 4-digit PINs exist. */
+const PIN_SPACE = 10_000;
+
 function bookingCode(): string {
   let code = '';
   for (let i = 0; i < 6; i++) code += CODE_ALPHABET[randomInt(CODE_ALPHABET.length)];
@@ -249,8 +252,10 @@ export class BookingsService {
             })
             .returning();
           // The partial unique index on (trip, seat) rejects seats another booking holds.
+          const pins = await this.freePins(tx, trip.id, passengerCount);
           await tx.insert(bookingPassengers).values(
             input.passengers.map((passenger, index) => ({
+              pin: pins[index]!,
               bookingId: row!.id,
               tripId: trip.id,
               seatNumber: seats[index]!,
@@ -266,8 +271,9 @@ export class BookingsService {
         });
       } catch (error) {
         const constraint = uniqueViolation(error);
-        // Two open tickets numbered at once: number them again.
+        // Two open tickets numbered at once, or the same PIN drawn at once: try again.
         if (constraint === 'booking_passengers_active_seat_key' && open) continue;
+        if (constraint === 'booking_passengers_active_pin_key') continue;
         if (constraint === 'booking_passengers_active_seat_key') {
           throw conflict('One of the seats was just taken, choose another', 'SEAT_TAKEN');
         }
@@ -381,6 +387,33 @@ export class BookingsService {
       throw conflict('There are no tickets left for this day', 'DEPARTURE_NOT_BOOKABLE');
     }
     return free.slice(0, count);
+  }
+
+  /**
+   * Random 4-digit PINs not used by the departure's active tickets (ADR-052). Two bookings drawing
+   * the same PIN at once hit the partial unique index and the booking is tried again.
+   */
+  private async freePins(tx: Transaction, tripId: string, count: number): Promise<string[]> {
+    const taken = new Set(
+      (
+        await tx
+          .select({ pin: bookingPassengers.pin })
+          .from(bookingPassengers)
+          .where(and(eq(bookingPassengers.tripId, tripId), eq(bookingPassengers.active, true)))
+      ).map((row) => row.pin),
+    );
+    if (taken.size + count > PIN_SPACE / 2) {
+      throw conflict('There are no tickets left for this day', 'DEPARTURE_NOT_BOOKABLE');
+    }
+    const pins: string[] = [];
+    while (pins.length < count) {
+      const pin = String(randomInt(PIN_SPACE)).padStart(4, '0');
+      if (!taken.has(pin)) {
+        taken.add(pin);
+        pins.push(pin);
+      }
+    }
+    return pins;
   }
 
   /**
@@ -979,6 +1012,7 @@ export class BookingsService {
               booking.status === 'confirmed' && p.active
                 ? {
                     qr: `${TICKET_QR_PREFIX}${p.id}`,
+                    pin: p.pin,
                     boardedAt: p.boardedAt?.toISOString() ?? null,
                   }
                 : null,

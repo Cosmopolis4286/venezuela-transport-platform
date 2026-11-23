@@ -2,6 +2,7 @@ import { Badge, Banner, Body, Button, Card, Heading, Row, Screen } from '@vtp/mo
 import { localTime, longDate } from '@vtp/shared-types';
 import { View } from 'react-native';
 import { QrCode } from '@/components/qr-code';
+import { TicketPin } from '@/components/ticket-pin';
 import { useT } from '@/i18n/use-t';
 import { useSavedTickets } from '@/lib/saved-tickets-store';
 
@@ -45,6 +46,7 @@ export function SavedTicketsView({ onBack }: { onBack?: () => void }) {
               <View style={{ paddingVertical: 8 }}>
                 <QrCode value={p.qr} />
               </View>
+              {p.pin ? <TicketPin pin={p.pin} /> : null}
             </Card>
           ))}
         </View>

@@ -242,7 +242,20 @@ export const TICKET_QR_PREFIX = 'VTP1.';
  * `POST /organizations/:id/tickets/validate` — the scanned QR payload, or the booking code and
  * seat typed by hand when the passenger's screen cannot be read.
  */
-export type ValidateTicketRequest = { qr: string } | { bookingCode: string; seatNumber: string };
+export type ValidateTicketRequest =
+  | { qr: string }
+  | { bookingCode: string; seatNumber: string }
+  /** The 4-digit PIN the passenger says aloud, on the driver's trip (ADR-052). */
+  | { tripId: string; pin: string };
+
+/** A ticket PIN: 4 digits, unique among the active tickets of one departure (ADR-052). */
+export const TICKET_PIN_PATTERN = /^\d{4}$/;
+
+/** The PIN as typed (spaces or dashes removed), or null if it is not 4 digits. */
+export function normalizePin(typed: string): string | null {
+  const pin = typed.replace(/[\s-]/g, '');
+  return TICKET_PIN_PATTERN.test(pin) ? pin : null;
+}
 
 /**
  * `boarded` → valid, marked as boarded now. `already_boarded` → used before (see `boardedAt`).
@@ -321,6 +334,10 @@ export const OFFLINE_TICKETS_AHEAD_HOURS = 24;
 export interface OfflineTicket {
   /** The id in the QR. */
   ticketId: string;
+  /** The departure, to check a PIN on the driver's trip (ADR-052). */
+  tripId: string;
+  /** 4 digits; null on tickets issued before PINs existed. */
+  pin: string | null;
   bookingCode: string;
   seatNumber: string;
   passengerName: string;

@@ -1,39 +1,11 @@
-import {
-  ApiError,
-  Badge,
-  Banner,
-  Body,
-  Button,
-  Card,
-  Field,
-  Heading,
-  Row,
-  Screen,
-  Subheading,
-  useAuth,
-  useColors,
-  userMessage,
-} from '@vtp/mobile-core';
-import {
-  localTime,
-  networkClock,
-  ticketIdFromQr,
-  type TicketValidation,
-  type ValidateTicketRequest,
-} from '@vtp/shared-types';
+import { Banner, Body, Button, Card, Field, Screen, Subheading, useColors } from '@vtp/mobile-core';
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
-import { noSignal, ONLINE_TIMEOUT_MS, withTimeout } from '@/lib/no-signal';
-import { updateOffline, useOfflineSync, useOfflineTickets } from '@/lib/offline-store';
-import {
-  checkOffline,
-  OFFLINE_LIST_STALE_MS,
-  withBoarding,
-  withOnlineBoarding,
-} from '@/lib/offline-tickets';
-import { ticketErrorMessage, ticketVerdict } from '@/lib/ticket-result';
+import { OFFLINE_LIST_STALE_MS } from '@/lib/offline-tickets';
+import { ResultCard } from '@/lib/result-card';
+import { useTicketCheck } from '@/lib/use-ticket-check';
 
 /** The same code read again within this time is ignored (the camera reports it many times). */
 const REPEAT_MS = 4000;
@@ -46,20 +18,14 @@ export default function ScanScreen() {
     organizationId: string;
     name?: string;
   }>();
-  const { api } = useAuth();
   const colors = useColors();
   const [permission, requestPermission] = useCameraPermissions();
-  const [result, setResult] = useState<TicketValidation | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   const [code, setCode] = useState('');
   const [seat, setSeat] = useState('');
-  const [offline, setOffline] = useState(false);
   const lastScan = useRef<{ data: string; at: number } | null>(null);
   // The line's tickets stay on the phone to check them without signal (ADR-049).
-  const saved = useOfflineTickets(organizationId);
-  useOfflineSync(api, organizationId);
-  const listAt = saved.list ? networkClock(saved.list.generatedAt) : null;
+  const { validate, reset, result, error, busy, offline, saved, listAt } =
+    useTicketCheck(organizationId);
   // Re-checked every minute: a list kept too long may miss tickets sold later.
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -68,66 +34,6 @@ export default function ScanScreen() {
   }, []);
   const stale =
     saved.list !== null && now - Date.parse(saved.list.generatedAt) > OFFLINE_LIST_STALE_MS;
-
-  /** Without signal: the list on the phone, and the boarding is sent when the signal is back. */
-  const validateOffline = (body: ValidateTicketRequest) => {
-    const checked = checkOffline(saved, body, Date.now());
-    if (!checked) {
-      setResult(null);
-      setError(
-        saved.list
-          ? `Sin señal, y este boleto no está en la lista guardada (de las ${listAt}). Si lo compró hace poco, pide que espere a que vuelva la señal o cóbrale en efectivo.`
-          : 'Sin señal, y todavía no hay boletos guardados en este teléfono. Abre la app con señal antes de salir.',
-      );
-      return;
-    }
-    if (checked.boarding) {
-      const boarding = checked.boarding;
-      updateOffline(organizationId, (kept) => withBoarding(kept, boarding));
-    }
-    setOffline(true);
-    setResult(checked.validation);
-  };
-
-  const validate = async (body: ValidateTicketRequest) => {
-    setBusy(true);
-    setError(null);
-    setOffline(false);
-    try {
-      const validation = await withTimeout(
-        api.request<TicketValidation>(`/organizations/${organizationId}/tickets/validate`, {
-          method: 'POST',
-          body,
-        }),
-        ONLINE_TIMEOUT_MS,
-      );
-      // Not accepted again on this phone if the signal goes.
-      const ticketId =
-        'qr' in body
-          ? ticketIdFromQr(body.qr)
-          : saved.list?.tickets.find(
-              (t) =>
-                t.bookingCode === validation.bookingCode && t.seatNumber === validation.seatNumber,
-            )?.ticketId;
-      if (validation.result === 'boarded' && ticketId) {
-        updateOffline(organizationId, (kept) =>
-          withOnlineBoarding(kept, ticketId, validation.boardedAt ?? new Date().toISOString()),
-        );
-      }
-      setResult(validation);
-    } catch (e) {
-      if (noSignal(e)) {
-        validateOffline(body);
-      } else {
-        setResult(null);
-        setError(
-          e instanceof ApiError ? ticketErrorMessage(e.status, userMessage(e)) : userMessage(e),
-        );
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const onScanned = ({ data }: BarcodeScanningResult) => {
     const now = Date.now();
@@ -140,9 +46,7 @@ export default function ScanScreen() {
   };
 
   const next = () => {
-    setResult(null);
-    setError(null);
-    setOffline(false);
+    reset();
     setCode('');
     setSeat('');
   };
@@ -237,29 +141,5 @@ export default function ScanScreen() {
         </>
       )}
     </Screen>
-  );
-}
-
-function ResultCard({ result }: { result: TicketValidation }) {
-  const verdict = ticketVerdict(result);
-  return (
-    <>
-      <Banner tone={verdict.tone}>
-        {verdict.title}
-        {verdict.detail ? `\n${verdict.detail}` : ''}
-      </Banner>
-      <Card>
-        <Row>
-          <Badge label={`Puesto ${result.seatNumber}`} tone={verdict.ok ? 'success' : 'neutral'} />
-          <Badge label={result.bookingCode} />
-        </Row>
-        <Heading>{result.passengerName}</Heading>
-        <Body>{result.documentNumber}</Body>
-        <Body muted>
-          {result.from.city} → {result.to.city} · sale {localTime(result.departsAt)}
-        </Body>
-        <Body muted>{result.route.name}</Body>
-      </Card>
-    </>
   );
 }

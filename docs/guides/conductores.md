@@ -72,6 +72,19 @@ En la pantalla del viaje, toca **Marcar salida** cuando el autobús deja el term
 2 horas antes de la hora programada) y **Marcar llegada** al terminar. La empresa ve el estado en
 su tablero, y desde la salida los pasajeros ya no pueden cancelar.
 
+### Recoger parada por parada
+
+La lista de pasajeros va **por parada**, en el orden de la ruta (de adentro hacia la salida): en
+cada parada ves quién sube, quién ya subió y cuántos bajan. Al llegar a una parada toca **Llegué:
+esperar 2 minutos**: a los pasajeros de esa parada les llega un aviso y en tu pantalla corre el
+tiempo. Si no hay señal el aviso no sale, pero el tiempo corre igual.
+
+### Validar con PIN
+
+Si el pasajero no puede mostrar el QR, pídele su **PIN de 4 dígitos** y escríbelo en **Validar con
+PIN**, en la pantalla del viaje. Solo sirve para ese viaje. Funciona sin señal con los boletos
+guardados en el teléfono.
+
 ### Sin señal
 
 La app guarda en el teléfono tus viajes, los pasajeros y las rutas cada vez que la abres con señal.

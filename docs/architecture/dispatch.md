@@ -97,16 +97,17 @@ producto. Los documentos se cargan en **Vehículos** ([fleet.md](fleet.md#docume
 
 ## Endpoints (`/api/v1`)
 
-| Método y ruta                                 | Quién                                  |
-| --------------------------------------------- | -------------------------------------- |
-| `GET /organizations/:id/vehicles`             | Miembros                               |
-| `POST`/`PATCH /organizations/:id/vehicles…`   | `fleet.manage`                         |
-| `GET /organizations/:id/dispatch?date=`       | `operations.dispatch`                  |
-| `PUT /organizations/:id/dispatch/assignment`  | `operations.dispatch`                  |
-| `POST /organizations/:id/dispatch/cancel`     | `operations.dispatch`                  |
-| `GET /me/driving`                             | Con sesión — sus viajes como conductor |
-| `GET /me/driving/:tripId/passengers`          | El conductor asignado                  |
-| `POST /me/driving/:tripId/depart`, `…/arrive` | El conductor asignado                  |
+| Método y ruta                                    | Quién                                  |
+| ------------------------------------------------ | -------------------------------------- |
+| `GET /organizations/:id/vehicles`                | Miembros                               |
+| `POST`/`PATCH /organizations/:id/vehicles…`      | `fleet.manage`                         |
+| `GET /organizations/:id/dispatch?date=`          | `operations.dispatch`                  |
+| `PUT /organizations/:id/dispatch/assignment`     | `operations.dispatch`                  |
+| `POST /organizations/:id/dispatch/cancel`        | `operations.dispatch`                  |
+| `GET /me/driving`                                | Con sesión — sus viajes como conductor |
+| `GET /me/driving/:tripId/passengers`             | El conductor asignado                  |
+| `POST /me/driving/:tripId/depart`, `…/arrive`    | El conductor asignado                  |
+| `POST /me/driving/:tripId/stops/:stopId/arrived` | El conductor asignado (ADR-052)        |
 
 ## Todavía no
 

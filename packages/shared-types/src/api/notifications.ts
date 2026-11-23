@@ -52,5 +52,6 @@ export const NOTIFICATION_KINDS = [
   'commission_changed',
   'payout_sent',
   'debt_payment',
+  'driver_at_stop',
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];

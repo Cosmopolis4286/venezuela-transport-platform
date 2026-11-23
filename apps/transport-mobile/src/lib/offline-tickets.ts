@@ -1,6 +1,7 @@
 import {
   inBoardingWindow,
   normalizeBookingCode,
+  normalizePin,
   ticketIdFromQr,
   type OfflineBoarding,
   type OfflineBoardingOutcome,
@@ -30,6 +31,10 @@ function find(list: OfflineTicketList, input: ValidateTicketRequest): OfflineTic
   if ('qr' in input && typeof input.qr === 'string') {
     const id = ticketIdFromQr(input.qr);
     return id ? list.tickets.find((t) => t.ticketId === id) : undefined;
+  }
+  if ('pin' in input && typeof input.pin === 'string') {
+    const pin = normalizePin(input.pin);
+    return pin ? list.tickets.find((t) => t.tripId === input.tripId && t.pin === pin) : undefined;
   }
   const typed = input as { bookingCode: string; seatNumber: string };
   const code = normalizeBookingCode(typed.bookingCode);

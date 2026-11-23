@@ -21,6 +21,8 @@ export interface NotificationMessages {
   bookingCancelled: (bookingCode: string, refund: string | null) => NotificationText;
   refundSent: (bookingCode: string, amount: string, reference: string) => NotificationText;
   tripReminder: (route: string, departs: string, from: string) => NotificationText;
+  /** The driver reached the passenger's stop and waits a few minutes (ADR-052). */
+  driverAtStop: (stop: string, minutes: number, plate: string | null) => NotificationText;
   tripAssigned: (route: string, departs: string, plate: string | null) => NotificationText;
   taxiAccepted: (plate: string, fare: string) => NotificationText;
   taxiRequested: (terminal: string, passengers: number) => NotificationText;
@@ -154,6 +156,10 @@ const es: NotificationMessages = {
   refundSent: (code, amount, reference) => ({
     title: 'Te devolvimos tu dinero',
     body: `Te devolvimos ${amount} de la reserva ${code}. Referencia de la devolución: ${reference}.`,
+  }),
+  driverAtStop: (stop, minutes, plate) => ({
+    title: 'Tu carro llegó',
+    body: `Te espera en ${stop}${plate ? ` (placa ${plate})` : ''} por ${minutes} minutos. Ten listo tu QR o tu PIN.`,
   }),
   tripReminder: (route, departs, from) => ({
     title: 'Tu viaje es hoy',
@@ -331,6 +337,10 @@ const en: NotificationMessages = {
     title: 'We refunded your money',
     body: `We refunded ${amount} for booking ${code}. Refund reference: ${reference}.`,
   }),
+  driverAtStop: (stop, minutes, plate) => ({
+    title: 'Your ride is here',
+    body: `It is waiting at ${stop}${plate ? ` (plate ${plate})` : ''} for ${minutes} minutes. Have your QR or PIN ready.`,
+  }),
   tripReminder: (route, departs, from) => ({
     title: 'Your trip is today',
     body: `${route}: you leave ${departs} from ${from}. Arrive early and have your QR code ready.`,
@@ -504,6 +514,10 @@ const ptBR: NotificationMessages = {
   refundSent: (code, amount, reference) => ({
     title: 'Devolvemos seu dinheiro',
     body: `Devolvemos ${amount} da reserva ${code}. Referência da devolução: ${reference}.`,
+  }),
+  driverAtStop: (stop, minutes, plate) => ({
+    title: 'Seu carro chegou',
+    body: `Ele espera em ${stop}${plate ? ` (placa ${plate})` : ''} por ${minutes} minutos. Tenha seu QR ou PIN em mãos.`,
   }),
   tripReminder: (route, departs, from) => ({
     title: 'Sua viagem é hoje',

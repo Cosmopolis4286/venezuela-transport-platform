@@ -11,6 +11,8 @@ import {
 const ANA = '6f1c2a3b-1d2e-4f50-8a9b-0c1d2e3f4a5b';
 const ticket: OfflineTicket = {
   ticketId: ANA,
+  tripId: 'trip-1',
+  pin: '0427',
   bookingCode: 'VTP-7K3QXA',
   seatNumber: '3',
   passengerName: 'Ana Pérez',
@@ -58,6 +60,13 @@ describe('checking tickets without signal', () => {
     expect(checkOffline(online, { qr: `${TICKET_QR_PREFIX}${ANA}` }, noon)!.validation.result).toBe(
       'already_boarded',
     );
+  });
+
+  it('finds a ticket by its PIN, only on its own departure', () => {
+    const byPin = checkOffline(saved, { tripId: 'trip-1', pin: ' 04-27 ' }, noon)!;
+    expect(byPin.validation.result).toBe('boarded');
+    expect(checkOffline(saved, { tripId: 'trip-2', pin: '0427' }, noon)).toBeNull();
+    expect(checkOffline(saved, { tripId: 'trip-1', pin: '427' }, noon)).toBeNull();
   });
 
   it('does not know tickets that are not on the list', () => {
