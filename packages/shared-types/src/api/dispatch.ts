@@ -113,3 +113,11 @@ export interface DriverManifest extends DriverTrip {
  * departure) and then `…/arrive`. Once departed, passengers can no longer cancel.
  */
 export const DEPART_EARLY_HOURS = 2;
+
+/**
+ * `POST /me/driving/:tripId/depart|arrive`: `at` is when the driver tapped it, if marked without
+ * signal and sent later (see `offlineTime`); now by default.
+ */
+export interface MarkTripRequest {
+  at?: string;
+}

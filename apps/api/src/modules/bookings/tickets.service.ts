@@ -3,6 +3,7 @@ import {
   inBoardingWindow as boardingWindowOk,
   normalizeBookingCode,
   OFFLINE_TICKETS_AHEAD_HOURS,
+  offlineTime,
   ticketIdFromQr,
   type BoardingIssue,
   type OfflineBoardingOutcome,
@@ -25,8 +26,6 @@ import { users } from '../identity/identity.schema.js';
 import { boardingIssues, bookingPassengers, bookings, trips } from './bookings.schema.js';
 
 const HOUR_MS = 3600_000;
-/** How far back a boarding made without signal is accepted when it finally arrives. */
-const OFFLINE_BOARDING_MAX_AGE_MS = 48 * HOUR_MS;
 /** Tickets a phone keeps: boarding windows reach 12 hours past departure. */
 const OFFLINE_TICKETS_LIMIT = 5000;
 
@@ -240,12 +239,7 @@ export class TicketsService {
         continue;
       }
       const { passenger, booking } = row;
-      const asked = Date.parse(boarding.boardedAt);
-      const at = new Date(
-        Number.isNaN(asked)
-          ? now
-          : Math.min(now, Math.max(now - OFFLINE_BOARDING_MAX_AGE_MS, asked)),
-      );
+      const at = new Date(offlineTime(boarding.boardedAt, now));
       const issue = (
         kind: 'double_use' | 'not_paid',
         first: Date | null,

@@ -1,6 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type { AssignTripRequest, CancelDepartureRequest } from '@vtp/shared-types';
-import { IsString, IsUUID, Length, Matches, ValidateIf } from 'class-validator';
+import type { AssignTripRequest, CancelDepartureRequest, MarkTripRequest } from '@vtp/shared-types';
+import {
+  IsDateString,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+  Matches,
+  ValidateIf,
+} from 'class-validator';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -46,4 +54,11 @@ export class CancelDepartureDto implements CancelDepartureRequest {
   @IsString()
   @Length(5, 300)
   reason!: string;
+}
+
+export class MarkTripDto implements MarkTripRequest {
+  @ApiProperty({ required: false, description: 'When the driver tapped it, if sent later' })
+  @IsOptional()
+  @IsDateString()
+  at?: string;
 }

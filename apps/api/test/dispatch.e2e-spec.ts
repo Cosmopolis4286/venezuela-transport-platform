@@ -439,8 +439,11 @@ describe.runIf(expectDatabase)('Dispatch (e2e)', () => {
       const [afternoonTrip] = (
         await http().get('/api/v1/me/driving').set('Authorization', driver.auth).expect(200)
       ).body as DriverTrip[];
-      const mark = (step: 'depart' | 'arrive', auth = driver.auth) =>
-        http().post(`/api/v1/me/driving/${afternoonTrip!.id}/${step}`).set('Authorization', auth);
+      const mark = (step: 'depart' | 'arrive', auth = driver.auth, body: object = {}) =>
+        http()
+          .post(`/api/v1/me/driving/${afternoonTrip!.id}/${step}`)
+          .set('Authorization', auth)
+          .send(body);
       expect((await mark('depart').expect(409)).body.error.reason).toBe('TRIP_TOO_EARLY');
       await db
         .update(tripsTable)
@@ -448,11 +451,22 @@ describe.runIf(expectDatabase)('Dispatch (e2e)', () => {
         .where(eq(tripsTable.id, afternoonTrip!.id));
       expect((await mark('arrive').expect(409)).body.error.reason).toBe('TRIP_WRONG_STEP');
       await mark('depart', ana.auth).expect(404);
-      const departed = (await mark('depart').expect(200)).body as DriverTrip;
-      expect(departed.departedAt).not.toBeNull();
+      // Marked without signal 10 minutes ago and sent now (ADR-051): the phone's time is kept.
+      const tappedAt = new Date(Date.now() - 10 * 60_000);
+      await mark('depart', driver.auth, { at: 'ayer' }).expect(400);
+      const departed = (
+        await mark('depart', driver.auth, { at: tappedAt.toISOString() }).expect(200)
+      ).body as DriverTrip;
+      expect(Date.parse(departed.departedAt!)).toBe(tappedAt.getTime());
       expect(departed.arrivedAt).toBeNull();
       expect((await mark('depart').expect(409)).body.error.reason).toBe('TRIP_WRONG_STEP');
-      expect(((await mark('arrive').expect(200)).body as DriverTrip).arrivedAt).not.toBeNull();
+      // A phone clock behind never arrives before leaving.
+      const arrived = (
+        await mark('arrive', driver.auth, {
+          at: new Date(tappedAt.getTime() - 3600_000).toISOString(),
+        }).expect(200)
+      ).body as DriverTrip;
+      expect(arrived.arrivedAt).toBe(departed.departedAt);
       await mark('arrive').expect(409);
       const progress = (
         (

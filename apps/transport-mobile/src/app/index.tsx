@@ -33,8 +33,17 @@ import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { RefreshControl } from 'react-native';
 import { tripLoad, tripWhen } from '@/lib/driver-trip';
+import { dismissFailed, useOutbox } from '@/lib/outbox-store';
+import { useKeepRoutesSaved } from '@/lib/keep-routes';
 import { useOfflineSync } from '@/lib/offline-store';
 import { useRefreshOnFocus } from '@/lib/use-refresh-on-focus';
+
+/** Keeps a line's routes and fares on the phone for cash sales without signal (ADR-051). */
+function KeepRoutesSaved({ organizationId }: { organizationId: string }) {
+  const { api } = useAuth();
+  useKeepRoutesSaved(api, organizationId);
+  return null;
+}
 
 /** Downloads a line's tickets while the app is open (ADR-049); renders nothing. */
 function KeepTicketsOffline({ organizationId }: { organizationId: string }) {
@@ -45,7 +54,9 @@ function KeepTicketsOffline({ organizationId }: { organizationId: string }) {
 
 export default function Home() {
   const user = useCurrentUser();
-  const { api, signOut } = useAuth();
+  const { api, signOut, state } = useAuth();
+  const outbox = useOutbox();
+  const offline = state.status === 'signedIn' && state.offline === true;
   const organizations = useApi<OrganizationMembershipSummary[]>('/me/organizations');
   const invitations = useApi<ReceivedInvitation[]>('/me/invitations');
   const application = useApi<ProviderApplication>('/me/application');
@@ -99,6 +110,36 @@ export default function Home() {
     >
       <Heading>{user.firstName ? `Hola, ${user.firstName}` : 'Hola'}</Heading>
       <TermsPrompt />
+      {offline ? (
+        <Banner tone="warning">
+          Sin señal. Puedes validar boletos, marcar salida y llegada y anotar ventas en efectivo con
+          lo guardado en el teléfono; se envía solo cuando vuelva la señal.
+        </Banner>
+      ) : null}
+      {outbox.pending.length ? (
+        <Banner tone="info">
+          {outbox.pending.length === 1
+            ? '1 registro hecho sin señal espera para enviarse.'
+            : `${outbox.pending.length} registros hechos sin señal esperan para enviarse.`}
+        </Banner>
+      ) : null}
+      {outbox.failed.length ? (
+        <Card>
+          <Subheading>No se pudo registrar</Subheading>
+          {outbox.failed.map(({ item, message: why }) => (
+            <Body key={item.id}>
+              {item.label}: {why}
+            </Body>
+          ))}
+          <Body muted>Avísale a tu despachador si hace falta corregirlo.</Body>
+          <Button variant="secondary" title="Entendido" onPress={dismissFailed} />
+        </Card>
+      ) : null}
+      {organizations.data
+        ?.filter((m) => m.organization.status === 'active' && m.permissions.includes('trips.drive'))
+        .map((m) => (
+          <KeepRoutesSaved key={m.organization.id} organizationId={m.organization.id} />
+        ))}
       {/* The day's tickets of each line where they validate, kept to check them without signal. */}
       {organizations.data
         ?.filter(
@@ -144,7 +185,7 @@ export default function Home() {
       {drives ? (
         <>
           <Subheading>Mis viajes</Subheading>
-          {driving.error ? (
+          {driving.error && !driving.data ? (
             <Banner tone="error">{driving.error.userMessage}</Banner>
           ) : driving.data?.length ? (
             driving.data.map((trip) => (
@@ -170,7 +211,7 @@ export default function Home() {
       ) : null}
 
       <Subheading>Mis organizaciones</Subheading>
-      {organizations.error ? (
+      {organizations.error && !organizations.data ? (
         <Banner tone="error">{organizations.error.userMessage}</Banner>
       ) : organizations.data?.length ? (
         organizations.data.map(({ organization, role, permissions }) => (
@@ -279,7 +320,7 @@ export default function Home() {
           </Body>
           <Button title="Empezar solicitud" onPress={() => router.push('/application/edit')} />
         </Card>
-      ) : application.error ? (
+      ) : application.error && !application.data && !offline ? (
         <Banner tone="error">{application.error.userMessage}</Banner>
       ) : null}
 

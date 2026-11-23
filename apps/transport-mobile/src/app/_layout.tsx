@@ -9,6 +9,8 @@ import { Stack, useRouter } from 'expo-router';
 import { useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { api } from '@/lib/api';
+import { useSendPending } from '@/lib/outbox-store';
+import { responseCache } from '@/lib/response-cache';
 
 function RootNavigator() {
   const { state } = useAuth();
@@ -23,6 +25,8 @@ function RootNavigator() {
     [router],
   );
   usePushNotifications(api, 'transport', signedIn, openNotice);
+  // Cash sales, departures and arrivals done without signal go out when it comes back (ADR-051).
+  useSendPending(api, signedIn ? state.user.id : null);
   if (state.status === 'loading' || state.status === 'unavailable') return <SplashScreen />;
   return (
     <Stack>
@@ -48,7 +52,8 @@ export default function RootLayout() {
   return (
     // Staff screens are Spanish only for now (passenger app: es, en, pt-BR).
     <I18nProvider fixedLocale="es">
-      <AuthProvider api={api}>
+      {/* Saved screens and profile: the app opens and works without signal (ADR-051). */}
+      <AuthProvider api={api} cache={responseCache}>
         <RootNavigator />
         <StatusBar style="auto" />
       </AuthProvider>

@@ -1,6 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   addAmounts,
+  offlineTime,
   todayInVenezuela,
   type CashSale,
   type CashSalesDay,
@@ -42,6 +43,19 @@ export class CashSalesService {
     meta: RequestMeta,
   ): Promise<CashSale> {
     const organizationId = access.organization.id;
+    // Sent again (no answer the first time, or recorded without signal): the same sale.
+    if (input.clientId) {
+      const [again] = await this.database.db
+        .select()
+        .from(cashSales)
+        .where(
+          and(eq(cashSales.driverUserId, actor.user.id), eq(cashSales.clientId, input.clientId)),
+        );
+      if (again) {
+        if (again.organizationId !== organizationId) throw notFound();
+        return (await this.view([again]))[0]!;
+      }
+    }
     const [route] = await this.database.db
       .select({ id: routes.id, status: routes.status })
       .from(routes)
@@ -73,6 +87,7 @@ export class CashSalesService {
         ),
       );
     if (!fare) throw invalid('This segment has no published fare');
+    const soldAt = new Date(offlineTime(input.soldAt, Date.now()));
     const [row] = await this.database.db
       .insert(cashSales)
       .values({
@@ -83,17 +98,22 @@ export class CashSalesService {
         passengers: input.passengers,
         amount: fromScaled(toScaled(fare.amount, 2) * BigInt(input.passengers), 2),
         currency: fare.currency,
-        serviceDate: todayInVenezuela(),
+        serviceDate: todayInVenezuela(soldAt),
         driverUserId: actor.user.id,
+        clientId: input.clientId ?? null,
+        createdAt: soldAt,
       })
+      // Two copies sent at the same time: the second finds the first.
+      .onConflictDoNothing({ target: [cashSales.driverUserId, cashSales.clientId] })
       .returning();
-    await this.record('cash_sale.recorded', row!.id, actor, meta, {
+    if (!row) return this.create(access, input, actor, meta);
+    await this.record('cash_sale.recorded', row.id, actor, meta, {
       organizationId,
-      passengers: row!.passengers,
-      amount: row!.amount,
-      currency: row!.currency,
+      passengers: row.passengers,
+      amount: row.amount,
+      currency: row.currency,
     });
-    return (await this.view([row!]))[0]!;
+    return (await this.view([row]))[0]!;
   }
 
   /** What this driver recorded on `date` (today by default) for the organization. */

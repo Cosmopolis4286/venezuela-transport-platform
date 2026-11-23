@@ -2,6 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   DEPART_EARLY_HOURS,
   NETWORK_UTC_OFFSET,
+  offlineTime,
   rolesWith,
   toNetworkIso,
   type AssignTripRequest,
@@ -297,10 +298,16 @@ export class DispatchService {
     tripId: string,
     step: 'depart' | 'arrive',
     meta: RequestMeta,
+    /** When the driver tapped it, if marked without signal and sent later (ADR-051). */
+    at?: string,
   ): Promise<DriverTrip> {
     const [row] = await this.drivenTrips(actor.user.id, null, tripId);
     if (!row) throw tripNotFound();
-    const now = new Date();
+    let now = new Date(offlineTime(at, Date.now()));
+    if (step === 'arrive' && row.trip.departedAt && now < row.trip.departedAt) {
+      // The phone's clock was behind: never arrive before leaving.
+      now = row.trip.departedAt;
+    }
     if (step === 'depart') {
       if (+row.trip.departsAt - DEPART_EARLY_HOURS * 3_600_000 > +now) {
         throw conflict('Too early to mark the departure', 'TRIP_TOO_EARLY');

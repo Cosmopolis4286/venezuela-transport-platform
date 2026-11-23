@@ -4,7 +4,17 @@ import {
   type CreateCashSaleRequest,
   type VoidCashSaleRequest,
 } from '@vtp/shared-types';
-import { IsInt, IsOptional, IsString, IsUUID, Length, Matches, Max, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+  Matches,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class CreateCashSaleDto implements CreateCashSaleRequest {
   @ApiProperty()
@@ -24,6 +34,16 @@ export class CreateCashSaleDto implements CreateCashSaleRequest {
   @Min(1)
   @Max(MAX_CASH_PASSENGERS)
   passengers!: number;
+
+  @ApiProperty({ required: false, description: 'Chosen by the phone; a resend is kept once' })
+  @IsOptional()
+  @IsUUID()
+  clientId?: string;
+
+  @ApiProperty({ required: false, description: 'When sold, if sent later (no signal)' })
+  @IsOptional()
+  @IsDateString()
+  soldAt?: string;
 }
 
 export class VoidCashSaleDto implements VoidCashSaleRequest {

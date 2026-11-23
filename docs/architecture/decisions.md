@@ -964,3 +964,24 @@ el teléfono (el conductor puede buscarlo por el código de reserva). Una cancel
 otro teléfono se ve recién al recuperar la señal; el conductor la rechaza con su propia lista.
 Guarda en un archivo de la app el nombre y el documento de los pasajeros de la reserva, como ya los
 muestra la pantalla de la reserva.
+
+## ADR-051: El conductor trabaja sin señal y la app envía todo al volver
+
+**Decisión** (del dueño del producto). La app de transportistas guarda en el teléfono el perfil y
+la última respuesta de cada pantalla (viajes, pasajeros, rutas con paradas y tarifas), así que abre
+y se usa sin señal: muestra "Sin señal: ves lo guardado a las…". Las ventas en efectivo, la salida
+y la llegada hechas sin señal (o sin respuesta en 8 segundos) se guardan en una cola, en orden, y
+se envían solas cada minuto y al volver a la app. Cada una lleva la hora en que el conductor la
+hizo; la API la acepta si no es futura ni de hace más de 48 horas (`offlineTime`, la misma regla que
+los abordajes de ADR-049), y una llegada nunca queda antes de la salida. Una venta lleva un
+`clientId` elegido por el teléfono: enviada dos veces se guarda una vez. Si la API rechaza algo
+(p. ej. la ruta se despublicó), sale de la cola y el conductor lo ve en el inicio con el motivo.
+
+**Por qué.** En El Triunfo y Sierra Imataca no hay señal (análisis de Casacoima): sin esto, el
+conductor no podía ni abrir su viaje, y las ventas en efectivo y las horas reales se perdían.
+
+**Compromisos.** La venta en efectivo no aparta puestos (ADR-033), así que sin señal no hay
+sobreventa que revisar. Una ruta que el teléfono nunca descargó con señal no se puede usar sin
+señal. Solo la cuenta que hizo el trabajo pendiente lo envía; cerrar sesión borra las pantallas
+guardadas (no la cola). El teléfono guarda las pantallas hasta 3 días, con nombres de pasajeros.
+Una venta enviada tarde cuenta en el día en que se vendió, y ya no se puede anular si ese día pasó.

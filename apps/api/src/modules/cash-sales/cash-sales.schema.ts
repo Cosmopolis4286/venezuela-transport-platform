@@ -8,6 +8,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 import { users } from '../identity/identity.schema.js';
@@ -42,6 +43,8 @@ export const cashSales = pgTable(
     driverUserId: uuid()
       .notNull()
       .references(() => users.id, { onDelete: 'restrict' }),
+    /** Chosen by the phone (ADR-051): a sale sent twice, e.g. after no signal, is kept once. */
+    clientId: uuid(),
     voidedAt: timestamp({ withTimezone: true }),
     voidReason: text(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
@@ -50,6 +53,7 @@ export const cashSales = pgTable(
     check('cash_sales_passengers_check', sql`${t.passengers} between 1 and 60`),
     index('cash_sales_organization_date_idx').on(t.organizationId, t.serviceDate),
     index('cash_sales_driver_date_idx').on(t.driverUserId, t.serviceDate),
+    uniqueIndex('cash_sales_driver_client_idx').on(t.driverUserId, t.clientId),
   ],
 );
 

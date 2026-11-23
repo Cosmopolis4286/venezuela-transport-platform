@@ -26,7 +26,12 @@ import {
   type OrganizationAccess,
 } from '../organizations/organization-access.js';
 import { BookingsService } from '../bookings/bookings.service.js';
-import { AssignTripDto, CancelDepartureDto, DispatchDateQueryDto } from './dispatch.dto.js';
+import {
+  AssignTripDto,
+  CancelDepartureDto,
+  DispatchDateQueryDto,
+  MarkTripDto,
+} from './dispatch.dto.js';
 import { DispatchService } from './dispatch.service.js';
 
 /** Dispatchers assign a vehicle and a driver to each departure. */
@@ -90,9 +95,10 @@ export class DriverController {
   depart(
     @CurrentAuth() auth: Authenticated,
     @Param('tripId', ParseUUIDPipe) tripId: string,
+    @Body() body: MarkTripDto,
     @ReqMeta() meta: RequestMeta,
   ): Promise<DriverTrip> {
-    return this.dispatch.markTrip(auth, tripId, 'depart', meta);
+    return this.dispatch.markTrip(auth, tripId, 'depart', meta, body.at);
   }
 
   @Post(':tripId/arrive')
@@ -100,9 +106,10 @@ export class DriverController {
   arrive(
     @CurrentAuth() auth: Authenticated,
     @Param('tripId', ParseUUIDPipe) tripId: string,
+    @Body() body: MarkTripDto,
     @ReqMeta() meta: RequestMeta,
   ): Promise<DriverTrip> {
-    return this.dispatch.markTrip(auth, tripId, 'arrive', meta);
+    return this.dispatch.markTrip(auth, tripId, 'arrive', meta, body.at);
   }
 
   @Get(':tripId/passengers')

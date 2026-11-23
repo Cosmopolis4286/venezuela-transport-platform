@@ -72,6 +72,15 @@ En la pantalla del viaje, toca **Marcar salida** cuando el autobús deja el term
 2 horas antes de la hora programada) y **Marcar llegada** al terminar. La empresa ve el estado en
 su tablero, y desde la salida los pasajeros ya no pueden cancelar.
 
+### Sin señal
+
+La app guarda en el teléfono tus viajes, los pasajeros y las rutas cada vez que la abres con señal.
+Sin señal la abres igual: arriba dice **Sin señal: ves lo guardado a las…**. Puedes marcar salida y
+llegada y anotar ventas en efectivo; se guardan con la hora en que lo hiciste y se envían solos
+cuando vuelve la señal (en el inicio ves cuántos esperan). Si algo no se pudo registrar, el inicio
+te dice qué y por qué; avísale a tu despachador. Si cierras sesión, lo guardado se borra; lo que
+falta enviar se envía cuando vuelvas a entrar con tu cuenta.
+
 ## 4. Validar boletos (inspectores y conductores)
 
 En rutas urbanas y suburbanas el **conductor** también valida: el pasajero muestra su **boleto
@@ -125,7 +134,8 @@ con los datos del viaje y tu ubicación. Úsalo solo si estás en peligro.
 
 Si un pasajero te paga en efectivo, anótalo en **Ventas en efectivo**: eliges la ruta, dónde sube
 y dónde baja, y cuántos pasajeros. La app calcula el monto con la tarifa publicada. Abajo ves lo
-que llevas en el día; si te equivocaste, toca **Anular** (solo el mismo día). Ese dinero es tuyo o
+que llevas en el día; si te equivocaste, toca **Anular** (solo el mismo día). Sin señal la venta
+queda en **Por enviar** y se envía sola. Ese dinero es tuyo o
 de tu empresa según lo acuerden: no pasa por VTP, no lleva cargo de la plataforma y solo aparece en
 los reportes de la empresa.
 

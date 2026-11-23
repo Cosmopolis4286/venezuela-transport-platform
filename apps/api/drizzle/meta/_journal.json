@@ -337,6 +337,13 @@
       "when": 1795381067227,
       "tag": "0047_offline_boarding",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1795400254007,
+      "tag": "0048_offline_driver_queue",
+      "breakpoints": true
     }
   ]
 }
