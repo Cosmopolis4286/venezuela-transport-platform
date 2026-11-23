@@ -65,6 +65,9 @@ pull request.
 
 ### Agregado
 
+- **Boletos del pasajero sin señal** (ADR-050): la app de pasajeros guarda sola los boletos
+  pagados de los próximos viajes y los muestra sin señal en **Mis boletos guardados**, aunque la
+  sesión haya vencido. Cerrar sesión los borra; cada uno se borra 2 días después del viaje.
 - **Validar boletos sin señal** (ADR-049): la app de transportistas guarda sola los boletos
   pagados del día de su empresa y, sin señal, los valida con esa lista y envía lo validado al
   volver la señal. Un boleto usado en dos unidades, o con la reserva cancelada, aparece en el
