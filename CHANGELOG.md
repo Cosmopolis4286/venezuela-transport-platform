@@ -65,6 +65,11 @@ pull request.
 
 ### Agregado
 
+- **El conductor trabaja sin señal** (ADR-051): la app de transportistas abre y muestra lo guardado
+  (viajes, pasajeros, rutas y tarifas) sin señal. Las ventas en efectivo, la salida y la llegada
+  hechas sin señal se envían solas al volver, con la hora real y sin duplicarse; lo que la API
+  rechace se ve en el inicio. La API acepta `clientId` y `soldAt` en las ventas en efectivo y `at`
+  al marcar salida y llegada (migración `0048`).
 - **Boletos del pasajero sin señal** (ADR-050): la app de pasajeros guarda sola los boletos
   pagados de los próximos viajes y los muestra sin señal en **Mis boletos guardados**, aunque la
   sesión haya vencido. Cerrar sesión los borra; cada uno se borra 2 días después del viaje.

@@ -20,4 +20,5 @@ export * from './api/reports.js';
 export * from './api/legal.js';
 export * from './api/fiscal.js';
 export * from './api/cash-sales.js';
+export * from './api/offline.js';
 export * from './api/support.js';

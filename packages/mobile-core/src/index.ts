@@ -6,6 +6,7 @@ export {
 } from './api/client';
 export { ApiError, userMessage } from './api/errors';
 export { useApi, type ApiResource } from './api/use-api';
+export { memoryResponseCache, responseKey, type ResponseCache } from './api/response-cache';
 export { AuthProvider, useAuth, useCurrentUser, type AuthState } from './auth/auth-context';
 export { memoryTokenStore, type TokenStore } from './session/token-store';
 export { secureTokenStore } from './session/secure-token-store';

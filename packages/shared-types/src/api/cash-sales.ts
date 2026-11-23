@@ -15,6 +15,13 @@ export interface CreateCashSaleRequest {
   fromStopId: string;
   toStopId: string;
   passengers: number;
+  /**
+   * Chosen by the phone for each sale (a UUID) so sending it again, e.g. after recording it
+   * without signal, never records it twice.
+   */
+  clientId?: string;
+  /** When it was sold, if recorded without signal and sent later (see `offlineTime`). */
+  soldAt?: string;
 }
 
 export interface CashSale {

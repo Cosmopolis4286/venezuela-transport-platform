@@ -12,6 +12,7 @@ import {
   useApi,
   useAuth,
   useColors,
+  useCurrentUser,
   userMessage,
 } from '@vtp/mobile-core';
 import {
@@ -27,6 +28,10 @@ import {
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { noSignal, withTimeout } from '@/lib/no-signal';
+import { newClientId } from '@/lib/outbox';
+import { enqueue, useOutbox } from '@/lib/outbox-store';
+import { SavedAt } from '@/lib/saved-at';
 
 const QUICK_COUNTS = ['1', '2', '3', '4', '5', '6'] as const;
 
@@ -40,6 +45,8 @@ export default function CashScreen() {
     name?: string;
   }>();
   const { api } = useAuth();
+  const user = useCurrentUser();
+  const outbox = useOutbox();
   const colors = useColors();
   const base = `/organizations/${organizationId}`;
   const routes = useApi<RouteSummary[]>(organizationId ? `${base}/routes` : null);
@@ -58,15 +65,26 @@ export default function CashScreen() {
   const fare = route.data?.fares.find((f) => f.fromStopId === fromId && f.toStopId === toId);
   const passengers = Math.min(Number(count) || 0, MAX_CASH_PASSENGERS);
   const amount = fare ? (Number(fare.amount) * passengers).toFixed(2) : null;
+  // Recorded without signal, still to send (ADR-051).
+  const unsent = outbox.pending.flatMap((item) =>
+    item.kind === 'cash' && item.organizationId === organizationId ? [item] : [],
+  );
 
   const record = async () => {
     if (!routeId || !fromId || !toId || passengers < 1) return;
     setBusy(true);
     setMessage(null);
+    // Its own id and time: sent again later (no signal), it is still one sale (ADR-051).
+    const body = {
+      routeId,
+      fromStopId: fromId,
+      toStopId: toId,
+      passengers,
+      clientId: newClientId(),
+      soldAt: new Date().toISOString(),
+    };
     try {
-      const sale = await api.request<CashSale>(`${base}/cash-sales`, {
-        body: { routeId, fromStopId: fromId, toStopId: toId, passengers },
-      });
+      const sale = await withTimeout(api.request<CashSale>(`${base}/cash-sales`, { body }));
       setMessage({
         tone: 'success',
         text: `Registrado: ${sale.passengers} × ${sale.from.name} → ${sale.to.name}, ${formatPaymentAmount(sale.amount, sale.currency)}.`,
@@ -74,7 +92,24 @@ export default function CashScreen() {
       setCount('1');
       await today.reload();
     } catch (e) {
-      setMessage({ tone: 'error', text: userMessage(e) });
+      if (noSignal(e) && fare && amount) {
+        const from = stops.find((s) => s.stop.id === fromId)?.stop.name ?? '';
+        const to = stops.find((s) => s.stop.id === toId)?.stop.name ?? '';
+        enqueue(api, user.id, {
+          id: body.clientId,
+          kind: 'cash',
+          organizationId,
+          body,
+          label: `${passengers} × ${from} → ${to}, ${formatPaymentAmount(amount, fare.currency)}`,
+        });
+        setMessage({
+          tone: 'success',
+          text: 'Guardada sin señal. Se enviará sola cuando vuelva la señal.',
+        });
+        setCount('1');
+      } else {
+        setMessage({ tone: 'error', text: userMessage(e) });
+      }
     } finally {
       setBusy(false);
     }
@@ -121,6 +156,8 @@ export default function CashScreen() {
         tarifa publicada; no lleva cargo de la plataforma.
       </Body>
 
+      {routes.savedAt ? <SavedAt savedAt={routes.savedAt} /> : null}
+
       <Subheading>Ruta</Subheading>
       {routes.loading && !routes.data ? <ActivityIndicator color={colors.text} /> : null}
       {routes.data && !active.length ? <Body muted>No hay rutas publicadas.</Body> : null}
@@ -139,6 +176,11 @@ export default function CashScreen() {
         )}
       </View>
 
+      {routeId && !route.data && route.error ? (
+        <Banner tone="warning">
+          Sin señal y esta ruta no está guardada en el teléfono. Ábrela una vez con señal.
+        </Banner>
+      ) : null}
       {routeId && route.data ? (
         <>
           <Subheading>Sube en</Subheading>
@@ -202,6 +244,21 @@ export default function CashScreen() {
       ) : null}
 
       {message ? <Banner tone={message.tone}>{message.text}</Banner> : null}
+
+      {unsent.length ? (
+        <>
+          <Subheading>Por enviar ({unsent.length})</Subheading>
+          {unsent.map((item) => (
+            <Card key={item.id}>
+              <Row>
+                <Badge label={localTime(toNetworkIso(item.body.soldAt))} />
+                <Badge label="Sin enviar" tone="warning" />
+              </Row>
+              <Body>{item.label}</Body>
+            </Card>
+          ))}
+        </>
+      ) : null}
 
       <Subheading>Hoy</Subheading>
       {today.data?.totals.length ? (

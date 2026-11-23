@@ -25,6 +25,7 @@ import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'ex
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
+import { noSignal, ONLINE_TIMEOUT_MS, withTimeout } from '@/lib/no-signal';
 import { updateOffline, useOfflineSync, useOfflineTickets } from '@/lib/offline-store';
 import {
   checkOffline,
@@ -36,18 +37,6 @@ import { ticketErrorMessage, ticketVerdict } from '@/lib/ticket-result';
 
 /** The same code read again within this time is ignored (the camera reports it many times). */
 const REPEAT_MS = 4000;
-/** Without an answer by then, the ticket is checked against the list kept on the phone. */
-const ONLINE_TIMEOUT_MS = 8000;
-
-class NoAnswer extends Error {}
-const withTimeout = <T,>(promise: Promise<T>, ms: number) =>
-  Promise.race([
-    promise,
-    new Promise<never>((_, reject) => setTimeout(() => reject(new NoAnswer()), ms)),
-  ]);
-const noSignal = (e: unknown) =>
-  e instanceof NoAnswer || (e instanceof ApiError && e.code === 'NETWORK');
-
 /**
  * Boarding: scan the passenger's QR (or type the booking code and seat) and show at once whether
  * they may board. The first valid scan marks the passenger as boarded.

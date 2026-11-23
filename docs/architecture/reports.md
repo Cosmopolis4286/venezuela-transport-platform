@@ -31,7 +31,8 @@ y las celdas que parecen fórmulas se neutralizan).
 ### Efectivo (ADR-033)
 
 `SalesReport.cash` suma lo que los conductores anotaron como cobrado en efectivo
-(`POST /organizations/:id/cash-sales`), por moneda y por ruta, según el día en que se anotó y sin
+(`POST /organizations/:id/cash-sales`), por moneda y por ruta, según el día en que se vendió (una venta anotada sin señal
+llega después con su hora, ADR-051) y sin
 los registros anulados. Va aparte de las ventas por la app: no lleva comisión ni se liquida. El
 CSV de ventas lo agrega como filas "Ruta (efectivo)".
 

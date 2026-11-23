@@ -303,6 +303,21 @@ describe.runIf(expectDatabase)('Suburban frequency service and open tickets (e2e
       expect(day.sales).toHaveLength(2);
       expect(day.totals).toEqual([{ currency: 'USD', passengers: 3, amount: '1.50' }]);
 
+      // Recorded without signal and sent later, twice (ADR-051): kept once, on the day it was sold
+      // (at most 48 hours back), so today's numbers do not change.
+      const offline = {
+        ...segment,
+        passengers: 2,
+        clientId: randomUUID(),
+        soldAt: new Date(Date.now() - 30 * 24 * 3600_000).toISOString(),
+      };
+      const first = (await cash(offline).expect(201)).body as CashSale;
+      const again = (await cash(offline).expect(201)).body as CashSale;
+      expect(again.id).toBe(first.id);
+      expect(first.serviceDate).toBe(todayInVenezuela(new Date(Date.now() - 48 * 3600_000)));
+      expect(first.serviceDate).not.toBe(today);
+      await cash({ ...offline, soldAt: 'ayer' }).expect(400);
+
       // The operator's sales report counts cash apart from app sales.
       const report = (
         await http()

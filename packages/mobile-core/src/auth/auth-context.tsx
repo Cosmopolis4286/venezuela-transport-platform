@@ -17,7 +17,9 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { AppState } from 'react-native';
 import type { ApiClient } from '../api/client';
+import { PROFILE_KEY, type ResponseCache } from '../api/response-cache';
 import { ApiError, userMessage } from '../api/errors';
 import { currentLocale } from '../i18n/active-locale';
 import { CORE_MESSAGES } from '../i18n/core-messages';
@@ -32,11 +34,17 @@ export type AuthState =
    * phone for that account (e.g. saved tickets) stays.
    */
   | { status: 'signedOut'; notice?: string; expired?: boolean }
-  | { status: 'signedIn'; user: UserProfile };
+  /**
+   * `offline`: no signal to load the session, so the app opened with the profile saved on the
+   * phone (only with a `cache`, ADR-051); it keeps trying and leaves this state by itself.
+   */
+  | { status: 'signedIn'; user: UserProfile; offline?: boolean };
 
 export interface AuthContextValue {
   state: AuthState;
   api: ApiClient;
+  /** Where screens keep their last answers for no signal; null when the app passed none. */
+  cache: ResponseCache | null;
   requestCode(channel: OtpChannel, destination: string): Promise<OtpChallengeResponse>;
   verifyCode(challengeId: string, code: string): Promise<void>;
   signInWithPassword(email: string, password: string): Promise<void>;
@@ -62,29 +70,55 @@ export interface AuthContextValue {
   reload(): Promise<void>;
 }
 
-/** Restores the saved session and loads the user it belongs to. */
-async function loadSession(api: ApiClient): Promise<AuthState> {
+/** How often an app opened without signal tries to load the session again. */
+const OFFLINE_RETRY_MS = 30_000;
+
+/**
+ * Restores the saved session and loads the user it belongs to. Without signal, opens with the
+ * profile saved on the phone when the app keeps one.
+ */
+export async function loadSession(api: ApiClient, cache: ResponseCache | null): Promise<AuthState> {
   try {
     // A saved session that can no longer be refreshed ended by itself, not by signing out.
     if (!api.hasSession && !(await api.restore())) return { status: 'signedOut', expired: true };
     return { status: 'signedIn', user: await api.request<UserProfile>('/me') };
   } catch (error) {
-    return api.hasSession
-      ? { status: 'unavailable', message: userMessage(error) }
-      : { status: 'signedOut' };
+    if (!api.hasSession) return { status: 'signedOut' };
+    const saved = cache?.read<UserProfile>(PROFILE_KEY);
+    if (saved && error instanceof ApiError && error.code === 'NETWORK') {
+      return { status: 'signedIn', user: saved.value, offline: true };
+    }
+    return { status: 'unavailable', message: userMessage(error) };
   }
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export function AuthProvider({ api, children }: { api: ApiClient; children: ReactNode }) {
+export function AuthProvider({
+  api,
+  cache = null,
+  children,
+}: {
+  api: ApiClient;
+  /** Lets screens and the session work without signal (ADR-051). */
+  cache?: ResponseCache | null;
+  children: ReactNode;
+}) {
   const [state, setState] = useState<AuthState>({ status: 'loading' });
 
-  const loadUser = useCallback(async () => setState(await loadSession(api)), [api]);
+  const loadUser = useCallback(async () => {
+    const next = await loadSession(api, cache);
+    // Still without signal: keep the same state (and the same user object) on screen.
+    setState((current) =>
+      current.status === 'signedIn' && current.offline && next.status === 'signedIn' && next.offline
+        ? current
+        : next,
+    );
+  }, [api, cache]);
 
   useEffect(() => {
     let active = true;
-    void loadSession(api).then((next) => {
+    void loadSession(api, cache).then((next) => {
       if (active) setState(next);
     });
     const unsubscribe = api.onSessionEnded(() =>
@@ -98,7 +132,30 @@ export function AuthProvider({ api, children }: { api: ApiClient; children: Reac
       active = false;
       unsubscribe();
     };
-  }, [api]);
+  }, [api, cache]);
+
+  // The profile is kept to open without signal; another account first deletes what was kept.
+  const user = state.status === 'signedIn' && !state.offline ? state.user : null;
+  useEffect(() => {
+    if (!cache || !user) return;
+    if (cache.read<UserProfile>(PROFILE_KEY)?.value.id !== user.id) cache.clear();
+    cache.write(PROFILE_KEY, user);
+  }, [cache, user]);
+
+  // Opened without signal: try again every 30 seconds and when the app comes back to front.
+  const offline = state.status === 'signedIn' && state.offline === true;
+  useEffect(() => {
+    if (!offline) return;
+    const retry = () => void loadUser();
+    const timer = setInterval(retry, OFFLINE_RETRY_MS);
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (next === 'active') retry();
+    });
+    return () => {
+      clearInterval(timer);
+      subscription.remove();
+    };
+  }, [offline, loadUser]);
 
   /**
    * Signs in with `response`. When this phone was a guest, its trips move to the account it signed
@@ -125,6 +182,7 @@ export function AuthProvider({ api, children }: { api: ApiClient; children: Reac
     () => ({
       state,
       api,
+      cache,
       requestCode: (channel, destination) =>
         api.request<OtpChallengeResponse>('/auth/otp/request', {
           auth: false,
@@ -177,6 +235,7 @@ export function AuthProvider({ api, children }: { api: ApiClient; children: Reac
       signOut: async () => {
         await unregisterFromPush(api);
         await api.endSession();
+        cache?.clear();
         setState({ status: 'signedOut' });
       },
       acceptTerms: async () => {
@@ -188,18 +247,19 @@ export function AuthProvider({ api, children }: { api: ApiClient; children: Reac
       deleteAccount: async () => {
         await api.request('/me', { method: 'DELETE' });
         await api.endSession();
+        cache?.clear();
         setState({
           status: 'signedOut',
           notice: CORE_MESSAGES[currentLocale()].legal.deleted,
         });
       },
       reload: async () => {
-        if (state.status !== 'signedIn') return loadUser();
+        if (state.status !== 'signedIn' || state.offline) return loadUser();
         // Errors propagate to the caller; a failed refresh never signs the user out by itself.
         setState({ status: 'signedIn', user: await api.request<UserProfile>('/me') });
       },
     }),
-    [api, loadUser, signedIn, state],
+    [api, cache, loadUser, signedIn, state],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
