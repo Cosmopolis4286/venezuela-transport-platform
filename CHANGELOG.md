@@ -13,6 +13,9 @@ pull request.
 
 ### Cambiado
 
+- **Documentos legales, versión 2026-11-22** (los usuarios aceptan de nuevo): reúne todos los
+  cambios de la etapa 3 y los proveedores de mapas (Apple y Google) en la Política de Privacidad, por
+  si la 2026-11-21 ya se había publicado sin alguno de ellos.
 - **Los bolívares se cobran siempre con la tasa oficial del BCV** (ADR-048): un job la busca cada
   6 horas en bcv.org.ve (o en DolarApi si la página falla) y la guarda con su "fecha valor" y su
   fuente. Las empresas y la plataforma solo escriben la tasa de reales (PIX). Sin tasa de los
